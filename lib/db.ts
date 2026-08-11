@@ -136,23 +136,41 @@ function pgSsl(): any {
   return { rejectUnauthorized: true };
 }
 
+/** Resolve the pg connection config.
+ *  - Cloudflare Workers: prefer the **Hyperdrive** binding — Workers can't open a
+ *    raw TCP socket to Supabase, so Hyperdrive proxies/pools the connection. The
+ *    Worker→Hyperdrive hop is local plaintext (ssl:false); Hyperdrive→DB does TLS.
+ *    search_path is set at the DATABASE level (ALTER DATABASE … SET search_path)
+ *    so it works even though Hyperdrive doesn't forward the `options` startup param.
+ *  - Otherwise (Vercel/Node, or dev-pg): use DATABASE_URL directly with TLS +
+ *    per-connection search_path via the `options` startup param. */
+async function resolveDbConfig(): Promise<{ connectionString?: string; ssl: any; options?: string }> {
+  const { APP_KEY } = await import("./config");
+  try {
+    const { getCloudflareContext } = await import("@opennextjs/cloudflare");
+    const env: any = (getCloudflareContext() as any)?.env;
+    const cs: string | undefined = env?.HYPERDRIVE?.connectionString;
+    if (cs) return { connectionString: cs, ssl: false };
+  } catch {
+    /* not running on Workers / no Hyperdrive binding — fall through */
+  }
+  return { connectionString: process.env.DATABASE_URL, ssl: pgSsl(), options: `-c search_path=${APP_KEY},public` };
+}
+
 async function getPgPool() {
   if (!gp._pgPool) {
     const { Pool, types } = await import("pg");
     types.setTypeParser(20, (v: string | null) => (v == null ? null : parseInt(v, 10))); // bigint→number
     types.setTypeParser(1082, (v: string | null) => v); // date→string
-    const { APP_KEY } = await import("./config");
+    const cfg = await resolveDbConfig();
     gp._pgPool = new Pool({
-      connectionString: process.env.DATABASE_URL,
-      max: 3,
+      connectionString: cfg.connectionString,
+      max: 5,
       idleTimeoutMillis: 30_000,
       connectionTimeoutMillis: 10_000,
       allowExitOnIdle: true,
-      ssl: pgSsl(),
-      // Set search_path as a per-CONNECTION startup parameter (not a one-off SET).
-      // Critical under transaction-mode poolers (Supabase pgBouncer :6543) where a
-      // single `SET` wouldn't persist to the backend serving later statements.
-      options: `-c search_path=${APP_KEY},public`,
+      ssl: cfg.ssl,
+      ...(cfg.options ? { options: cfg.options } : {}),
     });
     gp._pgPool.on("error", (e: any) => console.error("[pg pool] idle client error:", e?.message));
     // Prod bootstrap: run migrations + seed reference data + ensure an admin exists.

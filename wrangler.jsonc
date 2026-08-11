@@ -10,6 +10,12 @@
     "directory": ".open-next/assets",
     "binding": "ASSETS"
   },
+  // Hyperdrive proxies/pools the Postgres connection — Workers can't open raw TCP
+  // to Supabase. Create the config with `wrangler hyperdrive create` and paste its
+  // id below (replace REPLACE_WITH_HYPERDRIVE_ID).
+  "hyperdrive": [
+    { "binding": "HYPERDRIVE", "id": "1b6c680aa6e84d1ea404483de7ef48c2" }
+  ],
   "observability": {
     "enabled": true
   }
