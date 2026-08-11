@@ -15,7 +15,7 @@ export default async function Dashboard() {
     dashboardStats(),
     listStock({ lowOnly: true, limit: 6 }),
     listOrders({ platform: "Shopee", limit: 6 }),
-    topProducts(6),
+    topProducts(20),
     ordersTrend(6),
   ]);
 
