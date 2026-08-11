@@ -14,7 +14,13 @@
   // to Supabase. Create the config with `wrangler hyperdrive create` and paste its
   // id below (replace REPLACE_WITH_HYPERDRIVE_ID).
   "hyperdrive": [
-    { "binding": "HYPERDRIVE", "id": "1b6c680aa6e84d1ea404483de7ef48c2" }
+    {
+      "binding": "HYPERDRIVE",
+      "id": "1b6c680aa6e84d1ea404483de7ef48c2",
+      // Dummy — only used for LOCAL Hyperdrive emulation (we don't use wrangler dev;
+      // local dev uses PGlite). Production uses the real config via `id`. Not a secret.
+      "localConnectionString": "postgresql://user:pass@localhost:5432/postgres"
+    }
   ],
   "observability": {
     "enabled": true
