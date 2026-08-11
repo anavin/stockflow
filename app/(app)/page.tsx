@@ -15,7 +15,7 @@ export default async function Dashboard() {
     dashboardStats(),
     listStock({ lowOnly: true, limit: 6 }),
     listOrders({ platform: "Shopee", limit: 6 }),
-    topProducts(20),
+    topProducts(10),
     ordersTrend(6),
   ]);
 
@@ -155,7 +155,10 @@ export default async function Dashboard() {
 
       {/* ── top products ── */}
       <section className="card mt-4 p-5">
-        <h2 className="flex items-center gap-2 text-sm font-semibold text-ink"><Sparkles size={15} className="text-brand" /> กลิ่นที่เบิกมากที่สุด</h2>
+        <div className="mb-1 flex items-center justify-between">
+          <h2 className="flex items-center gap-2 text-sm font-semibold text-ink"><Sparkles size={15} className="text-brand" /> กลิ่นที่เบิกมากที่สุด</h2>
+          <Link href="/scents" className="inline-flex items-center gap-1 text-xs font-medium text-brand-600">ดูทั้งหมด <ArrowRight size={12} /></Link>
+        </div>
         {top.length === 0 ? (
           <p className="py-6 text-center text-sm text-muted">ยังไม่มีข้อมูล</p>
         ) : (

@@ -234,7 +234,7 @@ export async function dashboardStats(): Promise<DashStats> {
 /** กลิ่นที่เบิกมากสุด (ผลรวมจำนวนจากใบเบิกที่ยังไม่ลบ) — สำหรับกราฟบนหน้าภาพรวม */
 export type TopProduct = { product: string; qty: number };
 export async function topProducts(limit = 6): Promise<TopProduct[]> {
-  const lim = Math.min(Math.max(1, limit), 20);
+  const lim = Math.min(Math.max(1, limit), 500);
   return q<TopProduct>(
     `select oi.product, sum(oi.qty)::float8 as qty
      from order_items oi join orders o on o.order_no = oi.order_no
