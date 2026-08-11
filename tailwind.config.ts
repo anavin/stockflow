@@ -16,9 +16,9 @@ export default {
         line: "#e6e9f0",    // cool hairline border
         soft: "#f1f4f9",    // cool soft bg / hover
         brand: {
-          DEFAULT: "#ec4a2a", // refined Shopee orange
-          600: "#d33e20",
-          50: "#fff2ee",
+          DEFAULT: "#4f46e5", // professional indigo
+          600: "#4338ca",
+          50: "#eef2ff",
         },
       },
       fontFamily: {

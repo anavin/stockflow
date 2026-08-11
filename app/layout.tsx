@@ -7,7 +7,7 @@ export const metadata: Metadata = {
   description: "ระบบเบิกสินค้าแต่ละแพลตฟอร์ม — Shopee",
 };
 
-export const viewport: Viewport = { themeColor: "#ee4d2d" };
+export const viewport: Viewport = { themeColor: "#4f46e5" };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
