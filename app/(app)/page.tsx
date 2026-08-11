@@ -213,7 +213,7 @@ function Ring({ value }: { value: number }) {
   return (
     <svg width="72" height="72" viewBox="0 0 72 72" className="shrink-0 -rotate-90">
       <circle cx="36" cy="36" r={r} fill="none" stroke="#e6e9f0" strokeWidth="8" />
-      <circle cx="36" cy="36" r={r} fill="none" stroke="#4f46e5" strokeWidth="8" strokeLinecap="round"
+      <circle cx="36" cy="36" r={r} fill="none" stroke="#059669" strokeWidth="8" strokeLinecap="round"
         strokeDasharray={c} strokeDashoffset={off} />
       <text x="36" y="36" transform="rotate(90 36 36)" textAnchor="middle" dominantBaseline="central"
         className="fill-ink" style={{ fontSize: 15, fontWeight: 700 }}>{pct}%</text>

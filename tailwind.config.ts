@@ -16,9 +16,9 @@ export default {
         line: "#e6e9f0",    // cool hairline border
         soft: "#f1f4f9",    // cool soft bg / hover
         brand: {
-          DEFAULT: "#4f46e5", // professional indigo
-          600: "#4338ca",
-          50: "#eef2ff",
+          DEFAULT: "#059669", // professional emerald
+          600: "#047857",
+          50: "#ecfdf5",
         },
       },
       fontFamily: {
