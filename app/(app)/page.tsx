@@ -85,7 +85,7 @@ export default async function Dashboard() {
           <HealthBar normal={normal} low={s.low} negative={s.negative} />
           <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs">
             <Legend color="bg-emerald-500" label="ปกติ" n={normal} />
-            <Legend color="bg-amber-500" label="ใกล้หมด" n={s.low} />
+            <Legend color="bg-amber-400" label="ใกล้หมด" n={s.low} />
             <Legend color="bg-red-500" label="ติดลบ" n={s.negative} />
           </div>
         </section>
@@ -213,7 +213,7 @@ function Ring({ value }: { value: number }) {
   return (
     <svg width="72" height="72" viewBox="0 0 72 72" className="shrink-0 -rotate-90">
       <circle cx="36" cy="36" r={r} fill="none" stroke="#e6e9f0" strokeWidth="8" />
-      <circle cx="36" cy="36" r={r} fill="none" stroke="#059669" strokeWidth="8" strokeLinecap="round"
+      <circle cx="36" cy="36" r={r} fill="none" style={{ stroke: "rgb(var(--brand))" }} strokeWidth="8" strokeLinecap="round"
         strokeDasharray={c} strokeDashoffset={off} />
       <text x="36" y="36" transform="rotate(90 36 36)" textAnchor="middle" dominantBaseline="central"
         className="fill-ink" style={{ fontSize: 15, fontWeight: 700 }}>{pct}%</text>
@@ -226,10 +226,11 @@ function HealthBar({ normal, low, negative }: { normal: number; low: number; neg
   const total = Math.max(1, normal + low + negative);
   const seg = (n: number) => `${(n / total) * 100}%`;
   return (
-    <div className="mt-3 flex h-2.5 w-full overflow-hidden rounded-full bg-soft">
-      {normal > 0 && <div className="h-full bg-emerald-500" style={{ width: seg(normal) }} />}
-      {low > 0 && <div className="h-full bg-amber-500" style={{ width: seg(low) }} />}
-      {negative > 0 && <div className="h-full bg-red-500" style={{ width: seg(negative) }} />}
+    <div className="mt-3 flex h-3 w-full gap-1">
+      {normal > 0 && <div className="h-full rounded-full bg-emerald-500" style={{ width: seg(normal) }} />}
+      {low > 0 && <div className="h-full rounded-full bg-amber-400" style={{ width: seg(low) }} />}
+      {negative > 0 && <div className="h-full rounded-full bg-red-500" style={{ width: seg(negative) }} />}
+      {normal + low + negative === 0 && <div className="h-full w-full rounded-full bg-soft" />}
     </div>
   );
 }

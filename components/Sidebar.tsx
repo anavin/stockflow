@@ -5,6 +5,16 @@ import { useState } from "react";
 import { PLATFORMS } from "@/lib/config";
 import { Package, PlusCircle, Upload, List, LogOut, Menu, X, Trash2, Users, ScanLine, Boxes, LayoutDashboard } from "lucide-react";
 
+// สีเอกลักษณ์ของแต่ละแพลตฟอร์ม (ใช้เป็นจุดสีในเมนู)
+const PLATFORM_COLORS: Record<string, string> = {
+  Shopee: "#ee4d2d",   // ส้ม
+  Lazada: "#0f146e",   // น้ำเงินเข้ม
+  Tiktok: "#141416",   // ดำ
+  Line: "#06c755",     // เขียว
+  Website: "#2563eb",  // ฟ้า
+  Office: "#475569",   // เทา
+};
+
 export default function Sidebar({ user }: { user: { full_name: string; username: string; role: string } }) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
@@ -82,9 +92,9 @@ export default function Sidebar({ user }: { user: { full_name: string; username:
 
         <div className="px-3 pb-1 pt-4 text-[11px] font-semibold uppercase tracking-wide text-faint">แพลตฟอร์มอื่น</div>
         {PLATFORMS.filter((p) => !p.enabled).map((p) => (
-          <div key={p.code} className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-faint">
-            <span className="inline-block h-4 w-4 rounded bg-line" /> {p.name}
-            <span className="ml-auto text-[10px]">เร็วๆ นี้</span>
+          <div key={p.code} className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-muted">
+            <span className="inline-block h-2.5 w-2.5 rounded-full" style={{ backgroundColor: PLATFORM_COLORS[p.code] || "#94a0b1" }} /> {p.name}
+            <span className="ml-auto text-[10px] text-faint">เร็วๆ นี้</span>
           </div>
         ))}
       </nav>
