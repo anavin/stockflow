@@ -15,10 +15,12 @@ export default {
         faint: "#94a0b1",   // light slate (tertiary)
         line: "#e6e9f0",    // cool hairline border
         soft: "#f1f4f9",    // cool soft bg / hover
+        // Per-platform accent driven by CSS vars (see globals.css --brand*).
+        // Shopee = orange by default; switch via data-platform on <html>.
         brand: {
-          DEFAULT: "#059669", // professional emerald
-          600: "#047857",
-          50: "#ecfdf5",
+          DEFAULT: "rgb(var(--brand) / <alpha-value>)",
+          600: "rgb(var(--brand-600) / <alpha-value>)",
+          50: "rgb(var(--brand-50) / <alpha-value>)",
         },
       },
       fontFamily: {
