@@ -2,7 +2,7 @@
 import { useEffect, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import { lookupOrderForIssue, confirmIssueByOrder, reverseIssue, type IssueResult, type IssueLookup } from "@/lib/actions/stock";
-import { ScanLine, CheckCircle2, AlertTriangle, XCircle, Undo2, Camera, PackageCheck, X } from "lucide-react";
+import { ScanLine, CheckCircle2, AlertTriangle, XCircle, Undo2, Camera, PackageCheck, X, Printer } from "lucide-react";
 
 const CameraScan = dynamic(() => import("./CameraScan"), { ssr: false });
 
@@ -174,6 +174,12 @@ function ResultCard({ entry, idx, isAdmin, onReverse }: { entry: Entry; idx: num
         </div>
         <div className="flex items-center gap-2">
           <span className="text-xs text-muted">{res.doc_no} · {at}</span>
+          {!reversed && (
+            <a href={`/api/print/${encodeURIComponent(res.order_no!)}`} target="_blank" rel="noreferrer"
+              className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs text-muted hover:bg-soft hover:text-ink">
+              <Printer size={13} /> พิมพ์
+            </a>
+          )}
           {isAdmin && !reversed && (
             <button onClick={() => onReverse(res.order_no!, idx)} className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs text-muted hover:bg-red-50 hover:text-red-600">
               <Undo2 size={13} /> ยกเลิก
