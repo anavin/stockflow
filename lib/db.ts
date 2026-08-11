@@ -122,8 +122,6 @@ function getDb(): Promise<PGlite> {
 // ---------------------------------------------------------------------------
 // Postgres (Supabase, production)
 // ---------------------------------------------------------------------------
-type GP = { _pgPool?: any };
-const gp = globalThis as unknown as GP;
 
 /** TLS config for the pg pool.
  *  - If DATABASE_CA_CERT is set (PEM), verify against it (recommended for prod).
