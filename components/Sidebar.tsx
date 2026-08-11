@@ -48,7 +48,6 @@ export default function Sidebar({ user }: { user: { full_name: string; username:
             <Link
               key={n.href}
               href={n.href}
-              prefetch={false}
               onClick={() => setOpen(false)}
               className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors ${
                 isActive(n.href, n.exact) ? "bg-soft font-medium text-ink" : "text-muted hover:bg-soft hover:text-ink"
@@ -63,7 +62,7 @@ export default function Sidebar({ user }: { user: { full_name: string; username:
         {stockNav.map((n) => {
           const Icon = n.icon;
           return (
-            <Link key={n.href} href={n.href} prefetch={false} onClick={() => setOpen(false)}
+            <Link key={n.href} href={n.href} onClick={() => setOpen(false)}
               className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors ${
                 isActive(n.href, n.exact) ? "bg-soft font-medium text-ink" : "text-muted hover:bg-soft hover:text-ink"
               }`}>
@@ -73,7 +72,7 @@ export default function Sidebar({ user }: { user: { full_name: string; username:
         })}
 
         {user.role === "admin" && (
-          <Link href="/users" prefetch={false} onClick={() => setOpen(false)}
+          <Link href="/users" onClick={() => setOpen(false)}
             className={`mt-1 flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors ${
               isActive("/users") ? "bg-soft font-medium text-ink" : "text-muted hover:bg-soft hover:text-ink"
             }`}>

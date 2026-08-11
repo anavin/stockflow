@@ -13,10 +13,8 @@ export async function createSession(userId: number): Promise<string> {
      values ($1, $2, now() + ($3 || ' days')::interval)`,
     [token, userId, String(SESSION_COOKIE_MAX_AGE_DAYS)],
   );
-  // เก็บกวาด session หมดอายุ + login_attempts เก่า — ต้อง AWAIT (fire-and-forget จะ
-  // ไม่คืน connection ให้ pool บน Cloudflare Workers → connection รั่วจน pool หมด → hang)
-  await q(`delete from user_sessions where expires_at is not null and expires_at < now()`).catch(() => {});
-  await q(`delete from login_attempts where created_at < now() - interval '30 days'`).catch(() => {});
+  // ไม่เก็บกวาดตรงนี้ทุกครั้ง (ช้า — เพิ่ม round-trip ต่อการ login). session หมดอายุ
+  // ถูกเช็คตอนอ่าน (getUserFromToken) อยู่แล้ว; แถวเก่าค่อยเก็บกวาดเป็น cron/มือทีหลัง.
   return token;
 }
 

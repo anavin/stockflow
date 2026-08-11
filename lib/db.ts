@@ -11,7 +11,6 @@
 import type { PGlite } from "@electric-sql/pglite";
 import { readFile, readdir } from "node:fs/promises";
 import path from "node:path";
-import { cache } from "react";
 
 const ROOT = process.cwd();
 const DATA_DIR = path.join(ROOT, ".pgdata");
@@ -158,67 +157,44 @@ async function resolveDbConfig(): Promise<{ connectionString?: string; ssl: any;
   return { connectionString: process.env.DATABASE_URL, ssl: pgSsl(), options: `-c search_path=${APP_KEY},public` };
 }
 
-// A persistent Pool proved unreliable on Cloudflare Workers (connections leak/die
-// across isolates → intermittent 500s and hangs). Instead open a FRESH Client per
-// q()/tx() and close it — Hyperdrive already pools connections server-side, so this
-// is cheap and, crucially, stateless (no cross-request/isolate connection reuse).
-let pgTypesReady = false;
-async function getPgClient(): Promise<any> {
-  const { Client, types } = await import("pg");
-  if (!pgTypesReady) {
+// On Vercel/Node a persistent Pool is the fast, correct choice — connections are
+// reused across warm invocations (no per-request connect/TLS latency) and concurrent
+// queries run in parallel. (The per-request-Client approach was only to survive
+// Cloudflare Workers' isolate model, which we no longer target.)
+type GP = { _pgPool?: any };
+const gp = globalThis as unknown as GP;
+async function getPool(): Promise<any> {
+  if (!gp._pgPool) {
+    const { Pool, types } = await import("pg");
     types.setTypeParser(20, (v: string | null) => (v == null ? null : parseInt(v, 10))); // bigint→number
     types.setTypeParser(1082, (v: string | null) => v); // date→string
-    pgTypesReady = true;
+    const cfg = await resolveDbConfig();
+    gp._pgPool = new Pool({
+      connectionString: cfg.connectionString,
+      ssl: cfg.ssl,
+      max: 10,
+      idleTimeoutMillis: 30_000,
+      connectionTimeoutMillis: 10_000,
+      keepAlive: true,
+      ...(cfg.options ? { options: cfg.options } : {}),
+    });
+    gp._pgPool.on("error", (e: any) => console.error("[pg pool] idle client error:", e?.message));
+    await pgBootstrapOnce(gp._pgPool);
   }
-  const cfg = await resolveDbConfig();
-  const client = new Client({
-    connectionString: cfg.connectionString,
-    ssl: cfg.ssl,
-    connectionTimeoutMillis: 10_000,
-    ...(cfg.options ? { options: cfg.options } : {}),
-  });
-  await client.connect();
-  return client;
+  return gp._pgPool;
 }
 
-// Request-scoped client: React.cache dedupes within a single request, so every q()
-// in that request shares ONE connection (node-postgres serialises queries on it),
-// closed after the response via next/server's after(). Without this, a query-heavy
-// page + its ~10 sidebar link prefetches open a storm of connections at once and
-// overrun Hyperdrive → intermittent 500s. Falls back to per-call clients if after()
-// isn't available in the current context.
-const getSharedClient = cache(async (): Promise<any | null> => {
-  let client: any;
-  try {
-    client = await getPgClient();
-  } catch {
-    return null;
-  }
-  try {
-    const { after } = await import("next/server");
-    after(async () => { await client.end().catch(() => {}); });
-    return client;
-  } catch {
-    await client.end().catch(() => {});
-    return null; // no after() → don't share (would leak); use per-call clients
-  }
-});
-
-/** Ensure an admin exists (once per isolate). Schema/tables come from the Supabase
+/** Ensure an admin exists (once per process). Schema/tables come from the Supabase
  *  SQL file; here we only bootstrap the admin so a fresh DB is usable. */
 type GB = { _pgBoot?: Promise<void> };
 const gb = globalThis as unknown as GB;
-function pgBootstrapOnce(): Promise<void> {
+function pgBootstrapOnce(pool: any): Promise<void> {
   if (!gb._pgBoot) {
     gb._pgBoot = (async () => {
-      let client: any;
       try {
-        client = await getPgClient();
-        await ensureAdmin(client);
+        await ensureAdmin(pool);
       } catch (e: any) {
         console.warn("[pg bootstrap] ensureAdmin skipped:", e?.message);
-      } finally {
-        if (client) await client.end().catch(() => {});
       }
     })();
   }
@@ -238,28 +214,17 @@ function isRetryableStatement(sql: string): boolean {
 /** Run a query and return rows. */
 export async function q<T = any>(sql: string, params: any[] = []): Promise<T[]> {
   if (usePg()) {
-    await pgBootstrapOnce();
-    // Prefer the request-scoped shared connection (1 per request, closed via after()).
-    const shared = await getSharedClient();
-    if (shared) {
-      const r = await shared.query(sql, params);
-      return r.rows as T[];
-    }
-    // Fallback: fresh client per query (reliable, but many connections).
+    const pool = await getPool();
     const MAX = isRetryableStatement(sql) ? 3 : 1;
     let lastErr: any;
     for (let attempt = 0; attempt < MAX; attempt++) {
-      let client: any;
       try {
-        client = await getPgClient();
-        const r = await client.query(sql, params);
+        const r = await pool.query(sql, params);
         return r.rows as T[];
       } catch (e) {
         lastErr = e;
         if (attempt === MAX - 1 || !isTransientDbError(e)) throw e;
         await new Promise((res) => setTimeout(res, 250 * (attempt + 1)));
-      } finally {
-        if (client) await client.end().catch(() => {});
       }
     }
     throw lastErr;
@@ -272,8 +237,8 @@ export async function q<T = any>(sql: string, params: any[] = []): Promise<T[]> 
 /** Run several statements atomically. cb receives a scoped runner. */
 export async function tx<T>(cb: (run: <R = any>(sql: string, params?: any[]) => Promise<R[]>) => Promise<T>): Promise<T> {
   if (usePg()) {
-    await pgBootstrapOnce();
-    const client = await getPgClient();
+    const pool = await getPool();
+    const client = await pool.connect();
     try {
       await client.query("begin");
       const run = async <R = any>(sql: string, params: any[] = []) => (await client.query(sql, params)).rows as R[];
@@ -284,7 +249,7 @@ export async function tx<T>(cb: (run: <R = any>(sql: string, params?: any[]) => 
       await client.query("rollback").catch(() => {});
       throw e;
     } finally {
-      await client.end().catch(() => {});
+      client.release();
     }
   }
   // PGlite: single-connection; wrap in a transaction block.
