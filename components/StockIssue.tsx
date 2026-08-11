@@ -1,7 +1,10 @@
 "use client";
 import { useRef, useState } from "react";
+import dynamic from "next/dynamic";
 import { issueStockByOrder, reverseIssue, type IssueResult } from "@/lib/actions/stock";
-import { ScanLine, CheckCircle2, AlertTriangle, XCircle, Undo2 } from "lucide-react";
+import { ScanLine, CheckCircle2, AlertTriangle, XCircle, Undo2, Camera } from "lucide-react";
+
+const CameraScan = dynamic(() => import("./CameraScan"), { ssr: false });
 
 type Entry = { at: string; res: IssueResult; input: string; reversed?: boolean };
 
@@ -9,6 +12,7 @@ export default function StockIssue({ isAdmin }: { isAdmin: boolean }) {
   const [value, setValue] = useState("");
   const [busy, setBusy] = useState(false);
   const [log, setLog] = useState<Entry[]>([]);
+  const [scanOpen, setScanOpen] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   async function onReverse(orderNo: string, idx: number) {
@@ -18,9 +22,8 @@ export default function StockIssue({ isAdmin }: { isAdmin: boolean }) {
     setLog((l) => l.map((e, i) => (i === idx ? { ...e, reversed: true } : e)));
   }
 
-  async function submit(e?: React.FormEvent) {
-    e?.preventDefault();
-    const on = value.trim().toUpperCase();
+  async function submit(codeArg?: string) {
+    const on = (codeArg ?? value).trim().toUpperCase();
     if (!on || busy) return;
     setBusy(true);
     const res = await issueStockByOrder(on);
@@ -32,7 +35,7 @@ export default function StockIssue({ isAdmin }: { isAdmin: boolean }) {
 
   return (
     <div className="space-y-5">
-      <form onSubmit={submit} className="card p-5">
+      <form onSubmit={(e) => { e.preventDefault(); submit(); }} className="card p-5">
         <label className="label flex items-center gap-1"><ScanLine size={14} /> สแกน / กรอก Order No. เพื่อตัดสต๊อก</label>
         <div className="flex gap-2">
           <input
@@ -45,8 +48,18 @@ export default function StockIssue({ isAdmin }: { isAdmin: boolean }) {
           />
           <button className="btn-primary" disabled={busy}>{busy ? "กำลังตัด…" : "ตัดสต๊อก"}</button>
         </div>
-        <p className="mt-2 text-xs text-faint">เครื่องสแกนจะพิมพ์เลขให้อัตโนมัติแล้วกด Enter — ระบบจะตัดสต๊อกตามรายการในใบเบิกทันที</p>
+        <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
+          <p className="text-xs text-faint">เครื่องสแกน USB/Bluetooth จะพิมพ์เลขให้แล้วกด Enter เอง — หรือใช้กล้องมือถือ</p>
+          <button type="button" onClick={() => setScanOpen(true)} className="btn-ghost shrink-0"><Camera size={16} /> สแกนด้วยกล้อง</button>
+        </div>
       </form>
+
+      {scanOpen && (
+        <CameraScan
+          onClose={() => setScanOpen(false)}
+          onScan={(code) => { setScanOpen(false); submit(code); }}
+        />
+      )}
 
       {log.length > 0 && (
         <div className="space-y-3">
