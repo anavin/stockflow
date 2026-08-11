@@ -2,8 +2,9 @@ import { NextResponse } from "next/server";
 import ExcelJS from "exceljs";
 import { getCurrentUser } from "@/lib/auth/session";
 import { parseStockWorkbook } from "@/lib/import/parse-stock";
-import { tx } from "@/lib/db";
+import { tx, q } from "@/lib/db";
 import { revalidatePath } from "next/cache";
+import { productKey } from "@/lib/config";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -24,6 +25,11 @@ export async function POST(req: Request) {
     await wb.xlsx.load(buf as any);
     const { lines, sheets } = parseStockWorkbook(wb);
     if (lines.length === 0) return NextResponse.json({ ok: false, error: "ไม่พบชีตสต๊อก (สต๊อก xx ml.) ในไฟล์" }, { status: 400 });
+
+    // map ชื่อกลิ่นให้ตรง catalog ของระบบเบิก (กันชื่อสะกดต่าง เช่น "Legend of Oud" → "Legend of OUD")
+    const cat = await q<{ name: string }>(`select name from products`);
+    const canon = new Map(cat.map((c) => [productKey(c.name), c.name]));
+    for (const l of lines) l.product = canon.get(productKey(l.product)) ?? l.product;
 
     await tx(async (run) => {
       for (const l of lines) {

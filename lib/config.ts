@@ -22,6 +22,11 @@ export const PLATFORMS: { code: PlatformCode; name: string; prefix: string; enab
 export const DEFAULT_UNIT = "ขวด";
 export const CUSTOMER_TYPES = ["ลูกค้าใหม่", "ลูกค้าเก่า"] as const;
 
+/** normalize ชื่อกลิ่นสำหรับจับคู่ (ตัดช่องว่าง/อักขระ/ตัวพิมพ์) — "DionysusX" == "Dionysus X" */
+export function productKey(s?: string | null): string {
+  return (s || "").toLowerCase().replace(/[^a-z0-9ก-๙]/g, "");
+}
+
 /** ขนาดที่ track สต๊อก (ตัดสต๊อกเฉพาะขนาดเหล่านี้) — ขนาดตัวอย่าง 1.2/4 ml ไม่ตัด */
 export const STOCK_TRACKED_SIZES = ["10 ml", "30 ml", "50 ml", "90 ml", "100 ml"];
 export function isStockTracked(size?: string | null): boolean {

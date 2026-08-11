@@ -54,16 +54,24 @@ export async function issueStockByOrder(orderNo: string): Promise<IssueResult> {
           skipped.push({ product: it.product, size: it.size || "", qty: Number(it.qty) });
           continue;
         }
+        // หา SKU สต๊อกที่มีอยู่แบบ normalize ชื่อ (กันชื่อสะกดต่าง เช่น "DionysusX" vs "Dionysus X")
+        const [m] = await run<{ product: string }>(
+          `select product from stock
+           where size = $2 and regexp_replace(lower(product),'[^a-z0-9]','','g') = regexp_replace(lower($1),'[^a-z0-9]','','g')
+           limit 1`,
+          [it.product, it.size || ""],
+        );
+        const stockProduct = m?.product ?? it.product;
         const [row] = await run<{ qty: number }>(
           `insert into stock (product, size, qty, updated_at) values ($1, $2, $3, now())
            on conflict (product, size) do update set qty = stock.qty + $3, updated_at = now()
            returning qty::float8 as qty`,
-          [it.product, it.size || "", -Number(it.qty)],
+          [stockProduct, it.size || "", -Number(it.qty)],
         );
         await run(
           `insert into stock_moves (product, size, qty_change, balance, reason, order_no, created_by)
            values ($1,$2,$3,$4,'issue',$5,$6)`,
-          [it.product, it.size || "", -Number(it.qty), row.qty, on, user.id],
+          [stockProduct, it.size || "", -Number(it.qty), row.qty, on, user.id],
         );
         lines.push({ product: it.product, size: it.size || "", qty: Number(it.qty), balance: row.qty });
       }
