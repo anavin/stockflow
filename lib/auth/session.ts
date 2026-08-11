@@ -13,9 +13,10 @@ export async function createSession(userId: number): Promise<string> {
      values ($1, $2, now() + ($3 || ' days')::interval)`,
     [token, userId, String(SESSION_COOKIE_MAX_AGE_DAYS)],
   );
-  // เก็บกวาด session หมดอายุ + login_attempts เก่า (fire-and-forget, กันตารางบวม)
-  q(`delete from user_sessions where expires_at is not null and expires_at < now()`).catch(() => {});
-  q(`delete from login_attempts where created_at < now() - interval '30 days'`).catch(() => {});
+  // เก็บกวาด session หมดอายุ + login_attempts เก่า — ต้อง AWAIT (fire-and-forget จะ
+  // ไม่คืน connection ให้ pool บน Cloudflare Workers → connection รั่วจน pool หมด → hang)
+  await q(`delete from user_sessions where expires_at is not null and expires_at < now()`).catch(() => {});
+  await q(`delete from login_attempts where created_at < now() - interval '30 days'`).catch(() => {});
   return token;
 }
 
@@ -30,8 +31,9 @@ export async function getUserFromToken(token: string | undefined): Promise<User 
   );
   const user = rows[0];
   if (!user) return null;
-  // touch (fire-and-forget)
-  q(`update user_sessions set last_activity_at = now() where token = $1`, [token]).catch(() => {});
+  // NOTE: ไม่ touch last_activity แบบ fire-and-forget ที่นี่ — บน Workers query ที่ไม่
+  // await จะไม่ปล่อย connection คืน pool (รั่วจน hang) และ getUserFromToken ถูกเรียก
+  // ทุก request. ตัดออกเพื่อความเสถียร (last_activity ไม่ใช่ข้อมูลจำเป็น).
   return user;
 }
 
