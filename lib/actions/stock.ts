@@ -107,6 +107,65 @@ export async function issueStockByOrder(orderNo: string): Promise<IssueResult> {
   }
 }
 
+export type IssueItemPreview = {
+  line_no: number; product: string; size: string; qty: number; unit: string;
+  is_free: boolean; sku: string | null; spec: string | null; stock: number; tracked: boolean;
+};
+export type IssueLookup = {
+  ok: boolean; error?: string; alreadyIssued?: boolean;
+  order_no?: string; doc_no?: string | null; items?: IssueItemPreview[];
+};
+
+/** สแกน/กรอก Order No. → ดึงรายการทั้งหมดของใบเบิกมาให้ตรวจ (ยังไม่ตัดสต๊อก). */
+export async function lookupOrderForIssue(orderNo: string): Promise<IssueLookup> {
+  const user = await getCurrentUser();
+  if (!user) return { ok: false, error: "กรุณาเข้าสู่ระบบ" };
+  const on = (orderNo || "").trim();
+  if (!on) return { ok: false, error: "กรอก/สแกน Order No." };
+
+  const [order] = await q<{ order_no: string; doc_no: string | null; deleted_at: string | null; stock_issued_at: string | null }>(
+    `select order_no, doc_no, deleted_at, stock_issued_at from orders where order_no = $1`, [on]);
+  if (!order) return { ok: false, error: `ไม่พบใบเบิก Order No. ${on}` };
+  if (order.deleted_at) return { ok: false, error: "ใบเบิกนี้อยู่ในถังขยะ" };
+  if (order.stock_issued_at) return { ok: false, alreadyIssued: true, order_no: on, doc_no: order.doc_no, error: "ใบเบิกนี้ตัดสต๊อกไปแล้ว" };
+
+  const items = await q<{ line_no: number; product: string; size: string; qty: number; unit: string; is_free: boolean; sku: string | null; spec: string | null }>(
+    `select line_no, product, size, qty::float8 as qty, unit, is_free, sku, spec
+     from order_items where order_no = $1 and coalesce(product,'') <> '' order by line_no`, [on]);
+  if (items.length === 0) return { ok: false, error: "ใบเบิกไม่มีรายการสินค้า" };
+
+  const withStock: IssueItemPreview[] = [];
+  for (const it of items) {
+    const [s] = await q<{ qty: number }>(
+      `select qty::float8 as qty from stock
+       where size = $2 and regexp_replace(lower(product),'[^a-z0-9ก-๙]','','g') = regexp_replace(lower($1),'[^a-z0-9ก-๙]','','g')
+       order by (product = $1) desc limit 1`, [it.product, it.size]);
+    withStock.push({ ...it, stock: s?.qty ?? 0, tracked: isStockTracked(it.size) });
+  }
+  return { ok: true, order_no: on, doc_no: order.doc_no, items: withStock };
+}
+
+/** บันทึก SKU + Spec ที่พนักงานสแกน/กรอก แล้วตัดสต๊อก (ยืนยัน). */
+export async function confirmIssueByOrder(
+  orderNo: string,
+  entries: { line_no: number; sku?: string | null; spec?: string | null }[],
+): Promise<IssueResult> {
+  const user = await getCurrentUser();
+  if (!user) return { ok: false, error: "กรุณาเข้าสู่ระบบ" };
+  const on = (orderNo || "").trim();
+  try {
+    await tx(async (run) => {
+      for (const e of entries) {
+        await run(`update order_items set sku = $2, spec = $3 where order_no = $1 and line_no = $4`,
+          [on, (e.sku || "").trim() || null, (e.spec || "").trim() || null, e.line_no]);
+      }
+    });
+  } catch (e: any) {
+    return { ok: false, error: e?.message || "บันทึกข้อมูลไม่สำเร็จ" };
+  }
+  return issueStockByOrder(on); // ตัดสต๊อก (atomic + กันตัดซ้ำ)
+}
+
 /** ยกเลิกการตัดสต๊อก (คืนสต๊อก + เคลียร์ flag) — เฉพาะ admin */
 export async function reverseIssue(orderNo: string): Promise<{ ok: boolean; error?: string }> {
   const user = await getCurrentUser();

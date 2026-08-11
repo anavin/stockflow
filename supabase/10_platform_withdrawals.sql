@@ -1557,3 +1557,6 @@ create index if not exists idx_user_sessions_expires on platform_withdrawals.use
 -- Cloudflare Hyperdrive (ที่ไม่ forward `options` startup param). ปลอดภัยเพราะ
 -- project นี้ dedicated ให้แอปเดียว (labparfumo-core).
 alter database postgres set search_path to platform_withdrawals, public;
+
+-- 0006 verify-before-issue: spec ต่อรายการ (สแกน/กรอก SKU+Spec ก่อนยืนยันตัดสต๊อก)
+alter table order_items add column if not exists spec text;
