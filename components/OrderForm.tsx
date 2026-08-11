@@ -306,7 +306,7 @@ export default function OrderForm({ products, sizes, provinces, postcodes, initi
         </div>
       </section>
 
-      <div className="sticky bottom-0 flex flex-wrap gap-3 border-t border-line bg-[#faf9f7]/90 py-4 backdrop-blur">
+      <div className="sticky bottom-0 flex flex-wrap gap-3 border-t border-line bg-[#f5f7fa]/90 py-4 backdrop-blur">
         <button className="btn-primary" disabled={busy} onClick={() => onSave(false)}>
           <Save size={16} /> {busy ? "กำลังบันทึก…" : "บันทึก"}
         </button>

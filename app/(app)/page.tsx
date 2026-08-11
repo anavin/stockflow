@@ -212,8 +212,8 @@ function Ring({ value }: { value: number }) {
   const off = c * (1 - Math.max(0, Math.min(1, value)));
   return (
     <svg width="72" height="72" viewBox="0 0 72 72" className="shrink-0 -rotate-90">
-      <circle cx="36" cy="36" r={r} fill="none" stroke="#f5f3ef" strokeWidth="8" />
-      <circle cx="36" cy="36" r={r} fill="none" stroke="#ee4d2d" strokeWidth="8" strokeLinecap="round"
+      <circle cx="36" cy="36" r={r} fill="none" stroke="#e6e9f0" strokeWidth="8" />
+      <circle cx="36" cy="36" r={r} fill="none" stroke="#ec4a2a" strokeWidth="8" strokeLinecap="round"
         strokeDasharray={c} strokeDashoffset={off} />
       <text x="36" y="36" transform="rotate(90 36 36)" textAnchor="middle" dominantBaseline="central"
         className="fill-ink" style={{ fontSize: 15, fontWeight: 700 }}>{pct}%</text>
