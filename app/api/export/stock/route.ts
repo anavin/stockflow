@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import ExcelJS from "exceljs";
 import { getCurrentUser } from "@/lib/auth/session";
+import { can } from "@/lib/auth/roles";
 import { listStock } from "@/lib/queries";
 
 export const runtime = "nodejs";
@@ -9,6 +10,7 @@ export const dynamic = "force-dynamic";
 export async function GET(req: Request) {
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  if (!can.viewStock(user.role)) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const url = new URL(req.url);
   const rows = await listStock({ search: url.searchParams.get("q") || undefined, lowOnly: url.searchParams.get("low") === "1", limit: 5000 });
 

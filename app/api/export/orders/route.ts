@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import ExcelJS from "exceljs";
 import { getCurrentUser } from "@/lib/auth/session";
+import { can } from "@/lib/auth/roles";
 import { q } from "@/lib/db";
 
 export const runtime = "nodejs";
@@ -18,6 +19,7 @@ type Row = {
 export async function GET(req: Request) {
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  if (!can.createOrders(user.role)) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const url = new URL(req.url);
   const search = url.searchParams.get("q") || undefined;
   const month = url.searchParams.get("month") || undefined;

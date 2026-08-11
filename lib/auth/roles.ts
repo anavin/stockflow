@@ -38,12 +38,14 @@ export const can = {
   manageUsers: (role?: string | null) => norm(role) === "admin",
 };
 
-/** หน้าแรกที่ควรพาไปหลัง login / เวลาถูกกันสิทธิ์ (ไม่ให้ตาย/วนลูป) */
+/** หน้าแรกที่ควรพาไปหลัง login / เวลาถูกกันสิทธิ์ (ไม่ให้ตาย/วนลูป)
+ *  บทบาทที่ไม่รู้จัก/ว่าง → /no-access (หน้าที่ต้องแค่ login) กันวนลูป redirect */
 export function homeFor(role?: string | null): string {
   const r = norm(role);
   if (r === "admin") return "/";
   if (r === "picker") return "/stock/issue";
-  return "/shopee"; // creator + default
+  if (r === "creator") return "/shopee";
+  return "/no-access";
 }
 
 export type { Role };

@@ -13,20 +13,25 @@ async function requireAdmin() {
   return { user };
 }
 
-/** หา SKU สต๊อกที่ตรงกับชื่อในใบเบิกแบบ normalize (กันสะกดต่าง) — keep อักษรไทย
- *  ให้ตรงกับ productKey() ใน config. คืนชื่อจริงในตาราง stock ถ้าเจอ ไม่งั้นคืนชื่อเดิม. */
-async function matchStockProduct(
+/** SQL: จับคู่ SKU สต๊อกที่มีอยู่จริงแบบ normalize —
+ *  ชื่อ: ตัดช่องว่าง/อักขระ (เก็บไทย ก-๙) ให้ตรงกับ productKey()
+ *  ขนาด: ตัดช่องว่าง+จุดท้าย ('4 ml.' == '4 ml') กันสร้าง SKU ซ้ำจากรูปแบบต่างเล็กน้อย */
+const SKU_MATCH = `regexp_replace(lower(product),'[^a-z0-9ก-๙]','','g') = regexp_replace(lower($1),'[^a-z0-9ก-๙]','','g')
+   and btrim(lower(size), ' .') = btrim(lower($2), ' .')`;
+const SKU_TIEBREAK = `order by (product = $1) desc, (size = $2) desc limit 1`;
+
+/** คืน {product,size} จริงในตาราง stock ถ้าเจอ ไม่งั้นคืน input (จะสร้าง SKU ใหม่/ติดลบ).
+ *  ใช้ทั้งตอน preview และตอนตัดจริง เพื่อให้ยอดที่โชว์กับที่ตัด "ตรงแถวเดียวกัน". */
+async function matchStockSku(
   run: <R = any>(sql: string, p?: any[]) => Promise<R[]>,
   product: string,
   size: string,
-): Promise<string> {
-  const [m] = await run<{ product: string }>(
-    `select product from stock
-     where size = $2 and regexp_replace(lower(product),'[^a-z0-9ก-๙]','','g') = regexp_replace(lower($1),'[^a-z0-9ก-๙]','','g')
-     limit 1`,
-    [product, size],
+): Promise<{ product: string; size: string }> {
+  const [m] = await run<{ product: string; size: string }>(
+    `select product, size from stock where ${SKU_MATCH} ${SKU_TIEBREAK}`,
+    [product, size || ""],
   );
-  return m?.product ?? product;
+  return m ?? { product, size: size || "" };
 }
 
 export type IssueLine = { product: string; size: string; qty: number; balance: number };
@@ -39,12 +44,64 @@ export type IssueResult = {
   doc_no?: string | null;
   lines?: IssueLine[];
   negatives?: IssueLine[];   // SKU ที่ตัดแล้วติดลบ (สต๊อกไม่พอ)
-  skipped?: SkipLine[];      // ขนาดตัวอย่าง (1.2/4 ml) — ไม่ตัดสต๊อก
+  skipped?: SkipLine[];      // ขนาดที่ไม่มีหน่วย ml (ของแถม/อุปกรณ์) — ไม่ตัดสต๊อก
 };
 
 /**
  * สแกน/กรอก Order No. → ตัดสต๊อกตามรายการในใบเบิกอัตโนมัติ (atomic, กันตัดซ้ำ).
  */
+/** core: CLAIM ใบเบิก (atomic กันตัดซ้ำ) + ตัดสต๊อกทุกบรรทัด — ต้องเรียกภายใน tx() เท่านั้น.
+ *  แยกออกมาเพื่อให้ confirmIssueByOrder ห่อ SKU/Spec + การตัด ไว้ใน tx เดียว (atomic). */
+async function runIssue(
+  run: <R = any>(sql: string, p?: any[]) => Promise<R[]>,
+  on: string,
+  userId: number,
+): Promise<IssueResult> {
+  const [order] = await run<{ order_no: string; doc_no: string | null; deleted_at: string | null; stock_issued_at: string | null }>(
+    `select order_no, doc_no, deleted_at, stock_issued_at from orders where order_no = $1`, [on]);
+  if (!order) return { ok: false, error: `ไม่พบใบเบิก Order No. ${on}` };
+  if (order.deleted_at) return { ok: false, error: `ใบเบิกนี้อยู่ในถังขยะ` };
+  if (order.stock_issued_at) return { ok: false, alreadyIssued: true, order_no: on, doc_no: order.doc_no, error: `ใบเบิกนี้ตัดสต๊อกไปแล้ว` };
+
+  // Atomically CLAIM the order so two concurrent scans can't both deduct.
+  const claim = await run<{ order_no: string }>(
+    `update orders set stock_issued_at = now(), stock_issued_by = $2
+     where order_no = $1 and deleted_at is null and stock_issued_at is null
+     returning order_no`,
+    [on, userId]);
+  if (claim.length === 0) return { ok: false, alreadyIssued: true, order_no: on, doc_no: order.doc_no, error: `ใบเบิกนี้ตัดสต๊อกไปแล้ว` };
+
+  const items = await run<{ product: string; size: string; qty: number }>(
+    `select product, size, qty::float8 as qty from order_items where order_no = $1 and coalesce(product,'') <> ''`, [on]);
+  if (items.length === 0) throw new Error("ใบเบิกไม่มีรายการสินค้า");
+
+  const lines: IssueLine[] = [];
+  const skipped: SkipLine[] = [];
+  for (const it of items) {
+    // ตัดสต๊อกทุกขนาดที่เป็น ml (รวมตัวอย่าง 1.2/4 ml) — ขนาดที่ไม่มี ml (ของแถม/อุปกรณ์) ไม่ตัด
+    if (!isStockTracked(it.size)) {
+      skipped.push({ product: it.product, size: it.size || "", qty: Number(it.qty) });
+      continue;
+    }
+    // จับคู่ SKU จริงในสต๊อก (normalize ชื่อ+ขนาด) → ตัดตรงแถวเดิม ไม่สร้าง SKU ซ้ำ
+    const sku = await matchStockSku(run, it.product, it.size || "");
+    const [row] = await run<{ qty: number }>(
+      `insert into stock (product, size, qty, updated_at) values ($1, $2, $3, now())
+       on conflict (product, size) do update set qty = stock.qty + $3, updated_at = now()
+       returning qty::float8 as qty`,
+      [sku.product, sku.size, -Number(it.qty)],
+    );
+    await run(
+      `insert into stock_moves (product, size, qty_change, balance, reason, order_no, created_by)
+       values ($1,$2,$3,$4,'issue',$5,$6)`,
+      [sku.product, sku.size, -Number(it.qty), row.qty, on, userId],
+    );
+    lines.push({ product: sku.product, size: sku.size, qty: Number(it.qty), balance: row.qty });
+  }
+
+  return { ok: true, order_no: on, doc_no: order.doc_no, lines, negatives: lines.filter((l) => l.balance < 0), skipped };
+}
+
 export async function issueStockByOrder(orderNo: string): Promise<IssueResult> {
   const user = await getCurrentUser();
   if (!user) return { ok: false, error: "กรุณาเข้าสู่ระบบ" };
@@ -53,54 +110,7 @@ export async function issueStockByOrder(orderNo: string): Promise<IssueResult> {
   if (!on) return { ok: false, error: "กรอก/สแกน Order No." };
 
   try {
-    const out = await tx<IssueResult>(async (run) => {
-      const [order] = await run<{ order_no: string; doc_no: string | null; deleted_at: string | null; stock_issued_at: string | null }>(
-        `select order_no, doc_no, deleted_at, stock_issued_at from orders where order_no = $1`, [on]);
-      if (!order) return { ok: false, error: `ไม่พบใบเบิก Order No. ${on}` };
-      if (order.deleted_at) return { ok: false, error: `ใบเบิกนี้อยู่ในถังขยะ` };
-      if (order.stock_issued_at) return { ok: false, alreadyIssued: true, order_no: on, doc_no: order.doc_no, error: `ใบเบิกนี้ตัดสต๊อกไปแล้ว` };
-
-      // Atomically CLAIM the order so two concurrent scans can't both deduct.
-      // Only the winner gets a row back; a concurrent claimer sees 0 rows.
-      const claim = await run<{ order_no: string }>(
-        `update orders set stock_issued_at = now(), stock_issued_by = $2
-         where order_no = $1 and deleted_at is null and stock_issued_at is null
-         returning order_no`,
-        [on, user.id]);
-      if (claim.length === 0) return { ok: false, alreadyIssued: true, order_no: on, doc_no: order.doc_no, error: `ใบเบิกนี้ตัดสต๊อกไปแล้ว` };
-
-      const items = await run<{ product: string; size: string; qty: number }>(
-        `select product, size, qty::float8 as qty from order_items where order_no = $1 and coalesce(product,'') <> ''`, [on]);
-      if (items.length === 0) throw new Error("ใบเบิกไม่มีรายการสินค้า");
-
-      const lines: IssueLine[] = [];
-      const skipped: SkipLine[] = [];
-      for (const it of items) {
-        // ขนาดตัวอย่าง (1.2/4 ml) ไม่ตัดสต๊อก
-        if (!isStockTracked(it.size)) {
-          skipped.push({ product: it.product, size: it.size || "", qty: Number(it.qty) });
-          continue;
-        }
-        // หา SKU สต๊อกที่มีอยู่แบบ normalize ชื่อ (กันชื่อสะกดต่าง เช่น "DionysusX" vs "Dionysus X")
-        // regex เก็บอักษรไทย (ก-๙) ให้ตรงกับ productKey() — ไม่งั้นกลิ่นชื่อไทยจะยุบเป็นค่าว่างชนกัน
-        const stockProduct = await matchStockProduct(run, it.product, it.size || "");
-        const [row] = await run<{ qty: number }>(
-          `insert into stock (product, size, qty, updated_at) values ($1, $2, $3, now())
-           on conflict (product, size) do update set qty = stock.qty + $3, updated_at = now()
-           returning qty::float8 as qty`,
-          [stockProduct, it.size || "", -Number(it.qty)],
-        );
-        await run(
-          `insert into stock_moves (product, size, qty_change, balance, reason, order_no, created_by)
-           values ($1,$2,$3,$4,'issue',$5,$6)`,
-          [stockProduct, it.size || "", -Number(it.qty), row.qty, on, user.id],
-        );
-        lines.push({ product: stockProduct, size: it.size || "", qty: Number(it.qty), balance: row.qty });
-      }
-
-      return { ok: true, order_no: on, doc_no: order.doc_no, lines, negatives: lines.filter((l) => l.balance < 0), skipped };
-    });
-
+    const out = await tx<IssueResult>((run) => runIssue(run, on, user.id));
     revalidatePath("/stock");
     revalidatePath("/stock/moves");
     return out;
@@ -139,10 +149,10 @@ export async function lookupOrderForIssue(orderNo: string): Promise<IssueLookup>
 
   const withStock: IssueItemPreview[] = [];
   for (const it of items) {
+    // ยอดคงเหลือที่โชว์ต้องมาจาก SKU แถวเดียวกับที่จะตัดจริง (normalize ชื่อ+ขนาดเหมือน matchStockSku)
     const [s] = await q<{ qty: number }>(
-      `select qty::float8 as qty from stock
-       where size = $2 and regexp_replace(lower(product),'[^a-z0-9ก-๙]','','g') = regexp_replace(lower($1),'[^a-z0-9ก-๙]','','g')
-       order by (product = $1) desc limit 1`, [it.product, it.size]);
+      `select qty::float8 as qty from stock where ${SKU_MATCH} ${SKU_TIEBREAK}`,
+      [it.product, it.size || ""]);
     withStock.push({ ...it, stock: s?.qty ?? 0, tracked: isStockTracked(it.size) });
   }
   return { ok: true, order_no: on, doc_no: order.doc_no, items: withStock };
@@ -157,17 +167,22 @@ export async function confirmIssueByOrder(
   if (!user) return { ok: false, error: "กรุณาเข้าสู่ระบบ" };
   if (!can.issueStock(user.role)) return { ok: false, error: "ไม่มีสิทธิ์ตัดสต๊อก (เฉพาะฝ่ายจัดของ)" };
   const on = (orderNo || "").trim();
+  if (!on) return { ok: false, error: "กรอก/สแกน Order No." };
   try {
-    await tx(async (run) => {
+    // บันทึก SKU/Spec แล้วตัดสต๊อก ใน tx เดียว → ถ้าตัดล้มเหลว SKU/Spec ก็ไม่ถูกบันทึกค้าง
+    const out = await tx<IssueResult>(async (run) => {
       for (const e of entries) {
         await run(`update order_items set sku = $2, spec = $3 where order_no = $1 and line_no = $4`,
           [on, (e.sku || "").trim() || null, (e.spec || "").trim() || null, e.line_no]);
       }
+      return runIssue(run, on, user.id);
     });
+    revalidatePath("/stock");
+    revalidatePath("/stock/moves");
+    return out;
   } catch (e: any) {
-    return { ok: false, error: e?.message || "บันทึกข้อมูลไม่สำเร็จ" };
+    return { ok: false, error: e?.message || "ตัดสต๊อกไม่สำเร็จ" };
   }
-  return issueStockByOrder(on); // ตัดสต๊อก (atomic + กันตัดซ้ำ)
 }
 
 /** ยกเลิกการตัดสต๊อก (คืนสต๊อก + เคลียร์ flag) — เฉพาะ admin */

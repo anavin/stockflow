@@ -47,7 +47,7 @@ export default function StockIssue({ isAdmin, initialOrder }: { isAdmin: boolean
   }
 
   // ขั้น 2: กดยืนยัน → บันทึก SKU+Spec แล้วตัดสต๊อก
-  async function confirm() {
+  async function submitIssue() {
     if (!preview?.order_no || busy) return;
     const missing = preview.items!.some((it) => it.tracked && !(form[it.line_no]?.sku || "").trim());
     if (missing && !window.confirm("บางรายการยังไม่ได้ใส่ SKU — ยืนยันตัดสต๊อกเลยไหม?")) return;
@@ -105,7 +105,7 @@ export default function StockIssue({ isAdmin, initialOrder }: { isAdmin: boolean
               <div key={it.line_no} className="rounded-lg border border-line p-3">
                 <div className="flex flex-wrap items-center justify-between gap-1 text-sm">
                   <span><span className="font-medium text-ink">{it.product}</span> <span className="text-muted">{it.size}</span>{it.is_free && <span className="chip ml-1 bg-brand-50 text-brand-600">Free</span>}</span>
-                  <span className="text-xs text-muted">จำนวน {it.qty} · {it.tracked ? `คงเหลือ ${it.stock}` : "ตัวอย่าง (ไม่ตัด)"}</span>
+                  <span className="text-xs text-muted">จำนวน {it.qty} · {it.tracked ? `คงเหลือ ${it.stock}` : "ไม่ตัดสต๊อก"}</span>
                 </div>
                 <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
                   <div className="flex gap-1">
@@ -120,7 +120,7 @@ export default function StockIssue({ isAdmin, initialOrder }: { isAdmin: boolean
             ))}
           </div>
 
-          <button onClick={confirm} disabled={busy} className="btn-primary mt-4 w-full">
+          <button onClick={submitIssue} disabled={busy} className="btn-primary mt-4 w-full">
             <CheckCircle2 size={16} /> {busy ? "กำลังตัดสต๊อก…" : "ยืนยันตัดสต๊อก"}
           </button>
         </div>
@@ -211,7 +211,7 @@ function ResultCard({ entry, idx, isAdmin, onReverse }: { entry: Entry; idx: num
                 <td className="px-3 py-1.5">{l.product}</td>
                 <td className="px-3 py-1.5">{l.size}</td>
                 <td className="px-3 py-1.5 text-right">×{l.qty}</td>
-                <td className="px-3 py-1.5 text-right text-xs">ตัวอย่าง (ไม่ตัด)</td>
+                <td className="px-3 py-1.5 text-right text-xs">ไม่ตัดสต๊อก</td>
               </tr>
             ))}
           </tbody>

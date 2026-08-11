@@ -9,7 +9,8 @@ export function getSupabaseBrowser() {
     _client = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      { auth: { persistSession: false, autoRefreshToken: false }, db: { schema: APP_KEY } },
+      // schema เป็น custom (ไม่ใช่ 'public') — supabase-js type คาดหวัง literal, cast ให้ผ่าน
+      { auth: { persistSession: false, autoRefreshToken: false }, db: { schema: APP_KEY as any } },
     );
   }
   return _client;

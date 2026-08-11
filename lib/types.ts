@@ -34,6 +34,8 @@ export type Order = {
   created_by?: number | null;
   created_at?: string;
   updated_at?: string;
+  stock_issued_at?: string | null;
+  issued_by?: string | null;
 };
 
 export type OrderWithItems = Order & { items: OrderItem[] };
