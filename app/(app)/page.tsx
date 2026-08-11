@@ -10,13 +10,13 @@ export const dynamic = "force-dynamic";
 
 export default async function Dashboard() {
   const user = await requireUser();
-  const [s, lowStock, recent, top, trend] = await Promise.all([
-    dashboardStats(),
-    listStock({ lowOnly: true, limit: 6 }),
-    listOrders({ platform: "Shopee", limit: 6 }),
-    topProducts(6),
-    ordersTrend(6),
-  ]);
+  // โหลดทีละ query (ไม่ Promise.all) — เปิดหลาย connection พร้อมกันบน Workers/Hyperdrive
+  // ทำให้ค้างได้; ทีละตัวใช้ connection เดียว เสถียรกว่า (หน้า internal ช้าเล็กน้อยรับได้)
+  const s = await dashboardStats();
+  const lowStock = await listStock({ lowOnly: true, limit: 6 });
+  const recent = await listOrders({ platform: "Shopee", limit: 6 });
+  const top = await topProducts(6);
+  const trend = await ordersTrend(6);
 
   const fulfill = s.ordersTotal > 0 ? s.issuedTotal / s.ordersTotal : 0;
   const normal = Math.max(0, s.skus - s.low - s.negative);

@@ -208,21 +208,27 @@ export type DashStats = {
   skus: number; low: number; negative: number;
 };
 export async function dashboardStats(): Promise<DashStats> {
-  const one = async (sql: string, p: any[] = []) => (await q<{ n: number }>(sql, p))[0]?.n ?? 0;
-  // สุขภาพสต๊อก อิงเฉพาะ SKU ที่ track สต๊อกจริง (ตาราง stock) ให้ตัวเลขตรงกัน:
-  //   ปกติ (qty>10) + ต้องเติม (0..10) + ติดลบ (<0) = skus พอดี, ตรงกับลิสต์ "ต้องเติม"
-  const [ordersTotal, ordersToday, ordersMonth, issuedTotal, issuedToday, skus, low, negative] = await Promise.all([
-    one(`select count(*)::int n from orders where deleted_at is null`),
-    one(`select count(*)::int n from orders where deleted_at is null and doc_date = current_date`),
-    one(`select count(*)::int n from orders where deleted_at is null and to_char(doc_date,'YYYY-MM') = to_char(current_date,'YYYY-MM')`),
-    one(`select count(*)::int n from orders where deleted_at is null and stock_issued_at is not null`),
-    one(`select count(*)::int n from orders where deleted_at is null and stock_issued_at::date = current_date`),
-    one(`select count(*)::int n from stock`),
-    one(`select count(*)::int n from stock where qty >= 0 and qty <= 10`),
-    one(`select count(*)::int n from stock where qty < 0`),
-  ]);
-  const pendingIssue = ordersTotal - issuedTotal;
-  return { ordersTotal, ordersToday, ordersMonth, issuedTotal, issuedToday, pendingIssue, skus, low, negative };
+  // ทำเป็น query เดียว (scalar subqueries) แทน 8 query ขนาน — ลดจำนวน connection
+  // ที่เปิดพร้อมกันบน Workers/Hyperdrive (เปิดหลาย connection พร้อมกันเคยทำให้ค้าง).
+  // สุขภาพสต๊อก อิงเฉพาะ SKU ที่ track จริง (ตาราง stock): ปกติ(>10)+ต้องเติม(0..10)+ติดลบ(<0)=skus
+  const [r] = await q<DashStats & { pendingIssue?: number }>(
+    `select
+       (select count(*)::int from orders where deleted_at is null) as "ordersTotal",
+       (select count(*)::int from orders where deleted_at is null and doc_date = current_date) as "ordersToday",
+       (select count(*)::int from orders where deleted_at is null and to_char(doc_date,'YYYY-MM') = to_char(current_date,'YYYY-MM')) as "ordersMonth",
+       (select count(*)::int from orders where deleted_at is null and stock_issued_at is not null) as "issuedTotal",
+       (select count(*)::int from orders where deleted_at is null and stock_issued_at::date = current_date) as "issuedToday",
+       (select count(*)::int from stock) as skus,
+       (select count(*)::int from stock where qty >= 0 and qty <= 10) as low,
+       (select count(*)::int from stock where qty < 0) as negative`,
+  );
+  const s = r ?? ({} as DashStats);
+  const ordersTotal = s.ordersTotal ?? 0, issuedTotal = s.issuedTotal ?? 0;
+  return {
+    ordersTotal, ordersToday: s.ordersToday ?? 0, ordersMonth: s.ordersMonth ?? 0,
+    issuedTotal, issuedToday: s.issuedToday ?? 0, pendingIssue: ordersTotal - issuedTotal,
+    skus: s.skus ?? 0, low: s.low ?? 0, negative: s.negative ?? 0,
+  };
 }
 
 /** กลิ่นที่เบิกมากสุด (ผลรวมจำนวนจากใบเบิกที่ยังไม่ลบ) — สำหรับกราฟบนหน้าภาพรวม */

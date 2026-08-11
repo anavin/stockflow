@@ -163,7 +163,6 @@ async function getPgPool() {
     types.setTypeParser(20, (v: string | null) => (v == null ? null : parseInt(v, 10))); // bigint→number
     types.setTypeParser(1082, (v: string | null) => v); // date→string
     const cfg = await resolveDbConfig();
-    const { APP_KEY } = await import("./config");
     gp._pgPool = new Pool({
       connectionString: cfg.connectionString,
       max: 5,
@@ -172,14 +171,10 @@ async function getPgPool() {
       allowExitOnIdle: true,
       ssl: cfg.ssl,
     });
-    // Set search_path on EVERY physical connection. This works through Cloudflare
-    // Hyperdrive (which forwards neither the `options` startup param nor honours
-    // ALTER DATABASE search_path) and through poolers — the SET is queued on the
-    // client before any consumer query, so unqualified table names resolve to the
-    // app schema. Belt-and-suspenders vs. the server-side ALTER DATABASE default.
-    gp._pgPool.on("connect", (client: any) => {
-      client.query(`set search_path to ${APP_KEY}, public`).catch(() => {});
-    });
+    // No per-connection SET search_path: on prod all tables live in `public` (which
+    // is always in the default search_path), so unqualified queries resolve without
+    // it. A fire-and-forget SET on each new connection also risked stalling under the
+    // burst of concurrent connections a page like the dashboard opens.
     gp._pgPool.on("error", (e: any) => console.error("[pg pool] idle client error:", e?.message));
     // Prod bootstrap: run migrations + seed reference data + ensure an admin exists.
     // (init() only covers the PGlite/dev path.) Guarded so it runs once per pool.
