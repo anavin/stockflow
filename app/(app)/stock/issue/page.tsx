@@ -10,7 +10,12 @@ export default async function StockIssuePage() {
   const me = await requireUser();
   const sum = await stockSummary();
   return (
-    <div className="mx-auto max-w-3xl px-4 py-6 md:px-8">
+    // หน้าสแกน = ธีมน้ำเงิน (override --brand เฉพาะหน้านี้) ให้ action เด่น;
+    // สีผลลัพธ์ เขียว/เหลือง/แดง ไม่เปลี่ยน
+    <div
+      className="mx-auto max-w-3xl px-4 py-6 md:px-8"
+      style={{ ["--brand" as any]: "37 99 235", ["--brand-600" as any]: "29 78 216", ["--brand-50" as any]: "239 246 255" }}
+    >
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-xl font-bold text-ink">ตัดสต๊อก (สแกนใบเบิก)</h1>
