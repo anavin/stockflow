@@ -143,11 +143,11 @@ export default function OrderForm({ products, sizes, provinces, postcodes, initi
     setError("");
     if (!f.order_no.trim()) { setError("กรุณากรอก Order No."); return; }
 
-    // บังคับช่องจำเป็นสำหรับจัดส่ง — ผู้รับ / จังหวัด / ที่อยู่
-    const fErr = { receiver: !f.receiver.trim(), province: !f.province.trim(), address: !f.address.trim() };
-    if (fErr.receiver || fErr.province || fErr.address) {
+    // บังคับช่องจำเป็นสำหรับจัดส่ง — ผู้รับ / จังหวัด (ที่อยู่ไม่บังคับ)
+    const fErr = { receiver: !f.receiver.trim(), province: !f.province.trim() };
+    if (fErr.receiver || fErr.province) {
       setFieldErrors(fErr);
-      const miss = [fErr.receiver && "ผู้รับ", fErr.province && "จังหวัด", fErr.address && "ที่อยู่"].filter(Boolean).join(" / ");
+      const miss = [fErr.receiver && "ผู้รับ", fErr.province && "จังหวัด"].filter(Boolean).join(" / ");
       setError(`กรุณากรอกข้อมูลจัดส่งให้ครบ: ${miss} (ดูช่องสีแดง)`);
       return;
     }
@@ -271,8 +271,8 @@ export default function OrderForm({ products, sizes, provinces, postcodes, initi
             <input className="input" value={f.postcode} onChange={(e) => set({ postcode: e.target.value })} placeholder="อัตโนมัติจากอำเภอ" />
           </div>
           <div className="md:col-span-3">
-            <label className="label">ที่อยู่ (บ้านเลขที่ / ถนน / รายละเอียด) <span className="text-brand">*</span></label>
-            <textarea className={`input min-h-[64px] ${fieldErrors.address ? "border-red-400 ring-2 ring-red-100" : ""}`} value={f.address} onChange={(e) => set({ address: e.target.value })} />
+            <label className="label">ที่อยู่ (บ้านเลขที่ / ถนน / รายละเอียด)</label>
+            <textarea className="input min-h-[64px]" value={f.address} onChange={(e) => set({ address: e.target.value })} />
           </div>
         </div>
       </section>
