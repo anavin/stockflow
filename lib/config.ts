@@ -27,10 +27,11 @@ export function productKey(s?: string | null): string {
   return (s || "").toLowerCase().replace(/[^a-z0-9ก-๙]/g, "");
 }
 
-/** ขนาดที่ track สต๊อก (ตัดสต๊อกเฉพาะขนาดเหล่านี้) — ขนาดตัวอย่าง 1.2/4 ml ไม่ตัด */
-export const STOCK_TRACKED_SIZES = ["10 ml", "30 ml", "50 ml", "90 ml", "100 ml"];
+/** ขนาดที่ track สต๊อก — ตัดสต๊อกทุกขนาดที่เป็น "x ml" (รวมตัวอย่าง 1.2/4 ml และ variant
+ *  เช่น "4 ml.", "1.2 ml (45 หลอด)"). ขนาดที่ไม่มีหน่วย ml = ไม่ตัด */
+export const STOCK_TRACKED_SIZES = ["1.2 ml", "4 ml", "10 ml", "30 ml", "50 ml", "90 ml", "100 ml"];
 export function isStockTracked(size?: string | null): boolean {
-  return STOCK_TRACKED_SIZES.includes((size || "").trim());
+  return /\d\s*ml/i.test((size || "").trim());
 }
 
 /** ของแถม (Free) ให้ได้เฉพาะขนาดเล็กเท่านั้น — ไซต์ใหญ่ห้ามเป็นของแถม */
