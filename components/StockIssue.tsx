@@ -1,5 +1,5 @@
 "use client";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import { lookupOrderForIssue, confirmIssueByOrder, reverseIssue, type IssueResult, type IssueLookup } from "@/lib/actions/stock";
 import { ScanLine, CheckCircle2, AlertTriangle, XCircle, Undo2, Camera, PackageCheck, X } from "lucide-react";
@@ -10,7 +10,7 @@ type Entry = { at: string; res: IssueResult; input: string; reversed?: boolean }
 
 const now = () => new Date().toLocaleTimeString("th-TH");
 
-export default function StockIssue({ isAdmin }: { isAdmin: boolean }) {
+export default function StockIssue({ isAdmin, initialOrder }: { isAdmin: boolean; initialOrder?: string }) {
   const [value, setValue] = useState("");
   const [busy, setBusy] = useState(false);
   const [log, setLog] = useState<Entry[]>([]);
@@ -62,6 +62,12 @@ export default function StockIssue({ isAdmin }: { isAdmin: boolean }) {
 
   const setField = (line: number, key: "sku" | "spec", v: string) =>
     setForm((f) => ({ ...f, [line]: { ...f[line], [key]: v } }));
+
+  // มาจากปุ่ม "ตัดสต๊อก" ในหน้าใบเบิก (/stock/issue?order=XXX) → ดึงรายการให้อัตโนมัติ
+  useEffect(() => {
+    if (initialOrder) lookup(initialOrder);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
     <div className="space-y-5">

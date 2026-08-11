@@ -15,7 +15,8 @@ export default function ReverseIssueButton({ orderNo }: { orderNo: string }) {
     const res = await reverseIssue(orderNo);
     setBusy(false);
     if (!res.ok) { alert(res.error); return; }
-    router.refresh();
+    // พาไปหน้าใบเบิกนั้น → แก้ไข หรือกดปุ่ม "ตัดสต๊อก" ใหม่ได้ในที่เดียว
+    router.push(`/shopee/${encodeURIComponent(orderNo)}`);
   }
 
   return (

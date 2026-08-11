@@ -6,8 +6,9 @@ import { Boxes, History, ClipboardList } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
-export default async function StockIssuePage() {
+export default async function StockIssuePage({ searchParams }: { searchParams: Promise<{ order?: string }> }) {
   const me = await requireUser();
+  const { order } = await searchParams;
   const sum = await stockSummary();
   return (
     // หน้าสแกน = ธีมน้ำเงิน (override --brand เฉพาะหน้านี้) ให้ action เด่น;
@@ -27,7 +28,7 @@ export default async function StockIssuePage() {
           <Link href="/stock/moves" className="btn-ghost"><History size={16} /> ประวัติ</Link>
         </div>
       </div>
-      <StockIssue isAdmin={me.role === "admin"} />
+      <StockIssue isAdmin={me.role === "admin"} initialOrder={order} />
     </div>
   );
 }
