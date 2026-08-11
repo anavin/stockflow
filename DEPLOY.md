@@ -28,44 +28,35 @@ DATABASE_URL=postgres://postgres.<ref>:<password>@aws-0-<region>.pooler.supabase
 - แนะนำ: ตั้ง `DATABASE_CA_CERT` = เนื้อไฟล์ CA ของ Supabase (PEM) → ตรวจ cert ได้ปกติและปลอดภัย
 - ทางลัด (ไม่แนะนำ prod): ตั้ง `PGSSL_NO_VERIFY=1` เพื่อข้ามการตรวจ cert
 
-## 2) Cloudflare (โฮสต์แอป)
-Deploy Next.js บน Cloudflare Workers ด้วย **OpenNext** (แนวเดียวกับ lab-parfumo-next branch `cloudflare`).
+## 2) Cloudflare Workers (โฮสต์แอป)
+Deploy Next.js บน Cloudflare Workers ด้วย **OpenNext** — config เตรียมไว้ให้ครบแล้ว
+(`wrangler.jsonc`, `open-next.config.ts`, สคริปต์ใน `package.json`).
 
+**ขั้นตอน:**
 ```bash
-npm i -D @opennextjs/cloudflare wrangler
-```
-`wrangler.toml`:
-```toml
-name = "platform-withdrawals"
-compatibility_date = "2024-11-01"
-compatibility_flags = ["nodejs_compat"]     # จำเป็น — pg + react-pdf ใช้ Node APIs
-main = ".open-next/worker.js"
-[assets]
-directory = ".open-next/assets"
-```
-build & deploy:
-```bash
-npx @opennextjs/cloudflare build
-npx wrangler deploy
-```
+# 1. ติดตั้ง deps (ครั้งแรก — ประกาศไว้ใน package.json แล้ว)
+npm install
 
-### env vars (Cloudflare → Settings → Variables & Secrets)
-ตั้งเป็น **Secret** ทั้งหมด:
-```
-DATABASE_URL                 = postgres://…pooler.supabase.com:6543/postgres
-ADMIN_USERNAME               = admin
-ADMIN_PASSWORD               = <รหัสจริง>
-NEXT_PUBLIC_SUPABASE_URL     = https://<ref>.supabase.co   # (เผื่อใช้ storage/realtime ภายหลัง)
-NEXT_PUBLIC_SUPABASE_ANON_KEY= <anon key>
-SUPABASE_SERVICE_ROLE_KEY    = <service role>              # server-only ห้ามหลุด client
-```
-> ตั้ง secret ใน `.env.production`/wrangler ให้ครบก่อน deploy — กัน wrangler ลบ vars ที่ไม่ได้ประกาศ
+# 2. ล็อกอิน Cloudflare (ครั้งแรก)
+npx wrangler login
 
-### หมายเหตุการพิมพ์ PDF บน Workers
-route `/api/print/[orderNo]` เรนเดอร์ PDF ฝั่ง server (react-pdf) และอ่านฟอนต์ไทยจาก
-`public/fonts/*.ttf` — OpenNext bundle ให้และทำงานได้ภายใต้ `nodejs_compat`. ถ้าเจอปัญหา
-ขนาด/หน่วยความจำบน Workers ให้ย้ายการเรนเดอร์ PDF ไปฝั่ง client (แนวเดียวกับ lab-parfumo-next)
-หรือ deploy เวอร์ชัน Node (Vercel) คู่กัน.
+# 3. ตั้ง secret (ทีละตัว — ปลอดภัยกว่าใส่ในไฟล์)
+npx wrangler secret put DATABASE_URL       # postgres://…pooler.supabase.com:6543/postgres
+npx wrangler secret put ADMIN_USERNAME     # admin
+npx wrangler secret put ADMIN_PASSWORD     # <รหัสจริง>
+# ถ้าเจอ cert error ตอนต่อ DB: npx wrangler secret put DATABASE_CA_CERT   # เนื้อไฟล์ CA (PEM)
+
+# 4. ทดสอบ local (จำลอง Workers) แล้ว deploy
+npm run cf:preview      # build + เปิด preview ที่เครื่อง
+npm run cf:deploy       # build + deploy ขึ้น Cloudflare
+```
+> `compatibility_flags = ["nodejs_compat"]` จำเป็น — `pg` + `react-pdf` ใช้ Node APIs.
+> secrets ตั้งผ่าน `wrangler secret put` (ไม่ต้องมีใน `wrangler.jsonc`).
+
+### ✅ PDF บน Workers — แก้แล้ว
+ฟอนต์ไทยฝัง base64 ใน `lib/pdf/fonts.ts` (ไม่อ่านไฟล์/`process.cwd()`) → route
+`/api/print/[orderNo]` เรนเดอร์ได้บน Workers เหมือน Node เป๊ะ (ทดสอบ render ผ่านแล้ว).
+ถ้าเปลี่ยนฟอนต์ ให้รัน `npm run gen:fonts` เพื่อ regenerate.
 
 ## ทางเลือก: Vercel/Node
 ต้องการง่ายสุดให้ deploy บน Vercel (Node runtime) — ตั้งแค่ env ชุดเดียวกัน ไม่ต้อง OpenNext.

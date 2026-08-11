@@ -1,0 +1,18 @@
+{
+  // Cloudflare Workers deploy config (OpenNext).  Docs: https://opennext.js.org/cloudflare
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "platform-withdrawals",
+  "main": ".open-next/worker.js",
+  // nodejs_compat is REQUIRED — pg + react-pdf use Node APIs (net/tls, buffer, streams).
+  "compatibility_date": "2025-03-25",
+  "compatibility_flags": ["nodejs_compat"],
+  "assets": {
+    "directory": ".open-next/assets",
+    "binding": "ASSETS"
+  },
+  "observability": {
+    "enabled": true
+  }
+  // Secrets (DATABASE_URL, ADMIN_USERNAME, ADMIN_PASSWORD, optional DATABASE_CA_CERT)
+  // are set via `wrangler secret put ...` or the Cloudflare dashboard — NOT here.
+}

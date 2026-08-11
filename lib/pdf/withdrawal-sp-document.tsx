@@ -7,21 +7,22 @@
  * column is titled "สินค้า (EDP)" instead of "รายการ". Dynamic values (scent
  * names, order numbers) are Latin.
  */
-import path from "path";
 import { Document, Page, Text, View, StyleSheet, Font, Svg, Rect } from "@react-pdf/renderer";
 import { code39 } from "./code39";
 import { COMPANY_NAME, COMPANY_NAME_EN } from "@/lib/config";
+import { NOTO_SANS_THAI_REGULAR, NOTO_SANS_THAI_BOLD } from "./fonts";
 import type { OrderWithItems } from "@/lib/types";
 
-const FONTS_DIR = path.join(process.cwd(), "public", "fonts");
 let fontRegistered = false;
 function registerFontOnce() {
   if (fontRegistered) return;
+  // Fonts are embedded (base64 data URIs) — no fs/process.cwd(), so this renders
+  // on Cloudflare Workers (nodejs_compat) as well as Node/Vercel.
   Font.register({
     family: "NotoSansThai",
     fonts: [
-      { src: path.join(FONTS_DIR, "NotoSansThai-Regular.ttf"), fontWeight: "normal" },
-      { src: path.join(FONTS_DIR, "NotoSansThai-Bold.ttf"), fontWeight: "bold" },
+      { src: NOTO_SANS_THAI_REGULAR, fontWeight: "normal" },
+      { src: NOTO_SANS_THAI_BOLD, fontWeight: "bold" },
     ],
   });
   Font.registerHyphenationCallback((w) => [w]);
