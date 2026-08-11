@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { requireUser } from "@/lib/auth/require-user";
+import { requireDashboard } from "@/lib/auth/require-user";
 import { dashboardStats, listStock, listOrders, topProducts, ordersTrend } from "@/lib/queries";
 import {
   PlusCircle, ScanLine, Boxes, AlertTriangle, PackageCheck, ClipboardList,
@@ -9,7 +9,7 @@ import {
 export const dynamic = "force-dynamic";
 
 export default async function Dashboard() {
-  const user = await requireUser();
+  const user = await requireDashboard();
   // ยิงขนานผ่าน pool (เร็ว) — บน Vercel/Node connection pool รองรับ concurrent query ปกติ
   const [s, lowStock, recent, top, trend] = await Promise.all([
     dashboardStats(),

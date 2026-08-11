@@ -3,10 +3,13 @@ import { notFound } from "next/navigation";
 import { getOrder, getProducts, getSizes, getProvinces, getPostcodes } from "@/lib/queries";
 import OrderForm from "@/components/OrderForm";
 import { ChevronLeft, Printer, ScanLine, PackageCheck } from "lucide-react";
+import { requireCreator } from "@/lib/auth/require-user";
+import { can } from "@/lib/auth/roles";
 
 export const dynamic = "force-dynamic";
 
 export default async function EditOrderPage({ params }: { params: Promise<{ orderNo: string }> }) {
+  const me = await requireCreator();
   const { orderNo } = await params;
   const decoded = decodeURIComponent(orderNo);
   const [order, products, sizes, provinces, postcodes] = await Promise.all([
@@ -22,16 +25,16 @@ export default async function EditOrderPage({ params }: { params: Promise<{ orde
         </Link>
         <div className="flex items-center gap-2">
           {order.stock_issued_at ? (
-            <Link href="/stock/issued" className="inline-flex items-center gap-1 rounded-md bg-green-50 px-2.5 py-1.5 text-sm font-medium text-green-700">
+            <span className="inline-flex items-center gap-1 rounded-md bg-green-50 px-2.5 py-1.5 text-sm font-medium text-green-700">
               <PackageCheck size={16} /> ตัดสต๊อกแล้ว
-            </Link>
-          ) : (
+            </span>
+          ) : can.issueStock(me.role) ? (
             <Link href={`/stock/issue?order=${encodeURIComponent(decoded)}`}
               className="inline-flex items-center gap-1 rounded-md px-2.5 py-1.5 text-sm font-medium text-white"
               style={{ backgroundColor: "rgb(37 99 235)" }}>
               <ScanLine size={16} /> ตัดสต๊อก
             </Link>
-          )}
+          ) : null}
           <a href={`/api/print/${encodeURIComponent(decoded)}`} target="_blank" rel="noreferrer" className="btn-ghost">
             <Printer size={16} /> พิมพ์ใบเบิก
           </a>

@@ -3,6 +3,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { q, tx } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth/session";
+import { can } from "@/lib/auth/roles";
 import { buildProductLabel, type OrderWithItems } from "@/lib/types";
 import { formatDocNo, monthLabel, ymdKey } from "@/lib/docno";
 import { isAllowedFreeSize, FREE_ALLOWED_SIZES } from "@/lib/config";
@@ -64,6 +65,7 @@ async function allocDocNo(run: <R = any>(sql: string, p?: any[]) => Promise<R[]>
 export async function saveOrder(input: OrderInput): Promise<SaveResult> {
   const user = await getCurrentUser();
   if (!user) return { ok: false, error: "กรุณาเข้าสู่ระบบ" };
+  if (!can.createOrders(user.role)) return { ok: false, error: "ไม่มีสิทธิ์จัดการใบเบิก (เฉพาะฝ่ายสร้างใบเบิก)" };
 
   const parsed = orderSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? "ข้อมูลไม่ถูกต้อง" };
@@ -144,6 +146,7 @@ export async function orderExists(orderNo: string): Promise<{ exists: boolean; d
 export async function deleteOrder(orderNo: string): Promise<{ ok: boolean; error?: string }> {
   const user = await getCurrentUser();
   if (!user) return { ok: false, error: "กรุณาเข้าสู่ระบบ" };
+  if (!can.createOrders(user.role)) return { ok: false, error: "ไม่มีสิทธิ์จัดการใบเบิก (เฉพาะฝ่ายสร้างใบเบิก)" };
   try {
     await q(`update orders set deleted_at = now(), deleted_by = $2 where order_no = $1`, [orderNo, user.id]);
     revalidatePath("/shopee");
@@ -158,6 +161,7 @@ export async function deleteOrder(orderNo: string): Promise<{ ok: boolean; error
 export async function restoreOrder(orderNo: string): Promise<{ ok: boolean; error?: string }> {
   const user = await getCurrentUser();
   if (!user) return { ok: false, error: "กรุณาเข้าสู่ระบบ" };
+  if (!can.createOrders(user.role)) return { ok: false, error: "ไม่มีสิทธิ์จัดการใบเบิก (เฉพาะฝ่ายสร้างใบเบิก)" };
   try {
     await q(`update orders set deleted_at = null, deleted_by = null where order_no = $1`, [orderNo]);
     revalidatePath("/shopee");
@@ -172,6 +176,7 @@ export async function restoreOrder(orderNo: string): Promise<{ ok: boolean; erro
 export async function purgeOrder(orderNo: string): Promise<{ ok: boolean; error?: string }> {
   const user = await getCurrentUser();
   if (!user) return { ok: false, error: "กรุณาเข้าสู่ระบบ" };
+  if (!can.createOrders(user.role)) return { ok: false, error: "ไม่มีสิทธิ์จัดการใบเบิก (เฉพาะฝ่ายสร้างใบเบิก)" };
   try {
     await q(`delete from orders where order_no = $1 and deleted_at is not null`, [orderNo]);
     revalidatePath("/shopee/trash");
@@ -249,6 +254,7 @@ export async function matchOrders(orderNos: string[]): Promise<{ ok: boolean; er
 export async function bulkSaveOrders(orders: OrderWithItems[]): Promise<{ ok: boolean; saved: number; failed?: number; error?: string }> {
   const user = await getCurrentUser();
   if (!user) return { ok: false, saved: 0, error: "กรุณาเข้าสู่ระบบ" };
+  if (!can.createOrders(user.role)) return { ok: false, saved: 0, error: "ไม่มีสิทธิ์นำเข้าใบเบิก (เฉพาะฝ่ายสร้างใบเบิก)" };
   let saved = 0;
   const errors: string[] = [];
   // พยายามบันทึกทุกออร์เดอร์ (แต่ละอันเป็น tx ของตัวเอง) — ไม่หยุดกลางคันเมื่อเจอแถวเสีย

@@ -3,12 +3,14 @@ import { listOrders, getMonths, countOrders } from "@/lib/queries";
 import OrdersTable from "@/components/OrdersTable";
 import ShopeeFilters from "@/components/ShopeeFilters";
 import { PlusCircle, Upload, ChevronLeft, ChevronRight, FileDown } from "lucide-react";
+import { requireCreator } from "@/lib/auth/require-user";
 
 export const dynamic = "force-dynamic";
 
 const PAGE_SIZE = 50;
 
 export default async function ShopeePage({ searchParams }: { searchParams: Promise<{ q?: string; month?: string; page?: string }> }) {
+  await requireCreator();
   const { q, month, page } = await searchParams;
   const pageNum = Math.max(1, Number(page) || 1);
   const offset = (pageNum - 1) * PAGE_SIZE;

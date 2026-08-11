@@ -3,6 +3,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { PLATFORMS } from "@/lib/config";
+import { can, ROLE_LABELS } from "@/lib/auth/roles";
 import { Package, PlusCircle, Upload, List, LogOut, Menu, X, Trash2, Users, ScanLine, Boxes, LayoutDashboard } from "lucide-react";
 
 // สีเอกลักษณ์ของแต่ละแพลตฟอร์ม (ใช้เป็นจุดสีในเมนู)
@@ -19,18 +20,25 @@ export default function Sidebar({ user }: { user: { full_name: string; username:
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
 
-  const nav = [
-    { href: "/", label: "หน้าหลัก", icon: LayoutDashboard, exact: true },
-    { href: "/shopee", label: "ใบเบิก Shopee", icon: List, exact: true },
-    { href: "/shopee/new", label: "สร้างใบเบิกใหม่", icon: PlusCircle },
-    { href: "/shopee/import", label: "นำเข้า Excel/CSV", icon: Upload },
-    { href: "/shopee/trash", label: "ถังขยะ", icon: Trash2 },
-  ];
-
-  const stockNav = [
-    { href: "/stock/issue", label: "ตัดสต๊อก (สแกน)", icon: ScanLine },
-    { href: "/stock", label: "สต๊อกคงเหลือ", icon: Boxes, exact: true },
-  ];
+  const role = user.role;
+  // เมนูขึ้นตามสิทธิ์ — สร้างใบเบิก vs จัดของ/ตัดสต๊อก แยกกัน
+  const dashNav = can.viewDashboard(role)
+    ? [{ href: "/", label: "หน้าหลัก", icon: LayoutDashboard, exact: true }]
+    : [];
+  const orderNav = can.createOrders(role)
+    ? [
+        { href: "/shopee", label: "ใบเบิก Shopee", icon: List, exact: true },
+        { href: "/shopee/new", label: "สร้างใบเบิกใหม่", icon: PlusCircle },
+        { href: "/shopee/import", label: "นำเข้า Excel/CSV", icon: Upload },
+        { href: "/shopee/trash", label: "ถังขยะ", icon: Trash2 },
+      ]
+    : [];
+  const stockNav = can.viewStock(role)
+    ? [
+        { href: "/stock/issue", label: "ตัดสต๊อก (สแกน)", icon: ScanLine },
+        { href: "/stock", label: "สต๊อกคงเหลือ", icon: Boxes, exact: true },
+      ]
+    : [];
 
   const isActive = (href: string, exact?: boolean) =>
     exact ? pathname === href : pathname.startsWith(href);
@@ -45,16 +53,18 @@ export default function Sidebar({ user }: { user: { full_name: string; username:
         </div>
       </div>
 
-      <div className="px-3">
-        {/* แพลตฟอร์มที่ใช้งาน — โชว์ด้วยสีเอกลักษณ์ของแพลตฟอร์ม (Shopee = ส้ม) */}
-        <div className="flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-semibold"
-          style={{ backgroundColor: "rgb(238 77 45 / 0.10)", color: "#c2410c" }}>
-          <Package size={14} /> Shopee
+      {orderNav.length > 0 && (
+        <div className="px-3">
+          {/* แพลตฟอร์มที่ใช้งาน — โชว์ด้วยสีเอกลักษณ์ของแพลตฟอร์ม (Shopee = ส้ม) */}
+          <div className="flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-semibold"
+            style={{ backgroundColor: "rgb(238 77 45 / 0.10)", color: "#c2410c" }}>
+            <Package size={14} /> Shopee
+          </div>
         </div>
-      </div>
+      )}
 
       <nav className="mt-2 flex-1 space-y-0.5 px-3">
-        {nav.map((n) => {
+        {[...dashNav, ...orderNav].map((n) => {
           const Icon = n.icon;
           return (
             <Link
@@ -70,20 +80,24 @@ export default function Sidebar({ user }: { user: { full_name: string; username:
           );
         })}
 
-        <div className="px-3 pb-1 pt-4 text-[11px] font-semibold uppercase tracking-wide text-faint">สต๊อกสินค้า</div>
-        {stockNav.map((n) => {
-          const Icon = n.icon;
-          return (
-            <Link key={n.href} href={n.href} onClick={() => setOpen(false)}
-              className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors ${
-                isActive(n.href, n.exact) ? "bg-soft font-medium text-ink" : "text-muted hover:bg-soft hover:text-ink"
-              }`}>
-              <Icon size={16} /> {n.label}
-            </Link>
-          );
-        })}
+        {stockNav.length > 0 && (
+          <>
+            <div className="px-3 pb-1 pt-4 text-[11px] font-semibold uppercase tracking-wide text-faint">สต๊อกสินค้า</div>
+            {stockNav.map((n) => {
+              const Icon = n.icon;
+              return (
+                <Link key={n.href} href={n.href} onClick={() => setOpen(false)}
+                  className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors ${
+                    isActive(n.href, n.exact) ? "bg-soft font-medium text-ink" : "text-muted hover:bg-soft hover:text-ink"
+                  }`}>
+                  <Icon size={16} /> {n.label}
+                </Link>
+              );
+            })}
+          </>
+        )}
 
-        {user.role === "admin" && (
+        {can.manageUsers(role) && (
           <Link href="/users" onClick={() => setOpen(false)}
             className={`mt-1 flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors ${
               isActive("/users") ? "bg-soft font-medium text-ink" : "text-muted hover:bg-soft hover:text-ink"
@@ -92,19 +106,23 @@ export default function Sidebar({ user }: { user: { full_name: string; username:
           </Link>
         )}
 
-        <div className="px-3 pb-1 pt-4 text-[11px] font-semibold uppercase tracking-wide text-faint">แพลตฟอร์มอื่น</div>
-        {PLATFORMS.filter((p) => !p.enabled).map((p) => (
-          <div key={p.code} className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-muted">
-            <span className="inline-block h-2.5 w-2.5 rounded-full" style={{ backgroundColor: PLATFORM_COLORS[p.code] || "#94a0b1" }} /> {p.name}
-            <span className="ml-auto text-[10px] text-faint">เร็วๆ นี้</span>
-          </div>
-        ))}
+        {orderNav.length > 0 && (
+          <>
+            <div className="px-3 pb-1 pt-4 text-[11px] font-semibold uppercase tracking-wide text-faint">แพลตฟอร์มอื่น</div>
+            {PLATFORMS.filter((p) => !p.enabled).map((p) => (
+              <div key={p.code} className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-muted">
+                <span className="inline-block h-2.5 w-2.5 rounded-full" style={{ backgroundColor: PLATFORM_COLORS[p.code] || "#94a0b1" }} /> {p.name}
+                <span className="ml-auto text-[10px] text-faint">เร็วๆ นี้</span>
+              </div>
+            ))}
+          </>
+        )}
       </nav>
 
       <div className="border-t border-line p-3">
         <div className="mb-2 px-2">
           <div className="text-sm font-medium text-ink">{user.full_name || user.username}</div>
-          <div className="text-[11px] text-muted">@{user.username} · {user.role}</div>
+          <div className="text-[11px] text-muted">@{user.username} · {ROLE_LABELS[user.role] || user.role}</div>
         </div>
         <form action="/api/logout" method="post">
           <button className="btn-ghost w-full justify-start text-muted"><LogOut size={16} /> ออกจากระบบ</button>

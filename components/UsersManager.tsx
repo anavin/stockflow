@@ -1,13 +1,16 @@
 "use client";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { createUser, setUserActive, resetPassword } from "@/lib/actions/users";
+import { createUser, setUserActive, resetPassword, setUserRole } from "@/lib/actions/users";
+import { ROLE_LABELS, ROLE_DESC } from "@/lib/auth/roles";
 import type { UserRow } from "@/lib/queries";
 import { UserPlus, KeyRound, CheckCircle2 } from "lucide-react";
 
+const ROLE_OPTS = ["creator", "picker", "admin"] as const;
+
 export default function UsersManager({ users, meId }: { users: UserRow[]; meId: number }) {
   const router = useRouter();
-  const [form, setForm] = useState({ username: "", full_name: "", role: "staff", password: "" });
+  const [form, setForm] = useState({ username: "", full_name: "", role: "creator", password: "" });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [msg, setMsg] = useState("");
@@ -21,7 +24,14 @@ export default function UsersManager({ users, meId }: { users: UserRow[]; meId: 
     setBusy(false);
     if (!res.ok) { setError(res.error || "เพิ่มไม่สำเร็จ"); return; }
     setMsg(`เพิ่มผู้ใช้ "${form.username}" แล้ว`);
-    setForm({ username: "", full_name: "", role: "staff", password: "" });
+    setForm({ username: "", full_name: "", role: "creator", password: "" });
+    router.refresh();
+  }
+
+  async function changeRole(u: UserRow, role: string) {
+    if (role === u.role) return;
+    const res = await setUserRole(u.id, role);
+    if (!res.ok) alert(res.error);
     router.refresh();
   }
 
@@ -53,11 +63,11 @@ export default function UsersManager({ users, meId }: { users: UserRow[]; meId: 
             <input className="input" value={form.full_name} onChange={(e) => set({ full_name: e.target.value })} />
           </div>
           <div>
-            <label className="label">สิทธิ์</label>
+            <label className="label">บทบาท / สิทธิ์</label>
             <select className="input" value={form.role} onChange={(e) => set({ role: e.target.value })}>
-              <option value="staff">พนักงาน (staff)</option>
-              <option value="admin">ผู้ดูแลระบบ (admin)</option>
+              {ROLE_OPTS.map((r) => <option key={r} value={r}>{ROLE_LABELS[r]}</option>)}
             </select>
+            <p className="mt-1 text-xs text-faint">{ROLE_DESC[form.role]}</p>
           </div>
           <div>
             <label className="label">รหัสผ่าน</label>
@@ -87,7 +97,11 @@ export default function UsersManager({ users, meId }: { users: UserRow[]; meId: 
                 <td className="px-4 py-3 font-medium text-ink">@{u.username}{u.id === meId && <span className="ml-1 text-xs text-faint">(คุณ)</span>}</td>
                 <td className="px-4 py-3">{u.full_name || "—"}</td>
                 <td className="px-4 py-3">
-                  <span className={`chip ${u.role === "admin" ? "bg-brand-50 text-brand-600" : "bg-soft text-muted"}`}>{u.role}</span>
+                  <select value={u.role} onChange={(e) => changeRole(u, e.target.value)} disabled={u.id === meId}
+                    className="input h-8 py-0 text-xs disabled:opacity-60" title="เปลี่ยนบทบาท">
+                    {!ROLE_OPTS.includes(u.role as any) && <option value={u.role}>{u.role} (เดิม)</option>}
+                    {ROLE_OPTS.map((r) => <option key={r} value={r}>{ROLE_LABELS[r]}</option>)}
+                  </select>
                 </td>
                 <td className="px-4 py-3">
                   <span className={`chip ${u.is_active ? "bg-green-50 text-green-700" : "bg-red-50 text-red-600"}`}>{u.is_active ? "ใช้งาน" : "ปิด"}</span>

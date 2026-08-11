@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { requireUser } from "@/lib/auth/require-user";
+import { requireStock } from "@/lib/auth/require-user";
 import { getStockMoves } from "@/lib/queries";
 import { ChevronLeft, ArrowDownCircle, ArrowUpCircle, Wrench } from "lucide-react";
 
@@ -12,7 +12,7 @@ const REASON: Record<string, { label: string; cls: string }> = {
 };
 
 export default async function StockMovesPage({ searchParams }: { searchParams: Promise<{ order?: string }> }) {
-  await requireUser();
+  await requireStock();
   const { order } = await searchParams;
   const moves = await getStockMoves({ orderNo: order, limit: 300 });
 

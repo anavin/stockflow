@@ -1,11 +1,12 @@
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth/session";
+import { homeFor } from "@/lib/auth/roles";
 import { APP_TITLE } from "@/lib/config";
 import LoginForm from "@/components/LoginForm";
 
 export default async function LoginPage({ searchParams }: { searchParams: Promise<{ next?: string }> }) {
   const user = await getCurrentUser();
-  if (user) redirect("/");
+  if (user) redirect(homeFor(user.role));
   const { next } = await searchParams;
 
   return (

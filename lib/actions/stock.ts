@@ -2,6 +2,7 @@
 import { revalidatePath } from "next/cache";
 import { q, tx } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth/session";
+import { can } from "@/lib/auth/roles";
 import { isStockTracked } from "@/lib/config";
 
 /** แก้ไขสต๊อก (รับเข้า/ปรับยอด/นำเข้า/ยกเลิก) = เฉพาะ admin */
@@ -47,6 +48,7 @@ export type IssueResult = {
 export async function issueStockByOrder(orderNo: string): Promise<IssueResult> {
   const user = await getCurrentUser();
   if (!user) return { ok: false, error: "กรุณาเข้าสู่ระบบ" };
+  if (!can.issueStock(user.role)) return { ok: false, error: "ไม่มีสิทธิ์ตัดสต๊อก (เฉพาะฝ่ายจัดของ)" };
   const on = (orderNo || "").trim();
   if (!on) return { ok: false, error: "กรอก/สแกน Order No." };
 
@@ -120,6 +122,7 @@ export type IssueLookup = {
 export async function lookupOrderForIssue(orderNo: string): Promise<IssueLookup> {
   const user = await getCurrentUser();
   if (!user) return { ok: false, error: "กรุณาเข้าสู่ระบบ" };
+  if (!can.issueStock(user.role)) return { ok: false, error: "ไม่มีสิทธิ์ตัดสต๊อก (เฉพาะฝ่ายจัดของ)" };
   const on = (orderNo || "").trim();
   if (!on) return { ok: false, error: "กรอก/สแกน Order No." };
 
@@ -152,6 +155,7 @@ export async function confirmIssueByOrder(
 ): Promise<IssueResult> {
   const user = await getCurrentUser();
   if (!user) return { ok: false, error: "กรุณาเข้าสู่ระบบ" };
+  if (!can.issueStock(user.role)) return { ok: false, error: "ไม่มีสิทธิ์ตัดสต๊อก (เฉพาะฝ่ายจัดของ)" };
   const on = (orderNo || "").trim();
   try {
     await tx(async (run) => {

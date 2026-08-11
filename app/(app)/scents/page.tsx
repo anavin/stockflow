@@ -1,12 +1,12 @@
 import Link from "next/link";
-import { requireUser } from "@/lib/auth/require-user";
+import { requireDashboard } from "@/lib/auth/require-user";
 import { topProducts } from "@/lib/queries";
 import { ChevronLeft, Sparkles } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
 export default async function ScentsPage() {
-  await requireUser();
+  await requireDashboard();
   const all = await topProducts(500);
   const max = all[0]?.qty || 1;
   const total = all.reduce((s, p) => s + Number(p.qty), 0);

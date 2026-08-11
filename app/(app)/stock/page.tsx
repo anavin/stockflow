@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { requireUser } from "@/lib/auth/require-user";
+import { requireStock } from "@/lib/auth/require-user";
 import { listStock, getProducts, getSizes, stockSummary } from "@/lib/queries";
 import StockManager from "@/components/StockManager";
 import { ScanLine, FileDown } from "lucide-react";
@@ -7,7 +7,7 @@ import { ScanLine, FileDown } from "lucide-react";
 export const dynamic = "force-dynamic";
 
 export default async function StockPage({ searchParams }: { searchParams: Promise<{ q?: string; low?: string }> }) {
-  const me = await requireUser();
+  const me = await requireStock();
   const isAdmin = me.role === "admin";
   const { q, low } = await searchParams;
   const lowOnly = low === "1";

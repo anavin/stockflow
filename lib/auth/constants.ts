@@ -2,7 +2,7 @@
 export const SESSION_COOKIE = "pw_session";
 export const SESSION_COOKIE_MAX_AGE_DAYS = 7;
 
-export type Role = "admin" | "staff" | (string & {});
+export type Role = "admin" | "creator" | "picker" | "staff" | (string & {});
 
 export type User = {
   id: number;

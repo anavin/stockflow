@@ -2,10 +2,12 @@ import Link from "next/link";
 import { listDeletedOrders } from "@/lib/queries";
 import TrashTable from "@/components/TrashTable";
 import { ChevronLeft } from "lucide-react";
+import { requireCreator } from "@/lib/auth/require-user";
 
 export const dynamic = "force-dynamic";
 
 export default async function TrashPage() {
+  await requireCreator();
   const orders = await listDeletedOrders("Shopee");
   return (
     <div className="mx-auto max-w-6xl px-4 py-6 md:px-8">

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { requireUser } from "@/lib/auth/require-user";
+import { requireStock } from "@/lib/auth/require-user";
 import { listIssuedOrders } from "@/lib/queries";
 import { ChevronLeft, Search, Printer, Eye, ListChecks } from "lucide-react";
 import ReverseIssueButton from "@/components/ReverseIssueButton";
@@ -7,7 +7,7 @@ import ReverseIssueButton from "@/components/ReverseIssueButton";
 export const dynamic = "force-dynamic";
 
 export default async function IssuedOrdersPage({ searchParams }: { searchParams: Promise<{ q?: string }> }) {
-  const me = await requireUser();
+  const me = await requireStock();
   const { q } = await searchParams;
   const rows = await listIssuedOrders({ search: q, limit: 200 });
 

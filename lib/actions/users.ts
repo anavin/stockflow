@@ -15,7 +15,7 @@ async function requireAdminUser() {
 const createSchema = z.object({
   username: z.string().trim().min(3, "ชื่อผู้ใช้อย่างน้อย 3 ตัว").regex(/^[a-zA-Z0-9._-]+$/, "ใช้ได้เฉพาะ a-z 0-9 . _ -"),
   full_name: z.string().trim().default(""),
-  role: z.enum(["admin", "staff"]).default("staff"),
+  role: z.enum(["admin", "creator", "picker"]).default("creator"),
   password: z.string(),
 });
 
@@ -46,6 +46,16 @@ export async function setUserActive(id: number, active: boolean): Promise<{ ok: 
   if ("error" in gate) return { ok: false, error: gate.error };
   if (gate.user.id === id && !active) return { ok: false, error: "ปิดใช้งานตัวเองไม่ได้" };
   await q(`update users set is_active = $2 where id = $1`, [id, active]);
+  revalidatePath("/users");
+  return { ok: true };
+}
+
+export async function setUserRole(id: number, role: string): Promise<{ ok: boolean; error?: string }> {
+  const gate = await requireAdminUser();
+  if ("error" in gate) return { ok: false, error: gate.error };
+  if (!["admin", "creator", "picker"].includes(role)) return { ok: false, error: "บทบาทไม่ถูกต้อง" };
+  if (gate.user.id === id && role !== "admin") return { ok: false, error: "เปลี่ยนบทบาทตัวเองออกจากแอดมินไม่ได้" };
+  await q(`update users set role = $2 where id = $1`, [id, role]);
   revalidatePath("/users");
   return { ok: true };
 }

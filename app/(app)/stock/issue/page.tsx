@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { requireUser } from "@/lib/auth/require-user";
+import { requireStock } from "@/lib/auth/require-user";
 import { stockSummary } from "@/lib/queries";
 import StockIssue from "@/components/StockIssue";
 import { Boxes, History, ClipboardList } from "lucide-react";
@@ -7,7 +7,7 @@ import { Boxes, History, ClipboardList } from "lucide-react";
 export const dynamic = "force-dynamic";
 
 export default async function StockIssuePage({ searchParams }: { searchParams: Promise<{ order?: string }> }) {
-  const me = await requireUser();
+  const me = await requireStock();
   const { order } = await searchParams;
   const sum = await stockSummary();
   return (

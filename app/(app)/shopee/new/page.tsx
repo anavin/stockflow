@@ -2,10 +2,12 @@ import Link from "next/link";
 import { getProducts, getSizes, getProvinces, getPostcodes } from "@/lib/queries";
 import OrderForm from "@/components/OrderForm";
 import { ChevronLeft } from "lucide-react";
+import { requireCreator } from "@/lib/auth/require-user";
 
 export const dynamic = "force-dynamic";
 
 export default async function NewOrderPage() {
+  await requireCreator();
   const [products, sizes, provinces, postcodes] = await Promise.all([
     getProducts(), getSizes(), getProvinces(), getPostcodes(),
   ]);
