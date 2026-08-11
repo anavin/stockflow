@@ -157,52 +157,48 @@ async function resolveDbConfig(): Promise<{ connectionString?: string; ssl: any;
   return { connectionString: process.env.DATABASE_URL, ssl: pgSsl(), options: `-c search_path=${APP_KEY},public` };
 }
 
-async function getPgPool() {
-  if (!gp._pgPool) {
-    const { Pool, types } = await import("pg");
+// A persistent Pool proved unreliable on Cloudflare Workers (connections leak/die
+// across isolates → intermittent 500s and hangs). Instead open a FRESH Client per
+// q()/tx() and close it — Hyperdrive already pools connections server-side, so this
+// is cheap and, crucially, stateless (no cross-request/isolate connection reuse).
+let pgTypesReady = false;
+async function getPgClient(): Promise<any> {
+  const { Client, types } = await import("pg");
+  if (!pgTypesReady) {
     types.setTypeParser(20, (v: string | null) => (v == null ? null : parseInt(v, 10))); // bigint→number
     types.setTypeParser(1082, (v: string | null) => v); // date→string
-    const cfg = await resolveDbConfig();
-    gp._pgPool = new Pool({
-      connectionString: cfg.connectionString,
-      max: 5,
-      idleTimeoutMillis: 30_000,
-      connectionTimeoutMillis: 10_000,
-      allowExitOnIdle: true,
-      ssl: cfg.ssl,
-    });
-    // No per-connection SET search_path: on prod all tables live in `public` (which
-    // is always in the default search_path), so unqualified queries resolve without
-    // it. A fire-and-forget SET on each new connection also risked stalling under the
-    // burst of concurrent connections a page like the dashboard opens.
-    gp._pgPool.on("error", (e: any) => console.error("[pg pool] idle client error:", e?.message));
-    // Prod bootstrap: run migrations + seed reference data + ensure an admin exists.
-    // (init() only covers the PGlite/dev path.) Guarded so it runs once per pool.
-    await ensurePgBootstrap(gp._pgPool);
+    pgTypesReady = true;
   }
-  return gp._pgPool;
+  const cfg = await resolveDbConfig();
+  const client = new Client({
+    connectionString: cfg.connectionString,
+    ssl: cfg.ssl,
+    connectionTimeoutMillis: 10_000,
+    ...(cfg.options ? { options: cfg.options } : {}),
+  });
+  await client.connect();
+  return client;
 }
 
-/** On prod (pg) the schema is created by supabase/10_platform_withdrawals.sql, but
- *  make first boot self-healing: apply idempotent migrations and bootstrap the admin
- *  so a fresh DB is actually usable (DEPLOY.md previously implied this happened
- *  automatically — it didn't). All statements are `if not exists`/idempotent. */
-async function ensurePgBootstrap(pool: any) {
-  try {
-    const files = (await readdir(MIG_DIR)).filter((f) => f.endsWith(".sql")).sort();
-    for (const f of files) {
-      const sql = await readFile(path.join(MIG_DIR, f), "utf8");
-      await pool.query(sql);
-    }
-  } catch (e: any) {
-    // Schema may be managed entirely via the Supabase SQL file — don't hard-fail.
-    console.warn("[pg bootstrap] migrate skipped:", e?.message);
+/** Ensure an admin exists (once per isolate). Schema/tables come from the Supabase
+ *  SQL file; here we only bootstrap the admin so a fresh DB is usable. */
+type GB = { _pgBoot?: Promise<void> };
+const gb = globalThis as unknown as GB;
+function pgBootstrapOnce(): Promise<void> {
+  if (!gb._pgBoot) {
+    gb._pgBoot = (async () => {
+      let client: any;
+      try {
+        client = await getPgClient();
+        await ensureAdmin(client);
+      } catch (e: any) {
+        console.warn("[pg bootstrap] ensureAdmin skipped:", e?.message);
+      } finally {
+        if (client) await client.end().catch(() => {});
+      }
+    })();
   }
-  try {
-    await ensureAdmin(pool);
-  } catch (e: any) {
-    console.warn("[pg bootstrap] ensureAdmin skipped:", e?.message);
-  }
+  return gb._pgBoot;
 }
 
 function isTransientDbError(e: any): boolean {
@@ -218,17 +214,21 @@ function isRetryableStatement(sql: string): boolean {
 /** Run a query and return rows. */
 export async function q<T = any>(sql: string, params: any[] = []): Promise<T[]> {
   if (usePg()) {
-    const MAX = isRetryableStatement(sql) ? 4 : 1;
+    await pgBootstrapOnce();
+    const MAX = isRetryableStatement(sql) ? 3 : 1;
     let lastErr: any;
     for (let attempt = 0; attempt < MAX; attempt++) {
+      let client: any;
       try {
-        const pool = await getPgPool();
-        const r = await pool.query(sql, params);
+        client = await getPgClient();
+        const r = await client.query(sql, params);
         return r.rows as T[];
       } catch (e) {
         lastErr = e;
         if (attempt === MAX - 1 || !isTransientDbError(e)) throw e;
         await new Promise((res) => setTimeout(res, 250 * (attempt + 1)));
+      } finally {
+        if (client) await client.end().catch(() => {});
       }
     }
     throw lastErr;
@@ -241,8 +241,8 @@ export async function q<T = any>(sql: string, params: any[] = []): Promise<T[]> 
 /** Run several statements atomically. cb receives a scoped runner. */
 export async function tx<T>(cb: (run: <R = any>(sql: string, params?: any[]) => Promise<R[]>) => Promise<T>): Promise<T> {
   if (usePg()) {
-    const pool = await getPgPool();
-    const client = await pool.connect();
+    await pgBootstrapOnce();
+    const client = await getPgClient();
     try {
       await client.query("begin");
       const run = async <R = any>(sql: string, params: any[] = []) => (await client.query(sql, params)).rows as R[];
@@ -253,7 +253,7 @@ export async function tx<T>(cb: (run: <R = any>(sql: string, params?: any[]) => 
       await client.query("rollback").catch(() => {});
       throw e;
     } finally {
-      client.release();
+      await client.end().catch(() => {});
     }
   }
   // PGlite: single-connection; wrap in a transaction block.
