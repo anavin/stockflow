@@ -4,9 +4,9 @@ import type { User } from "./constants";
 
 const LOCKOUT_MIN = 15;
 const MAX_ATTEMPTS = 5;
-// bcrypt hash ปลอม (well-formed) ใช้เผา CPU ให้เท่ากันเมื่อไม่พบ user
-// → กันเดา username จากเวลาตอบ (ปกติกรณีไม่มี user จะเร็วกว่าเพราะข้าม bcrypt)
-const DUMMY_HASH = "$2b$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy";
+// hash ปลอม (PBKDF2, well-formed) ใช้เผาเวลาให้เท่ากันเมื่อไม่พบ user
+// → กันเดา username จากเวลาตอบ (ปกติกรณีไม่มี user จะเร็วกว่าเพราะข้ามการ verify)
+const DUMMY_HASH = "pbkdf2$100000$Gjxxqrj+gJk8YoZsUgbIKw==$W6ODSB5uMS7Aad+Tw/Qze0WrIUCQLl5uYx3YLQdAUUQ=";
 
 export type LoginResult = { ok: boolean; user?: User; error?: string; attemptsRemaining?: number };
 
