@@ -85,7 +85,7 @@ export default async function Dashboard() {
           <HealthBar normal={normal} low={s.low} negative={s.negative} />
           <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs">
             <Legend color="bg-emerald-500" label="ปกติ" n={normal} />
-            <Legend color="bg-amber-400" label="ใกล้หมด" n={s.low} />
+            <Legend color="bg-amber-500" label="ใกล้หมด" n={s.low} />
             <Legend color="bg-red-500" label="ติดลบ" n={s.negative} />
           </div>
         </section>
@@ -168,7 +168,7 @@ export default async function Dashboard() {
                   <span className="w-4 text-right text-xs font-medium text-faint">{i + 1}</span>
                   <span className="w-40 shrink-0 truncate text-sm text-ink" title={p.product}>{p.product}</span>
                   <div className="h-4 flex-1 overflow-hidden rounded-full bg-soft">
-                    <div className="flex h-full items-center justify-end rounded-full bg-gradient-to-r from-brand-50 to-brand pr-2" style={{ width: `${pct}%` }} />
+                    <div className="flex h-full items-center justify-end rounded-full bg-brand pr-2" style={{ width: `${pct}%` }} />
                   </div>
                   <span className="w-14 shrink-0 text-right text-xs font-semibold text-ink">{Number(p.qty).toLocaleString()}</span>
                 </div>
@@ -228,7 +228,7 @@ function HealthBar({ normal, low, negative }: { normal: number; low: number; neg
   return (
     <div className="mt-3 flex h-2.5 w-full overflow-hidden rounded-full bg-soft">
       {normal > 0 && <div className="h-full bg-emerald-500" style={{ width: seg(normal) }} />}
-      {low > 0 && <div className="h-full bg-amber-400" style={{ width: seg(low) }} />}
+      {low > 0 && <div className="h-full bg-amber-500" style={{ width: seg(low) }} />}
       {negative > 0 && <div className="h-full bg-red-500" style={{ width: seg(negative) }} />}
     </div>
   );
@@ -253,7 +253,7 @@ function TrendBars({ data }: { data: { ym: string; label: string; n: number }[] 
         <div key={d.ym} className="flex flex-1 flex-col items-center gap-1">
           <span className="text-[10px] font-medium text-muted">{d.n}</span>
           <div className="flex w-full items-end justify-center" style={{ height: 56 }}>
-            <div className="w-full max-w-[26px] rounded-t-md bg-gradient-to-t from-brand-50 to-brand transition-all"
+            <div className="w-full max-w-[26px] rounded-t-md bg-brand transition-all"
               style={{ height: `${Math.max(6, (d.n / max) * 56)}px` }} title={`${d.label}: ${d.n}`} />
           </div>
           <span className="text-[10px] text-faint">{d.label}</span>
