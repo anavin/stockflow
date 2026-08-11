@@ -18,8 +18,20 @@ export async function createSession(userId: number): Promise<string> {
   return token;
 }
 
+// In-memory session cache: getUserFromToken runs on EVERY request (auth gate in the
+// layout). With a warm serverless instance this avoids a DB round-trip per page nav
+// — a big win when the DB is far away (~210ms/query). Short TTL bounds staleness
+// (a revoked/deactivated session keeps working for at most SESS_TTL_MS).
+type SessCache = { _sess?: Map<string, { user: User; exp: number }> };
+const gc = globalThis as unknown as SessCache;
+gc._sess ||= new Map();
+const SESS_TTL_MS = 30_000;
+
 export async function getUserFromToken(token: string | undefined): Promise<User | null> {
   if (!token) return null;
+  const cached = gc._sess!.get(token);
+  if (cached && cached.exp > Date.now()) return cached.user;
+
   const rows = await q<User>(
     `select u.id, u.username, u.full_name, u.role, u.is_active, u.last_login_at, u.created_at
      from user_sessions s join users u on u.id = s.user_id
@@ -28,14 +40,13 @@ export async function getUserFromToken(token: string | undefined): Promise<User 
     [token],
   );
   const user = rows[0];
-  if (!user) return null;
-  // NOTE: ไม่ touch last_activity แบบ fire-and-forget ที่นี่ — บน Workers query ที่ไม่
-  // await จะไม่ปล่อย connection คืน pool (รั่วจน hang) และ getUserFromToken ถูกเรียก
-  // ทุก request. ตัดออกเพื่อความเสถียร (last_activity ไม่ใช่ข้อมูลจำเป็น).
+  if (!user) { gc._sess!.delete(token); return null; }
+  gc._sess!.set(token, { user, exp: Date.now() + SESS_TTL_MS });
   return user;
 }
 
 export async function deleteSession(token: string): Promise<void> {
+  gc._sess!.delete(token);
   await q(`delete from user_sessions where token = $1`, [token]);
 }
 
