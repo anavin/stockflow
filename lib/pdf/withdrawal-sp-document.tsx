@@ -128,12 +128,13 @@ function Panel({ order, copyLabel }: { order: OrderWithItems; copyLabel: string 
   const addr = [order.address, order.district, order.province, order.postcode].filter(Boolean).join(" ");
 
   // Density: shrink rows/fonts for big orders so it all fits ONE landscape page.
+  // เพิ่มระดับย่อสำหรับใบใหญ่มาก (40–50 รายการ) กันตกขอบเงียบๆ.
   const n = items.length;
-  const rowH = n > 22 ? 9.5 : n > 14 ? 11 : 14;
-  const cfs = n > 22 ? 6.6 : n > 14 ? 7 : 7.5;
-  const pv = n > 14 ? 1.3 : 2.5;
-  const signGap = n > 14 ? 6 : 14;
-  const bcH = n > 14 ? 26 : 34;   // barcode เล็กลงเมื่อออร์เดอร์ใหญ่ กันล้น
+  const rowH = n > 40 ? 6.3 : n > 31 ? 7.4 : n > 22 ? 9.5 : n > 14 ? 11 : 14;
+  const cfs = n > 40 ? 5.4 : n > 31 ? 6 : n > 22 ? 6.6 : n > 14 ? 7 : 7.5;
+  const pv = n > 31 ? 0.8 : n > 14 ? 1.3 : 2.5;
+  const signGap = n > 31 ? 3 : n > 14 ? 6 : 14;
+  const bcH = n > 31 ? 22 : n > 14 ? 26 : 34;   // barcode เล็กลงเมื่อออร์เดอร์ใหญ่ กันล้น
   const rowStyle = { minHeight: rowH };
   const cStyle = { fontSize: cfs, paddingVertical: pv };
 

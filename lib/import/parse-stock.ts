@@ -18,11 +18,15 @@ const cellText = (v: any): string => {
   }
   return String(v).trim();
 };
-const num = (v: any): number => {
+// คืน null เมื่อค่าจำนวนอ่านไม่ได้ (เช่น "-", "N/A", สูตร error) — จะได้ "ข้าม" แถวนั้น
+// แทนที่จะ set สต๊อกเป็น 0 เงียบๆ (import เป็นการ set ค่าสัมบูรณ์ = เสี่ยงล้างสต๊อก)
+const num = (v: any): number | null => {
   let t: any = v;
+  if (t === "" || t == null) return null;
   if (t && typeof t === "object") t = "result" in t ? t.result : "text" in t ? t.text : NaN;
+  if (t === "" || t == null) return null;
   const n = Number(t);
-  return Number.isFinite(n) ? n : 0;
+  return Number.isFinite(n) ? n : null;
 };
 
 /** ปรับ "50 ml." / "50 ml" / "50ml" → "50 ml" ให้ตรงกับระบบ */
@@ -58,7 +62,9 @@ function parseSimpleSheet(ws: ExcelJS.Worksheet): StockLine[] | null {
         if (!product) continue;
         const size = normalizeSize(cellText(ws.getRow(rr).getCell(cs).value));
         if (!size) continue;
-        out.push({ product, size, qty: num(ws.getRow(rr).getCell(cq).value) });
+        const qty = num(ws.getRow(rr).getCell(cq).value);
+        if (qty == null) continue;   // อ่านจำนวนไม่ได้ → ข้าม (ไม่ล้างสต๊อกเป็น 0)
+        out.push({ product, size, qty });
       }
       return out;
     }
@@ -101,6 +107,7 @@ export function parseStockWorkbook(wb: ExcelJS.Workbook): { lines: StockLine[]; 
       const product = cellText(ws.getRow(r).getCell(3).value);   // C
       if (!product) continue;
       const qty = num(ws.getRow(r).getCell(7).value);            // G = คงเหลือ
+      if (qty == null) continue;   // อ่านจำนวนไม่ได้ → ข้าม (ไม่ล้างสต๊อกเป็น 0)
       lines.push({ product, size, qty });
     }
   }

@@ -20,7 +20,8 @@ const orderSchema = z.object({
   order_no: z.string().trim().min(1, "กรอก Order No."),
   platform: z.string().trim().default("Shopee"),
   doc_no: z.string().trim().optional().nullable(),
-  doc_date: z.string().trim().optional().nullable(),   // YYYY-MM-DD
+  doc_date: z.string().trim().regex(/^\d{4}-\d{2}-\d{2}$/, "วันที่ต้องเป็น YYYY-MM-DD").optional().nullable()
+    .or(z.literal("")),   // YYYY-MM-DD (กัน doc_no เพี้ยน SH-NaN-… ตอนคำนวณ)
   channel: z.string().trim().optional().nullable(),
   shop_name: z.string().trim().optional().nullable(),
   username: z.string().trim().optional().nullable(),
@@ -73,6 +74,11 @@ export async function saveOrder(input: OrderInput): Promise<SaveResult> {
   if (badFree) {
     return { ok: false, error: `ของแถม "${badFree.product}" ขนาด ${badFree.size} ไม่ได้ — ของแถมได้เฉพาะ ${FREE_ALLOWED_SIZES.join(" / ")}` };
   }
+  // ของแถมจำนวนต้องไม่เกิน 30 (บังคับฝั่ง server ด้วย ไม่ใช่แค่ disable ปุ่มบนฟอร์ม/นำเข้า)
+  const bigFree = o.items.find((it) => it.is_free && Number(it.qty) > 30);
+  if (bigFree) {
+    return { ok: false, error: `ของแถม "${bigFree.product}" จำนวน ${bigFree.qty} เกิน 30 ไม่ได้` };
+  }
 
   const date = o.doc_date ? new Date(o.doc_date + "T00:00:00") : new Date();
   const ml = monthLabel(date);
@@ -93,7 +99,8 @@ export async function saveOrder(input: OrderInput): Promise<SaveResult> {
       const updates = ORDER_COLS.slice(1).map((c) => `${c} = excluded.${c}`).join(", ");
       await run(
         `insert into orders (${ORDER_COLS.join(",")}) values (${ph})
-         on conflict (order_no) do update set ${updates}, updated_at = now()`,
+         on conflict (order_no) do update set ${updates}, updated_at = now(),
+           deleted_at = null, deleted_by = null`,   // บันทึกทับ = กู้ออกจากถังขยะด้วย (กันใบหาย)
         vals,
       );
       // Set created_by only on first insert.
@@ -239,12 +246,15 @@ export async function matchOrders(orderNos: string[]): Promise<{ ok: boolean; er
 }
 
 /** Bulk upsert from the import wizard. Returns count of orders saved. */
-export async function bulkSaveOrders(orders: OrderWithItems[]): Promise<{ ok: boolean; saved: number; error?: string }> {
+export async function bulkSaveOrders(orders: OrderWithItems[]): Promise<{ ok: boolean; saved: number; failed?: number; error?: string }> {
   const user = await getCurrentUser();
   if (!user) return { ok: false, saved: 0, error: "กรุณาเข้าสู่ระบบ" };
   let saved = 0;
-  try {
-    for (const ord of orders) {
+  const errors: string[] = [];
+  // พยายามบันทึกทุกออร์เดอร์ (แต่ละอันเป็น tx ของตัวเอง) — ไม่หยุดกลางคันเมื่อเจอแถวเสีย
+  // เพื่อไม่ให้เหลือสถานะค้างครึ่งๆ และรายงานจำนวนสำเร็จ/ล้มเหลวให้ครบ
+  for (const ord of orders) {
+    try {
       const res = await saveOrder({
         ...ord,
         items: ord.items.map((it) => ({
@@ -252,11 +262,15 @@ export async function bulkSaveOrders(orders: OrderWithItems[]): Promise<{ ok: bo
         })),
       } as OrderInput);
       if (res.ok) saved += 1;
-      else return { ok: false, saved, error: `${ord.order_no}: ${res.error}` };
+      else errors.push(`${ord.order_no}: ${res.error}`);
+    } catch (e: any) {
+      errors.push(`${ord.order_no}: ${e?.message || "บันทึกไม่สำเร็จ"}`);
     }
-    revalidatePath("/shopee");
-    return { ok: true, saved };
-  } catch (e: any) {
-    return { ok: false, saved, error: e?.message || "นำเข้าไม่สำเร็จ" };
   }
+  revalidatePath("/shopee");
+  if (errors.length) {
+    const preview = errors.slice(0, 5).join("; ");
+    return { ok: false, saved, failed: errors.length, error: `บันทึกสำเร็จ ${saved}, ล้มเหลว ${errors.length} — ${preview}${errors.length > 5 ? " …" : ""}` };
+  }
+  return { ok: true, saved, failed: 0 };
 }

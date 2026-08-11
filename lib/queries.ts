@@ -54,7 +54,7 @@ export async function listOrders(opts: { platform?: string; search?: string; mon
   const sql = `
     select o.*,
            coalesce(count(i.id), 0)::int as item_count,
-           coalesce(sum(i.qty), 0)      as total_qty
+           coalesce(sum(i.qty), 0)::float8 as total_qty
     from orders o
     left join order_items i on i.order_no = o.order_no
     ${where.length ? "where " + where.join(" and ") : ""}
@@ -73,7 +73,8 @@ export async function countOrders(opts: { platform?: string; search?: string; mo
   if (opts.search) {
     params.push(`%${opts.search}%`);
     const p = `$${params.length}`;
-    where.push(`(order_no ilike ${p} or doc_no ilike ${p} or receiver ilike ${p} or username ilike ${p} or shop_name ilike ${p})`);
+    // ต้องตรงกับ listOrders เป๊ะ (รวม province) ไม่งั้น total/หน้าเพจเพี้ยน
+    where.push(`(order_no ilike ${p} or doc_no ilike ${p} or receiver ilike ${p} or username ilike ${p} or shop_name ilike ${p} or province ilike ${p})`);
   }
   const [r] = await q<{ n: number }>(`select count(*)::int n from orders ${where.length ? "where " + where.join(" and ") : ""}`, params);
   return r?.n ?? 0;
@@ -81,7 +82,7 @@ export async function countOrders(opts: { platform?: string; search?: string; mo
 
 export async function listDeletedOrders(platform = "Shopee", limit = 200): Promise<OrderRow[]> {
   const rows = await q<OrderRow>(
-    `select o.*, coalesce(count(i.id),0)::int as item_count, coalesce(sum(i.qty),0) as total_qty
+    `select o.*, coalesce(count(i.id),0)::int as item_count, coalesce(sum(i.qty),0)::float8 as total_qty
      from orders o left join order_items i on i.order_no = o.order_no
      where o.platform = $1 and o.deleted_at is not null
      group by o.order_no
@@ -97,8 +98,11 @@ export async function countDeleted(platform = "Shopee"): Promise<number> {
   return r?.n ?? 0;
 }
 
-export async function getOrder(orderNo: string): Promise<OrderWithItems | null> {
-  const [order] = await q<Order>(`select * from orders where order_no = $1`, [orderNo]);
+export async function getOrder(orderNo: string, opts: { includeDeleted?: boolean } = {}): Promise<OrderWithItems | null> {
+  const [order] = await q<Order>(
+    `select * from orders where order_no = $1 ${opts.includeDeleted ? "" : "and deleted_at is null"}`,
+    [orderNo],
+  );
   if (!order) return null;
   const items = await q<OrderItem>(
     `select id, line_no, product, size, is_free, qty::float8 as qty, unit, product_label, sku
@@ -121,7 +125,9 @@ export async function listStock(opts: { search?: string; lowOnly?: boolean; thre
   const sql = `
     select ps.product, ps.size, coalesce(s.qty,0)::float8 as qty, s.updated_at
     from (
-      select distinct product, size from order_items where coalesce(product,'') <> '' and coalesce(size,'') <> ''
+      select distinct oi.product, oi.size from order_items oi
+        join orders o on o.order_no = oi.order_no
+        where o.deleted_at is null and coalesce(oi.product,'') <> '' and coalesce(oi.size,'') <> ''
       union
       select product, size from stock
     ) ps
@@ -158,7 +164,14 @@ export async function getOrderWithStock(orderNo: string): Promise<(OrderWithItem
   if (!order) return null;
   const [meta] = await q<{ stock_issued_at: string | null }>(`select stock_issued_at from orders where order_no = $1`, [orderNo]);
   const itemsStock = await Promise.all(order.items.map(async (it) => {
-    const [s] = await q<{ qty: number }>(`select qty::float8 as qty from stock where product = $1 and size = $2`, [it.product, it.size]);
+    // จับคู่แบบ normalize (keep อักษรไทย) ให้ตรงกับตอนตัดสต๊อกจริง (matchStockProduct)
+    // ไม่งั้น preview โชว์ 0 ทั้งที่ตัดจริงไปเจอ SKU ที่สะกดต่างเล็กน้อย
+    const [s] = await q<{ qty: number }>(
+      `select qty::float8 as qty from stock
+       where size = $2 and regexp_replace(lower(product),'[^a-z0-9ก-๙]','','g') = regexp_replace(lower($1),'[^a-z0-9ก-๙]','','g')
+       order by (product = $1) desc limit 1`,
+      [it.product, it.size],
+    );
     return { ...it, stock: s?.qty ?? 0 };
   }));
   return { ...order, stock_issued_at: meta?.stock_issued_at ?? null, itemsStock };
@@ -202,7 +215,7 @@ export async function dashboardStats(): Promise<DashStats> {
     one(`select count(*)::int n from orders where deleted_at is null and to_char(doc_date,'YYYY-MM') = to_char(current_date,'YYYY-MM')`),
     one(`select count(*)::int n from orders where deleted_at is null and stock_issued_at is not null`),
     one(`select count(*)::int n from orders where deleted_at is null and stock_issued_at::date = current_date`),
-    one(`select count(*)::int n from (select distinct product,size from order_items where coalesce(product,'')<>'' union select product,size from stock) t`),
+    one(`select count(*)::int n from (select distinct oi.product,oi.size from order_items oi join orders o on o.order_no=oi.order_no where o.deleted_at is null and coalesce(oi.product,'')<>'' union select product,size from stock) t`),
     one(`select count(*)::int n from stock where qty > 0 and qty <= 10`),
     one(`select count(*)::int n from stock where qty < 0`),
   ]);
@@ -211,9 +224,9 @@ export async function dashboardStats(): Promise<DashStats> {
 }
 
 export async function stockSummary(): Promise<{ skus: number; low: number; issuedOrders: number }> {
-  const [a] = await q<{ n: number }>(`select count(*)::int n from (select distinct product, size from order_items where coalesce(product,'')<>'' union select product,size from stock) t`);
+  const [a] = await q<{ n: number }>(`select count(*)::int n from (select distinct oi.product, oi.size from order_items oi join orders o on o.order_no=oi.order_no where o.deleted_at is null and coalesce(oi.product,'')<>'' union select product,size from stock) t`);
   const [b] = await q<{ n: number }>(`select count(*)::int n from stock where qty <= 10`);
-  const [c] = await q<{ n: number }>(`select count(*)::int n from orders where stock_issued_at is not null`);
+  const [c] = await q<{ n: number }>(`select count(*)::int n from orders where deleted_at is null and stock_issued_at is not null`);
   return { skus: a?.n ?? 0, low: b?.n ?? 0, issuedOrders: c?.n ?? 0 };
 }
 

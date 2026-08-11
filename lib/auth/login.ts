@@ -4,6 +4,9 @@ import type { User } from "./constants";
 
 const LOCKOUT_MIN = 15;
 const MAX_ATTEMPTS = 5;
+// bcrypt hash ปลอม (well-formed) ใช้เผา CPU ให้เท่ากันเมื่อไม่พบ user
+// → กันเดา username จากเวลาตอบ (ปกติกรณีไม่มี user จะเร็วกว่าเพราะข้าม bcrypt)
+const DUMMY_HASH = "$2b$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy";
 
 export type LoginResult = { ok: boolean; user?: User; error?: string; attemptsRemaining?: number };
 
@@ -40,7 +43,10 @@ export async function loginWithPassword(username: string, password: string): Pro
     return { ok: false as const, error: "ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง", attemptsRemaining: remaining };
   };
 
-  if (!user) return bad();
+  if (!user) {
+    await verifyBcrypt(password, DUMMY_HASH).catch(() => false);   // constant-time: อย่าตอบเร็วกว่าเคสมี user
+    return bad();
+  }
   if (!(await verifyBcrypt(password, user.password_hash))) return bad();
 
   await logAttempt(username, true);

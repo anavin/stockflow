@@ -33,6 +33,11 @@ export async function POST(req: Request) {
 
     await tx(async (run) => {
       for (const l of lines) {
+        // set ค่าสัมบูรณ์ตามไฟล์ แต่บันทึก movement เป็น "ส่วนต่าง" (ยอดใหม่-ยอดเก่า)
+        // เพื่อให้ ledger รวมกันแล้วเท่ากับ balance เสมอ (เหมือน adjustStock)
+        const [cur] = await run<{ qty: number }>(`select qty::float8 as qty from stock where product = $1 and size = $2`, [l.product, l.size]);
+        const old = cur?.qty ?? 0;
+        const diff = l.qty - old;
         await run(
           `insert into stock (product, size, qty, updated_at) values ($1,$2,$3,now())
            on conflict (product, size) do update set qty = $3, updated_at = now()`,
@@ -40,8 +45,8 @@ export async function POST(req: Request) {
         );
         await run(
           `insert into stock_moves (product, size, qty_change, balance, reason, note, created_by)
-           values ($1,$2,$3,$3,'adjust','นำเข้าจากไฟล์สต๊อก',$4)`,
-          [l.product, l.size, l.qty, user.id],
+           values ($1,$2,$3,$4,'adjust','นำเข้าจากไฟล์สต๊อก',$5)`,
+          [l.product, l.size, diff, l.qty, user.id],
         );
       }
     });

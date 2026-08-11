@@ -1547,3 +1547,8 @@ alter table platform_withdrawals.orders add column if not exists stock_issued_by
 alter table platform_withdrawals.stock       enable row level security;
 alter table platform_withdrawals.stock_moves enable row level security;
 revoke all on all tables in schema platform_withdrawals from anon, authenticated;
+
+-- 0005 session expiry (TTL ฝั่ง server กัน token หลุดใช้ได้ตลอดกาล)
+alter table platform_withdrawals.user_sessions add column if not exists expires_at timestamptz;
+update platform_withdrawals.user_sessions set expires_at = created_at + interval '7 days' where expires_at is null;
+create index if not exists idx_user_sessions_expires on platform_withdrawals.user_sessions (expires_at);

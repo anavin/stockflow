@@ -84,8 +84,8 @@ async function seed(db: PGlite) {
     postcodes.map((p) => [p.province, p.district, p.postcode]), "on conflict do nothing");
 }
 
-async function ensureAdmin(db: PGlite) {
-  const [{ n }] = (await db.query<{ n: number }>("select count(*)::int n from users")).rows;
+async function ensureAdmin(db: { query: (sql: string, params?: any[]) => Promise<{ rows: any[] }> }) {
+  const [{ n }] = (await db.query("select count(*)::int n from users")).rows as { n: number }[];
   if (n > 0) return;
   const { randomBytes } = await import("node:crypto");
   const { hashBcrypt } = await import("./auth/password");
@@ -125,27 +125,63 @@ function getDb(): Promise<PGlite> {
 type GP = { _pgPool?: any };
 const gp = globalThis as unknown as GP;
 
+/** TLS config for the pg pool.
+ *  - If DATABASE_CA_CERT is set (PEM), verify against it (recommended for prod).
+ *  - Else if PGSSL_NO_VERIFY=1, skip verification (last resort — e.g. pooler cert
+ *    not in the trust store). Otherwise use default TLS with full verification. */
+function pgSsl(): any {
+  const ca = process.env.DATABASE_CA_CERT;
+  if (ca && ca.trim()) return { ca, rejectUnauthorized: true };
+  if (process.env.PGSSL_NO_VERIFY === "1") return { rejectUnauthorized: false };
+  return { rejectUnauthorized: true };
+}
+
 async function getPgPool() {
   if (!gp._pgPool) {
     const { Pool, types } = await import("pg");
     types.setTypeParser(20, (v: string | null) => (v == null ? null : parseInt(v, 10))); // bigint→number
     types.setTypeParser(1082, (v: string | null) => v); // date→string
+    const { APP_KEY } = await import("./config");
     gp._pgPool = new Pool({
       connectionString: process.env.DATABASE_URL,
       max: 3,
       idleTimeoutMillis: 30_000,
       connectionTimeoutMillis: 10_000,
       allowExitOnIdle: true,
-      // Supabase requires TLS; pooler cert is not in the local trust store.
-      ssl: { rejectUnauthorized: false },
+      ssl: pgSsl(),
+      // Set search_path as a per-CONNECTION startup parameter (not a one-off SET).
+      // Critical under transaction-mode poolers (Supabase pgBouncer :6543) where a
+      // single `SET` wouldn't persist to the backend serving later statements.
+      options: `-c search_path=${APP_KEY},public`,
     });
     gp._pgPool.on("error", (e: any) => console.error("[pg pool] idle client error:", e?.message));
-    // Route all queries to the app schema (search_path) so unqualified table
-    // names resolve to platform_withdrawals.* on the shared project.
-    const { APP_KEY } = await import("./config");
-    await gp._pgPool.query(`set search_path to ${APP_KEY}, public`).catch(() => {});
+    // Prod bootstrap: run migrations + seed reference data + ensure an admin exists.
+    // (init() only covers the PGlite/dev path.) Guarded so it runs once per pool.
+    await ensurePgBootstrap(gp._pgPool);
   }
   return gp._pgPool;
+}
+
+/** On prod (pg) the schema is created by supabase/10_platform_withdrawals.sql, but
+ *  make first boot self-healing: apply idempotent migrations and bootstrap the admin
+ *  so a fresh DB is actually usable (DEPLOY.md previously implied this happened
+ *  automatically — it didn't). All statements are `if not exists`/idempotent. */
+async function ensurePgBootstrap(pool: any) {
+  try {
+    const files = (await readdir(MIG_DIR)).filter((f) => f.endsWith(".sql")).sort();
+    for (const f of files) {
+      const sql = await readFile(path.join(MIG_DIR, f), "utf8");
+      await pool.query(sql);
+    }
+  } catch (e: any) {
+    // Schema may be managed entirely via the Supabase SQL file — don't hard-fail.
+    console.warn("[pg bootstrap] migrate skipped:", e?.message);
+  }
+  try {
+    await ensureAdmin(pool);
+  } catch (e: any) {
+    console.warn("[pg bootstrap] ensureAdmin skipped:", e?.message);
+  }
 }
 
 function isTransientDbError(e: any): boolean {

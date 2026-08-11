@@ -12,6 +12,22 @@ async function requireAdmin() {
   return { user };
 }
 
+/** หา SKU สต๊อกที่ตรงกับชื่อในใบเบิกแบบ normalize (กันสะกดต่าง) — keep อักษรไทย
+ *  ให้ตรงกับ productKey() ใน config. คืนชื่อจริงในตาราง stock ถ้าเจอ ไม่งั้นคืนชื่อเดิม. */
+async function matchStockProduct(
+  run: <R = any>(sql: string, p?: any[]) => Promise<R[]>,
+  product: string,
+  size: string,
+): Promise<string> {
+  const [m] = await run<{ product: string }>(
+    `select product from stock
+     where size = $2 and regexp_replace(lower(product),'[^a-z0-9ก-๙]','','g') = regexp_replace(lower($1),'[^a-z0-9ก-๙]','','g')
+     limit 1`,
+    [product, size],
+  );
+  return m?.product ?? product;
+}
+
 export type IssueLine = { product: string; size: string; qty: number; balance: number };
 export type SkipLine = { product: string; size: string; qty: number };
 export type IssueResult = {
@@ -42,9 +58,18 @@ export async function issueStockByOrder(orderNo: string): Promise<IssueResult> {
       if (order.deleted_at) return { ok: false, error: `ใบเบิกนี้อยู่ในถังขยะ` };
       if (order.stock_issued_at) return { ok: false, alreadyIssued: true, order_no: on, doc_no: order.doc_no, error: `ใบเบิกนี้ตัดสต๊อกไปแล้ว` };
 
+      // Atomically CLAIM the order so two concurrent scans can't both deduct.
+      // Only the winner gets a row back; a concurrent claimer sees 0 rows.
+      const claim = await run<{ order_no: string }>(
+        `update orders set stock_issued_at = now(), stock_issued_by = $2
+         where order_no = $1 and deleted_at is null and stock_issued_at is null
+         returning order_no`,
+        [on, user.id]);
+      if (claim.length === 0) return { ok: false, alreadyIssued: true, order_no: on, doc_no: order.doc_no, error: `ใบเบิกนี้ตัดสต๊อกไปแล้ว` };
+
       const items = await run<{ product: string; size: string; qty: number }>(
         `select product, size, qty::float8 as qty from order_items where order_no = $1 and coalesce(product,'') <> ''`, [on]);
-      if (items.length === 0) return { ok: false, error: "ใบเบิกไม่มีรายการสินค้า" };
+      if (items.length === 0) throw new Error("ใบเบิกไม่มีรายการสินค้า");
 
       const lines: IssueLine[] = [];
       const skipped: SkipLine[] = [];
@@ -55,13 +80,8 @@ export async function issueStockByOrder(orderNo: string): Promise<IssueResult> {
           continue;
         }
         // หา SKU สต๊อกที่มีอยู่แบบ normalize ชื่อ (กันชื่อสะกดต่าง เช่น "DionysusX" vs "Dionysus X")
-        const [m] = await run<{ product: string }>(
-          `select product from stock
-           where size = $2 and regexp_replace(lower(product),'[^a-z0-9]','','g') = regexp_replace(lower($1),'[^a-z0-9]','','g')
-           limit 1`,
-          [it.product, it.size || ""],
-        );
-        const stockProduct = m?.product ?? it.product;
+        // regex เก็บอักษรไทย (ก-๙) ให้ตรงกับ productKey() — ไม่งั้นกลิ่นชื่อไทยจะยุบเป็นค่าว่างชนกัน
+        const stockProduct = await matchStockProduct(run, it.product, it.size || "");
         const [row] = await run<{ qty: number }>(
           `insert into stock (product, size, qty, updated_at) values ($1, $2, $3, now())
            on conflict (product, size) do update set qty = stock.qty + $3, updated_at = now()
@@ -73,10 +93,9 @@ export async function issueStockByOrder(orderNo: string): Promise<IssueResult> {
            values ($1,$2,$3,$4,'issue',$5,$6)`,
           [stockProduct, it.size || "", -Number(it.qty), row.qty, on, user.id],
         );
-        lines.push({ product: it.product, size: it.size || "", qty: Number(it.qty), balance: row.qty });
+        lines.push({ product: stockProduct, size: it.size || "", qty: Number(it.qty), balance: row.qty });
       }
 
-      await run(`update orders set stock_issued_at = now(), stock_issued_by = $2 where order_no = $1`, [on, user.id]);
       return { ok: true, order_no: on, doc_no: order.doc_no, lines, negatives: lines.filter((l) => l.balance < 0), skipped };
     });
 
@@ -98,16 +117,21 @@ export async function reverseIssue(orderNo: string): Promise<{ ok: boolean; erro
     await tx(async (run) => {
       const [o] = await run<{ stock_issued_at: string | null }>(`select stock_issued_at from orders where order_no = $1`, [on]);
       if (!o?.stock_issued_at) throw new Error("ใบเบิกนี้ยังไม่ได้ตัดสต๊อก");
-      const items = await run<{ product: string; size: string; qty: number }>(
-        `select product, size, qty::float8 as qty from order_items where order_no = $1 and coalesce(product,'') <> ''`, [on]);
-      for (const it of items) {
-        if (!isStockTracked(it.size)) continue;   // ตัวอย่างไม่เคยตัด → ไม่ต้องคืน
+      // คืนสต๊อกจากสิ่งที่ "ตัดจริง" ที่บันทึกไว้ใน ledger (ไม่ใช่คำนวณใหม่จาก order_items)
+      // → คืนตรง SKU/จำนวนที่ตัดไป แม้ชื่อจะถูก normalize-match หรือ order ถูกแก้ภายหลัง.
+      // จำกัดเฉพาะรอบตัดล่าสุด (created_at >= stock_issued_at) กันคืนซ้ำจากรอบก่อนๆ.
+      const moves = await run<{ product: string; size: string; qty_change: number }>(
+        `select product, size, qty_change::float8 as qty_change from stock_moves
+         where order_no = $1 and reason = 'issue' and created_at >= $2`, [on, o.stock_issued_at]);
+      for (const mv of moves) {
+        const back = -Number(mv.qty_change);   // issue บันทึกเป็นค่าลบ → คืนเป็นบวก
+        if (!back) continue;
         const [row] = await run<{ qty: number }>(
           `insert into stock (product, size, qty, updated_at) values ($1,$2,$3,now())
            on conflict (product, size) do update set qty = stock.qty + $3, updated_at = now()
-           returning qty::float8 as qty`, [it.product, it.size || "", Number(it.qty)]);
+           returning qty::float8 as qty`, [mv.product, mv.size || "", back]);
         await run(`insert into stock_moves (product, size, qty_change, balance, reason, order_no, note, created_by)
-                   values ($1,$2,$3,$4,'adjust',$5,'ยกเลิกตัดสต๊อก',$6)`, [it.product, it.size || "", Number(it.qty), row.qty, on, user.id]);
+                   values ($1,$2,$3,$4,'adjust',$5,'ยกเลิกตัดสต๊อก',$6)`, [mv.product, mv.size || "", back, row.qty, on, user.id]);
       }
       await run(`update orders set stock_issued_at = null, stock_issued_by = null where order_no = $1`, [on]);
     });

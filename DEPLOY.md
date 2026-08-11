@@ -10,15 +10,23 @@
    (สร้าง schema `platform_withdrawals` + ตาราง + seed products/sizes/platforms/postcodes + เปิด RLS)
    > ถ้ายังไม่เคยรัน `00_shared.sql` (auth/app_members กลาง) บน project นี้ — รันก่อน
 2. Dashboard → **API → Exposed schemas** → เพิ่ม `platform_withdrawals` ⚠️ (ลืมบ่อย)
-3. สร้างผู้ดูแลระบบ (ครั้งแรก): ตั้ง `ADMIN_USERNAME`/`ADMIN_PASSWORD` ให้ตรงกับที่ตั้งใน env
-   แล้วเรียกหน้าเว็บครั้งแรก ระบบจะ bootstrap ให้ — **หรือ** insert แถวใน `platform_withdrawals.users`
-   ด้วย bcrypt hash เอง
+3. สร้างผู้ดูแลระบบ (ครั้งแรก): ตั้ง `ADMIN_USERNAME`/`ADMIN_PASSWORD` ใน env ให้เรียบร้อย
+   → **เมื่อแอปเชื่อมต่อ DB ครั้งแรก จะ bootstrap admin ให้อัตโนมัติ** (ทั้ง dev PGlite และ prod pg)
+   ถ้า `ADMIN_PASSWORD` ไม่ได้ตั้ง ระบบจะสุ่มรหัสให้แล้ว log ออกมา — **หรือ** insert แถวใน
+   `platform_withdrawals.users` ด้วย bcrypt hash เอง
 
 ### connection string
-ใช้ **pooled connection** (พอร์ต 6543, pgBouncer) จาก Dashboard → Database → Connection string → "Transaction":
+ใช้ **pooled connection** (พอร์ต 6543, transaction mode) จาก Dashboard → Database → Connection string → "Transaction":
 ```
 DATABASE_URL=postgres://postgres.<ref>:<password>@aws-0-<region>.pooler.supabase.com:6543/postgres
 ```
+> แอปตั้ง `search_path` เป็น startup parameter ต่อ connection แล้ว (ไม่ใช่ `SET` ครั้งเดียว) จึงใช้กับ
+> pooler transaction mode ได้ถูกต้อง.
+
+### TLS
+ดีฟอลต์ตรวจ certificate เต็มรูปแบบ (`rejectUnauthorized: true`). ถ้าเจอปัญหา cert:
+- แนะนำ: ตั้ง `DATABASE_CA_CERT` = เนื้อไฟล์ CA ของ Supabase (PEM) → ตรวจ cert ได้ปกติและปลอดภัย
+- ทางลัด (ไม่แนะนำ prod): ตั้ง `PGSSL_NO_VERIFY=1` เพื่อข้ามการตรวจ cert
 
 ## 2) Cloudflare (โฮสต์แอป)
 Deploy Next.js บน Cloudflare Workers ด้วย **OpenNext** (แนวเดียวกับ lab-parfumo-next branch `cloudflare`).

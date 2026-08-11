@@ -12,18 +12,22 @@ export async function GET(_req: Request, ctx: { params: Promise<{ orderNo: strin
   if (!user) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
 
   const { orderNo } = await ctx.params;
-  const order = await getOrder(decodeURIComponent(orderNo));
+  const order = await getOrder(decodeURIComponent(orderNo));   // ไม่รวมใบในถังขยะ → 404
   if (!order) return NextResponse.json({ error: "not found" }, { status: 404 });
 
-  const buffer = await renderToBuffer(WithdrawalDocument({ order }) as any);
-  const filename = `ใบเบิก-${order.doc_no || order.order_no}.pdf`;
-
-  return new NextResponse(buffer as any, {
-    headers: {
-      "content-type": "application/pdf",
-      // inline → opens in the browser's PDF viewer (Ctrl/Cmd-P to print)
-      "content-disposition": `inline; filename*=UTF-8''${encodeURIComponent(filename)}`,
-      "cache-control": "no-store",
-    },
-  });
+  try {
+    const buffer = await renderToBuffer(WithdrawalDocument({ order }) as any);
+    const filename = `ใบเบิก-${order.doc_no || order.order_no}.pdf`;
+    return new NextResponse(buffer as any, {
+      headers: {
+        "content-type": "application/pdf",
+        // inline → opens in the browser's PDF viewer (Ctrl/Cmd-P to print)
+        "content-disposition": `inline; filename*=UTF-8''${encodeURIComponent(filename)}`,
+        "cache-control": "no-store",
+      },
+    });
+  } catch (e: any) {
+    console.error("[print] render failed:", e?.message);
+    return NextResponse.json({ error: "สร้าง PDF ไม่สำเร็จ", detail: e?.message }, { status: 500 });
+  }
 }
