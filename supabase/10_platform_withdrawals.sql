@@ -1513,3 +1513,37 @@ end $$;
 
 -- grant the anon/authenticated roles nothing on this schema (server uses owner).
 revoke all on all tables in schema platform_withdrawals from anon, authenticated;
+
+-- ============================================================================
+-- migrations 0002 (trash) + 0003 (customer search) + 0004 (stock)
+-- ============================================================================
+set search_path to platform_withdrawals, public;
+
+-- 0002 soft-delete (ถังขยะ)
+alter table platform_withdrawals.orders add column if not exists deleted_at timestamptz;
+alter table platform_withdrawals.orders add column if not exists deleted_by int;
+create index if not exists idx_orders_deleted_at on platform_withdrawals.orders (deleted_at);
+
+-- 0003 customer autocomplete indexes
+create index if not exists idx_orders_username on platform_withdrawals.orders (lower(username));
+create index if not exists idx_orders_phone    on platform_withdrawals.orders (phone);
+create index if not exists idx_orders_receiver on platform_withdrawals.orders (lower(receiver));
+
+-- 0004 central stock
+create table if not exists platform_withdrawals.stock (
+  product text not null, size text not null, qty numeric not null default 0,
+  updated_at timestamptz not null default now(), primary key (product, size));
+create table if not exists platform_withdrawals.stock_moves (
+  id serial primary key, product text not null, size text not null,
+  qty_change numeric not null, balance numeric, reason text not null,
+  order_no text, note text, created_by int, created_at timestamptz not null default now());
+create index if not exists idx_stock_moves_order   on platform_withdrawals.stock_moves (order_no);
+create index if not exists idx_stock_moves_created on platform_withdrawals.stock_moves (created_at desc);
+create index if not exists idx_stock_moves_ps      on platform_withdrawals.stock_moves (product, size);
+alter table platform_withdrawals.orders add column if not exists stock_issued_at timestamptz;
+alter table platform_withdrawals.orders add column if not exists stock_issued_by int;
+
+-- RLS backstop for new tables
+alter table platform_withdrawals.stock       enable row level security;
+alter table platform_withdrawals.stock_moves enable row level security;
+revoke all on all tables in schema platform_withdrawals from anon, authenticated;

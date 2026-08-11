@@ -68,3 +68,11 @@ route `/api/print/[orderNo]` เรนเดอร์ PDF ฝั่ง server (r
 - [ ] `npm run build` ผ่าน
 - [ ] login ได้ + สร้าง/นำเข้า/พิมพ์ ใบเบิกได้บน prod
 - [ ] ไม่มี secret / `.pgdata` / `node_modules` ใน git
+
+## โหลดข้อมูลเข้า prod (หลัง deploy)
+ข้อมูลใน dev (PGlite `.pgdata`) ไม่ย้ายอัตโนมัติ — บน prod ใช้ฟีเจอร์ import ของแอปเองได้เลย:
+1. **ออร์เดอร์:** เข้า `นำเข้า Excel/CSV` → อัปโหลดไฟล์ `รายการเบิกสินค้า TOUCH-2.xlsx` (sheet Shopee) → ยืนยัน
+2. **สต๊อก:** เข้า `สต๊อกสินค้า` → `ดาวน์โหลดเทมเพลต` กรอกยอด (หรือใช้ยอดจากไฟล์ Lab Stock) → `นำเข้าไฟล์`
+3. ผู้ใช้พนักงาน: เพิ่มที่ `จัดการผู้ใช้` (admin)
+
+> ตาราง stock/stock_moves + คอลัมน์ deleted_at/stock_issued_at อยู่ในไฟล์ `supabase/10_platform_withdrawals.sql` แล้ว (รันไฟล์เดียวจบ)
