@@ -11,6 +11,7 @@
 import type { PGlite } from "@electric-sql/pglite";
 import { readFile, readdir } from "node:fs/promises";
 import path from "node:path";
+import { cache } from "react";
 
 const ROOT = process.cwd();
 const DATA_DIR = path.join(ROOT, ".pgdata");
@@ -180,6 +181,29 @@ async function getPgClient(): Promise<any> {
   return client;
 }
 
+// Request-scoped client: React.cache dedupes within a single request, so every q()
+// in that request shares ONE connection (node-postgres serialises queries on it),
+// closed after the response via next/server's after(). Without this, a query-heavy
+// page + its ~10 sidebar link prefetches open a storm of connections at once and
+// overrun Hyperdrive → intermittent 500s. Falls back to per-call clients if after()
+// isn't available in the current context.
+const getSharedClient = cache(async (): Promise<any | null> => {
+  let client: any;
+  try {
+    client = await getPgClient();
+  } catch {
+    return null;
+  }
+  try {
+    const { after } = await import("next/server");
+    after(async () => { await client.end().catch(() => {}); });
+    return client;
+  } catch {
+    await client.end().catch(() => {});
+    return null; // no after() → don't share (would leak); use per-call clients
+  }
+});
+
 /** Ensure an admin exists (once per isolate). Schema/tables come from the Supabase
  *  SQL file; here we only bootstrap the admin so a fresh DB is usable. */
 type GB = { _pgBoot?: Promise<void> };
@@ -215,6 +239,13 @@ function isRetryableStatement(sql: string): boolean {
 export async function q<T = any>(sql: string, params: any[] = []): Promise<T[]> {
   if (usePg()) {
     await pgBootstrapOnce();
+    // Prefer the request-scoped shared connection (1 per request, closed via after()).
+    const shared = await getSharedClient();
+    if (shared) {
+      const r = await shared.query(sql, params);
+      return r.rows as T[];
+    }
+    // Fallback: fresh client per query (reliable, but many connections).
     const MAX = isRetryableStatement(sql) ? 3 : 1;
     let lastErr: any;
     for (let attempt = 0; attempt < MAX; attempt++) {
