@@ -1,0 +1,49 @@
+import { NextResponse } from "next/server";
+import ExcelJS from "exceljs";
+import { getCurrentUser } from "@/lib/auth/session";
+import { parseStockWorkbook } from "@/lib/import/parse-stock";
+import { tx } from "@/lib/db";
+import { revalidatePath } from "next/cache";
+
+export const runtime = "nodejs";
+export const maxDuration = 60;
+
+/** อัปโหลดไฟล์สต๊อก (Lab Stock & Seller Data Monitoring) → ตั้งยอดสต๊อกปัจจุบันตามไฟล์ */
+export async function POST(req: Request) {
+  const user = await getCurrentUser();
+  if (!user) return NextResponse.json({ ok: false, error: "กรุณาเข้าสู่ระบบ" }, { status: 401 });
+  if (user.role !== "admin") return NextResponse.json({ ok: false, error: "เฉพาะผู้ดูแลระบบ (admin)" }, { status: 403 });
+
+  const form = await req.formData();
+  const file = form.get("file");
+  if (!(file instanceof File)) return NextResponse.json({ ok: false, error: "ไม่พบไฟล์" }, { status: 400 });
+
+  try {
+    const buf = Buffer.from(await file.arrayBuffer());
+    const wb = new ExcelJS.Workbook();
+    await wb.xlsx.load(buf as any);
+    const { lines, sheets } = parseStockWorkbook(wb);
+    if (lines.length === 0) return NextResponse.json({ ok: false, error: "ไม่พบชีตสต๊อก (สต๊อก xx ml.) ในไฟล์" }, { status: 400 });
+
+    await tx(async (run) => {
+      for (const l of lines) {
+        await run(
+          `insert into stock (product, size, qty, updated_at) values ($1,$2,$3,now())
+           on conflict (product, size) do update set qty = $3, updated_at = now()`,
+          [l.product, l.size, l.qty],
+        );
+        await run(
+          `insert into stock_moves (product, size, qty_change, balance, reason, note, created_by)
+           values ($1,$2,$3,$3,'adjust','นำเข้าจากไฟล์สต๊อก',$4)`,
+          [l.product, l.size, l.qty, user.id],
+        );
+      }
+    });
+
+    revalidatePath("/stock");
+    revalidatePath("/stock/moves");
+    return NextResponse.json({ ok: true, imported: lines.length, sheets });
+  } catch (e: any) {
+    return NextResponse.json({ ok: false, error: e?.message || "นำเข้าไม่สำเร็จ" }, { status: 400 });
+  }
+}

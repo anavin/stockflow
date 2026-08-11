@@ -1,0 +1,38 @@
+[
+{
+"code": "Shopee",
+"name": "Shopee",
+"prefix": "SH",
+"sort": 10
+},
+{
+"code": "Lazada",
+"name": "Lazada",
+"prefix": "LZ",
+"sort": 20
+},
+{
+"code": "Tiktok",
+"name": "TikTok",
+"prefix": "TT",
+"sort": 30
+},
+{
+"code": "Line",
+"name": "Line",
+"prefix": "LN",
+"sort": 40
+},
+{
+"code": "Website",
+"name": "Website",
+"prefix": "WEB",
+"sort": 50
+},
+{
+"code": "Office",
+"name": "Office",
+"prefix": "OFF",
+"sort": 60
+}
+]

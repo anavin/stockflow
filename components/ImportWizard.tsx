@@ -1,0 +1,205 @@
+"use client";
+import { useRef, useState } from "react";
+import { useRouter } from "next/navigation";
+import { bulkSaveOrders, matchOrders, type MatchResult } from "@/lib/actions/orders";
+import type { OrderWithItems } from "@/lib/types";
+import { UploadCloud, FileSpreadsheet, CheckCircle2, AlertTriangle, Printer, Link2 } from "lucide-react";
+
+type Preview = {
+  orders: OrderWithItems[];
+  totalRows: number;
+  itemCount: number;
+  errors: { row: number; message: string }[];
+  noItemOrders: number;
+  orderNos: string[];
+};
+
+export default function ImportWizard() {
+  const router = useRouter();
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [fileName, setFileName] = useState("");
+  const [preview, setPreview] = useState<Preview | null>(null);
+  const [match, setMatch] = useState<MatchResult | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const [savedMsg, setSavedMsg] = useState("");
+
+  async function runMatch() {
+    if (!preview) return;
+    setBusy(true); setError("");
+    const res = await matchOrders(preview.orderNos);
+    setBusy(false);
+    if (!res.ok) { setError(res.error || "จับคู่ไม่สำเร็จ"); return; }
+    setMatch({ found: res.found || [], missing: res.missing || [] });
+  }
+
+  async function onFile(file: File) {
+    setError(""); setSavedMsg(""); setPreview(null); setMatch(null); setFileName(file.name);
+    setBusy(true);
+    const fd = new FormData();
+    fd.append("file", file);
+    try {
+      const res = await fetch("/api/import", { method: "POST", body: fd });
+      const data = await res.json();
+      if (!data.ok) { setError(data.error || "อ่านไฟล์ไม่สำเร็จ"); setBusy(false); return; }
+      setPreview(data);
+    } catch {
+      setError("อัปโหลดไม่สำเร็จ");
+    }
+    setBusy(false);
+  }
+
+  async function confirmImport() {
+    if (!preview) return;
+    setBusy(true); setError("");
+    const res = await bulkSaveOrders(preview.orders);
+    setBusy(false);
+    if (!res.ok) { setError(`${res.error} (บันทึกสำเร็จ ${res.saved} ออร์เดอร์ก่อนหยุด)`); return; }
+    setSavedMsg(`นำเข้าสำเร็จ ${res.saved} ออร์เดอร์`);
+    setTimeout(() => { router.push("/shopee"); router.refresh(); }, 900);
+  }
+
+  return (
+    <div className="space-y-5">
+      {/* dropzone */}
+      <div
+        className="card flex cursor-pointer flex-col items-center gap-3 border-dashed py-12 text-center hover:border-brand"
+        onClick={() => inputRef.current?.click()}
+        onDragOver={(e) => e.preventDefault()}
+        onDrop={(e) => { e.preventDefault(); const f = e.dataTransfer.files?.[0]; if (f) onFile(f); }}
+      >
+        <UploadCloud size={36} className="text-brand" />
+        <div className="text-sm font-medium text-ink">คลิกเพื่อเลือกไฟล์ หรือ ลากไฟล์มาวาง</div>
+        <div className="text-xs text-muted">รองรับ .xlsx, .xls, .csv — หัวตารางแถวแรก (เช่น sheet “Shopee”)</div>
+        {fileName && <div className="mt-1 inline-flex items-center gap-1 text-xs text-muted"><FileSpreadsheet size={14} /> {fileName}</div>}
+        <input ref={inputRef} type="file" accept=".xlsx,.xls,.csv" className="hidden"
+          onChange={(e) => { const f = e.target.files?.[0]; if (f) onFile(f); }} />
+      </div>
+
+      {busy && !preview && <p className="text-sm text-muted">กำลังอ่านไฟล์…</p>}
+      {error && <div className="flex items-start gap-2 rounded-lg bg-red-50 px-4 py-3 text-sm text-red-600"><AlertTriangle size={16} className="mt-0.5" /> {error}</div>}
+      {savedMsg && <div className="flex items-center gap-2 rounded-lg bg-green-50 px-4 py-3 text-sm text-green-700"><CheckCircle2 size={16} /> {savedMsg}</div>}
+
+      {preview && (
+        <div className="space-y-4">
+          <div className="flex flex-wrap gap-3">
+            <Stat label="ออร์เดอร์" value={preview.orders.length} />
+            <Stat label="รายการสินค้า" value={preview.itemCount} />
+            <Stat label="แถวข้อมูล" value={preview.totalRows} />
+            <Stat label="ข้อผิดพลาด" value={preview.errors.length} warn={preview.errors.length > 0} />
+          </div>
+
+          {preview.orders.length === 0 && preview.noItemOrders > 0 && (
+            <div className="space-y-3">
+              <div className="rounded-lg bg-amber-50 px-4 py-3 text-sm text-amber-800">
+                ไฟล์นี้มีแต่ <b>หมายเลขคำสั่งซื้อ {preview.noItemOrders} รายการ</b> (ไม่มีข้อมูลสินค้า) — สร้างใบเบิกใหม่ไม่ได้
+                <div className="mt-1 text-xs text-amber-700">
+                  แต่ถ้าออร์เดอร์เหล่านี้มีอยู่ในระบบแล้ว สามารถ<b>จับคู่แล้วสั่งพิมพ์</b>ได้เลย 👇
+                </div>
+              </div>
+              {!match ? (
+                <button className="btn-primary" disabled={busy} onClick={runMatch}>
+                  <Link2 size={16} /> {busy ? "กำลังจับคู่…" : `จับคู่กับข้อมูลในระบบ (${preview.orderNos.length})`}
+                </button>
+              ) : (
+                <div className="space-y-3">
+                  <div className="flex flex-wrap gap-3">
+                    <Stat label="พบในระบบ (พิมพ์ได้)" value={match.found.length} />
+                    <Stat label="ไม่พบในระบบ" value={match.missing.length} warn={match.missing.length > 0} />
+                  </div>
+                  {match.found.length > 0 && (
+                    <div className="overflow-hidden rounded-xl border border-line bg-white">
+                      <div className="max-h-[380px] overflow-auto">
+                        <table className="w-full text-sm">
+                          <thead className="sticky top-0 bg-soft text-left text-xs text-muted">
+                            <tr><th className="px-4 py-2">Order No.</th><th className="px-4 py-2">เลขที่ใบเบิก</th><th className="px-4 py-2">ผู้รับ</th><th className="px-4 py-2 text-right">พิมพ์</th></tr>
+                          </thead>
+                          <tbody>
+                            {match.found.map((m) => (
+                              <tr key={m.order_no} className="border-t border-line">
+                                <td className="px-4 py-2 font-mono text-xs">{m.order_no}</td>
+                                <td className="px-4 py-2 font-mono text-xs">{m.doc_no || "—"}</td>
+                                <td className="px-4 py-2">{m.receiver || "—"}</td>
+                                <td className="px-4 py-2 text-right">
+                                  <a href={`/api/print/${encodeURIComponent(m.order_no)}`} target="_blank" rel="noreferrer"
+                                    className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs text-brand-600 hover:bg-brand-50">
+                                    <Printer size={14} /> พิมพ์
+                                  </a>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
+                  {match.missing.length > 0 && (
+                    <div className="rounded-lg bg-amber-50 px-4 py-2 text-xs text-amber-700">
+                      ไม่พบในระบบ {match.missing.length} รายการ (ต้องสร้างใบเบิกก่อน): {match.missing.slice(0, 10).join(", ")}{match.missing.length > 10 ? " …" : ""}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
+          {preview.errors.length > 0 && (
+            <div className="rounded-lg bg-amber-50 px-4 py-3 text-xs text-amber-700">
+              {preview.errors.slice(0, 8).map((e, i) => <div key={i}>แถว {e.row}: {e.message}</div>)}
+              {preview.errors.length > 8 && <div>… และอีก {preview.errors.length - 8} รายการ</div>}
+            </div>
+          )}
+
+          <div className="overflow-hidden rounded-xl border border-line bg-white">
+            <div className="max-h-[420px] overflow-auto">
+              <table className="w-full text-sm">
+                <thead className="sticky top-0 bg-soft text-left text-xs text-muted">
+                  <tr>
+                    <th className="px-4 py-2">Order No.</th>
+                    <th className="px-4 py-2">ผู้รับ</th>
+                    <th className="px-4 py-2">จังหวัด</th>
+                    <th className="px-4 py-2">รายการ</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {preview.orders.slice(0, 200).map((o) => (
+                    <tr key={o.order_no} className="border-t border-line align-top">
+                      <td className="px-4 py-2 font-mono text-xs">{o.order_no}</td>
+                      <td className="px-4 py-2">{o.receiver || o.username || "—"}</td>
+                      <td className="px-4 py-2 text-muted">{o.province || "—"}</td>
+                      <td className="px-4 py-2 text-xs text-muted">
+                        {o.items.map((it, i) => (
+                          <span key={i} className="mr-1 inline-block">
+                            {it.product} {it.size}{it.is_free ? " (Free)" : ""} ×{it.qty}{i < o.items.length - 1 ? "," : ""}
+                          </span>
+                        ))}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            {preview.orders.length > 200 && <div className="border-t border-line px-4 py-2 text-xs text-muted">แสดง 200 จาก {preview.orders.length} ออร์เดอร์</div>}
+          </div>
+
+          <div className="flex gap-3">
+            <button className="btn-primary" disabled={busy || preview.orders.length === 0} onClick={confirmImport}>
+              {busy ? "กำลังบันทึก…" : `ยืนยันนำเข้า ${preview.orders.length} ออร์เดอร์`}
+            </button>
+            <button className="btn-ghost" disabled={busy} onClick={() => { setPreview(null); setFileName(""); }}>เลือกไฟล์ใหม่</button>
+          </div>
+          <p className="text-xs text-faint">* ออร์เดอร์ที่มี Order No. ซ้ำกับในระบบจะถูกอัปเดตทับ</p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function Stat({ label, value, warn }: { label: string; value: number; warn?: boolean }) {
+  return (
+    <div className={`card px-4 py-3 ${warn ? "border-amber-200" : ""}`}>
+      <div className={`text-lg font-bold ${warn ? "text-amber-600" : "text-ink"}`}>{value}</div>
+      <div className="text-xs text-muted">{label}</div>
+    </div>
+  );
+}

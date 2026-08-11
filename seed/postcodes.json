@@ -1,0 +1,6107 @@
+[
+{
+"province": "กระบี่",
+"district": "อำเภอคลองท่อม",
+"postcode": "81120"
+},
+{
+"province": "กระบี่",
+"district": "อำเภอคลองท่อม",
+"postcode": "81170"
+},
+{
+"province": "กระบี่",
+"district": "อำเภอปลายพระยา",
+"postcode": "81160"
+},
+{
+"province": "กระบี่",
+"district": "อำเภอลำทับ",
+"postcode": "81190"
+},
+{
+"province": "กระบี่",
+"district": "อำเภออ่าวลึก",
+"postcode": "81110"
+},
+{
+"province": "กระบี่",
+"district": "อำเภอเกาะลันตา",
+"postcode": "81120"
+},
+{
+"province": "กระบี่",
+"district": "อำเภอเกาะลันตา",
+"postcode": "81150"
+},
+{
+"province": "กระบี่",
+"district": "อำเภอเขาพนม",
+"postcode": "80240"
+},
+{
+"province": "กระบี่",
+"district": "อำเภอเขาพนม",
+"postcode": "81140"
+},
+{
+"province": "กระบี่",
+"district": "อำเภอเมืองกระบี่",
+"postcode": "81000"
+},
+{
+"province": "กระบี่",
+"district": "อำเภอเมืองกระบี่",
+"postcode": "81180"
+},
+{
+"province": "กระบี่",
+"district": "อำเภอเหนือคลอง",
+"postcode": "81130"
+},
+{
+"province": "กรุงเทพมหานคร",
+"district": "เขตคลองสาน",
+"postcode": "10600"
+},
+{
+"province": "กรุงเทพมหานคร",
+"district": "เขตคลองสามวา",
+"postcode": "10510"
+},
+{
+"province": "กรุงเทพมหานคร",
+"district": "เขตคลองเตย",
+"postcode": "10110"
+},
+{
+"province": "กรุงเทพมหานคร",
+"district": "เขตคลองเตย",
+"postcode": "10260"
+},
+{
+"province": "กรุงเทพมหานคร",
+"district": "เขตคันนายาว",
+"postcode": "10230"
+},
+{
+"province": "กรุงเทพมหานคร",
+"district": "เขตจตุจักร",
+"postcode": "10900"
+},
+{
+"province": "กรุงเทพมหานคร",
+"district": "เขตจอมทอง",
+"postcode": "10150"
+},
+{
+"province": "กรุงเทพมหานคร",
+"district": "เขตดอนเมือง",
+"postcode": "10210"
+},
+{
+"province": "กรุงเทพมหานคร",
+"district": "เขตดินแดง",
+"postcode": "10400"
+},
+{
+"province": "กรุงเทพมหานคร",
+"district": "เขตดินแดง",
+"postcode": "10325"
+},
+{
+"province": "กรุงเทพมหานคร",
+"district": "เขตดุสิต",
+"postcode": "10300"
+},
+{
+"province": "กรุงเทพมหานคร",
+"district": "เขตดุสิต",
+"postcode": "10303"
+},
+{
+"province": "กรุงเทพมหานคร",
+"district": "เขตตลิ่งชัน",
+"postcode": "10170"
+},
+{
+"province": "กรุงเทพมหานคร",
+"district": "เขตทวีวัฒนา",
+"postcode": "10170"
+},
+{
+"province": "กรุงเทพมหานคร",
+"district": "เขตทุ่งครุ",
+"postcode": "10140"
+},
+{
+"province": "กรุงเทพมหานคร",
+"district": "เขตธนบุรี",
+"postcode": "10600"
+},
+{
+"province": "กรุงเทพมหานคร",
+"district": "เขตบางกอกน้อย",
+"postcode": "10700"
+},
+{
+"province": "กรุงเทพมหานคร",
+"district": "เขตบางกอกใหญ่",
+"postcode": "10600"
+},
+{
+"province": "กรุงเทพมหานคร",
+"district": "เขตบางกะปิ",
+"postcode": "10240"
+},
+{
+"province": "กรุงเทพมหานคร",
+"district": "เขตบางกะปิ",
+"postcode": "10250"
+},
+{
+"province": "กรุงเทพมหานคร",
+"district": "เขตบางขุนเทียน",
+"postcode": "10150"
+},
+{
+"province": "กรุงเทพมหานคร",
+"district": "เขตบางคอแหลม",
+"postcode": "10120"
+},
+{
+"province": "กรุงเทพมหานคร",
+"district": "เขตบางซื่อ",
+"postcode": "10800"
+},
+{
+"province": "กรุงเทพมหานคร",
+"district": "เขตบางนา",
+"postcode": "10260"
+},
+{
+"province": "กรุงเทพมหานคร",
+"district": "เขตบางบอน",
+"postcode": "10150"
+},
+{
+"province": "กรุงเทพมหานคร",
+"district": "เขตบางพลัด",
+"postcode": "10700"
+},
+{
+"province": "กรุงเทพมหานคร",
+"district": "เขตบางรัก",
+"postcode": "10500"
+},
+{
+"province": "กรุงเทพมหานคร",
+"district": "เขตบางเขน",
+"postcode": "10220"
+},
+{
+"province": "กรุงเทพมหานคร",
+"district": "เขตบางเขน",
+"postcode": "10230"
+},
+{
+"province": "กรุงเทพมหานคร",
+"district": "เขตบางแค",
+"postcode": "10160"
+},
+{
+"province": "กรุงเทพมหานคร",
+"district": "เขตบึงกุ่ม",
+"postcode": "10230"
+},
+{
+"province": "กรุงเทพมหานคร",
+"district": "เขตบึงกุ่ม",
+"postcode": "10240"
+},
+{
+"province": "กรุงเทพมหานคร",
+"district": "เขตปทุมวัน",
+"postcode": "10110"
+},
+{
+"province": "กรุงเทพมหานคร",
+"district": "เขตปทุมวัน",
+"postcode": "10120"
+},
+{
+"province": "กรุงเทพมหานคร",
+"district": "เขตปทุมวัน",
+"postcode": "10330"
+},
+{
+"province": "กรุงเทพมหานคร",
+"district": "เขตปทุมวัน",
+"postcode": "10400"
+},
+{
+"province": "กรุงเทพมหานคร",
+"district": "เขตปทุมวัน",
+"postcode": "10500"
+},
+{
+"province": "กรุงเทพมหานคร",
+"district": "เขตประเวศ",
+"postcode": "10250"
+},
+{
+"province": "กรุงเทพมหานคร",
+"district": "เขตป้อมปราบศัตรูพ่าย",
+"postcode": "10100"
+},
+{
+"province": "กรุงเทพมหานคร",
+"district": "เขตพญาไท",
+"postcode": "10400"
+},
+{
+"province": "กรุงเทพมหานคร",
+"district": "เขตพระนคร",
+"postcode": "10200"
+},
+{
+"province": "กรุงเทพมหานคร",
+"district": "เขตพระโขนง",
+"postcode": "10260"
+},
+{
+"province": "กรุงเทพมหานคร",
+"district": "เขตภาษีเจริญ",
+"postcode": "10160"
+},
+{
+"province": "กรุงเทพมหานคร",
+"district": "เขตมีนบุรี",
+"postcode": "10510"
+},
+{
+"province": "กรุงเทพมหานคร",
+"district": "เขตยานนาวา",
+"postcode": "10120"
+},
+{
+"province": "กรุงเทพมหานคร",
+"district": "เขตราชเทวี",
+"postcode": "10400"
+},
+{
+"province": "กรุงเทพมหานคร",
+"district": "เขตราษฎร์บูรณะ",
+"postcode": "10140"
+},
+{
+"province": "กรุงเทพมหานคร",
+"district": "เขตลาดกระบัง",
+"postcode": "10520"
+},
+{
+"province": "กรุงเทพมหานคร",
+"district": "เขตลาดพร้าว",
+"postcode": "10230"
+},
+{
+"province": "กรุงเทพมหานคร",
+"district": "เขตวังทองหลาง",
+"postcode": "10310"
+},
+{
+"province": "กรุงเทพมหานคร",
+"district": "เขตวัฒนา",
+"postcode": "10110"
+},
+{
+"province": "กรุงเทพมหานคร",
+"district": "เขตวัฒนา",
+"postcode": "10260"
+},
+{
+"province": "กรุงเทพมหานคร",
+"district": "เขตสวนหลวง",
+"postcode": "10250"
+},
+{
+"province": "กรุงเทพมหานคร",
+"district": "เขตสะพานสูง",
+"postcode": "10240"
+},
+{
+"province": "กรุงเทพมหานคร",
+"district": "เขตสะพานสูง",
+"postcode": "10250"
+},
+{
+"province": "กรุงเทพมหานคร",
+"district": "เขตสัมพันธวงศ์",
+"postcode": "10100"
+},
+{
+"province": "กรุงเทพมหานคร",
+"district": "เขตสาทร",
+"postcode": "10120"
+},
+{
+"province": "กรุงเทพมหานคร",
+"district": "เขตสายไหม",
+"postcode": "10220"
+},
+{
+"province": "กรุงเทพมหานคร",
+"district": "เขตหนองจอก",
+"postcode": "10530"
+},
+{
+"province": "กรุงเทพมหานคร",
+"district": "เขตหนองแขม",
+"postcode": "10160"
+},
+{
+"province": "กรุงเทพมหานคร",
+"district": "เขตหลักสี่",
+"postcode": "10210"
+},
+{
+"province": "กรุงเทพมหานคร",
+"district": "เขตห้วยขวาง",
+"postcode": "10310"
+},
+{
+"province": "กาญจนบุรี",
+"district": "อำเภอด่านมะขามเตี้ย",
+"postcode": "71260"
+},
+{
+"province": "กาญจนบุรี",
+"district": "อำเภอทองผาภูมิ",
+"postcode": "71180"
+},
+{
+"province": "กาญจนบุรี",
+"district": "อำเภอท่ามะกา",
+"postcode": "70190"
+},
+{
+"province": "กาญจนบุรี",
+"district": "อำเภอท่ามะกา",
+"postcode": "71120"
+},
+{
+"province": "กาญจนบุรี",
+"district": "อำเภอท่ามะกา",
+"postcode": "71130"
+},
+{
+"province": "กาญจนบุรี",
+"district": "อำเภอท่าม่วง",
+"postcode": "71000"
+},
+{
+"province": "กาญจนบุรี",
+"district": "อำเภอท่าม่วง",
+"postcode": "71110"
+},
+{
+"province": "กาญจนบุรี",
+"district": "อำเภอท่าม่วง",
+"postcode": "71130"
+},
+{
+"province": "กาญจนบุรี",
+"district": "อำเภอบ่อพลอย",
+"postcode": "71160"
+},
+{
+"province": "กาญจนบุรี",
+"district": "อำเภอบ่อพลอย",
+"postcode": "71220"
+},
+{
+"province": "กาญจนบุรี",
+"district": "อำเภอพนมทวน",
+"postcode": "71140"
+},
+{
+"province": "กาญจนบุรี",
+"district": "อำเภอพนมทวน",
+"postcode": "71170"
+},
+{
+"province": "กาญจนบุรี",
+"district": "อำเภอศรีสวัสดิ์",
+"postcode": "71220"
+},
+{
+"province": "กาญจนบุรี",
+"district": "อำเภอศรีสวัสดิ์",
+"postcode": "71250"
+},
+{
+"province": "กาญจนบุรี",
+"district": "อำเภอสังขละบุรี",
+"postcode": "71240"
+},
+{
+"province": "กาญจนบุรี",
+"district": "อำเภอหนองปรือ",
+"postcode": "71220"
+},
+{
+"province": "กาญจนบุรี",
+"district": "อำเภอห้วยกระเจา",
+"postcode": "71170"
+},
+{
+"province": "กาญจนบุรี",
+"district": "อำเภอเมืองกาญจนบุรี",
+"postcode": "71000"
+},
+{
+"province": "กาญจนบุรี",
+"district": "อำเภอเมืองกาญจนบุรี",
+"postcode": "71190"
+},
+{
+"province": "กาญจนบุรี",
+"district": "อำเภอเลาขวัญ",
+"postcode": "71210"
+},
+{
+"province": "กาญจนบุรี",
+"district": "อำเภอไทรโยค",
+"postcode": "71150"
+},
+{
+"province": "กาฬสินธุ์",
+"district": "อำเภอกมลาไสย",
+"postcode": "46130"
+},
+{
+"province": "กาฬสินธุ์",
+"district": "อำเภอกุฉินารายณ์",
+"postcode": "46110"
+},
+{
+"province": "กาฬสินธุ์",
+"district": "อำเภอคำม่วง",
+"postcode": "46180"
+},
+{
+"province": "กาฬสินธุ์",
+"district": "อำเภอฆ้องชัย",
+"postcode": "46130"
+},
+{
+"province": "กาฬสินธุ์",
+"district": "อำเภอดอนจาน",
+"postcode": "46000"
+},
+{
+"province": "กาฬสินธุ์",
+"district": "อำเภอท่าคันโท",
+"postcode": "46190"
+},
+{
+"province": "กาฬสินธุ์",
+"district": "อำเภอนาคู",
+"postcode": "46160"
+},
+{
+"province": "กาฬสินธุ์",
+"district": "อำเภอนามน",
+"postcode": "46230"
+},
+{
+"province": "กาฬสินธุ์",
+"district": "อำเภอยางตลาด",
+"postcode": "46120"
+},
+{
+"province": "กาฬสินธุ์",
+"district": "อำเภอร่องคำ",
+"postcode": "46210"
+},
+{
+"province": "กาฬสินธุ์",
+"district": "อำเภอสมเด็จ",
+"postcode": "46150"
+},
+{
+"province": "กาฬสินธุ์",
+"district": "อำเภอสหัสขันธ์",
+"postcode": "46140"
+},
+{
+"province": "กาฬสินธุ์",
+"district": "อำเภอสามชัย",
+"postcode": "46180"
+},
+{
+"province": "กาฬสินธุ์",
+"district": "อำเภอหนองกุงศรี",
+"postcode": "46220"
+},
+{
+"province": "กาฬสินธุ์",
+"district": "อำเภอห้วยผึ้ง",
+"postcode": "46240"
+},
+{
+"province": "กาฬสินธุ์",
+"district": "อำเภอห้วยเม็ก",
+"postcode": "46170"
+},
+{
+"province": "กาฬสินธุ์",
+"district": "อำเภอเขาวง",
+"postcode": "46160"
+},
+{
+"province": "กาฬสินธุ์",
+"district": "อำเภอเมืองกาฬสินธุ์",
+"postcode": "46000"
+},
+{
+"province": "กำแพงเพชร",
+"district": "อำเภอขาณุวรลักษบุรี",
+"postcode": "62130"
+},
+{
+"province": "กำแพงเพชร",
+"district": "อำเภอขาณุวรลักษบุรี",
+"postcode": "62140"
+},
+{
+"province": "กำแพงเพชร",
+"district": "อำเภอคลองขลุง",
+"postcode": "62120"
+},
+{
+"province": "กำแพงเพชร",
+"district": "อำเภอคลองลาน",
+"postcode": "62180"
+},
+{
+"province": "กำแพงเพชร",
+"district": "อำเภอทรายทองวัฒนา",
+"postcode": "62190"
+},
+{
+"province": "กำแพงเพชร",
+"district": "อำเภอบึงสามัคคี",
+"postcode": "62210"
+},
+{
+"province": "กำแพงเพชร",
+"district": "อำเภอปางศิลาทอง",
+"postcode": "62120"
+},
+{
+"province": "กำแพงเพชร",
+"district": "อำเภอพรานกระต่าย",
+"postcode": "62110"
+},
+{
+"province": "กำแพงเพชร",
+"district": "อำเภอลานกระบือ",
+"postcode": "62170"
+},
+{
+"province": "กำแพงเพชร",
+"district": "อำเภอเมืองกำแพงเพชร",
+"postcode": "62000"
+},
+{
+"province": "กำแพงเพชร",
+"district": "อำเภอเมืองกำแพงเพชร",
+"postcode": "62160"
+},
+{
+"province": "กำแพงเพชร",
+"district": "อำเภอโกสัมพีนคร",
+"postcode": "62000"
+},
+{
+"province": "กำแพงเพชร",
+"district": "อำเภอไทรงาม",
+"postcode": "62150"
+},
+{
+"province": "ขอนแก่น",
+"district": "อำเภอกระนวน",
+"postcode": "40170"
+},
+{
+"province": "ขอนแก่น",
+"district": "อำเภอชนบท",
+"postcode": "40180"
+},
+{
+"province": "ขอนแก่น",
+"district": "อำเภอชุมแพ",
+"postcode": "40130"
+},
+{
+"province": "ขอนแก่น",
+"district": "อำเภอชุมแพ",
+"postcode": "40290"
+},
+{
+"province": "ขอนแก่น",
+"district": "อำเภอซำสูง",
+"postcode": "40170"
+},
+{
+"province": "ขอนแก่น",
+"district": "อำเภอน้ำพอง",
+"postcode": "40140"
+},
+{
+"province": "ขอนแก่น",
+"district": "อำเภอน้ำพอง",
+"postcode": "40310"
+},
+{
+"province": "ขอนแก่น",
+"district": "อำเภอบ้านฝาง",
+"postcode": "40270"
+},
+{
+"province": "ขอนแก่น",
+"district": "อำเภอบ้านแฮด",
+"postcode": "40110"
+},
+{
+"province": "ขอนแก่น",
+"district": "อำเภอบ้านไผ่",
+"postcode": "40110"
+},
+{
+"province": "ขอนแก่น",
+"district": "อำเภอพระยืน",
+"postcode": "40320"
+},
+{
+"province": "ขอนแก่น",
+"district": "อำเภอพล",
+"postcode": "40120"
+},
+{
+"province": "ขอนแก่น",
+"district": "อำเภอภูผาม่าน",
+"postcode": "40350"
+},
+{
+"province": "ขอนแก่น",
+"district": "อำเภอภูเวียง",
+"postcode": "40150"
+},
+{
+"province": "ขอนแก่น",
+"district": "อำเภอมัญจาคีรี",
+"postcode": "40160"
+},
+{
+"province": "ขอนแก่น",
+"district": "อำเภอสีชมพู",
+"postcode": "40220"
+},
+{
+"province": "ขอนแก่น",
+"district": "อำเภอหนองนาคำ",
+"postcode": "40150"
+},
+{
+"province": "ขอนแก่น",
+"district": "อำเภอหนองสองห้อง",
+"postcode": "40190"
+},
+{
+"province": "ขอนแก่น",
+"district": "อำเภอหนองเรือ",
+"postcode": "40210"
+},
+{
+"province": "ขอนแก่น",
+"district": "อำเภอหนองเรือ",
+"postcode": "40240"
+},
+{
+"province": "ขอนแก่น",
+"district": "อำเภออุบลรัตน์",
+"postcode": "40250"
+},
+{
+"province": "ขอนแก่น",
+"district": "อำเภอเขาสวนกวาง",
+"postcode": "40280"
+},
+{
+"province": "ขอนแก่น",
+"district": "อำเภอเปือยน้อย",
+"postcode": "40340"
+},
+{
+"province": "ขอนแก่น",
+"district": "อำเภอเมืองขอนแก่น",
+"postcode": "40000"
+},
+{
+"province": "ขอนแก่น",
+"district": "อำเภอเมืองขอนแก่น",
+"postcode": "40002"
+},
+{
+"province": "ขอนแก่น",
+"district": "อำเภอเมืองขอนแก่น",
+"postcode": "40260"
+},
+{
+"province": "ขอนแก่น",
+"district": "อำเภอเวียงเก่า",
+"postcode": "40150"
+},
+{
+"province": "ขอนแก่น",
+"district": "อำเภอแวงน้อย",
+"postcode": "40230"
+},
+{
+"province": "ขอนแก่น",
+"district": "อำเภอแวงใหญ่",
+"postcode": "40330"
+},
+{
+"province": "ขอนแก่น",
+"district": "อำเภอโคกโพธิ์ไชย",
+"postcode": "40160"
+},
+{
+"province": "ขอนแก่น",
+"district": "อำเภอโนนศิลา",
+"postcode": "40110"
+},
+{
+"province": "จังหวัดนครราชสีมา",
+"district": "อำเภอปากช่อง",
+"postcode": "30450"
+},
+{
+"province": "จันทบุรี",
+"district": "อำเภอขลุง",
+"postcode": "22110"
+},
+{
+"province": "จันทบุรี",
+"district": "อำเภอขลุง",
+"postcode": "22150"
+},
+{
+"province": "จันทบุรี",
+"district": "อำเภอท่าใหม่",
+"postcode": "22120"
+},
+{
+"province": "จันทบุรี",
+"district": "อำเภอท่าใหม่",
+"postcode": "22170"
+},
+{
+"province": "จันทบุรี",
+"district": "อำเภอนายายอาม",
+"postcode": "22160"
+},
+{
+"province": "จันทบุรี",
+"district": "อำเภอนายายอาม",
+"postcode": "22170"
+},
+{
+"province": "จันทบุรี",
+"district": "อำเภอมะขาม",
+"postcode": "22150"
+},
+{
+"province": "จันทบุรี",
+"district": "อำเภอสอยดาว",
+"postcode": "22180"
+},
+{
+"province": "จันทบุรี",
+"district": "อำเภอเขาคิชฌกูฏ",
+"postcode": "22210"
+},
+{
+"province": "จันทบุรี",
+"district": "อำเภอเมืองจันทบุรี",
+"postcode": "22000"
+},
+{
+"province": "จันทบุรี",
+"district": "อำเภอแก่งหางแมว",
+"postcode": "22160"
+},
+{
+"province": "จันทบุรี",
+"district": "อำเภอแหลมสิงห์",
+"postcode": "22120"
+},
+{
+"province": "จันทบุรี",
+"district": "อำเภอแหลมสิงห์",
+"postcode": "22130"
+},
+{
+"province": "จันทบุรี",
+"district": "อำเภอแหลมสิงห์",
+"postcode": "22190"
+},
+{
+"province": "จันทบุรี",
+"district": "อำเภอโป่งน้ำร้อน",
+"postcode": "22140"
+},
+{
+"province": "ฉะเชิงเทรา",
+"district": "อำเภอคลองเขื่อน",
+"postcode": "24000"
+},
+{
+"province": "ฉะเชิงเทรา",
+"district": "อำเภอคลองเขื่อน",
+"postcode": "24110"
+},
+{
+"province": "ฉะเชิงเทรา",
+"district": "อำเภอท่าตะเกียบ",
+"postcode": "24160"
+},
+{
+"province": "ฉะเชิงเทรา",
+"district": "อำเภอบางคล้า",
+"postcode": "24110"
+},
+{
+"province": "ฉะเชิงเทรา",
+"district": "อำเภอบางน้ำเปรี้ยว",
+"postcode": "24000"
+},
+{
+"province": "ฉะเชิงเทรา",
+"district": "อำเภอบางน้ำเปรี้ยว",
+"postcode": "24150"
+},
+{
+"province": "ฉะเชิงเทรา",
+"district": "อำเภอบางน้ำเปรี้ยว",
+"postcode": "24170"
+},
+{
+"province": "ฉะเชิงเทรา",
+"district": "อำเภอบางปะกง",
+"postcode": "24130"
+},
+{
+"province": "ฉะเชิงเทรา",
+"district": "อำเภอบางปะกง",
+"postcode": "24180"
+},
+{
+"province": "ฉะเชิงเทรา",
+"district": "อำเภอบ้านโพธิ์",
+"postcode": "24140"
+},
+{
+"province": "ฉะเชิงเทรา",
+"district": "อำเภอพนมสารคาม",
+"postcode": "24120"
+},
+{
+"province": "ฉะเชิงเทรา",
+"district": "อำเภอราชสาส์น",
+"postcode": "24120"
+},
+{
+"province": "ฉะเชิงเทรา",
+"district": "อำเภอสนามชัยเขต",
+"postcode": "24160"
+},
+{
+"province": "ฉะเชิงเทรา",
+"district": "อำเภอเมืองฉะเชิงเทรา",
+"postcode": "24000"
+},
+{
+"province": "ฉะเชิงเทรา",
+"district": "อำเภอแปลงยาว",
+"postcode": "24190"
+},
+{
+"province": "ชลบุรี",
+"district": "อำเภอบางละมุง",
+"postcode": "20150"
+},
+{
+"province": "ชลบุรี",
+"district": "อำเภอบ่อทอง",
+"postcode": "20270"
+},
+{
+"province": "ชลบุรี",
+"district": "อำเภอบ้านบึง",
+"postcode": "20170"
+},
+{
+"province": "ชลบุรี",
+"district": "อำเภอบ้านบึง",
+"postcode": "20220"
+},
+{
+"province": "ชลบุรี",
+"district": "อำเภอพนัสนิคม",
+"postcode": "20140"
+},
+{
+"province": "ชลบุรี",
+"district": "อำเภอพนัสนิคม",
+"postcode": "20240"
+},
+{
+"province": "ชลบุรี",
+"district": "อำเภอพานทอง",
+"postcode": "20000"
+},
+{
+"province": "ชลบุรี",
+"district": "อำเภอพานทอง",
+"postcode": "20160"
+},
+{
+"province": "ชลบุรี",
+"district": "อำเภอศรีราชา",
+"postcode": "20110"
+},
+{
+"province": "ชลบุรี",
+"district": "อำเภอศรีราชา",
+"postcode": "20230"
+},
+{
+"province": "ชลบุรี",
+"district": "อำเภอสัตหีบ",
+"postcode": "20180"
+},
+{
+"province": "ชลบุรี",
+"district": "อำเภอสัตหีบ",
+"postcode": "20182"
+},
+{
+"province": "ชลบุรี",
+"district": "อำเภอสัตหีบ",
+"postcode": "20250"
+},
+{
+"province": "ชลบุรี",
+"district": "อำเภอสัตหีบ",
+"postcode": "20251"
+},
+{
+"province": "ชลบุรี",
+"district": "อำเภอหนองใหญ่",
+"postcode": "20190"
+},
+{
+"province": "ชลบุรี",
+"district": "อำเภอเกาะจันทร์",
+"postcode": "20240"
+},
+{
+"province": "ชลบุรี",
+"district": "อำเภอเกาะสีชัง",
+"postcode": "20120"
+},
+{
+"province": "ชลบุรี",
+"district": "อำเภอเมืองชลบุรี",
+"postcode": "20000"
+},
+{
+"province": "ชลบุรี",
+"district": "อำเภอเมืองชลบุรี",
+"postcode": "20130"
+},
+{
+"province": "ชลบุรี",
+"district": "อำเภอเมืองชลบุรี",
+"postcode": "20131"
+},
+{
+"province": "ชัยนาท",
+"district": "อำเภอมโนรมย์",
+"postcode": "17110"
+},
+{
+"province": "ชัยนาท",
+"district": "อำเภอมโนรมย์",
+"postcode": "17170"
+},
+{
+"province": "ชัยนาท",
+"district": "อำเภอวัดสิงห์",
+"postcode": "17120"
+},
+{
+"province": "ชัยนาท",
+"district": "อำเภอสรรคบุรี",
+"postcode": "17140"
+},
+{
+"province": "ชัยนาท",
+"district": "อำเภอสรรพยา",
+"postcode": "17150"
+},
+{
+"province": "ชัยนาท",
+"district": "อำเภอหนองมะโมง",
+"postcode": "17120"
+},
+{
+"province": "ชัยนาท",
+"district": "อำเภอหันคา",
+"postcode": "17130"
+},
+{
+"province": "ชัยนาท",
+"district": "อำเภอหันคา",
+"postcode": "17160"
+},
+{
+"province": "ชัยนาท",
+"district": "อำเภอเนินขาม",
+"postcode": "17130"
+},
+{
+"province": "ชัยนาท",
+"district": "อำเภอเมืองชัยนาท",
+"postcode": "17000"
+},
+{
+"province": "ชัยนาท",
+"district": "อำเภอเมืองชัยนาท",
+"postcode": "17120"
+},
+{
+"province": "ชัยภูมิ",
+"district": "อำเภอคอนสวรรค์",
+"postcode": "36140"
+},
+{
+"province": "ชัยภูมิ",
+"district": "อำเภอคอนสาร",
+"postcode": "36180"
+},
+{
+"province": "ชัยภูมิ",
+"district": "อำเภอจัตุรัส",
+"postcode": "36130"
+},
+{
+"province": "ชัยภูมิ",
+"district": "อำเภอจัตุรัส",
+"postcode": "36220"
+},
+{
+"province": "ชัยภูมิ",
+"district": "อำเภอซับใหญ่",
+"postcode": "36130"
+},
+{
+"province": "ชัยภูมิ",
+"district": "อำเภอบำเหน็จณรงค์",
+"postcode": "36160"
+},
+{
+"province": "ชัยภูมิ",
+"district": "อำเภอบำเหน็จณรงค์",
+"postcode": "36220"
+},
+{
+"province": "ชัยภูมิ",
+"district": "อำเภอบ้านเขว้า",
+"postcode": "36170"
+},
+{
+"province": "ชัยภูมิ",
+"district": "อำเภอบ้านแท่น",
+"postcode": "36190"
+},
+{
+"province": "ชัยภูมิ",
+"district": "อำเภอภักดีชุมพล",
+"postcode": "36260"
+},
+{
+"province": "ชัยภูมิ",
+"district": "อำเภอภูเขียว",
+"postcode": "36110"
+},
+{
+"province": "ชัยภูมิ",
+"district": "อำเภอหนองบัวระเหว",
+"postcode": "36250"
+},
+{
+"province": "ชัยภูมิ",
+"district": "อำเภอหนองบัวแดง",
+"postcode": "36210"
+},
+{
+"province": "ชัยภูมิ",
+"district": "อำเภอเกษตรสมบูรณ์",
+"postcode": "36120"
+},
+{
+"province": "ชัยภูมิ",
+"district": "อำเภอเทพสถิต",
+"postcode": "36230"
+},
+{
+"province": "ชัยภูมิ",
+"district": "อำเภอเนินสง่า",
+"postcode": "36130"
+},
+{
+"province": "ชัยภูมิ",
+"district": "อำเภอเมืองชัยภูมิ",
+"postcode": "36000"
+},
+{
+"province": "ชัยภูมิ",
+"district": "อำเภอเมืองชัยภูมิ",
+"postcode": "36240"
+},
+{
+"province": "ชัยภูมิ",
+"district": "อำเภอแก้งคร้อ",
+"postcode": "36150"
+},
+{
+"province": "ชุมพร",
+"district": "อำเภอทุ่งตะโก",
+"postcode": "86220"
+},
+{
+"province": "ชุมพร",
+"district": "อำเภอท่าแซะ",
+"postcode": "86140"
+},
+{
+"province": "ชุมพร",
+"district": "อำเภอท่าแซะ",
+"postcode": "86190"
+},
+{
+"province": "ชุมพร",
+"district": "อำเภอปะทิว",
+"postcode": "86160"
+},
+{
+"province": "ชุมพร",
+"district": "อำเภอปะทิว",
+"postcode": "86210"
+},
+{
+"province": "ชุมพร",
+"district": "อำเภอปะทิว",
+"postcode": "86230"
+},
+{
+"province": "ชุมพร",
+"district": "อำเภอพะโต๊ะ",
+"postcode": "86180"
+},
+{
+"province": "ชุมพร",
+"district": "อำเภอละแม",
+"postcode": "86170"
+},
+{
+"province": "ชุมพร",
+"district": "อำเภอสวี",
+"postcode": "86130"
+},
+{
+"province": "ชุมพร",
+"district": "อำเภอหลังสวน",
+"postcode": "86110"
+},
+{
+"province": "ชุมพร",
+"district": "อำเภอหลังสวน",
+"postcode": "86150"
+},
+{
+"province": "ชุมพร",
+"district": "อำเภอเมืองชุมพร",
+"postcode": "86000"
+},
+{
+"province": "ชุมพร",
+"district": "อำเภอเมืองชุมพร",
+"postcode": "86100"
+},
+{
+"province": "ชุมพร",
+"district": "อำเภอเมืองชุมพร",
+"postcode": "86120"
+},
+{
+"province": "ชุมพร",
+"district": "อำเภอเมืองชุมพร",
+"postcode": "86190"
+},
+{
+"province": "ตรัง",
+"district": "อำเภอกันตัง",
+"postcode": "92110"
+},
+{
+"province": "ตรัง",
+"district": "อำเภอนาโยง",
+"postcode": "92170"
+},
+{
+"province": "ตรัง",
+"district": "อำเภอปะเหลียน",
+"postcode": "92120"
+},
+{
+"province": "ตรัง",
+"district": "อำเภอปะเหลียน",
+"postcode": "92140"
+},
+{
+"province": "ตรัง",
+"district": "อำเภอปะเหลียน",
+"postcode": "92180"
+},
+{
+"province": "ตรัง",
+"district": "อำเภอย่านตาขาว",
+"postcode": "92140"
+},
+{
+"province": "ตรัง",
+"district": "อำเภอรัษฎา",
+"postcode": "92130"
+},
+{
+"province": "ตรัง",
+"district": "อำเภอรัษฎา",
+"postcode": "92160"
+},
+{
+"province": "ตรัง",
+"district": "อำเภอวังวิเศษ",
+"postcode": "92000"
+},
+{
+"province": "ตรัง",
+"district": "อำเภอวังวิเศษ",
+"postcode": "92220"
+},
+{
+"province": "ตรัง",
+"district": "อำเภอสิเกา",
+"postcode": "92000"
+},
+{
+"province": "ตรัง",
+"district": "อำเภอสิเกา",
+"postcode": "92150"
+},
+{
+"province": "ตรัง",
+"district": "อำเภอหาดสำราญ",
+"postcode": "92120"
+},
+{
+"province": "ตรัง",
+"district": "อำเภอห้วยยอด",
+"postcode": "92130"
+},
+{
+"province": "ตรัง",
+"district": "อำเภอห้วยยอด",
+"postcode": "92190"
+},
+{
+"province": "ตรัง",
+"district": "อำเภอห้วยยอด",
+"postcode": "92210"
+},
+{
+"province": "ตรัง",
+"district": "อำเภอเมืองตรัง",
+"postcode": "92000"
+},
+{
+"province": "ตรัง",
+"district": "อำเภอเมืองตรัง",
+"postcode": "92170"
+},
+{
+"province": "ตรัง",
+"district": "อำเภอเมืองตรัง",
+"postcode": "92190"
+},
+{
+"province": "ตราด",
+"district": "อำเภอคลองใหญ่",
+"postcode": "23110"
+},
+{
+"province": "ตราด",
+"district": "อำเภอบ่อไร่",
+"postcode": "23140"
+},
+{
+"province": "ตราด",
+"district": "อำเภอเกาะกูด",
+"postcode": "23000"
+},
+{
+"province": "ตราด",
+"district": "อำเภอเกาะกูด",
+"postcode": "23120"
+},
+{
+"province": "ตราด",
+"district": "อำเภอเกาะช้าง",
+"postcode": "23170"
+},
+{
+"province": "ตราด",
+"district": "อำเภอเขาสมิง",
+"postcode": "23130"
+},
+{
+"province": "ตราด",
+"district": "อำเภอเขาสมิง",
+"postcode": "23150"
+},
+{
+"province": "ตราด",
+"district": "อำเภอเมืองตราด",
+"postcode": "23000"
+},
+{
+"province": "ตราด",
+"district": "อำเภอแหลมงอบ",
+"postcode": "23120"
+},
+{
+"province": "ตาก",
+"district": "อำเภอท่าสองยาง",
+"postcode": "63150"
+},
+{
+"province": "ตาก",
+"district": "อำเภอบ้านตาก",
+"postcode": "63120"
+},
+{
+"province": "ตาก",
+"district": "อำเภอพบพระ",
+"postcode": "63160"
+},
+{
+"province": "ตาก",
+"district": "อำเภอวังเจ้า",
+"postcode": "63180"
+},
+{
+"province": "ตาก",
+"district": "อำเภอสามเงา",
+"postcode": "63130"
+},
+{
+"province": "ตาก",
+"district": "อำเภออุ้มผาง",
+"postcode": "63170"
+},
+{
+"province": "ตาก",
+"district": "อำเภอเมืองตาก",
+"postcode": "63000"
+},
+{
+"province": "ตาก",
+"district": "อำเภอแม่ระมาด",
+"postcode": "63140"
+},
+{
+"province": "ตาก",
+"district": "อำเภอแม่สอด",
+"postcode": "63110"
+},
+{
+"province": "นครนายก",
+"district": "อำเภอบ้านนา",
+"postcode": "26110"
+},
+{
+"province": "นครนายก",
+"district": "อำเภอปากพลี",
+"postcode": "26130"
+},
+{
+"province": "นครนายก",
+"district": "อำเภอองครักษ์",
+"postcode": "26120"
+},
+{
+"province": "นครนายก",
+"district": "อำเภอเมืองนครนายก",
+"postcode": "26000"
+},
+{
+"province": "นครนายก",
+"district": "อำเภอเมืองนครนายก",
+"postcode": "26001"
+},
+{
+"province": "นครปฐม",
+"district": "อำเภอกำแพงแสน",
+"postcode": "73140"
+},
+{
+"province": "นครปฐม",
+"district": "อำเภอกำแพงแสน",
+"postcode": "73180"
+},
+{
+"province": "นครปฐม",
+"district": "อำเภอดอนตูม",
+"postcode": "73150"
+},
+{
+"province": "นครปฐม",
+"district": "อำเภอนครชัยศรี",
+"postcode": "73120"
+},
+{
+"province": "นครปฐม",
+"district": "อำเภอบางเลน",
+"postcode": "73130"
+},
+{
+"province": "นครปฐม",
+"district": "อำเภอบางเลน",
+"postcode": "73190"
+},
+{
+"province": "นครปฐม",
+"district": "อำเภอพุทธมณฑล",
+"postcode": "73170"
+},
+{
+"province": "นครปฐม",
+"district": "อำเภอสามพราน",
+"postcode": "73110"
+},
+{
+"province": "นครปฐม",
+"district": "อำเภอสามพราน",
+"postcode": "73160"
+},
+{
+"province": "นครปฐม",
+"district": "อำเภอสามพราน",
+"postcode": "73210"
+},
+{
+"province": "นครปฐม",
+"district": "อำเภอสามพราน",
+"postcode": "73220"
+},
+{
+"province": "นครปฐม",
+"district": "อำเภอเมืองนครปฐม",
+"postcode": "73000"
+},
+{
+"province": "นครพนม",
+"district": "อำเภอท่าอุเทน",
+"postcode": "48120"
+},
+{
+"province": "นครพนม",
+"district": "อำเภอธาตุพนม",
+"postcode": "48110"
+},
+{
+"province": "นครพนม",
+"district": "อำเภอนาทม",
+"postcode": "48140"
+},
+{
+"province": "นครพนม",
+"district": "อำเภอนาหว้า",
+"postcode": "48180"
+},
+{
+"province": "นครพนม",
+"district": "อำเภอนาแก",
+"postcode": "48130"
+},
+{
+"province": "นครพนม",
+"district": "อำเภอบ้านแพง",
+"postcode": "48140"
+},
+{
+"province": "นครพนม",
+"district": "อำเภอปลาปาก",
+"postcode": "48160"
+},
+{
+"province": "นครพนม",
+"district": "อำเภอวังยาง",
+"postcode": "48130"
+},
+{
+"province": "นครพนม",
+"district": "อำเภอศรีสงคราม",
+"postcode": "48150"
+},
+{
+"province": "นครพนม",
+"district": "อำเภอเมืองนครพนม",
+"postcode": "48000"
+},
+{
+"province": "นครพนม",
+"district": "อำเภอเรณูนคร",
+"postcode": "48170"
+},
+{
+"province": "นครพนม",
+"district": "อำเภอโพนสวรรค์",
+"postcode": "48190"
+},
+{
+"province": "นครราชสีมา",
+"district": "อำเภอขามทะเลสอ",
+"postcode": "30280"
+},
+{
+"province": "นครราชสีมา",
+"district": "อำเภอขามสะแกแสง",
+"postcode": "30290"
+},
+{
+"province": "นครราชสีมา",
+"district": "อำเภอคง",
+"postcode": "30260"
+},
+{
+"province": "นครราชสีมา",
+"district": "อำเภอครบุรี",
+"postcode": "30250"
+},
+{
+"province": "นครราชสีมา",
+"district": "อำเภอจักราช",
+"postcode": "30230"
+},
+{
+"province": "นครราชสีมา",
+"district": "อำเภอชุมพวง",
+"postcode": "30270"
+},
+{
+"province": "นครราชสีมา",
+"district": "อำเภอด่านขุนทด",
+"postcode": "30210"
+},
+{
+"province": "นครราชสีมา",
+"district": "อำเภอด่านขุนทด",
+"postcode": "36220"
+},
+{
+"province": "นครราชสีมา",
+"district": "อำเภอบัวลาย",
+"postcode": "30120"
+},
+{
+"province": "นครราชสีมา",
+"district": "อำเภอบัวใหญ่",
+"postcode": "30120"
+},
+{
+"province": "นครราชสีมา",
+"district": "อำเภอบ้านเหลื่อม",
+"postcode": "30350"
+},
+{
+"province": "นครราชสีมา",
+"district": "อำเภอประทาย",
+"postcode": "30180"
+},
+{
+"province": "นครราชสีมา",
+"district": "อำเภอปักธงชัย",
+"postcode": "30150"
+},
+{
+"province": "นครราชสีมา",
+"district": "อำเภอปากช่อง",
+"postcode": "30130"
+},
+{
+"province": "นครราชสีมา",
+"district": "อำเภอปากช่อง",
+"postcode": "30320"
+},
+{
+"province": "นครราชสีมา",
+"district": "อำเภอพระทองคำ",
+"postcode": "30220"
+},
+{
+"province": "นครราชสีมา",
+"district": "อำเภอพิมาย",
+"postcode": "30110"
+},
+{
+"province": "นครราชสีมา",
+"district": "อำเภอลำทะเมนชัย",
+"postcode": "30270"
+},
+{
+"province": "นครราชสีมา",
+"district": "อำเภอวังน้ำเขียว",
+"postcode": "30150"
+},
+{
+"province": "นครราชสีมา",
+"district": "อำเภอวังน้ำเขียว",
+"postcode": "30370"
+},
+{
+"province": "นครราชสีมา",
+"district": "อำเภอสีคิ้ว",
+"postcode": "30140"
+},
+{
+"province": "นครราชสีมา",
+"district": "อำเภอสีคิ้ว",
+"postcode": "30340"
+},
+{
+"province": "นครราชสีมา",
+"district": "อำเภอสีดา",
+"postcode": "30430"
+},
+{
+"province": "นครราชสีมา",
+"district": "อำเภอสูงเนิน",
+"postcode": "30170"
+},
+{
+"province": "นครราชสีมา",
+"district": "อำเภอสูงเนิน",
+"postcode": "30380"
+},
+{
+"province": "นครราชสีมา",
+"district": "อำเภอหนองบุญมาก",
+"postcode": "30410"
+},
+{
+"province": "นครราชสีมา",
+"district": "อำเภอห้วยแถลง",
+"postcode": "30240"
+},
+{
+"province": "นครราชสีมา",
+"district": "อำเภอเฉลิมพระเกียรติ",
+"postcode": "30000"
+},
+{
+"province": "นครราชสีมา",
+"district": "อำเภอเฉลิมพระเกียรติ",
+"postcode": "30230"
+},
+{
+"province": "นครราชสีมา",
+"district": "อำเภอเทพารักษ์",
+"postcode": "30210"
+},
+{
+"province": "นครราชสีมา",
+"district": "อำเภอเมืองนครราชสีมา",
+"postcode": "30000"
+},
+{
+"province": "นครราชสีมา",
+"district": "อำเภอเมืองนครราชสีมา",
+"postcode": "30280"
+},
+{
+"province": "นครราชสีมา",
+"district": "อำเภอเมืองนครราชสีมา",
+"postcode": "30310"
+},
+{
+"province": "นครราชสีมา",
+"district": "อำเภอเมืองยาง",
+"postcode": "30270"
+},
+{
+"province": "นครราชสีมา",
+"district": "อำเภอเสิงสาง",
+"postcode": "30330"
+},
+{
+"province": "นครราชสีมา",
+"district": "อำเภอแก้งสนามนาง",
+"postcode": "30440"
+},
+{
+"province": "นครราชสีมา",
+"district": "อำเภอโชคชัย",
+"postcode": "30190"
+},
+{
+"province": "นครราชสีมา",
+"district": "อำเภอโนนสูง",
+"postcode": "30160"
+},
+{
+"province": "นครราชสีมา",
+"district": "อำเภอโนนสูง",
+"postcode": "30420"
+},
+{
+"province": "นครราชสีมา",
+"district": "อำเภอโนนแดง",
+"postcode": "30360"
+},
+{
+"province": "นครราชสีมา",
+"district": "อำเภอโนนไทย",
+"postcode": "30220"
+},
+{
+"province": "นครศรีธรรมราช",
+"district": "อำเภอขนอม",
+"postcode": "80210"
+},
+{
+"province": "นครศรีธรรมราช",
+"district": "อำเภอจุฬาภรณ์",
+"postcode": "80130"
+},
+{
+"province": "นครศรีธรรมราช",
+"district": "อำเภอจุฬาภรณ์",
+"postcode": "80180"
+},
+{
+"province": "นครศรีธรรมราช",
+"district": "อำเภอฉวาง",
+"postcode": "80150"
+},
+{
+"province": "นครศรีธรรมราช",
+"district": "อำเภอฉวาง",
+"postcode": "80250"
+},
+{
+"province": "นครศรีธรรมราช",
+"district": "อำเภอฉวาง",
+"postcode": "80260"
+},
+{
+"province": "นครศรีธรรมราช",
+"district": "อำเภอชะอวด",
+"postcode": "80180"
+},
+{
+"province": "นครศรีธรรมราช",
+"district": "อำเภอช้างกลาง",
+"postcode": "80220"
+},
+{
+"province": "นครศรีธรรมราช",
+"district": "อำเภอช้างกลาง",
+"postcode": "80250"
+},
+{
+"province": "นครศรีธรรมราช",
+"district": "อำเภอถ้ำพรรณรา",
+"postcode": "80260"
+},
+{
+"province": "นครศรีธรรมราช",
+"district": "อำเภอทุ่งสง",
+"postcode": "80110"
+},
+{
+"province": "นครศรีธรรมราช",
+"district": "อำเภอทุ่งสง",
+"postcode": "80310"
+},
+{
+"province": "นครศรีธรรมราช",
+"district": "อำเภอทุ่งใหญ่",
+"postcode": "80240"
+},
+{
+"province": "นครศรีธรรมราช",
+"district": "อำเภอท่าศาลา",
+"postcode": "80160"
+},
+{
+"province": "นครศรีธรรมราช",
+"district": "อำเภอนบพิตำ",
+"postcode": "80160"
+},
+{
+"province": "นครศรีธรรมราช",
+"district": "อำเภอนาบอน",
+"postcode": "80220"
+},
+{
+"province": "นครศรีธรรมราช",
+"district": "อำเภอนาบอน",
+"postcode": "80250"
+},
+{
+"province": "นครศรีธรรมราช",
+"district": "อำเภอบางขัน",
+"postcode": "80360"
+},
+{
+"province": "นครศรีธรรมราช",
+"district": "อำเภอปากพนัง",
+"postcode": "80140"
+},
+{
+"province": "นครศรีธรรมราช",
+"district": "อำเภอปากพนัง",
+"postcode": "80330"
+},
+{
+"province": "นครศรีธรรมราช",
+"district": "อำเภอพรหมคีรี",
+"postcode": "80320"
+},
+{
+"province": "นครศรีธรรมราช",
+"district": "อำเภอพระพรหม",
+"postcode": "80000"
+},
+{
+"province": "นครศรีธรรมราช",
+"district": "อำเภอพิปูน",
+"postcode": "80270"
+},
+{
+"province": "นครศรีธรรมราช",
+"district": "อำเภอร่อนพิบูลย์",
+"postcode": "80130"
+},
+{
+"province": "นครศรีธรรมราช",
+"district": "อำเภอร่อนพิบูลย์",
+"postcode": "80350"
+},
+{
+"province": "นครศรีธรรมราช",
+"district": "อำเภอลานสกา",
+"postcode": "80230"
+},
+{
+"province": "นครศรีธรรมราช",
+"district": "อำเภอสิชล",
+"postcode": "80120"
+},
+{
+"province": "นครศรีธรรมราช",
+"district": "อำเภอสิชล",
+"postcode": "80340"
+},
+{
+"province": "นครศรีธรรมราช",
+"district": "อำเภอหัวไทร",
+"postcode": "80170"
+},
+{
+"province": "นครศรีธรรมราช",
+"district": "อำเภอเฉลิมพระเกียรติ",
+"postcode": "80190"
+},
+{
+"province": "นครศรีธรรมราช",
+"district": "อำเภอเฉลิมพระเกียรติ",
+"postcode": "80290"
+},
+{
+"province": "นครศรีธรรมราช",
+"district": "อำเภอเฉลิมพระเกียรติ",
+"postcode": "80350"
+},
+{
+"province": "นครศรีธรรมราช",
+"district": "อำเภอเชียรใหญ่",
+"postcode": "80190"
+},
+{
+"province": "นครศรีธรรมราช",
+"district": "อำเภอเมืองนครศรีธรรมราช",
+"postcode": "80000"
+},
+{
+"province": "นครศรีธรรมราช",
+"district": "อำเภอเมืองนครศรีธรรมราช",
+"postcode": "80280"
+},
+{
+"province": "นครศรีธรรมราช",
+"district": "อำเภอเมืองนครศรีธรรมราช",
+"postcode": "80290"
+},
+{
+"province": "นครศรีธรรมราช",
+"district": "อำเภอเมืองนครศรีธรรมราช",
+"postcode": "80330"
+},
+{
+"province": "นครสวรรค์",
+"district": "อำเภอชุมตาบง",
+"postcode": "60150"
+},
+{
+"province": "นครสวรรค์",
+"district": "อำเภอชุมแสง",
+"postcode": "60120"
+},
+{
+"province": "นครสวรรค์",
+"district": "อำเภอชุมแสง",
+"postcode": "60250"
+},
+{
+"province": "นครสวรรค์",
+"district": "อำเภอตากฟ้า",
+"postcode": "60190"
+},
+{
+"province": "นครสวรรค์",
+"district": "อำเภอตาคลี",
+"postcode": "60140"
+},
+{
+"province": "นครสวรรค์",
+"district": "อำเภอตาคลี",
+"postcode": "60210"
+},
+{
+"province": "นครสวรรค์",
+"district": "อำเภอตาคลี",
+"postcode": "60260"
+},
+{
+"province": "นครสวรรค์",
+"district": "อำเภอท่าตะโก",
+"postcode": "60160"
+},
+{
+"province": "นครสวรรค์",
+"district": "อำเภอบรรพตพิสัย",
+"postcode": "60180"
+},
+{
+"province": "นครสวรรค์",
+"district": "อำเภอพยุหะคีรี",
+"postcode": "60130"
+},
+{
+"province": "นครสวรรค์",
+"district": "อำเภอลาดยาว",
+"postcode": "60150"
+},
+{
+"province": "นครสวรรค์",
+"district": "อำเภอหนองบัว",
+"postcode": "60110"
+},
+{
+"province": "นครสวรรค์",
+"district": "อำเภอเก้าเลี้ยว",
+"postcode": "60230"
+},
+{
+"province": "นครสวรรค์",
+"district": "อำเภอเมืองนครสวรรค์",
+"postcode": "60000"
+},
+{
+"province": "นครสวรรค์",
+"district": "อำเภอเมืองนครสวรรค์",
+"postcode": "60240"
+},
+{
+"province": "นครสวรรค์",
+"district": "อำเภอแม่วงก์",
+"postcode": "60150"
+},
+{
+"province": "นครสวรรค์",
+"district": "อำเภอแม่เปิน",
+"postcode": "60150"
+},
+{
+"province": "นครสวรรค์",
+"district": "อำเภอโกรกพระ",
+"postcode": "60170"
+},
+{
+"province": "นครสวรรค์",
+"district": "อำเภอไพศาลี",
+"postcode": "60220"
+},
+{
+"province": "นนทบุรี",
+"district": "อำเภอบางกรวย",
+"postcode": "11130"
+},
+{
+"province": "นนทบุรี",
+"district": "อำเภอบางบัวทอง",
+"postcode": "11110"
+},
+{
+"province": "นนทบุรี",
+"district": "อำเภอบางใหญ่",
+"postcode": "11140"
+},
+{
+"province": "นนทบุรี",
+"district": "อำเภอปากเกร็ด",
+"postcode": "11120"
+},
+{
+"province": "นนทบุรี",
+"district": "อำเภอเมืองนนทบุรี",
+"postcode": "11000"
+},
+{
+"province": "นนทบุรี",
+"district": "อำเภอไทรน้อย",
+"postcode": "11150"
+},
+{
+"province": "นราธิวาส",
+"district": "อำเภอจะแนะ",
+"postcode": "96220"
+},
+{
+"province": "นราธิวาส",
+"district": "อำเภอตากใบ",
+"postcode": "96110"
+},
+{
+"province": "นราธิวาส",
+"district": "อำเภอบาเจาะ",
+"postcode": "96170"
+},
+{
+"province": "นราธิวาส",
+"district": "อำเภอยี่งอ",
+"postcode": "96180"
+},
+{
+"province": "นราธิวาส",
+"district": "อำเภอระแงะ",
+"postcode": "96130"
+},
+{
+"province": "นราธิวาส",
+"district": "อำเภอระแงะ",
+"postcode": "96220"
+},
+{
+"province": "นราธิวาส",
+"district": "อำเภอรือเสาะ",
+"postcode": "96150"
+},
+{
+"province": "นราธิวาส",
+"district": "อำเภอศรีสาคร",
+"postcode": "96210"
+},
+{
+"province": "นราธิวาส",
+"district": "อำเภอสุคิริน",
+"postcode": "96190"
+},
+{
+"province": "นราธิวาส",
+"district": "อำเภอสุไหงปาดี",
+"postcode": "96140"
+},
+{
+"province": "นราธิวาส",
+"district": "อำเภอสุไหงโก-ลก",
+"postcode": "96120"
+},
+{
+"province": "นราธิวาส",
+"district": "อำเภอเจาะไอร้อง",
+"postcode": "96130"
+},
+{
+"province": "นราธิวาส",
+"district": "อำเภอเมืองนราธิวาส",
+"postcode": "96000"
+},
+{
+"province": "นราธิวาส",
+"district": "อำเภอแว้ง",
+"postcode": "96160"
+},
+{
+"province": "น่าน",
+"district": "อำเภอทุ่งช้าง",
+"postcode": "55130"
+},
+{
+"province": "น่าน",
+"district": "อำเภอท่าวังผา",
+"postcode": "55140"
+},
+{
+"province": "น่าน",
+"district": "อำเภอนาน้อย",
+"postcode": "55150"
+},
+{
+"province": "น่าน",
+"district": "อำเภอนาหมื่น",
+"postcode": "55180"
+},
+{
+"province": "น่าน",
+"district": "อำเภอบ่อเกลือ",
+"postcode": "55220"
+},
+{
+"province": "น่าน",
+"district": "อำเภอบ้านหลวง",
+"postcode": "55190"
+},
+{
+"province": "น่าน",
+"district": "อำเภอปัว",
+"postcode": "55120"
+},
+{
+"province": "น่าน",
+"district": "อำเภอภูเพียง",
+"postcode": "55000"
+},
+{
+"province": "น่าน",
+"district": "อำเภอสองแคว",
+"postcode": "55160"
+},
+{
+"province": "น่าน",
+"district": "อำเภอสันติสุข",
+"postcode": "55210"
+},
+{
+"province": "น่าน",
+"district": "อำเภอเฉลิมพระเกียรติ",
+"postcode": "55130"
+},
+{
+"province": "น่าน",
+"district": "อำเภอเฉลิมพระเกียรติ",
+"postcode": "55220"
+},
+{
+"province": "น่าน",
+"district": "อำเภอเชียงกลาง",
+"postcode": "55160"
+},
+{
+"province": "น่าน",
+"district": "อำเภอเมืองน่าน",
+"postcode": "55000"
+},
+{
+"province": "น่าน",
+"district": "อำเภอเวียงสา",
+"postcode": "55110"
+},
+{
+"province": "น่าน",
+"district": "อำเภอแม่จริม",
+"postcode": "55170"
+},
+{
+"province": "บึงกาฬ",
+"district": "อำเภอบึงโขงหลง",
+"postcode": "38220"
+},
+{
+"province": "บึงกาฬ",
+"district": "อำเภอบุ่งคล้า",
+"postcode": "38000"
+},
+{
+"province": "บึงกาฬ",
+"district": "อำเภอปากคาด",
+"postcode": "38190"
+},
+{
+"province": "บึงกาฬ",
+"district": "อำเภอพรเจริญ",
+"postcode": "38180"
+},
+{
+"province": "บึงกาฬ",
+"district": "อำเภอศรีวิไล",
+"postcode": "38210"
+},
+{
+"province": "บึงกาฬ",
+"district": "อำเภอเซกา",
+"postcode": "38150"
+},
+{
+"province": "บึงกาฬ",
+"district": "อำเภอเมืองบึงกาฬ",
+"postcode": "38000"
+},
+{
+"province": "บึงกาฬ",
+"district": "อำเภอโซ่พิสัย",
+"postcode": "38170"
+},
+{
+"province": "บุรีรัมย์",
+"district": "อำเภอกระสัง",
+"postcode": "31160"
+},
+{
+"province": "บุรีรัมย์",
+"district": "อำเภอคูเมือง",
+"postcode": "31190"
+},
+{
+"province": "บุรีรัมย์",
+"district": "อำเภอชำนิ",
+"postcode": "31110"
+},
+{
+"province": "บุรีรัมย์",
+"district": "อำเภอนางรอง",
+"postcode": "31110"
+},
+{
+"province": "บุรีรัมย์",
+"district": "อำเภอนาโพธิ์",
+"postcode": "31230"
+},
+{
+"province": "บุรีรัมย์",
+"district": "อำเภอบ้านกรวด",
+"postcode": "31180"
+},
+{
+"province": "บุรีรัมย์",
+"district": "อำเภอบ้านด่าน",
+"postcode": "31000"
+},
+{
+"province": "บุรีรัมย์",
+"district": "อำเภอบ้านใหม่ไชยพจน์",
+"postcode": "31120"
+},
+{
+"province": "บุรีรัมย์",
+"district": "อำเภอประโคนชัย",
+"postcode": "31140"
+},
+{
+"province": "บุรีรัมย์",
+"district": "อำเภอปะคำ",
+"postcode": "31220"
+},
+{
+"province": "บุรีรัมย์",
+"district": "อำเภอพลับพลาชัย",
+"postcode": "31250"
+},
+{
+"province": "บุรีรัมย์",
+"district": "อำเภอพุทไธสง",
+"postcode": "31120"
+},
+{
+"province": "บุรีรัมย์",
+"district": "อำเภอละหานทราย",
+"postcode": "31170"
+},
+{
+"province": "บุรีรัมย์",
+"district": "อำเภอลำปลายมาศ",
+"postcode": "31130"
+},
+{
+"province": "บุรีรัมย์",
+"district": "อำเภอสตึก",
+"postcode": "31150"
+},
+{
+"province": "บุรีรัมย์",
+"district": "อำเภอหนองกี่",
+"postcode": "31210"
+},
+{
+"province": "บุรีรัมย์",
+"district": "อำเภอหนองหงส์",
+"postcode": "31240"
+},
+{
+"province": "บุรีรัมย์",
+"district": "อำเภอห้วยราช",
+"postcode": "31000"
+},
+{
+"province": "บุรีรัมย์",
+"district": "อำเภอเฉลิมพระเกียรติ",
+"postcode": "31110"
+},
+{
+"province": "บุรีรัมย์",
+"district": "อำเภอเฉลิมพระเกียรติ",
+"postcode": "31170"
+},
+{
+"province": "บุรีรัมย์",
+"district": "อำเภอเมืองบุรีรัมย์",
+"postcode": "31000"
+},
+{
+"province": "บุรีรัมย์",
+"district": "อำเภอแคนดง",
+"postcode": "31150"
+},
+{
+"province": "บุรีรัมย์",
+"district": "อำเภอโนนดินแดง",
+"postcode": "31260"
+},
+{
+"province": "บุรีรัมย์",
+"district": "อำเภอโนนสุวรรณ",
+"postcode": "31110"
+},
+{
+"province": "ปทุมธานี",
+"district": "อำเภอคลองหลวง",
+"postcode": "12110"
+},
+{
+"province": "ปทุมธานี",
+"district": "อำเภอคลองหลวง",
+"postcode": "12120"
+},
+{
+"province": "ปทุมธานี",
+"district": "อำเภอคลองหลวง",
+"postcode": "12121"
+},
+{
+"province": "ปทุมธานี",
+"district": "อำเภอคลองหลวง",
+"postcode": "13180"
+},
+{
+"province": "ปทุมธานี",
+"district": "อำเภอธัญบุรี",
+"postcode": "12110"
+},
+{
+"province": "ปทุมธานี",
+"district": "อำเภอธัญบุรี",
+"postcode": "12130"
+},
+{
+"province": "ปทุมธานี",
+"district": "อำเภอลาดหลุมแก้ว",
+"postcode": "12140"
+},
+{
+"province": "ปทุมธานี",
+"district": "อำเภอลำลูกกา",
+"postcode": "12130"
+},
+{
+"province": "ปทุมธานี",
+"district": "อำเภอลำลูกกา",
+"postcode": "12150"
+},
+{
+"province": "ปทุมธานี",
+"district": "อำเภอสามโคก",
+"postcode": "12160"
+},
+{
+"province": "ปทุมธานี",
+"district": "อำเภอหนองเสือ",
+"postcode": "12170"
+},
+{
+"province": "ปทุมธานี",
+"district": "อำเภอเมืองปทุมธานี",
+"postcode": "12000"
+},
+{
+"province": "ประจวบคีรีขันธ์",
+"district": "อำเภอกุยบุรี",
+"postcode": "77150"
+},
+{
+"province": "ประจวบคีรีขันธ์",
+"district": "อำเภอทับสะแก",
+"postcode": "77130"
+},
+{
+"province": "ประจวบคีรีขันธ์",
+"district": "อำเภอบางสะพาน",
+"postcode": "77140"
+},
+{
+"province": "ประจวบคีรีขันธ์",
+"district": "อำเภอบางสะพาน",
+"postcode": "77190"
+},
+{
+"province": "ประจวบคีรีขันธ์",
+"district": "อำเภอบางสะพาน",
+"postcode": "77230"
+},
+{
+"province": "ประจวบคีรีขันธ์",
+"district": "อำเภอบางสะพานน้อย",
+"postcode": "77170"
+},
+{
+"province": "ประจวบคีรีขันธ์",
+"district": "อำเภอปราณบุรี",
+"postcode": "77120"
+},
+{
+"province": "ประจวบคีรีขันธ์",
+"district": "อำเภอปราณบุรี",
+"postcode": "77160"
+},
+{
+"province": "ประจวบคีรีขันธ์",
+"district": "อำเภอปราณบุรี",
+"postcode": "77220"
+},
+{
+"province": "ประจวบคีรีขันธ์",
+"district": "อำเภอสามร้อยยอด",
+"postcode": "77120"
+},
+{
+"province": "ประจวบคีรีขันธ์",
+"district": "อำเภอสามร้อยยอด",
+"postcode": "77180"
+},
+{
+"province": "ประจวบคีรีขันธ์",
+"district": "อำเภอหัวหิน",
+"postcode": "77110"
+},
+{
+"province": "ประจวบคีรีขันธ์",
+"district": "อำเภอเมืองประจวบคีรีขันธ์",
+"postcode": "77000"
+},
+{
+"province": "ประจวบคีรีขันธ์",
+"district": "อำเภอเมืองประจวบคีรีขันธ์",
+"postcode": "77210"
+},
+{
+"province": "ปราจีนบุรี",
+"district": "อำเภอกบินทร์บุรี",
+"postcode": "25110"
+},
+{
+"province": "ปราจีนบุรี",
+"district": "อำเภอกบินทร์บุรี",
+"postcode": "25240"
+},
+{
+"province": "ปราจีนบุรี",
+"district": "อำเภอนาดี",
+"postcode": "25220"
+},
+{
+"province": "ปราจีนบุรี",
+"district": "อำเภอบ้านสร้าง",
+"postcode": "25150"
+},
+{
+"province": "ปราจีนบุรี",
+"district": "อำเภอประจันตคาม",
+"postcode": "25130"
+},
+{
+"province": "ปราจีนบุรี",
+"district": "อำเภอศรีมหาโพธิ",
+"postcode": "25140"
+},
+{
+"province": "ปราจีนบุรี",
+"district": "อำเภอศรีมโหสถ",
+"postcode": "25190"
+},
+{
+"province": "ปราจีนบุรี",
+"district": "อำเภอเมืองปราจีนบุรี",
+"postcode": "25000"
+},
+{
+"province": "ปราจีนบุรี",
+"district": "อำเภอเมืองปราจีนบุรี",
+"postcode": "25230"
+},
+{
+"province": "ปัตตานี",
+"district": "อำเภอกะพ้อ",
+"postcode": "94230"
+},
+{
+"province": "ปัตตานี",
+"district": "อำเภอทุ่งยางแดง",
+"postcode": "94140"
+},
+{
+"province": "ปัตตานี",
+"district": "อำเภอปะนาเระ",
+"postcode": "94130"
+},
+{
+"province": "ปัตตานี",
+"district": "อำเภอปะนาเระ",
+"postcode": "94190"
+},
+{
+"province": "ปัตตานี",
+"district": "อำเภอมายอ",
+"postcode": "94140"
+},
+{
+"province": "ปัตตานี",
+"district": "อำเภอมายอ",
+"postcode": "94190"
+},
+{
+"province": "ปัตตานี",
+"district": "อำเภอยะรัง",
+"postcode": "94160"
+},
+{
+"province": "ปัตตานี",
+"district": "อำเภอยะหริ่ง",
+"postcode": "94150"
+},
+{
+"province": "ปัตตานี",
+"district": "อำเภอยะหริ่ง",
+"postcode": "94190"
+},
+{
+"province": "ปัตตานี",
+"district": "อำเภอสายบุรี",
+"postcode": "94110"
+},
+{
+"province": "ปัตตานี",
+"district": "อำเภอสายบุรี",
+"postcode": "94190"
+},
+{
+"province": "ปัตตานี",
+"district": "อำเภอหนองจิก",
+"postcode": "94170"
+},
+{
+"province": "ปัตตานี",
+"district": "อำเภอเมืองปัตตานี",
+"postcode": "94000"
+},
+{
+"province": "ปัตตานี",
+"district": "อำเภอแม่ลาน",
+"postcode": "94180"
+},
+{
+"province": "ปัตตานี",
+"district": "อำเภอโคกโพธิ์",
+"postcode": "94120"
+},
+{
+"province": "ปัตตานี",
+"district": "อำเภอโคกโพธิ์",
+"postcode": "94180"
+},
+{
+"province": "ปัตตานี",
+"district": "อำเภอไม้แก่น",
+"postcode": "94220"
+},
+{
+"province": "พระนครศรีอยุธยา",
+"district": "อำเภอท่าเรือ",
+"postcode": "13130"
+},
+{
+"province": "พระนครศรีอยุธยา",
+"district": "อำเภอท่าเรือ",
+"postcode": "18270"
+},
+{
+"province": "พระนครศรีอยุธยา",
+"district": "อำเภอนครหลวง",
+"postcode": "13260"
+},
+{
+"province": "พระนครศรีอยุธยา",
+"district": "อำเภอบางซ้าย",
+"postcode": "13270"
+},
+{
+"province": "พระนครศรีอยุธยา",
+"district": "อำเภอบางบาล",
+"postcode": "13250"
+},
+{
+"province": "พระนครศรีอยุธยา",
+"district": "อำเภอบางปะหัน",
+"postcode": "13220"
+},
+{
+"province": "พระนครศรีอยุธยา",
+"district": "อำเภอบางปะอิน",
+"postcode": "13160"
+},
+{
+"province": "พระนครศรีอยุธยา",
+"district": "อำเภอบางปะอิน",
+"postcode": "13170"
+},
+{
+"province": "พระนครศรีอยุธยา",
+"district": "อำเภอบางปะอิน",
+"postcode": "13180"
+},
+{
+"province": "พระนครศรีอยุธยา",
+"district": "อำเภอบางไทร",
+"postcode": "13190"
+},
+{
+"province": "พระนครศรีอยุธยา",
+"district": "อำเภอบางไทร",
+"postcode": "13290"
+},
+{
+"province": "พระนครศรีอยุธยา",
+"district": "อำเภอบ้านแพรก",
+"postcode": "13240"
+},
+{
+"province": "พระนครศรีอยุธยา",
+"district": "อำเภอผักไห่",
+"postcode": "13120"
+},
+{
+"province": "พระนครศรีอยุธยา",
+"district": "อำเภอผักไห่",
+"postcode": "13280"
+},
+{
+"province": "พระนครศรีอยุธยา",
+"district": "อำเภอพระนครศรีอยุธยา",
+"postcode": "13000"
+},
+{
+"province": "พระนครศรีอยุธยา",
+"district": "อำเภอภาชี",
+"postcode": "13140"
+},
+{
+"province": "พระนครศรีอยุธยา",
+"district": "อำเภอภาชี",
+"postcode": "18250"
+},
+{
+"province": "พระนครศรีอยุธยา",
+"district": "อำเภอมหาราช",
+"postcode": "13150"
+},
+{
+"province": "พระนครศรีอยุธยา",
+"district": "อำเภอลาดบัวหลวง",
+"postcode": "13230"
+},
+{
+"province": "พระนครศรีอยุธยา",
+"district": "อำเภอวังน้อย",
+"postcode": "13170"
+},
+{
+"province": "พระนครศรีอยุธยา",
+"district": "อำเภอวังน้อย",
+"postcode": "13180"
+},
+{
+"province": "พระนครศรีอยุธยา",
+"district": "อำเภออุทัย",
+"postcode": "13000"
+},
+{
+"province": "พระนครศรีอยุธยา",
+"district": "อำเภออุทัย",
+"postcode": "13210"
+},
+{
+"province": "พระนครศรีอยุธยา",
+"district": "อำเภอเสนา",
+"postcode": "13110"
+},
+{
+"province": "พะเยา",
+"district": "อำเภอจุน",
+"postcode": "56150"
+},
+{
+"province": "พะเยา",
+"district": "อำเภอดอกคำใต้",
+"postcode": "56120"
+},
+{
+"province": "พะเยา",
+"district": "อำเภอปง",
+"postcode": "56140"
+},
+{
+"province": "พะเยา",
+"district": "อำเภอภูกามยาว",
+"postcode": "56000"
+},
+{
+"province": "พะเยา",
+"district": "อำเภอภูซาง",
+"postcode": "56110"
+},
+{
+"province": "พะเยา",
+"district": "อำเภอเชียงคำ",
+"postcode": "56110"
+},
+{
+"province": "พะเยา",
+"district": "อำเภอเชียงม่วน",
+"postcode": "56160"
+},
+{
+"province": "พะเยา",
+"district": "อำเภอเมืองพะเยา",
+"postcode": "56000"
+},
+{
+"province": "พะเยา",
+"district": "อำเภอแม่ใจ",
+"postcode": "56130"
+},
+{
+"province": "พังงา",
+"district": "อำเภอกะปง",
+"postcode": "82170"
+},
+{
+"province": "พังงา",
+"district": "อำเภอคุระบุรี",
+"postcode": "82150"
+},
+{
+"province": "พังงา",
+"district": "อำเภอตะกั่วทุ่ง",
+"postcode": "82130"
+},
+{
+"province": "พังงา",
+"district": "อำเภอตะกั่วทุ่ง",
+"postcode": "82140"
+},
+{
+"province": "พังงา",
+"district": "อำเภอตะกั่วป่า",
+"postcode": "82110"
+},
+{
+"province": "พังงา",
+"district": "อำเภอตะกั่วป่า",
+"postcode": "82190"
+},
+{
+"province": "พังงา",
+"district": "อำเภอทับปุด",
+"postcode": "82180"
+},
+{
+"province": "พังงา",
+"district": "อำเภอท้ายเหมือง",
+"postcode": "82120"
+},
+{
+"province": "พังงา",
+"district": "อำเภอท้ายเหมือง",
+"postcode": "82210"
+},
+{
+"province": "พังงา",
+"district": "อำเภอเกาะยาว",
+"postcode": "82160"
+},
+{
+"province": "พังงา",
+"district": "อำเภอเกาะยาว",
+"postcode": "83000"
+},
+{
+"province": "พังงา",
+"district": "อำเภอเมืองพังงา",
+"postcode": "82000"
+},
+{
+"province": "พัทลุง",
+"district": "อำเภอกงหรา",
+"postcode": "93000"
+},
+{
+"province": "พัทลุง",
+"district": "อำเภอกงหรา",
+"postcode": "93180"
+},
+{
+"province": "พัทลุง",
+"district": "อำเภอควนขนุน",
+"postcode": "93110"
+},
+{
+"province": "พัทลุง",
+"district": "อำเภอควนขนุน",
+"postcode": "93150"
+},
+{
+"province": "พัทลุง",
+"district": "อำเภอตะโหมด",
+"postcode": "93160"
+},
+{
+"province": "พัทลุง",
+"district": "อำเภอบางแก้ว",
+"postcode": "93140"
+},
+{
+"province": "พัทลุง",
+"district": "อำเภอบางแก้ว",
+"postcode": "93160"
+},
+{
+"province": "พัทลุง",
+"district": "อำเภอปากพะยูน",
+"postcode": "93120"
+},
+{
+"province": "พัทลุง",
+"district": "อำเภอป่าบอน",
+"postcode": "93170"
+},
+{
+"province": "พัทลุง",
+"district": "อำเภอป่าพะยอม",
+"postcode": "93210"
+},
+{
+"province": "พัทลุง",
+"district": "อำเภอศรีนครินทร์",
+"postcode": "93000"
+},
+{
+"province": "พัทลุง",
+"district": "อำเภอศรีบรรพต",
+"postcode": "93190"
+},
+{
+"province": "พัทลุง",
+"district": "อำเภอเขาชัยสน",
+"postcode": "93130"
+},
+{
+"province": "พัทลุง",
+"district": "อำเภอเมืองพัทลุง",
+"postcode": "93000"
+},
+{
+"province": "พิจิตร",
+"district": "อำเภอดงเจริญ",
+"postcode": "66210"
+},
+{
+"province": "พิจิตร",
+"district": "อำเภอตะพานหิน",
+"postcode": "66110"
+},
+{
+"province": "พิจิตร",
+"district": "อำเภอตะพานหิน",
+"postcode": "66150"
+},
+{
+"province": "พิจิตร",
+"district": "อำเภอทับคล้อ",
+"postcode": "66150"
+},
+{
+"province": "พิจิตร",
+"district": "อำเภอทับคล้อ",
+"postcode": "66230"
+},
+{
+"province": "พิจิตร",
+"district": "อำเภอบางมูลนาก",
+"postcode": "66120"
+},
+{
+"province": "พิจิตร",
+"district": "อำเภอบางมูลนาก",
+"postcode": "66210"
+},
+{
+"province": "พิจิตร",
+"district": "อำเภอบึงนาราง",
+"postcode": "66130"
+},
+{
+"province": "พิจิตร",
+"district": "อำเภอวชิรบารมี",
+"postcode": "66140"
+},
+{
+"province": "พิจิตร",
+"district": "อำเภอวชิรบารมี",
+"postcode": "66220"
+},
+{
+"province": "พิจิตร",
+"district": "อำเภอวังทรายพูน",
+"postcode": "66180"
+},
+{
+"province": "พิจิตร",
+"district": "อำเภอสากเหล็ก",
+"postcode": "66160"
+},
+{
+"province": "พิจิตร",
+"district": "อำเภอสามง่าม",
+"postcode": "66140"
+},
+{
+"province": "พิจิตร",
+"district": "อำเภอสามง่าม",
+"postcode": "66220"
+},
+{
+"province": "พิจิตร",
+"district": "อำเภอเมืองพิจิตร",
+"postcode": "66000"
+},
+{
+"province": "พิจิตร",
+"district": "อำเภอเมืองพิจิตร",
+"postcode": "66170"
+},
+{
+"province": "พิจิตร",
+"district": "อำเภอโพทะเล",
+"postcode": "66130"
+},
+{
+"province": "พิจิตร",
+"district": "อำเภอโพธิ์ประทับช้าง",
+"postcode": "66190"
+},
+{
+"province": "พิษณุโลก",
+"district": "อำเภอชาติตระการ",
+"postcode": "65170"
+},
+{
+"province": "พิษณุโลก",
+"district": "อำเภอนครไทย",
+"postcode": "65120"
+},
+{
+"province": "พิษณุโลก",
+"district": "อำเภอบางกระทุ่ม",
+"postcode": "65110"
+},
+{
+"province": "พิษณุโลก",
+"district": "อำเภอบางกระทุ่ม",
+"postcode": "65210"
+},
+{
+"province": "พิษณุโลก",
+"district": "อำเภอบางระกำ",
+"postcode": "65140"
+},
+{
+"province": "พิษณุโลก",
+"district": "อำเภอบางระกำ",
+"postcode": "65240"
+},
+{
+"province": "พิษณุโลก",
+"district": "อำเภอพรหมพิราม",
+"postcode": "65150"
+},
+{
+"province": "พิษณุโลก",
+"district": "อำเภอพรหมพิราม",
+"postcode": "65180"
+},
+{
+"province": "พิษณุโลก",
+"district": "อำเภอวังทอง",
+"postcode": "65130"
+},
+{
+"province": "พิษณุโลก",
+"district": "อำเภอวังทอง",
+"postcode": "65220"
+},
+{
+"province": "พิษณุโลก",
+"district": "อำเภอวัดโบสถ์",
+"postcode": "65160"
+},
+{
+"province": "พิษณุโลก",
+"district": "อำเภอเนินมะปราง",
+"postcode": "65190"
+},
+{
+"province": "พิษณุโลก",
+"district": "อำเภอเมืองพิษณุโลก",
+"postcode": "65000"
+},
+{
+"province": "พิษณุโลก",
+"district": "อำเภอเมืองพิษณุโลก",
+"postcode": "65230"
+},
+{
+"province": "ภูเก็ต",
+"district": "อำเภอกะทู้",
+"postcode": "83120"
+},
+{
+"province": "ภูเก็ต",
+"district": "อำเภอกะทู้",
+"postcode": "83150"
+},
+{
+"province": "ภูเก็ต",
+"district": "อำเภอถลาง",
+"postcode": "83110"
+},
+{
+"province": "ภูเก็ต",
+"district": "อำเภอเมืองภูเก็ต",
+"postcode": "83000"
+},
+{
+"province": "ภูเก็ต",
+"district": "อำเภอเมืองภูเก็ต",
+"postcode": "83100"
+},
+{
+"province": "ภูเก็ต",
+"district": "อำเภอเมืองภูเก็ต",
+"postcode": "83130"
+},
+{
+"province": "มหาสารคาม",
+"district": "อำเภอกันทรวิชัย",
+"postcode": "44150"
+},
+{
+"province": "มหาสารคาม",
+"district": "อำเภอกุดรัง",
+"postcode": "44130"
+},
+{
+"province": "มหาสารคาม",
+"district": "อำเภอชื่นชม",
+"postcode": "44160"
+},
+{
+"province": "มหาสารคาม",
+"district": "อำเภอนาดูน",
+"postcode": "44180"
+},
+{
+"province": "มหาสารคาม",
+"district": "อำเภอนาเชือก",
+"postcode": "44170"
+},
+{
+"province": "มหาสารคาม",
+"district": "อำเภอบรบือ",
+"postcode": "44130"
+},
+{
+"province": "มหาสารคาม",
+"district": "อำเภอพยัคฆภูมิพิสัย",
+"postcode": "44110"
+},
+{
+"province": "มหาสารคาม",
+"district": "อำเภอยางสีสุราช",
+"postcode": "44210"
+},
+{
+"province": "มหาสารคาม",
+"district": "อำเภอวาปีปทุม",
+"postcode": "44120"
+},
+{
+"province": "มหาสารคาม",
+"district": "อำเภอเชียงยืน",
+"postcode": "44160"
+},
+{
+"province": "มหาสารคาม",
+"district": "อำเภอเมืองมหาสารคาม",
+"postcode": "44000"
+},
+{
+"province": "มหาสารคาม",
+"district": "อำเภอแกดำ",
+"postcode": "44190"
+},
+{
+"province": "มหาสารคาม",
+"district": "อำเภอโกสุมพิสัย",
+"postcode": "44140"
+},
+{
+"province": "มุกดาหาร",
+"district": "อำเภอคำชะอี",
+"postcode": "49110"
+},
+{
+"province": "มุกดาหาร",
+"district": "อำเภอดงหลวง",
+"postcode": "49140"
+},
+{
+"province": "มุกดาหาร",
+"district": "อำเภอดอนตาล",
+"postcode": "49120"
+},
+{
+"province": "มุกดาหาร",
+"district": "อำเภอนิคมคำสร้อย",
+"postcode": "49130"
+},
+{
+"province": "มุกดาหาร",
+"district": "อำเภอหนองสูง",
+"postcode": "49160"
+},
+{
+"province": "มุกดาหาร",
+"district": "อำเภอหว้านใหญ่",
+"postcode": "49150"
+},
+{
+"province": "มุกดาหาร",
+"district": "อำเภอเมืองมุกดาหาร",
+"postcode": "49000"
+},
+{
+"province": "ยะลา",
+"district": "อำเภอกรงปินัง",
+"postcode": "95000"
+},
+{
+"province": "ยะลา",
+"district": "อำเภอกาบัง",
+"postcode": "95120"
+},
+{
+"province": "ยะลา",
+"district": "อำเภอธารโต",
+"postcode": "95130"
+},
+{
+"province": "ยะลา",
+"district": "อำเภอธารโต",
+"postcode": "95150"
+},
+{
+"province": "ยะลา",
+"district": "อำเภอธารโต",
+"postcode": "95170"
+},
+{
+"province": "ยะลา",
+"district": "อำเภอบันนังสตา",
+"postcode": "95130"
+},
+{
+"province": "ยะลา",
+"district": "อำเภอยะหา",
+"postcode": "95120"
+},
+{
+"province": "ยะลา",
+"district": "อำเภอรามัน",
+"postcode": "95140"
+},
+{
+"province": "ยะลา",
+"district": "อำเภอเบตง",
+"postcode": "95110"
+},
+{
+"province": "ยะลา",
+"district": "อำเภอเมืองยะลา",
+"postcode": "95000"
+},
+{
+"province": "ยะลา",
+"district": "อำเภอเมืองยะลา",
+"postcode": "95160"
+},
+{
+"province": "ยโสธร",
+"district": "อำเภอกุดชุม",
+"postcode": "35140"
+},
+{
+"province": "ยโสธร",
+"district": "อำเภอคำเขื่อนแก้ว",
+"postcode": "35110"
+},
+{
+"province": "ยโสธร",
+"district": "อำเภอคำเขื่อนแก้ว",
+"postcode": "35180"
+},
+{
+"province": "ยโสธร",
+"district": "อำเภอค้อวัง",
+"postcode": "35160"
+},
+{
+"province": "ยโสธร",
+"district": "อำเภอทรายมูล",
+"postcode": "35170"
+},
+{
+"province": "ยโสธร",
+"district": "อำเภอป่าติ้ว",
+"postcode": "35150"
+},
+{
+"province": "ยโสธร",
+"district": "อำเภอมหาชนะชัย",
+"postcode": "35130"
+},
+{
+"province": "ยโสธร",
+"district": "อำเภอเมืองยโสธร",
+"postcode": "35000"
+},
+{
+"province": "ยโสธร",
+"district": "อำเภอเลิงนกทา",
+"postcode": "35120"
+},
+{
+"province": "ยโสธร",
+"district": "อำเภอไทยเจริญ",
+"postcode": "35120"
+},
+{
+"province": "ระนอง",
+"district": "อำเภอกระบุรี",
+"postcode": "85110"
+},
+{
+"province": "ระนอง",
+"district": "อำเภอกะเปอร์",
+"postcode": "85120"
+},
+{
+"province": "ระนอง",
+"district": "อำเภอละอุ่น",
+"postcode": "85130"
+},
+{
+"province": "ระนอง",
+"district": "อำเภอสุขสำราญ",
+"postcode": "85120"
+},
+{
+"province": "ระนอง",
+"district": "อำเภอเมืองระนอง",
+"postcode": "85000"
+},
+{
+"province": "ระนอง",
+"district": "อำเภอเมืองระนอง",
+"postcode": "85130"
+},
+{
+"province": "ระยอง",
+"district": "อำเภอนิคมพัฒนา",
+"postcode": "21180"
+},
+{
+"province": "ระยอง",
+"district": "อำเภอบ้านค่าย",
+"postcode": "21120"
+},
+{
+"province": "ระยอง",
+"district": "อำเภอบ้านฉาง",
+"postcode": "21130"
+},
+{
+"province": "ระยอง",
+"district": "อำเภอปลวกแดง",
+"postcode": "21140"
+},
+{
+"province": "ระยอง",
+"district": "อำเภอวังจันทร์",
+"postcode": "21210"
+},
+{
+"province": "ระยอง",
+"district": "อำเภอเขาชะเมา",
+"postcode": "21110"
+},
+{
+"province": "ระยอง",
+"district": "อำเภอเมืองระยอง",
+"postcode": "21000"
+},
+{
+"province": "ระยอง",
+"district": "อำเภอเมืองระยอง",
+"postcode": "21100"
+},
+{
+"province": "ระยอง",
+"district": "อำเภอเมืองระยอง",
+"postcode": "21150"
+},
+{
+"province": "ระยอง",
+"district": "อำเภอเมืองระยอง",
+"postcode": "21160"
+},
+{
+"province": "ระยอง",
+"district": "อำเภอแกลง",
+"postcode": "21110"
+},
+{
+"province": "ระยอง",
+"district": "อำเภอแกลง",
+"postcode": "21170"
+},
+{
+"province": "ระยอง",
+"district": "อำเภอแกลง",
+"postcode": "21190"
+},
+{
+"province": "ระยอง",
+"district": "อำเภอแกลง",
+"postcode": "22160"
+},
+{
+"province": "ราชบุรี",
+"district": "อำเภอจอมบึง",
+"postcode": "70150"
+},
+{
+"province": "ราชบุรี",
+"district": "อำเภอดำเนินสะดวก",
+"postcode": "70130"
+},
+{
+"province": "ราชบุรี",
+"district": "อำเภอดำเนินสะดวก",
+"postcode": "70210"
+},
+{
+"province": "ราชบุรี",
+"district": "อำเภอบางแพ",
+"postcode": "70160"
+},
+{
+"province": "ราชบุรี",
+"district": "อำเภอบ้านคา",
+"postcode": "70180"
+},
+{
+"province": "ราชบุรี",
+"district": "อำเภอบ้านโป่ง",
+"postcode": "70110"
+},
+{
+"province": "ราชบุรี",
+"district": "อำเภอบ้านโป่ง",
+"postcode": "70190"
+},
+{
+"province": "ราชบุรี",
+"district": "อำเภอปากท่อ",
+"postcode": "70140"
+},
+{
+"province": "ราชบุรี",
+"district": "อำเภอวัดเพลง",
+"postcode": "70170"
+},
+{
+"province": "ราชบุรี",
+"district": "อำเภอสวนผึ้ง",
+"postcode": "70180"
+},
+{
+"province": "ราชบุรี",
+"district": "อำเภอเมืองราชบุรี",
+"postcode": "70000"
+},
+{
+"province": "ราชบุรี",
+"district": "อำเภอโพธาราม",
+"postcode": "70120"
+},
+{
+"province": "ร้อยเอ็ด",
+"district": "อำเภอจตุรพักตรพิมาน",
+"postcode": "45180"
+},
+{
+"province": "ร้อยเอ็ด",
+"district": "อำเภอจังหาร",
+"postcode": "45000"
+},
+{
+"province": "ร้อยเอ็ด",
+"district": "อำเภอทุ่งเขาหลวง",
+"postcode": "45170"
+},
+{
+"province": "ร้อยเอ็ด",
+"district": "อำเภอธวัชบุรี",
+"postcode": "45170"
+},
+{
+"province": "ร้อยเอ็ด",
+"district": "อำเภอปทุมรัตต์",
+"postcode": "45190"
+},
+{
+"province": "ร้อยเอ็ด",
+"district": "อำเภอพนมไพร",
+"postcode": "45140"
+},
+{
+"province": "ร้อยเอ็ด",
+"district": "อำเภอศรีสมเด็จ",
+"postcode": "45000"
+},
+{
+"province": "ร้อยเอ็ด",
+"district": "อำเภอศรีสมเด็จ",
+"postcode": "45280"
+},
+{
+"province": "ร้อยเอ็ด",
+"district": "อำเภอสุวรรณภูมิ",
+"postcode": "45130"
+},
+{
+"province": "ร้อยเอ็ด",
+"district": "อำเภอหนองพอก",
+"postcode": "45210"
+},
+{
+"province": "ร้อยเอ็ด",
+"district": "อำเภอหนองฮี",
+"postcode": "45140"
+},
+{
+"province": "ร้อยเอ็ด",
+"district": "อำเภออาจสามารถ",
+"postcode": "45160"
+},
+{
+"province": "ร้อยเอ็ด",
+"district": "อำเภอเกษตรวิสัย",
+"postcode": "45150"
+},
+{
+"province": "ร้อยเอ็ด",
+"district": "อำเภอเชียงขวัญ",
+"postcode": "45000"
+},
+{
+"province": "ร้อยเอ็ด",
+"district": "อำเภอเชียงขวัญ",
+"postcode": "45170"
+},
+{
+"province": "ร้อยเอ็ด",
+"district": "อำเภอเมยวดี",
+"postcode": "45250"
+},
+{
+"province": "ร้อยเอ็ด",
+"district": "อำเภอเมืองร้อยเอ็ด",
+"postcode": "45000"
+},
+{
+"province": "ร้อยเอ็ด",
+"district": "อำเภอเมืองสรวง",
+"postcode": "45220"
+},
+{
+"province": "ร้อยเอ็ด",
+"district": "อำเภอเสลภูมิ",
+"postcode": "45120"
+},
+{
+"province": "ร้อยเอ็ด",
+"district": "อำเภอโพธิ์ชัย",
+"postcode": "45230"
+},
+{
+"province": "ร้อยเอ็ด",
+"district": "อำเภอโพนทราย",
+"postcode": "45240"
+},
+{
+"province": "ร้อยเอ็ด",
+"district": "อำเภอโพนทอง",
+"postcode": "45110"
+},
+{
+"province": "ลพบุรี",
+"district": "อำเภอชัยบาดาล",
+"postcode": "15130"
+},
+{
+"province": "ลพบุรี",
+"district": "อำเภอชัยบาดาล",
+"postcode": "15190"
+},
+{
+"province": "ลพบุรี",
+"district": "อำเภอชัยบาดาล",
+"postcode": "15230"
+},
+{
+"province": "ลพบุรี",
+"district": "อำเภอท่าวุ้ง",
+"postcode": "15150"
+},
+{
+"province": "ลพบุรี",
+"district": "อำเภอท่าวุ้ง",
+"postcode": "15180"
+},
+{
+"province": "ลพบุรี",
+"district": "อำเภอท่าหลวง",
+"postcode": "15230"
+},
+{
+"province": "ลพบุรี",
+"district": "อำเภอบ้านหมี่",
+"postcode": "15110"
+},
+{
+"province": "ลพบุรี",
+"district": "อำเภอบ้านหมี่",
+"postcode": "15180"
+},
+{
+"province": "ลพบุรี",
+"district": "อำเภอพัฒนานิคม",
+"postcode": "15140"
+},
+{
+"province": "ลพบุรี",
+"district": "อำเภอพัฒนานิคม",
+"postcode": "15220"
+},
+{
+"province": "ลพบุรี",
+"district": "อำเภอพัฒนานิคม",
+"postcode": "18220"
+},
+{
+"province": "ลพบุรี",
+"district": "อำเภอลำสนธิ",
+"postcode": "15130"
+},
+{
+"province": "ลพบุรี",
+"district": "อำเภอลำสนธิ",
+"postcode": "15190"
+},
+{
+"province": "ลพบุรี",
+"district": "อำเภอสระโบสถ์",
+"postcode": "15240"
+},
+{
+"province": "ลพบุรี",
+"district": "อำเภอสระโบสถ์",
+"postcode": "15250"
+},
+{
+"province": "ลพบุรี",
+"district": "อำเภอหนองม่วง",
+"postcode": "15170"
+},
+{
+"province": "ลพบุรี",
+"district": "อำเภอเมืองลพบุรี",
+"postcode": "13240"
+},
+{
+"province": "ลพบุรี",
+"district": "อำเภอเมืองลพบุรี",
+"postcode": "15000"
+},
+{
+"province": "ลพบุรี",
+"district": "อำเภอเมืองลพบุรี",
+"postcode": "15160"
+},
+{
+"province": "ลพบุรี",
+"district": "อำเภอเมืองลพบุรี",
+"postcode": "15210"
+},
+{
+"province": "ลพบุรี",
+"district": "อำเภอโคกสำโรง",
+"postcode": "15120"
+},
+{
+"province": "ลพบุรี",
+"district": "อำเภอโคกเจริญ",
+"postcode": "15250"
+},
+{
+"province": "ลำปาง",
+"district": "อำเภองาว",
+"postcode": "52110"
+},
+{
+"province": "ลำปาง",
+"district": "อำเภอวังเหนือ",
+"postcode": "52140"
+},
+{
+"province": "ลำปาง",
+"district": "อำเภอสบปราบ",
+"postcode": "52170"
+},
+{
+"province": "ลำปาง",
+"district": "อำเภอห้างฉัตร",
+"postcode": "52190"
+},
+{
+"province": "ลำปาง",
+"district": "อำเภอเกาะคา",
+"postcode": "52130"
+},
+{
+"province": "ลำปาง",
+"district": "อำเภอเถิน",
+"postcode": "52160"
+},
+{
+"province": "ลำปาง",
+"district": "อำเภอเถิน",
+"postcode": "52230"
+},
+{
+"province": "ลำปาง",
+"district": "อำเภอเมืองปาน",
+"postcode": "52240"
+},
+{
+"province": "ลำปาง",
+"district": "อำเภอเมืองลำปาง",
+"postcode": "52000"
+},
+{
+"province": "ลำปาง",
+"district": "อำเภอเมืองลำปาง",
+"postcode": "52100"
+},
+{
+"province": "ลำปาง",
+"district": "อำเภอเมืองลำปาง",
+"postcode": "52220"
+},
+{
+"province": "ลำปาง",
+"district": "อำเภอเสริมงาม",
+"postcode": "52210"
+},
+{
+"province": "ลำปาง",
+"district": "อำเภอแจ้ห่ม",
+"postcode": "52120"
+},
+{
+"province": "ลำปาง",
+"district": "อำเภอแม่ทะ",
+"postcode": "52150"
+},
+{
+"province": "ลำปาง",
+"district": "อำเภอแม่ทะ",
+"postcode": "52220"
+},
+{
+"province": "ลำปาง",
+"district": "อำเภอแม่พริก",
+"postcode": "52180"
+},
+{
+"province": "ลำปาง",
+"district": "อำเภอแม่พริก",
+"postcode": "52230"
+},
+{
+"province": "ลำปาง",
+"district": "อำเภอแม่เมาะ",
+"postcode": "52000"
+},
+{
+"province": "ลำปาง",
+"district": "อำเภอแม่เมาะ",
+"postcode": "52220"
+},
+{
+"province": "ลำพูน",
+"district": "อำเภอทุ่งหัวช้าง",
+"postcode": "51160"
+},
+{
+"province": "ลำพูน",
+"district": "อำเภอบ้านธิ",
+"postcode": "51180"
+},
+{
+"province": "ลำพูน",
+"district": "อำเภอบ้านโฮ่ง",
+"postcode": "51130"
+},
+{
+"province": "ลำพูน",
+"district": "อำเภอป่าซาง",
+"postcode": "51120"
+},
+{
+"province": "ลำพูน",
+"district": "อำเภอลี้",
+"postcode": "51110"
+},
+{
+"province": "ลำพูน",
+"district": "อำเภอเมืองลำพูน",
+"postcode": "51000"
+},
+{
+"province": "ลำพูน",
+"district": "อำเภอเมืองลำพูน",
+"postcode": "51150"
+},
+{
+"province": "ลำพูน",
+"district": "อำเภอเวียงหนองล่อง",
+"postcode": "51120"
+},
+{
+"province": "ลำพูน",
+"district": "อำเภอแม่ทา",
+"postcode": "51140"
+},
+{
+"province": "ลำพูน",
+"district": "อำเภอแม่ทา",
+"postcode": "51170"
+},
+{
+"province": "ศรีสะเกษ",
+"district": "อำเภอกันทรลักษ์",
+"postcode": "33110"
+},
+{
+"province": "ศรีสะเกษ",
+"district": "อำเภอกันทรารมย์",
+"postcode": "33130"
+},
+{
+"province": "ศรีสะเกษ",
+"district": "อำเภอขุขันธ์",
+"postcode": "33140"
+},
+{
+"province": "ศรีสะเกษ",
+"district": "อำเภอขุนหาญ",
+"postcode": "33150"
+},
+{
+"province": "ศรีสะเกษ",
+"district": "อำเภอน้ำเกลี้ยง",
+"postcode": "33130"
+},
+{
+"province": "ศรีสะเกษ",
+"district": "อำเภอบึงบูรพ์",
+"postcode": "33220"
+},
+{
+"province": "ศรีสะเกษ",
+"district": "อำเภอปรางค์กู่",
+"postcode": "33170"
+},
+{
+"province": "ศรีสะเกษ",
+"district": "อำเภอพยุห์",
+"postcode": "33230"
+},
+{
+"province": "ศรีสะเกษ",
+"district": "อำเภอภูสิงห์",
+"postcode": "33140"
+},
+{
+"province": "ศรีสะเกษ",
+"district": "อำเภอยางชุมน้อย",
+"postcode": "33190"
+},
+{
+"province": "ศรีสะเกษ",
+"district": "อำเภอราษีไศล",
+"postcode": "33160"
+},
+{
+"province": "ศรีสะเกษ",
+"district": "อำเภอวังหิน",
+"postcode": "33270"
+},
+{
+"province": "ศรีสะเกษ",
+"district": "อำเภอศรีรัตนะ",
+"postcode": "33240"
+},
+{
+"province": "ศรีสะเกษ",
+"district": "อำเภอศิลาลาด",
+"postcode": "33160"
+},
+{
+"province": "ศรีสะเกษ",
+"district": "อำเภอห้วยทับทัน",
+"postcode": "33210"
+},
+{
+"province": "ศรีสะเกษ",
+"district": "อำเภออุทุมพรพิสัย",
+"postcode": "33120"
+},
+{
+"province": "ศรีสะเกษ",
+"district": "อำเภอเบญจลักษ์",
+"postcode": "33110"
+},
+{
+"province": "ศรีสะเกษ",
+"district": "อำเภอเมืองจันทร์",
+"postcode": "33120"
+},
+{
+"province": "ศรีสะเกษ",
+"district": "อำเภอเมืองศรีสะเกษ",
+"postcode": "33000"
+},
+{
+"province": "ศรีสะเกษ",
+"district": "อำเภอโนนคูณ",
+"postcode": "33250"
+},
+{
+"province": "ศรีสะเกษ",
+"district": "อำเภอโพธิ์ศรีสุวรรณ",
+"postcode": "33120"
+},
+{
+"province": "ศรีสะเกษ",
+"district": "อำเภอไพรบึง",
+"postcode": "33180"
+},
+{
+"province": "สกลนคร",
+"district": "อำเภอกุดบาก",
+"postcode": "47180"
+},
+{
+"province": "สกลนคร",
+"district": "อำเภอกุสุมาลย์",
+"postcode": "47210"
+},
+{
+"province": "สกลนคร",
+"district": "อำเภอกุสุมาลย์",
+"postcode": "47230"
+},
+{
+"province": "สกลนคร",
+"district": "อำเภอคำตากล้า",
+"postcode": "47250"
+},
+{
+"province": "สกลนคร",
+"district": "อำเภอนิคมน้ำอูน",
+"postcode": "47270"
+},
+{
+"province": "สกลนคร",
+"district": "อำเภอบ้านม่วง",
+"postcode": "47140"
+},
+{
+"province": "สกลนคร",
+"district": "อำเภอพรรณานิคม",
+"postcode": "47130"
+},
+{
+"province": "สกลนคร",
+"district": "อำเภอพรรณานิคม",
+"postcode": "47220"
+},
+{
+"province": "สกลนคร",
+"district": "อำเภอพังโคน",
+"postcode": "47160"
+},
+{
+"province": "สกลนคร",
+"district": "อำเภอภูพาน",
+"postcode": "47180"
+},
+{
+"province": "สกลนคร",
+"district": "อำเภอวานรนิวาส",
+"postcode": "47120"
+},
+{
+"province": "สกลนคร",
+"district": "อำเภอวาริชภูมิ",
+"postcode": "47150"
+},
+{
+"province": "สกลนคร",
+"district": "อำเภอสว่างแดนดิน",
+"postcode": "47110"
+},
+{
+"province": "สกลนคร",
+"district": "อำเภอสว่างแดนดิน",
+"postcode": "47240"
+},
+{
+"province": "สกลนคร",
+"district": "อำเภอส่องดาว",
+"postcode": "47190"
+},
+{
+"province": "สกลนคร",
+"district": "อำเภออากาศอำนวย",
+"postcode": "47170"
+},
+{
+"province": "สกลนคร",
+"district": "อำเภอเจริญศิลป์",
+"postcode": "47290"
+},
+{
+"province": "สกลนคร",
+"district": "อำเภอเต่างอย",
+"postcode": "47260"
+},
+{
+"province": "สกลนคร",
+"district": "อำเภอเมืองสกลนคร",
+"postcode": "47000"
+},
+{
+"province": "สกลนคร",
+"district": "อำเภอเมืองสกลนคร",
+"postcode": "47220"
+},
+{
+"province": "สกลนคร",
+"district": "อำเภอเมืองสกลนคร",
+"postcode": "47230"
+},
+{
+"province": "สกลนคร",
+"district": "อำเภอโคกศรีสุพรรณ",
+"postcode": "47280"
+},
+{
+"province": "สกลนคร",
+"district": "อำเภอโพนนาแก้ว",
+"postcode": "47230"
+},
+{
+"province": "สงขลา",
+"district": "อำเภอกระแสสินธุ์",
+"postcode": "90270"
+},
+{
+"province": "สงขลา",
+"district": "อำเภอคลองหอยโข่ง",
+"postcode": "90110"
+},
+{
+"province": "สงขลา",
+"district": "อำเภอคลองหอยโข่ง",
+"postcode": "90115"
+},
+{
+"province": "สงขลา",
+"district": "อำเภอคลองหอยโข่ง",
+"postcode": "90230"
+},
+{
+"province": "สงขลา",
+"district": "อำเภอควนเนียง",
+"postcode": "90220"
+},
+{
+"province": "สงขลา",
+"district": "อำเภอจะนะ",
+"postcode": "90130"
+},
+{
+"province": "สงขลา",
+"district": "อำเภอนาทวี",
+"postcode": "90160"
+},
+{
+"province": "สงขลา",
+"district": "อำเภอนาหม่อม",
+"postcode": "90310"
+},
+{
+"province": "สงขลา",
+"district": "อำเภอบางกล่ำ",
+"postcode": "90110"
+},
+{
+"province": "สงขลา",
+"district": "อำเภอระโนด",
+"postcode": "90140"
+},
+{
+"province": "สงขลา",
+"district": "อำเภอรัตภูมิ",
+"postcode": "90180"
+},
+{
+"province": "สงขลา",
+"district": "อำเภอรัตภูมิ",
+"postcode": "90220"
+},
+{
+"province": "สงขลา",
+"district": "อำเภอสทิงพระ",
+"postcode": "90190"
+},
+{
+"province": "สงขลา",
+"district": "อำเภอสะบ้าย้อย",
+"postcode": "90210"
+},
+{
+"province": "สงขลา",
+"district": "อำเภอสะเดา",
+"postcode": "90120"
+},
+{
+"province": "สงขลา",
+"district": "อำเภอสะเดา",
+"postcode": "90170"
+},
+{
+"province": "สงขลา",
+"district": "อำเภอสะเดา",
+"postcode": "90240"
+},
+{
+"province": "สงขลา",
+"district": "อำเภอสะเดา",
+"postcode": "90320"
+},
+{
+"province": "สงขลา",
+"district": "อำเภอสิงหนคร",
+"postcode": "90280"
+},
+{
+"province": "สงขลา",
+"district": "อำเภอสิงหนคร",
+"postcode": "90330"
+},
+{
+"province": "สงขลา",
+"district": "อำเภอหาดใหญ่",
+"postcode": "90110"
+},
+{
+"province": "สงขลา",
+"district": "อำเภอหาดใหญ่",
+"postcode": "90112"
+},
+{
+"province": "สงขลา",
+"district": "อำเภอหาดใหญ่",
+"postcode": "90230"
+},
+{
+"province": "สงขลา",
+"district": "อำเภอหาดใหญ่",
+"postcode": "90250"
+},
+{
+"province": "สงขลา",
+"district": "อำเภอเทพา",
+"postcode": "90150"
+},
+{
+"province": "สงขลา",
+"district": "อำเภอเทพา",
+"postcode": "90260"
+},
+{
+"province": "สงขลา",
+"district": "อำเภอเมืองสงขลา",
+"postcode": "90000"
+},
+{
+"province": "สงขลา",
+"district": "อำเภอเมืองสงขลา",
+"postcode": "90100"
+},
+{
+"province": "สตูล",
+"district": "อำเภอควนกาหลง",
+"postcode": "91130"
+},
+{
+"province": "สตูล",
+"district": "อำเภอควนโดน",
+"postcode": "91160"
+},
+{
+"province": "สตูล",
+"district": "อำเภอทุ่งหว้า",
+"postcode": "91120"
+},
+{
+"province": "สตูล",
+"district": "อำเภอท่าแพ",
+"postcode": "91150"
+},
+{
+"province": "สตูล",
+"district": "อำเภอมะนัง",
+"postcode": "91130"
+},
+{
+"province": "สตูล",
+"district": "อำเภอละงู",
+"postcode": "91110"
+},
+{
+"province": "สตูล",
+"district": "อำเภอเมืองสตูล",
+"postcode": "91000"
+},
+{
+"province": "สตูล",
+"district": "อำเภอเมืองสตูล",
+"postcode": "91110"
+},
+{
+"province": "สตูล",
+"district": "อำเภอเมืองสตูล",
+"postcode": "91140"
+},
+{
+"province": "สมุทรปราการ",
+"district": "อำเภอบางบ่อ",
+"postcode": "10550"
+},
+{
+"province": "สมุทรปราการ",
+"district": "อำเภอบางบ่อ",
+"postcode": "10560"
+},
+{
+"province": "สมุทรปราการ",
+"district": "อำเภอบางพลี",
+"postcode": "10540"
+},
+{
+"province": "สมุทรปราการ",
+"district": "อำเภอบางเสาธง",
+"postcode": "10570"
+},
+{
+"province": "สมุทรปราการ",
+"district": "อำเภอพระประแดง",
+"postcode": "10130"
+},
+{
+"province": "สมุทรปราการ",
+"district": "อำเภอพระสมุทรเจดีย์",
+"postcode": "10290"
+},
+{
+"province": "สมุทรปราการ",
+"district": "อำเภอเมืองสมุทรปราการ",
+"postcode": "10270"
+},
+{
+"province": "สมุทรปราการ",
+"district": "อำเภอเมืองสมุทรปราการ",
+"postcode": "10280"
+},
+{
+"province": "สมุทรสงคราม",
+"district": "อำเภอบางคนที",
+"postcode": "75120"
+},
+{
+"province": "สมุทรสงคราม",
+"district": "อำเภออัมพวา",
+"postcode": "75110"
+},
+{
+"province": "สมุทรสงคราม",
+"district": "อำเภอเมืองสมุทรสงคราม",
+"postcode": "75000"
+},
+{
+"province": "สมุทรสาคร",
+"district": "อำเภอกระทุ่มแบน",
+"postcode": "74110"
+},
+{
+"province": "สมุทรสาคร",
+"district": "อำเภอกระทุ่มแบน",
+"postcode": "74130"
+},
+{
+"province": "สมุทรสาคร",
+"district": "อำเภอบ้านแพ้ว",
+"postcode": "70210"
+},
+{
+"province": "สมุทรสาคร",
+"district": "อำเภอบ้านแพ้ว",
+"postcode": "74120"
+},
+{
+"province": "สมุทรสาคร",
+"district": "อำเภอเมืองสมุทรสาคร",
+"postcode": "74000"
+},
+{
+"province": "สระบุรี",
+"district": "อำเภอดอนพุด",
+"postcode": "18210"
+},
+{
+"province": "สระบุรี",
+"district": "อำเภอบ้านหมอ",
+"postcode": "18130"
+},
+{
+"province": "สระบุรี",
+"district": "อำเภอบ้านหมอ",
+"postcode": "18210"
+},
+{
+"province": "สระบุรี",
+"district": "อำเภอบ้านหมอ",
+"postcode": "18270"
+},
+{
+"province": "สระบุรี",
+"district": "อำเภอพระพุทธบาท",
+"postcode": "18120"
+},
+{
+"province": "สระบุรี",
+"district": "อำเภอมวกเหล็ก",
+"postcode": "18180"
+},
+{
+"province": "สระบุรี",
+"district": "อำเภอมวกเหล็ก",
+"postcode": "18220"
+},
+{
+"province": "สระบุรี",
+"district": "อำเภอมวกเหล็ก",
+"postcode": "30130"
+},
+{
+"province": "สระบุรี",
+"district": "อำเภอวังม่วง",
+"postcode": "18220"
+},
+{
+"province": "สระบุรี",
+"district": "อำเภอวิหารแดง",
+"postcode": "18150"
+},
+{
+"province": "สระบุรี",
+"district": "อำเภอหนองแค",
+"postcode": "18140"
+},
+{
+"province": "สระบุรี",
+"district": "อำเภอหนองแค",
+"postcode": "18230"
+},
+{
+"province": "สระบุรี",
+"district": "อำเภอหนองแค",
+"postcode": "18250"
+},
+{
+"province": "สระบุรี",
+"district": "อำเภอหนองแซง",
+"postcode": "18170"
+},
+{
+"province": "สระบุรี",
+"district": "อำเภอหนองโดน",
+"postcode": "18190"
+},
+{
+"province": "สระบุรี",
+"district": "อำเภอเฉลิมพระเกียรติ",
+"postcode": "18000"
+},
+{
+"province": "สระบุรี",
+"district": "อำเภอเฉลิมพระเกียรติ",
+"postcode": "18240"
+},
+{
+"province": "สระบุรี",
+"district": "อำเภอเมืองสระบุรี",
+"postcode": "18000"
+},
+{
+"province": "สระบุรี",
+"district": "อำเภอเสาไห้",
+"postcode": "18160"
+},
+{
+"province": "สระบุรี",
+"district": "อำเภอแก่งคอย",
+"postcode": "18110"
+},
+{
+"province": "สระบุรี",
+"district": "อำเภอแก่งคอย",
+"postcode": "18260"
+},
+{
+"province": "สระแก้ว",
+"district": "อำเภอคลองหาด",
+"postcode": "27260"
+},
+{
+"province": "สระแก้ว",
+"district": "อำเภอตาพระยา",
+"postcode": "27180"
+},
+{
+"province": "สระแก้ว",
+"district": "อำเภอวังน้ำเย็น",
+"postcode": "27210"
+},
+{
+"province": "สระแก้ว",
+"district": "อำเภอวังสมบูรณ์",
+"postcode": "27210"
+},
+{
+"province": "สระแก้ว",
+"district": "อำเภอวังสมบูรณ์",
+"postcode": "27250"
+},
+{
+"province": "สระแก้ว",
+"district": "อำเภอวัฒนานคร",
+"postcode": "27160"
+},
+{
+"province": "สระแก้ว",
+"district": "อำเภออรัญประเทศ",
+"postcode": "27120"
+},
+{
+"province": "สระแก้ว",
+"district": "อำเภอเขาฉกรรจ์",
+"postcode": "27000"
+},
+{
+"province": "สระแก้ว",
+"district": "อำเภอเมืองสระแก้ว",
+"postcode": "27000"
+},
+{
+"province": "สระแก้ว",
+"district": "อำเภอโคกสูง",
+"postcode": "27120"
+},
+{
+"province": "สิงห์บุรี",
+"district": "อำเภอค่ายบางระจัน",
+"postcode": "16150"
+},
+{
+"province": "สิงห์บุรี",
+"district": "อำเภอท่าช้าง",
+"postcode": "16140"
+},
+{
+"province": "สิงห์บุรี",
+"district": "อำเภอบางระจัน",
+"postcode": "16130"
+},
+{
+"province": "สิงห์บุรี",
+"district": "อำเภอพรหมบุรี",
+"postcode": "16120"
+},
+{
+"province": "สิงห์บุรี",
+"district": "อำเภอพรหมบุรี",
+"postcode": "16160"
+},
+{
+"province": "สิงห์บุรี",
+"district": "อำเภออินทร์บุรี",
+"postcode": "16110"
+},
+{
+"province": "สิงห์บุรี",
+"district": "อำเภอเมืองสิงห์บุรี",
+"postcode": "16000"
+},
+{
+"province": "สุพรรณบุรี",
+"district": "อำเภอดอนเจดีย์",
+"postcode": "72170"
+},
+{
+"province": "สุพรรณบุรี",
+"district": "อำเภอดอนเจดีย์",
+"postcode": "72250"
+},
+{
+"province": "สุพรรณบุรี",
+"district": "อำเภอด่านช้าง",
+"postcode": "72180"
+},
+{
+"province": "สุพรรณบุรี",
+"district": "อำเภอบางปลาม้า",
+"postcode": "72150"
+},
+{
+"province": "สุพรรณบุรี",
+"district": "อำเภอศรีประจันต์",
+"postcode": "72140"
+},
+{
+"province": "สุพรรณบุรี",
+"district": "อำเภอสองพี่น้อง",
+"postcode": "71170"
+},
+{
+"province": "สุพรรณบุรี",
+"district": "อำเภอสองพี่น้อง",
+"postcode": "72110"
+},
+{
+"province": "สุพรรณบุรี",
+"district": "อำเภอสองพี่น้อง",
+"postcode": "72190"
+},
+{
+"province": "สุพรรณบุรี",
+"district": "อำเภอสามชุก",
+"postcode": "72130"
+},
+{
+"province": "สุพรรณบุรี",
+"district": "อำเภอหนองหญ้าไซ",
+"postcode": "72240"
+},
+{
+"province": "สุพรรณบุรี",
+"district": "อำเภออู่ทอง",
+"postcode": "71170"
+},
+{
+"province": "สุพรรณบุรี",
+"district": "อำเภออู่ทอง",
+"postcode": "72160"
+},
+{
+"province": "สุพรรณบุรี",
+"district": "อำเภออู่ทอง",
+"postcode": "72220"
+},
+{
+"province": "สุพรรณบุรี",
+"district": "อำเภอเดิมบางนางบวช",
+"postcode": "72120"
+},
+{
+"province": "สุพรรณบุรี",
+"district": "อำเภอเมืองสุพรรณบุรี",
+"postcode": "72000"
+},
+{
+"province": "สุพรรณบุรี",
+"district": "อำเภอเมืองสุพรรณบุรี",
+"postcode": "72210"
+},
+{
+"province": "สุพรรณบุรี",
+"district": "อำเภอเมืองสุพรรณบุรี",
+"postcode": "72230"
+},
+{
+"province": "สุราษฎร์ธานี",
+"district": "อำเภอกาญจนดิษฐ์",
+"postcode": "84160"
+},
+{
+"province": "สุราษฎร์ธานี",
+"district": "อำเภอกาญจนดิษฐ์",
+"postcode": "84290"
+},
+{
+"province": "สุราษฎร์ธานี",
+"district": "อำเภอกาญจนดิษฐ์",
+"postcode": "84340"
+},
+{
+"province": "สุราษฎร์ธานี",
+"district": "อำเภอคีรีรัฐนิคม",
+"postcode": "84180"
+},
+{
+"province": "สุราษฎร์ธานี",
+"district": "อำเภอชัยบุรี",
+"postcode": "84350"
+},
+{
+"province": "สุราษฎร์ธานี",
+"district": "อำเภอดอนสัก",
+"postcode": "84160"
+},
+{
+"province": "สุราษฎร์ธานี",
+"district": "อำเภอดอนสัก",
+"postcode": "84220"
+},
+{
+"province": "สุราษฎร์ธานี",
+"district": "อำเภอดอนสัก",
+"postcode": "84340"
+},
+{
+"province": "สุราษฎร์ธานี",
+"district": "อำเภอท่าฉาง",
+"postcode": "84150"
+},
+{
+"province": "สุราษฎร์ธานี",
+"district": "อำเภอท่าชนะ",
+"postcode": "84170"
+},
+{
+"province": "สุราษฎร์ธานี",
+"district": "อำเภอบ้านตาขุน",
+"postcode": "84230"
+},
+{
+"province": "สุราษฎร์ธานี",
+"district": "อำเภอบ้านนาสาร",
+"postcode": "84120"
+},
+{
+"province": "สุราษฎร์ธานี",
+"district": "อำเภอบ้านนาสาร",
+"postcode": "84240"
+},
+{
+"province": "สุราษฎร์ธานี",
+"district": "อำเภอบ้านนาสาร",
+"postcode": "84270"
+},
+{
+"province": "สุราษฎร์ธานี",
+"district": "อำเภอบ้านนาเดิม",
+"postcode": "84240"
+},
+{
+"province": "สุราษฎร์ธานี",
+"district": "อำเภอพนม",
+"postcode": "84250"
+},
+{
+"province": "สุราษฎร์ธานี",
+"district": "อำเภอพระแสง",
+"postcode": "84210"
+},
+{
+"province": "สุราษฎร์ธานี",
+"district": "อำเภอพุนพิน",
+"postcode": "84130"
+},
+{
+"province": "สุราษฎร์ธานี",
+"district": "อำเภอวิภาวดี",
+"postcode": "84370"
+},
+{
+"province": "สุราษฎร์ธานี",
+"district": "อำเภอเกาะพะงัน",
+"postcode": "84280"
+},
+{
+"province": "สุราษฎร์ธานี",
+"district": "อำเภอเกาะพะงัน",
+"postcode": "84360"
+},
+{
+"province": "สุราษฎร์ธานี",
+"district": "อำเภอเกาะสมุย",
+"postcode": "84140"
+},
+{
+"province": "สุราษฎร์ธานี",
+"district": "อำเภอเกาะสมุย",
+"postcode": "84220"
+},
+{
+"province": "สุราษฎร์ธานี",
+"district": "อำเภอเกาะสมุย",
+"postcode": "84310"
+},
+{
+"province": "สุราษฎร์ธานี",
+"district": "อำเภอเกาะสมุย",
+"postcode": "84320"
+},
+{
+"province": "สุราษฎร์ธานี",
+"district": "อำเภอเกาะสมุย",
+"postcode": "84330"
+},
+{
+"province": "สุราษฎร์ธานี",
+"district": "อำเภอเคียนซา",
+"postcode": "84210"
+},
+{
+"province": "สุราษฎร์ธานี",
+"district": "อำเภอเคียนซา",
+"postcode": "84260"
+},
+{
+"province": "สุราษฎร์ธานี",
+"district": "อำเภอเมืองสุราษฎร์ธานี",
+"postcode": "84000"
+},
+{
+"province": "สุราษฎร์ธานี",
+"district": "อำเภอเมืองสุราษฎร์ธานี",
+"postcode": "84100"
+},
+{
+"province": "สุราษฎร์ธานี",
+"district": "อำเภอเวียงสระ",
+"postcode": "84190"
+},
+{
+"province": "สุราษฎร์ธานี",
+"district": "อำเภอไชยา",
+"postcode": "84110"
+},
+{
+"province": "สุรินทร์",
+"district": "อำเภอกาบเชิง",
+"postcode": "32210"
+},
+{
+"province": "สุรินทร์",
+"district": "อำเภอจอมพระ",
+"postcode": "32180"
+},
+{
+"province": "สุรินทร์",
+"district": "อำเภอชุมพลบุรี",
+"postcode": "32190"
+},
+{
+"province": "สุรินทร์",
+"district": "อำเภอท่าตูม",
+"postcode": "32120"
+},
+{
+"province": "สุรินทร์",
+"district": "อำเภอบัวเชด",
+"postcode": "32230"
+},
+{
+"province": "สุรินทร์",
+"district": "อำเภอปราสาท",
+"postcode": "32140"
+},
+{
+"province": "สุรินทร์",
+"district": "อำเภอพนมดงรัก",
+"postcode": "32140"
+},
+{
+"province": "สุรินทร์",
+"district": "อำเภอรัตนบุรี",
+"postcode": "32130"
+},
+{
+"province": "สุรินทร์",
+"district": "อำเภอลำดวน",
+"postcode": "32220"
+},
+{
+"province": "สุรินทร์",
+"district": "อำเภอศรีณรงค์",
+"postcode": "32150"
+},
+{
+"province": "สุรินทร์",
+"district": "อำเภอศีขรภูมิ",
+"postcode": "32110"
+},
+{
+"province": "สุรินทร์",
+"district": "อำเภอสนม",
+"postcode": "32160"
+},
+{
+"province": "สุรินทร์",
+"district": "อำเภอสังขะ",
+"postcode": "32150"
+},
+{
+"province": "สุรินทร์",
+"district": "อำเภอสำโรงทาบ",
+"postcode": "32170"
+},
+{
+"province": "สุรินทร์",
+"district": "อำเภอเขวาสินรินทร์",
+"postcode": "32000"
+},
+{
+"province": "สุรินทร์",
+"district": "อำเภอเมืองสุรินทร์",
+"postcode": "32000"
+},
+{
+"province": "สุรินทร์",
+"district": "อำเภอโนนนารายณ์",
+"postcode": "32130"
+},
+{
+"province": "สุโขทัย",
+"district": "อำเภอกงไกรลาศ",
+"postcode": "64170"
+},
+{
+"province": "สุโขทัย",
+"district": "อำเภอคีรีมาศ",
+"postcode": "64160"
+},
+{
+"province": "สุโขทัย",
+"district": "อำเภอทุ่งเสลี่ยม",
+"postcode": "64150"
+},
+{
+"province": "สุโขทัย",
+"district": "อำเภอทุ่งเสลี่ยม",
+"postcode": "64230"
+},
+{
+"province": "สุโขทัย",
+"district": "อำเภอบ้านด่านลานหอย",
+"postcode": "64140"
+},
+{
+"province": "สุโขทัย",
+"district": "อำเภอศรีนคร",
+"postcode": "64180"
+},
+{
+"province": "สุโขทัย",
+"district": "อำเภอศรีสัชนาลัย",
+"postcode": "64130"
+},
+{
+"province": "สุโขทัย",
+"district": "อำเภอศรีสัชนาลัย",
+"postcode": "64190"
+},
+{
+"province": "สุโขทัย",
+"district": "อำเภอศรีสำโรง",
+"postcode": "64120"
+},
+{
+"province": "สุโขทัย",
+"district": "อำเภอสวรรคโลก",
+"postcode": "64110"
+},
+{
+"province": "สุโขทัย",
+"district": "อำเภอเมืองสุโขทัย",
+"postcode": "64000"
+},
+{
+"province": "สุโขทัย",
+"district": "อำเภอเมืองสุโขทัย",
+"postcode": "64210"
+},
+{
+"province": "สุโขทัย",
+"district": "อำเภอเมืองสุโขทัย",
+"postcode": "64220"
+},
+{
+"province": "หนองคาย",
+"district": "อำเภอท่าบ่อ",
+"postcode": "43110"
+},
+{
+"province": "หนองคาย",
+"district": "อำเภอรัตนวาปี",
+"postcode": "43120"
+},
+{
+"province": "หนองคาย",
+"district": "อำเภอศรีเชียงใหม่",
+"postcode": "43130"
+},
+{
+"province": "หนองคาย",
+"district": "อำเภอสระใคร",
+"postcode": "43100"
+},
+{
+"province": "หนองคาย",
+"district": "อำเภอสังคม",
+"postcode": "43160"
+},
+{
+"province": "หนองคาย",
+"district": "อำเภอเฝ้าไร่",
+"postcode": "43230"
+},
+{
+"province": "หนองคาย",
+"district": "อำเภอเมืองหนองคาย",
+"postcode": "43000"
+},
+{
+"province": "หนองคาย",
+"district": "อำเภอเมืองหนองคาย",
+"postcode": "43100"
+},
+{
+"province": "หนองคาย",
+"district": "อำเภอโพธิ์ตาก",
+"postcode": "43130"
+},
+{
+"province": "หนองคาย",
+"district": "อำเภอโพนพิสัย",
+"postcode": "43120"
+},
+{
+"province": "หนองบัวลำภู",
+"district": "อำเภอนากลาง",
+"postcode": "39170"
+},
+{
+"province": "หนองบัวลำภู",
+"district": "อำเภอนากลาง",
+"postcode": "39350"
+},
+{
+"province": "หนองบัวลำภู",
+"district": "อำเภอนาวัง",
+"postcode": "39170"
+},
+{
+"province": "หนองบัวลำภู",
+"district": "อำเภอศรีบุญเรือง",
+"postcode": "39180"
+},
+{
+"province": "หนองบัวลำภู",
+"district": "อำเภอสุวรรณคูหา",
+"postcode": "39270"
+},
+{
+"province": "หนองบัวลำภู",
+"district": "อำเภอเมืองหนองบัวลำภู",
+"postcode": "39000"
+},
+{
+"province": "หนองบัวลำภู",
+"district": "อำเภอโนนสัง",
+"postcode": "39140"
+},
+{
+"province": "อำนาจเจริญ",
+"district": "อำเภอชานุมาน",
+"postcode": "37210"
+},
+{
+"province": "อำนาจเจริญ",
+"district": "อำเภอปทุมราชวงศา",
+"postcode": "37110"
+},
+{
+"province": "อำนาจเจริญ",
+"district": "อำเภอพนา",
+"postcode": "37180"
+},
+{
+"province": "อำนาจเจริญ",
+"district": "อำเภอลืออำนาจ",
+"postcode": "37120"
+},
+{
+"province": "อำนาจเจริญ",
+"district": "อำเภอหัวตะพาน",
+"postcode": "37240"
+},
+{
+"province": "อำนาจเจริญ",
+"district": "อำเภอเมืองอำนาจเจริญ",
+"postcode": "37000"
+},
+{
+"province": "อำนาจเจริญ",
+"district": "อำเภอเสนางคนิคม",
+"postcode": "37290"
+},
+{
+"province": "อุดรธานี",
+"district": "อำเภอกุดจับ",
+"postcode": "41250"
+},
+{
+"province": "อุดรธานี",
+"district": "อำเภอกุมภวาปี",
+"postcode": "41110"
+},
+{
+"province": "อุดรธานี",
+"district": "อำเภอกุมภวาปี",
+"postcode": "41370"
+},
+{
+"province": "อุดรธานี",
+"district": "อำเภอกู่แก้ว",
+"postcode": "41130"
+},
+{
+"province": "อุดรธานี",
+"district": "อำเภอทุ่งฝน",
+"postcode": "41310"
+},
+{
+"province": "อุดรธานี",
+"district": "อำเภอนายูง",
+"postcode": "41380"
+},
+{
+"province": "อุดรธานี",
+"district": "อำเภอน้ำโสม",
+"postcode": "41210"
+},
+{
+"province": "อุดรธานี",
+"district": "อำเภอบ้านดุง",
+"postcode": "41190"
+},
+{
+"province": "อุดรธานี",
+"district": "อำเภอบ้านผือ",
+"postcode": "41160"
+},
+{
+"province": "อุดรธานี",
+"district": "อำเภอประจักษ์ศิลปาคม",
+"postcode": "41110"
+},
+{
+"province": "อุดรธานี",
+"district": "อำเภอพิบูลย์รักษ์",
+"postcode": "41130"
+},
+{
+"province": "อุดรธานี",
+"district": "อำเภอวังสามหมอ",
+"postcode": "41280"
+},
+{
+"province": "อุดรธานี",
+"district": "อำเภอศรีธาตุ",
+"postcode": "41230"
+},
+{
+"province": "อุดรธานี",
+"district": "อำเภอสร้างคอม",
+"postcode": "41260"
+},
+{
+"province": "อุดรธานี",
+"district": "อำเภอหนองวัวซอ",
+"postcode": "41220"
+},
+{
+"province": "อุดรธานี",
+"district": "อำเภอหนองวัวซอ",
+"postcode": "41360"
+},
+{
+"province": "อุดรธานี",
+"district": "อำเภอหนองหาน",
+"postcode": "41130"
+},
+{
+"province": "อุดรธานี",
+"district": "อำเภอหนองหาน",
+"postcode": "41320"
+},
+{
+"province": "อุดรธานี",
+"district": "อำเภอหนองแสง",
+"postcode": "41340"
+},
+{
+"province": "อุดรธานี",
+"district": "อำเภอเพ็ญ",
+"postcode": "41150"
+},
+{
+"province": "อุดรธานี",
+"district": "อำเภอเมืองอุดรธานี",
+"postcode": "41000"
+},
+{
+"province": "อุดรธานี",
+"district": "อำเภอเมืองอุดรธานี",
+"postcode": "41330"
+},
+{
+"province": "อุดรธานี",
+"district": "อำเภอโนนสะอาด",
+"postcode": "41240"
+},
+{
+"province": "อุดรธานี",
+"district": "อำเภอไชยวาน",
+"postcode": "41290"
+},
+{
+"province": "อุตรดิตถ์",
+"district": "อำเภอตรอน",
+"postcode": "53140"
+},
+{
+"province": "อุตรดิตถ์",
+"district": "อำเภอทองแสนขัน",
+"postcode": "53230"
+},
+{
+"province": "อุตรดิตถ์",
+"district": "อำเภอท่าปลา",
+"postcode": "53150"
+},
+{
+"province": "อุตรดิตถ์",
+"district": "อำเภอท่าปลา",
+"postcode": "53190"
+},
+{
+"province": "อุตรดิตถ์",
+"district": "อำเภอน้ำปาด",
+"postcode": "53110"
+},
+{
+"province": "อุตรดิตถ์",
+"district": "อำเภอบ้านโคก",
+"postcode": "53180"
+},
+{
+"province": "อุตรดิตถ์",
+"district": "อำเภอพิชัย",
+"postcode": "53120"
+},
+{
+"province": "อุตรดิตถ์",
+"district": "อำเภอพิชัย",
+"postcode": "53220"
+},
+{
+"province": "อุตรดิตถ์",
+"district": "อำเภอฟากท่า",
+"postcode": "53160"
+},
+{
+"province": "อุตรดิตถ์",
+"district": "อำเภอลับแล",
+"postcode": "53130"
+},
+{
+"province": "อุตรดิตถ์",
+"district": "อำเภอลับแล",
+"postcode": "53210"
+},
+{
+"province": "อุตรดิตถ์",
+"district": "อำเภอเมืองอุตรดิตถ์",
+"postcode": "53000"
+},
+{
+"province": "อุตรดิตถ์",
+"district": "อำเภอเมืองอุตรดิตถ์",
+"postcode": "53170"
+},
+{
+"province": "อุทัยธานี",
+"district": "อำเภอทัพทัน",
+"postcode": "61120"
+},
+{
+"province": "อุทัยธานี",
+"district": "อำเภอบ้านไร่",
+"postcode": "61140"
+},
+{
+"province": "อุทัยธานี",
+"district": "อำเภอบ้านไร่",
+"postcode": "61180"
+},
+{
+"province": "อุทัยธานี",
+"district": "อำเภอลานสัก",
+"postcode": "61160"
+},
+{
+"province": "อุทัยธานี",
+"district": "อำเภอสว่างอารมณ์",
+"postcode": "61150"
+},
+{
+"province": "อุทัยธานี",
+"district": "อำเภอหนองขาหย่าง",
+"postcode": "61130"
+},
+{
+"province": "อุทัยธานี",
+"district": "อำเภอหนองฉาง",
+"postcode": "61110"
+},
+{
+"province": "อุทัยธานี",
+"district": "อำเภอหนองฉาง",
+"postcode": "61170"
+},
+{
+"province": "อุทัยธานี",
+"district": "อำเภอห้วยคต",
+"postcode": "61170"
+},
+{
+"province": "อุทัยธานี",
+"district": "อำเภอเมืองอุทัยธานี",
+"postcode": "61000"
+},
+{
+"province": "อุบลราชธานี",
+"district": "อำเภอกุดข้าวปุ้น",
+"postcode": "34270"
+},
+{
+"province": "อุบลราชธานี",
+"district": "อำเภอดอนมดแดง",
+"postcode": "34000"
+},
+{
+"province": "อุบลราชธานี",
+"district": "อำเภอตระการพืชผล",
+"postcode": "34130"
+},
+{
+"province": "อุบลราชธานี",
+"district": "อำเภอตาลสุม",
+"postcode": "34330"
+},
+{
+"province": "อุบลราชธานี",
+"district": "อำเภอทุ่งศรีอุดม",
+"postcode": "34160"
+},
+{
+"province": "อุบลราชธานี",
+"district": "อำเภอนาจะหลวย",
+"postcode": "34280"
+},
+{
+"province": "อุบลราชธานี",
+"district": "อำเภอนาตาล",
+"postcode": "34170"
+},
+{
+"province": "อุบลราชธานี",
+"district": "อำเภอนาเยีย",
+"postcode": "34160"
+},
+{
+"province": "อุบลราชธานี",
+"district": "อำเภอน้ำขุ่น",
+"postcode": "34260"
+},
+{
+"province": "อุบลราชธานี",
+"district": "อำเภอน้ำยืน",
+"postcode": "34260"
+},
+{
+"province": "อุบลราชธานี",
+"district": "อำเภอบุณฑริก",
+"postcode": "34230"
+},
+{
+"province": "อุบลราชธานี",
+"district": "อำเภอพิบูลมังสาหาร",
+"postcode": "34110"
+},
+{
+"province": "อุบลราชธานี",
+"district": "อำเภอม่วงสามสิบ",
+"postcode": "34140"
+},
+{
+"province": "อุบลราชธานี",
+"district": "อำเภอวารินชำราบ",
+"postcode": "34190"
+},
+{
+"province": "อุบลราชธานี",
+"district": "อำเภอวารินชำราบ",
+"postcode": "34310"
+},
+{
+"province": "อุบลราชธานี",
+"district": "อำเภอศรีเมืองใหม่",
+"postcode": "34250"
+},
+{
+"province": "อุบลราชธานี",
+"district": "อำเภอสว่างวีระวงศ์",
+"postcode": "34190"
+},
+{
+"province": "อุบลราชธานี",
+"district": "อำเภอสำโรง",
+"postcode": "34360"
+},
+{
+"province": "อุบลราชธานี",
+"district": "อำเภอสิรินธร",
+"postcode": "34350"
+},
+{
+"province": "อุบลราชธานี",
+"district": "อำเภอเขมราฐ",
+"postcode": "34170"
+},
+{
+"province": "อุบลราชธานี",
+"district": "อำเภอเขื่องใน",
+"postcode": "34150"
+},
+{
+"province": "อุบลราชธานี",
+"district": "อำเภอเขื่องใน",
+"postcode": "34320"
+},
+{
+"province": "อุบลราชธานี",
+"district": "อำเภอเดชอุดม",
+"postcode": "34160"
+},
+{
+"province": "อุบลราชธานี",
+"district": "อำเภอเมืองอุบลราชธานี",
+"postcode": "34000"
+},
+{
+"province": "อุบลราชธานี",
+"district": "อำเภอเหล่าเสือโก้ก",
+"postcode": "34000"
+},
+{
+"province": "อุบลราชธานี",
+"district": "อำเภอโขงเจียม",
+"postcode": "34220"
+},
+{
+"province": "อุบลราชธานี",
+"district": "อำเภอโพธิ์ไทร",
+"postcode": "34340"
+},
+{
+"province": "อ่างทอง",
+"district": "อำเภอป่าโมก",
+"postcode": "14130"
+},
+{
+"province": "อ่างทอง",
+"district": "อำเภอวิเศษชัยชาญ",
+"postcode": "14110"
+},
+{
+"province": "อ่างทอง",
+"district": "อำเภอสามโก้",
+"postcode": "14160"
+},
+{
+"province": "อ่างทอง",
+"district": "อำเภอเมืองอ่างทอง",
+"postcode": "14000"
+},
+{
+"province": "อ่างทอง",
+"district": "อำเภอแสวงหา",
+"postcode": "14150"
+},
+{
+"province": "อ่างทอง",
+"district": "อำเภอโพธิ์ทอง",
+"postcode": "14120"
+},
+{
+"province": "อ่างทอง",
+"district": "อำเภอไชโย",
+"postcode": "14140"
+},
+{
+"province": "เชียงราย",
+"district": "อำเภอขุนตาล",
+"postcode": "57340"
+},
+{
+"province": "เชียงราย",
+"district": "อำเภอดอยหลวง",
+"postcode": "57110"
+},
+{
+"province": "เชียงราย",
+"district": "อำเภอป่าแดด",
+"postcode": "57190"
+},
+{
+"province": "เชียงราย",
+"district": "อำเภอพญาเม็งราย",
+"postcode": "57290"
+},
+{
+"province": "เชียงราย",
+"district": "อำเภอพาน",
+"postcode": "57120"
+},
+{
+"province": "เชียงราย",
+"district": "อำเภอพาน",
+"postcode": "57250"
+},
+{
+"province": "เชียงราย",
+"district": "อำเภอพาน",
+"postcode": "57280"
+},
+{
+"province": "เชียงราย",
+"district": "อำเภอเชียงของ",
+"postcode": "57140"
+},
+{
+"province": "เชียงราย",
+"district": "อำเภอเชียงแสน",
+"postcode": "57150"
+},
+{
+"province": "เชียงราย",
+"district": "อำเภอเทิง",
+"postcode": "57160"
+},
+{
+"province": "เชียงราย",
+"district": "อำเภอเทิง",
+"postcode": "57230"
+},
+{
+"province": "เชียงราย",
+"district": "อำเภอเมืองเชียงราย",
+"postcode": "57000"
+},
+{
+"province": "เชียงราย",
+"district": "อำเภอเมืองเชียงราย",
+"postcode": "57100"
+},
+{
+"province": "เชียงราย",
+"district": "อำเภอเวียงชัย",
+"postcode": "57210"
+},
+{
+"province": "เชียงราย",
+"district": "อำเภอเวียงป่าเป้า",
+"postcode": "57170"
+},
+{
+"province": "เชียงราย",
+"district": "อำเภอเวียงป่าเป้า",
+"postcode": "57260"
+},
+{
+"province": "เชียงราย",
+"district": "อำเภอเวียงเชียงรุ้ง",
+"postcode": "57210"
+},
+{
+"province": "เชียงราย",
+"district": "อำเภอเวียงแก่น",
+"postcode": "57310"
+},
+{
+"province": "เชียงราย",
+"district": "อำเภอแม่จัน",
+"postcode": "57110"
+},
+{
+"province": "เชียงราย",
+"district": "อำเภอแม่จัน",
+"postcode": "57240"
+},
+{
+"province": "เชียงราย",
+"district": "อำเภอแม่จัน",
+"postcode": "57270"
+},
+{
+"province": "เชียงราย",
+"district": "อำเภอแม่ฟ้าหลวง",
+"postcode": "57110"
+},
+{
+"province": "เชียงราย",
+"district": "อำเภอแม่ฟ้าหลวง",
+"postcode": "57240"
+},
+{
+"province": "เชียงราย",
+"district": "อำเภอแม่ลาว",
+"postcode": "57000"
+},
+{
+"province": "เชียงราย",
+"district": "อำเภอแม่ลาว",
+"postcode": "57250"
+},
+{
+"province": "เชียงราย",
+"district": "อำเภอแม่สรวย",
+"postcode": "57180"
+},
+{
+"province": "เชียงราย",
+"district": "อำเภอแม่สาย",
+"postcode": "57130"
+},
+{
+"province": "เชียงราย",
+"district": "อำเภอแม่สาย",
+"postcode": "57220"
+},
+{
+"province": "เชียงใหม่",
+"district": "อำเภอกัลยาณิวัฒนา",
+"postcode": "58130"
+},
+{
+"province": "เชียงใหม่",
+"district": "อำเภอจอมทอง",
+"postcode": "50160"
+},
+{
+"province": "เชียงใหม่",
+"district": "อำเภอจอมทอง",
+"postcode": "50240"
+},
+{
+"province": "เชียงใหม่",
+"district": "อำเภอดอยสะเก็ด",
+"postcode": "50220"
+},
+{
+"province": "เชียงใหม่",
+"district": "อำเภอดอยหล่อ",
+"postcode": "50160"
+},
+{
+"province": "เชียงใหม่",
+"district": "อำเภอดอยเต่า",
+"postcode": "50260"
+},
+{
+"province": "เชียงใหม่",
+"district": "อำเภอฝาง",
+"postcode": "50110"
+},
+{
+"province": "เชียงใหม่",
+"district": "อำเภอฝาง",
+"postcode": "50320"
+},
+{
+"province": "เชียงใหม่",
+"district": "อำเภอพร้าว",
+"postcode": "50190"
+},
+{
+"province": "เชียงใหม่",
+"district": "อำเภอสะเมิง",
+"postcode": "50250"
+},
+{
+"province": "เชียงใหม่",
+"district": "อำเภอสันกำแพง",
+"postcode": "50130"
+},
+{
+"province": "เชียงใหม่",
+"district": "อำเภอสันทราย",
+"postcode": "50210"
+},
+{
+"province": "เชียงใหม่",
+"district": "อำเภอสันทราย",
+"postcode": "50290"
+},
+{
+"province": "เชียงใหม่",
+"district": "อำเภอสันป่าตอง",
+"postcode": "50120"
+},
+{
+"province": "เชียงใหม่",
+"district": "อำเภอสารภี",
+"postcode": "50140"
+},
+{
+"province": "เชียงใหม่",
+"district": "อำเภอหางดง",
+"postcode": "50230"
+},
+{
+"province": "เชียงใหม่",
+"district": "อำเภอหางดง",
+"postcode": "50340"
+},
+{
+"province": "เชียงใหม่",
+"district": "อำเภออมก๋อย",
+"postcode": "50310"
+},
+{
+"province": "เชียงใหม่",
+"district": "อำเภอฮอด",
+"postcode": "50240"
+},
+{
+"province": "เชียงใหม่",
+"district": "อำเภอเชียงดาว",
+"postcode": "50170"
+},
+{
+"province": "เชียงใหม่",
+"district": "อำเภอเมืองเชียงใหม่",
+"postcode": "50000"
+},
+{
+"province": "เชียงใหม่",
+"district": "อำเภอเมืองเชียงใหม่",
+"postcode": "50100"
+},
+{
+"province": "เชียงใหม่",
+"district": "อำเภอเมืองเชียงใหม่",
+"postcode": "50200"
+},
+{
+"province": "เชียงใหม่",
+"district": "อำเภอเมืองเชียงใหม่",
+"postcode": "50290"
+},
+{
+"province": "เชียงใหม่",
+"district": "อำเภอเมืองเชียงใหม่",
+"postcode": "50300"
+},
+{
+"province": "เชียงใหม่",
+"district": "อำเภอเวียงแหง",
+"postcode": "50350"
+},
+{
+"province": "เชียงใหม่",
+"district": "อำเภอแม่ริม",
+"postcode": "50180"
+},
+{
+"province": "เชียงใหม่",
+"district": "อำเภอแม่ริม",
+"postcode": "50330"
+},
+{
+"province": "เชียงใหม่",
+"district": "อำเภอแม่วาง",
+"postcode": "50360"
+},
+{
+"province": "เชียงใหม่",
+"district": "อำเภอแม่ออน",
+"postcode": "50130"
+},
+{
+"province": "เชียงใหม่",
+"district": "อำเภอแม่อาย",
+"postcode": "50280"
+},
+{
+"province": "เชียงใหม่",
+"district": "อำเภอแม่แจ่ม",
+"postcode": "50270"
+},
+{
+"province": "เชียงใหม่",
+"district": "อำเภอแม่แตง",
+"postcode": "50150"
+},
+{
+"province": "เชียงใหม่",
+"district": "อำเภอแม่แตง",
+"postcode": "50330"
+},
+{
+"province": "เชียงใหม่",
+"district": "อำเภอไชยปราการ",
+"postcode": "50320"
+},
+{
+"province": "เพชรบุรี",
+"district": "อำเภอชะอำ",
+"postcode": "76120"
+},
+{
+"province": "เพชรบุรี",
+"district": "อำเภอท่ายาง",
+"postcode": "76130"
+},
+{
+"province": "เพชรบุรี",
+"district": "อำเภอบ้านลาด",
+"postcode": "76150"
+},
+{
+"province": "เพชรบุรี",
+"district": "อำเภอบ้านแหลม",
+"postcode": "76100"
+},
+{
+"province": "เพชรบุรี",
+"district": "อำเภอบ้านแหลม",
+"postcode": "76110"
+},
+{
+"province": "เพชรบุรี",
+"district": "อำเภอหนองหญ้าปล้อง",
+"postcode": "76160"
+},
+{
+"province": "เพชรบุรี",
+"district": "อำเภอเขาย้อย",
+"postcode": "76140"
+},
+{
+"province": "เพชรบุรี",
+"district": "อำเภอเมืองเพชรบุรี",
+"postcode": "76000"
+},
+{
+"province": "เพชรบุรี",
+"district": "อำเภอเมืองเพชรบุรี",
+"postcode": "76100"
+},
+{
+"province": "เพชรบุรี",
+"district": "อำเภอแก่งกระจาน",
+"postcode": "76170"
+},
+{
+"province": "เพชรบูรณ์",
+"district": "อำเภอชนแดน",
+"postcode": "67150"
+},
+{
+"province": "เพชรบูรณ์",
+"district": "อำเภอชนแดน",
+"postcode": "67190"
+},
+{
+"province": "เพชรบูรณ์",
+"district": "อำเภอน้ำหนาว",
+"postcode": "67260"
+},
+{
+"province": "เพชรบูรณ์",
+"district": "อำเภอบึงสามพัน",
+"postcode": "67160"
+},
+{
+"province": "เพชรบูรณ์",
+"district": "อำเภอบึงสามพัน",
+"postcode": "67230"
+},
+{
+"province": "เพชรบูรณ์",
+"district": "อำเภอวังโป่ง",
+"postcode": "67240"
+},
+{
+"province": "เพชรบูรณ์",
+"district": "อำเภอวิเชียรบุรี",
+"postcode": "67130"
+},
+{
+"province": "เพชรบูรณ์",
+"district": "อำเภอวิเชียรบุรี",
+"postcode": "67180"
+},
+{
+"province": "เพชรบูรณ์",
+"district": "อำเภอศรีเทพ",
+"postcode": "67170"
+},
+{
+"province": "เพชรบูรณ์",
+"district": "อำเภอหนองไผ่",
+"postcode": "67140"
+},
+{
+"province": "เพชรบูรณ์",
+"district": "อำเภอหนองไผ่",
+"postcode": "67220"
+},
+{
+"province": "เพชรบูรณ์",
+"district": "อำเภอหล่มสัก",
+"postcode": "67110"
+},
+{
+"province": "เพชรบูรณ์",
+"district": "อำเภอหล่มเก่า",
+"postcode": "67120"
+},
+{
+"province": "เพชรบูรณ์",
+"district": "อำเภอเขาค้อ",
+"postcode": "67270"
+},
+{
+"province": "เพชรบูรณ์",
+"district": "อำเภอเขาค้อ",
+"postcode": "67280"
+},
+{
+"province": "เพชรบูรณ์",
+"district": "อำเภอเมืองเพชรบูรณ์",
+"postcode": "67000"
+},
+{
+"province": "เพชรบูรณ์",
+"district": "อำเภอเมืองเพชรบูรณ์",
+"postcode": "67210"
+},
+{
+"province": "เพชรบูรณ์",
+"district": "อำเภอเมืองเพชรบูรณ์",
+"postcode": "67250"
+},
+{
+"province": "เลย",
+"district": "อำเภอด่านซ้าย",
+"postcode": "42120"
+},
+{
+"province": "เลย",
+"district": "อำเภอท่าลี่",
+"postcode": "42140"
+},
+{
+"province": "เลย",
+"district": "อำเภอนาด้วง",
+"postcode": "42210"
+},
+{
+"province": "เลย",
+"district": "อำเภอนาแห้ว",
+"postcode": "42170"
+},
+{
+"province": "เลย",
+"district": "อำเภอปากชม",
+"postcode": "42150"
+},
+{
+"province": "เลย",
+"district": "อำเภอผาขาว",
+"postcode": "42240"
+},
+{
+"province": "เลย",
+"district": "อำเภอภูกระดึง",
+"postcode": "42180"
+},
+{
+"province": "เลย",
+"district": "อำเภอภูหลวง",
+"postcode": "42230"
+},
+{
+"province": "เลย",
+"district": "อำเภอภูเรือ",
+"postcode": "42160"
+},
+{
+"province": "เลย",
+"district": "อำเภอวังสะพุง",
+"postcode": "42130"
+},
+{
+"province": "เลย",
+"district": "อำเภอหนองหิน",
+"postcode": "42190"
+},
+{
+"province": "เลย",
+"district": "อำเภอเชียงคาน",
+"postcode": "42110"
+},
+{
+"province": "เลย",
+"district": "อำเภอเมืองเลย",
+"postcode": "42000"
+},
+{
+"province": "เลย",
+"district": "อำเภอเมืองเลย",
+"postcode": "42100"
+},
+{
+"province": "เลย",
+"district": "อำเภอเอราวัณ",
+"postcode": "42220"
+},
+{
+"province": "แพร่",
+"district": "อำเภอร้องกวาง",
+"postcode": "54140"
+},
+{
+"province": "แพร่",
+"district": "อำเภอลอง",
+"postcode": "54150"
+},
+{
+"province": "แพร่",
+"district": "อำเภอวังชิ้น",
+"postcode": "54160"
+},
+{
+"province": "แพร่",
+"district": "อำเภอสอง",
+"postcode": "54120"
+},
+{
+"province": "แพร่",
+"district": "อำเภอสูงเม่น",
+"postcode": "54000"
+},
+{
+"province": "แพร่",
+"district": "อำเภอสูงเม่น",
+"postcode": "54130"
+},
+{
+"province": "แพร่",
+"district": "อำเภอหนองม่วงไข่",
+"postcode": "54170"
+},
+{
+"province": "แพร่",
+"district": "อำเภอเด่นชัย",
+"postcode": "54110"
+},
+{
+"province": "แพร่",
+"district": "อำเภอเมืองแพร่",
+"postcode": "54000"
+},
+{
+"province": "แม่ฮ่องสอน",
+"district": "อำเภอขุนยวม",
+"postcode": "58140"
+},
+{
+"province": "แม่ฮ่องสอน",
+"district": "อำเภอปางมะผ้า",
+"postcode": "58150"
+},
+{
+"province": "แม่ฮ่องสอน",
+"district": "อำเภอปาย",
+"postcode": "58130"
+},
+{
+"province": "แม่ฮ่องสอน",
+"district": "อำเภอสบเมย",
+"postcode": "58110"
+},
+{
+"province": "แม่ฮ่องสอน",
+"district": "อำเภอเมืองแม่ฮ่องสอน",
+"postcode": "58000"
+},
+{
+"province": "แม่ฮ่องสอน",
+"district": "อำเภอแม่ลาน้อย",
+"postcode": "58120"
+},
+{
+"province": "แม่ฮ่องสอน",
+"district": "อำเภอแม่สะเรียง",
+"postcode": "58110"
+}
+]
