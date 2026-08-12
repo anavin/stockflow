@@ -5,6 +5,8 @@ import Combobox from "./Combobox";
 import DatePicker from "./DatePicker";
 import CustomerSuggest from "./CustomerSuggest";
 import CustomerHistoryCard from "./CustomerHistoryCard";
+import PostcodeSearch from "./PostcodeSearch";
+import type { PostcodeHit } from "@/lib/actions/orders";
 import ItemsEditor, { emptyItem, itemErrorOf, hasItemError, type ItemDraft, type ItemError } from "./ItemsEditor";
 import type { CustomerSuggestion, CustomerHistory, PastOrder } from "@/lib/actions/orders";
 import { saveOrder, orderExists, customerHistory, type OrderInput } from "@/lib/actions/orders";
@@ -167,6 +169,15 @@ export default function OrderForm({ products, sizes, provinces, postcodes, initi
     return Array.from(new Set(postcodes.filter((p) => p.province === f.province).map((p) => p.district)));
   }, [postcodes, f.province]);
 
+  // เลือกจากผลค้นรหัสไปรษณีย์ → เติมจังหวัด/อำเภอ/รหัส + ใส่ตำบลไว้ต้นที่อยู่
+  function onPickPostcode(hit: PostcodeHit) {
+    const bkk = hit.province === "กรุงเทพมหานคร";
+    const district = (bkk ? "เขต" : "อำเภอ") + hit.district;
+    const tambon = (bkk ? "แขวง" : "ตำบล") + hit.subdistrict;
+    const addr = (f.address || "").replace(/^(ตำบล|แขวง)\S+\s*/, "").trim();
+    set({ province: hit.province, district, postcode: hit.postcode, address: `${tambon} ${addr}`.trim() });
+  }
+
   function onProvince(v: string) {
     set({ province: v, district: "", postcode: "" });
   }
@@ -250,17 +261,8 @@ export default function OrderForm({ products, sizes, provinces, postcodes, initi
             {dupWarn && <div className="mt-1 text-[11px] text-amber-600">{dupWarn}</div>}
           </div>
           <div>
-            <label className="label">เลขที่ใบเบิก</label>
-            <input className="input font-mono" value={f.doc_no} onChange={(e) => set({ doc_no: e.target.value })}
-              placeholder="ออกอัตโนมัติเมื่อบันทึก (SH-YY-MM-DD-####)" />
-          </div>
-          <div>
             <label className="label">วันที่</label>
             <DatePicker value={f.doc_date} onChange={(v) => set({ doc_date: v })} />
-          </div>
-          <div>
-            <label className="label">Channel</label>
-            <input className="input" value={f.channel} onChange={(e) => set({ channel: e.target.value })} />
           </div>
           <div>
             <label className="label">ชื่อลูกค้า / ร้าน</label>
@@ -331,8 +333,8 @@ export default function OrderForm({ products, sizes, provinces, postcodes, initi
             <Combobox value={f.district} onChange={onDistrict} options={districts} placeholder={f.province ? "เลือกอำเภอ/เขต" : "เลือกจังหวัดก่อน"} disabled={!f.province} />
           </div>
           <div>
-            <label className="label">รหัสไปรษณีย์</label>
-            <input className="input" value={f.postcode} onChange={(e) => set({ postcode: e.target.value })} placeholder="อัตโนมัติจากอำเภอ" />
+            <label className="label">รหัสไปรษณีย์ <span className="text-faint">(พิมพ์เพื่อค้นตำบล/อำเภอ)</span></label>
+            <PostcodeSearch value={f.postcode} onChange={(v) => set({ postcode: v })} onPick={onPickPostcode} placeholder="พิมพ์รหัส เช่น 10110" />
           </div>
           <div className="md:col-span-3">
             <label className="label">ที่อยู่ (บ้านเลขที่ / ถนน / รายละเอียด)</label>

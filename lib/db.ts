@@ -100,6 +100,18 @@ async function ensureAdmin(db: { query: (sql: string, params?: any[]) => Promise
     [username, await hashBcrypt(pw), "ผู้ดูแลระบบ"]);
 }
 
+async function ensureThaiPostcodes(db: PGlite) {
+  try {
+    const [{ n }] = (await db.query("select count(*)::int n from thai_postcodes")).rows as { n: number }[];
+    if (n > 0) return;
+    const rows = await loadSeed("thai_postcodes");
+    if (!rows.length) return;
+    console.log(`[db] seeding thai_postcodes (${rows.length} rows) …`);
+    await insertRows(db, "thai_postcodes", ["province", "district", "subdistrict", "postcode"],
+      rows.map((r) => [r.province, r.district, r.subdistrict, r.postcode]), "");
+  } catch { /* ตารางยังไม่มี = ข้าม (migration จะสร้างให้รอบถัดไป) */ }
+}
+
 async function init(): Promise<PGlite> {
   const { PGlite } = await import("@electric-sql/pglite");
   const db = new PGlite(DATA_DIR);
@@ -110,6 +122,7 @@ async function init(): Promise<PGlite> {
     await seed(db);
     console.log("[db] seed complete");
   }
+  await ensureThaiPostcodes(db);   // ตำบลทั้งประเทศ — seed แยก (แม้ DB เดิมมีข้อมูลอยู่แล้ว)
   await ensureAdmin(db);
   return db;
 }

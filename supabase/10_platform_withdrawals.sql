@@ -1568,3 +1568,11 @@ alter table users alter column role set default 'creator';
 
 -- 0008 รหัสสินค้า/กลิ่น (โชว์+ค้นหาในช่องเลือกกลิ่น)
 alter table public.products add column if not exists code text;
+
+-- 0009 รหัสไปรษณีย์ระดับตำบลทั้งประเทศ (พิมพ์รหัส → เลือกตำบล/อำเภอ)
+-- สร้างตารางนี้ แล้วรันไฟล์ข้อมูล thai_postcodes_prod.sql (7,436 แถว) แยกอีกที
+create table if not exists public.thai_postcodes (
+  id serial primary key, province text not null, district text not null,
+  subdistrict text not null, postcode text not null
+);
+create index if not exists idx_thai_postcodes_zip on public.thai_postcodes (postcode);

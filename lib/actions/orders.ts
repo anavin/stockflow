@@ -247,6 +247,21 @@ export async function searchCustomers(term: string): Promise<CustomerSuggestion[
   );
 }
 
+export type PostcodeHit = { province: string; district: string; subdistrict: string; postcode: string };
+/** ค้นหาจากรหัสไปรษณีย์ (ทั้งประเทศ) → ตำบล/อำเภอ/จังหวัด ให้เลือก */
+export async function lookupPostcode(code: string): Promise<PostcodeHit[]> {
+  const user = await getCurrentUser();
+  if (!user) return [];
+  const c = (code || "").replace(/\D/g, "");
+  if (c.length < 3) return [];
+  return q<PostcodeHit>(
+    `select distinct province, district, subdistrict, postcode
+     from thai_postcodes where postcode like $1
+     order by province, district, subdistrict limit 80`,
+    [c + "%"],
+  );
+}
+
 // --- ประวัติการซื้อรายออร์เดอร์ (ให้ดูเทียบ ก่อนตัดสินใจเติม) ---
 export type PastOrderItem = { product: string; size: string; is_free: boolean; qty: number };
 export type PastOrder = {
