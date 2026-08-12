@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getOrder, getProducts, getSizes, getProvinces, getPostcodes } from "@/lib/queries";
+import { getOrder, getProducts, getSizes, getProvinces, getPostcodes, getProductCodes } from "@/lib/queries";
 import OrderForm from "@/components/OrderForm";
 import { ChevronLeft, Printer, ScanLine, PackageCheck } from "lucide-react";
 import { requireCreator } from "@/lib/auth/require-user";
@@ -12,8 +12,8 @@ export default async function EditOrderPage({ params }: { params: Promise<{ orde
   const me = await requireCreator();
   const { orderNo } = await params;
   const decoded = decodeURIComponent(orderNo);
-  const [order, products, sizes, provinces, postcodes] = await Promise.all([
-    getOrder(decoded), getProducts(), getSizes(), getProvinces(), getPostcodes(),
+  const [order, products, sizes, provinces, postcodes, productCodes] = await Promise.all([
+    getOrder(decoded), getProducts(), getSizes(), getProvinces(), getPostcodes(), getProductCodes(),
   ]);
   if (!order) notFound();
 
@@ -42,7 +42,7 @@ export default async function EditOrderPage({ params }: { params: Promise<{ orde
       </div>
       <h1 className="mb-1 text-xl font-bold text-ink">แก้ไขใบเบิก</h1>
       <p className="mb-6 font-mono text-sm text-muted">{order.doc_no} · {order.order_no}</p>
-      <OrderForm products={products} sizes={sizes} provinces={provinces} postcodes={postcodes} initial={order} />
+      <OrderForm products={products} sizes={sizes} provinces={provinces} postcodes={postcodes} initial={order} productCodes={productCodes} />
     </div>
   );
 }

@@ -23,11 +23,20 @@ export async function getProducts(): Promise<string[]> {
   return rows.map((r) => r.name);
 }
 
-export type ProductAdminRow = { id: number; name: string; active: boolean; sort: number; used: number };
-/** รายชื่อกลิ่นทั้งหมด (รวมที่ปิดไว้) + จำนวนบรรทัดใบเบิกที่ใช้ชื่อนี้ — สำหรับหน้าจัดการ */
+/** map ชื่อกลิ่น → รหัส (เฉพาะกลิ่นที่มีรหัส) — ใช้โชว์/ค้นหาในช่องเลือกกลิ่น */
+export async function getProductCodes(): Promise<Record<string, string>> {
+  const rows = await q<{ name: string; code: string | null }>(
+    `select name, code from products where active and coalesce(code,'') <> ''`);
+  const m: Record<string, string> = {};
+  for (const r of rows) if (r.code) m[r.name] = r.code;
+  return m;
+}
+
+export type ProductAdminRow = { id: number; name: string; code: string | null; active: boolean; sort: number; used: number };
+/** รายชื่อกลิ่นทั้งหมด (รวมที่ปิดไว้) + รหัส + จำนวนบรรทัดใบเบิกที่ใช้ชื่อนี้ — สำหรับหน้าจัดการ */
 export async function listProductsAdmin(): Promise<ProductAdminRow[]> {
   return q<ProductAdminRow>(
-    `select p.id, p.name, p.active, p.sort,
+    `select p.id, p.name, p.code, p.active, p.sort,
             (select count(*)::int from order_items i where i.product = p.name) as used
      from products p order by p.active desc, p.sort, p.name`,
   );

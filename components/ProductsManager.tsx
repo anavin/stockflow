@@ -1,38 +1,46 @@
 "use client";
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { createProduct, renameProduct, setProductActive } from "@/lib/actions/products";
+import { createProduct, renameProduct, setProductActive, setProductCode } from "@/lib/actions/products";
 import type { ProductAdminRow } from "@/lib/queries";
 import { Plus, Check, X, Pencil, Search, CheckCircle2 } from "lucide-react";
 
 export default function ProductsManager({ products }: { products: ProductAdminRow[] }) {
   const router = useRouter();
   const [name, setName] = useState("");
+  const [code, setCode] = useState("");
   const [q, setQ] = useState("");
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState("");
   const [error, setError] = useState("");
   const [editId, setEditId] = useState<number | null>(null);
   const [editVal, setEditVal] = useState("");
+  const [codeId, setCodeId] = useState<number | null>(null);   // แก้รหัส inline
+  const [codeVal, setCodeVal] = useState("");
 
   const filtered = useMemo(() => {
     const t = q.trim().toLowerCase();
-    return t ? products.filter((p) => p.name.toLowerCase().includes(t)) : products;
+    return t ? products.filter((p) => p.name.toLowerCase().includes(t) || (p.code ?? "").toLowerCase().includes(t)) : products;
   }, [products, q]);
   const activeCount = products.filter((p) => p.active).length;
 
   async function add(e: React.FormEvent) {
     e.preventDefault();
     setError(""); setMsg(""); setBusy(true);
-    const res = await createProduct(name);
+    const res = await createProduct(name, code);
     setBusy(false);
     if (!res.ok) { setError(res.error || "เพิ่มไม่สำเร็จ"); return; }
-    setMsg(`เพิ่มกลิ่น "${name.trim()}" แล้ว`); setName(""); router.refresh();
+    setMsg(`เพิ่มกลิ่น "${name.trim()}" แล้ว`); setName(""); setCode(""); router.refresh();
   }
   async function saveRename(id: number) {
     const res = await renameProduct(id, editVal);
     if (!res.ok) { alert(res.error); return; }
     setEditId(null); router.refresh();
+  }
+  async function saveCode(id: number) {
+    const res = await setProductCode(id, codeVal);
+    if (!res.ok) { alert(res.error); return; }
+    setCodeId(null); router.refresh();
   }
   async function toggle(p: ProductAdminRow) {
     const res = await setProductActive(p.id, !p.active);
@@ -45,7 +53,8 @@ export default function ProductsManager({ products }: { products: ProductAdminRo
       <form onSubmit={add} className="card p-5">
         <h2 className="mb-3 flex items-center gap-2 text-sm font-semibold text-ink"><Plus size={16} /> เพิ่มกลิ่นใหม่</h2>
         <div className="flex flex-wrap gap-2">
-          <input className="input flex-1 min-w-[240px]" value={name} onChange={(e) => setName(e.target.value)} placeholder="ชื่อกลิ่น เช่น Volt - Twilight (EDT)" />
+          <input className="input flex-1 min-w-[220px]" value={name} onChange={(e) => setName(e.target.value)} placeholder="ชื่อกลิ่น เช่น Volt - Twilight (EDT)" />
+          <input className="input w-32 font-mono" value={code} onChange={(e) => setCode(e.target.value)} placeholder="รหัส (ไม่บังคับ)" />
           <button className="btn-primary" disabled={busy}>{busy ? "กำลังเพิ่ม…" : "เพิ่มกลิ่น"}</button>
         </div>
         {error && <p className="mt-2 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
@@ -66,13 +75,14 @@ export default function ProductsManager({ products }: { products: ProductAdminRo
           <thead className="bg-soft text-left text-xs text-muted">
             <tr>
               <th className="px-4 py-3">ชื่อกลิ่น</th>
+              <th className="px-4 py-3">รหัส</th>
               <th className="px-4 py-3 text-center">ใช้ในใบเบิก</th>
               <th className="px-4 py-3 text-center">สถานะ</th>
               <th className="px-4 py-3 text-right">จัดการ</th>
             </tr>
           </thead>
           <tbody>
-            {filtered.length === 0 && <tr><td colSpan={4} className="px-4 py-10 text-center text-muted">ไม่พบกลิ่น</td></tr>}
+            {filtered.length === 0 && <tr><td colSpan={5} className="px-4 py-10 text-center text-muted">ไม่พบกลิ่น</td></tr>}
             {filtered.map((p) => (
               <tr key={p.id} className={`border-t border-line ${!p.active ? "bg-soft/40" : ""}`}>
                 <td className="px-4 py-2.5">
@@ -85,6 +95,21 @@ export default function ProductsManager({ products }: { products: ProductAdminRo
                     </div>
                   ) : (
                     <span className={p.active ? "font-medium text-ink" : "text-muted line-through"}>{p.name}</span>
+                  )}
+                </td>
+                <td className="px-4 py-2.5">
+                  {codeId === p.id ? (
+                    <div className="flex items-center gap-1">
+                      <input autoFocus className="input h-8 w-24 py-0 font-mono text-xs" value={codeVal} onChange={(e) => setCodeVal(e.target.value)}
+                        onKeyDown={(e) => { if (e.key === "Enter") saveCode(p.id); if (e.key === "Escape") setCodeId(null); }} />
+                      <button onClick={() => saveCode(p.id)} className="rounded-md p-1 text-green-600 hover:bg-green-50" title="บันทึก"><Check size={15} /></button>
+                      <button onClick={() => setCodeId(null)} className="rounded-md p-1 text-muted hover:bg-soft" title="ยกเลิก"><X size={15} /></button>
+                    </div>
+                  ) : (
+                    <button onClick={() => { setCodeId(p.id); setCodeVal(p.code ?? ""); }}
+                      className="rounded px-1.5 py-0.5 font-mono text-xs hover:bg-soft">
+                      {p.code ? <span className="text-ink">{p.code}</span> : <span className="text-faint">— เพิ่มรหัส</span>}
+                    </button>
                   )}
                 </td>
                 <td className="px-4 py-2.5 text-center text-muted">{p.used > 0 ? p.used.toLocaleString() : "—"}</td>

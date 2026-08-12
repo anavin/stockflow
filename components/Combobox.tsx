@@ -20,6 +20,7 @@ export default function Combobox({
   disabled = false,
   invalid = false,
   className = "",
+  codes,
 }: {
   value: string;
   onChange: (v: string) => void;
@@ -29,6 +30,7 @@ export default function Combobox({
   disabled?: boolean;
   invalid?: boolean;
   className?: string;
+  codes?: Record<string, string>;   // option → รหัส (โชว์+ค้นหาได้)
 }) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
@@ -73,11 +75,26 @@ export default function Combobox({
     return () => document.removeEventListener("mousedown", onDoc);
   }, []);
 
+  // ค้นหา: จัดอันดับ "ขึ้นต้นด้วยตัวอักษรที่พิมพ์" ก่อน แล้วค่อยที่มีอยู่กลางคำ
+  // ภายในอันดับเดียวกันคงลำดับเดิมของ options (เช่น ขนาดเรียงน้อย→มาก ไม่ถูกเรียงตัวอักษรทับ)
   const filtered = useMemo(() => {
     const qq = query.trim().toLowerCase();
-    if (!qq) return options.slice(0, 200);
-    return options.filter((o) => o.toLowerCase().includes(qq)).slice(0, 200);
-  }, [options, query]);
+    if (!qq) return options.slice(0, 300);
+    const idx = new Map(options.map((o, i) => [o, i]));
+    const scored: { o: string; s: number }[] = [];
+    for (const o of options) {
+      const name = o.toLowerCase();
+      const code = (codes?.[o] || "").toLowerCase();
+      let s = -1;
+      if (name.startsWith(qq)) s = 0;            // ชื่อขึ้นต้นตรง = มาก่อน
+      else if (code && code.startsWith(qq)) s = 1; // รหัสขึ้นต้นตรง
+      else if (name.includes(qq)) s = 2;          // ชื่อมีอยู่กลางคำ
+      else if (code && code.includes(qq)) s = 3;  // รหัสมีอยู่กลางคำ
+      if (s >= 0) scored.push({ o, s });
+    }
+    scored.sort((a, b) => a.s - b.s || (idx.get(a.o)! - idx.get(b.o)!));
+    return scored.slice(0, 300).map((x) => x.o);
+  }, [options, query, codes]);
 
   useEffect(() => setHi(0), [query, open]);
   // reset the search text every time the popup closes so reopening is clean
@@ -131,10 +148,13 @@ export default function Combobox({
               type="button"
               onMouseEnter={() => setHi(i)}
               onClick={() => commit(o)}
-              className={`flex w-full items-center justify-between px-3 py-2 text-left text-sm ${i === hi ? "bg-soft" : ""} hover:bg-soft`}
+              className={`flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-sm ${i === hi ? "bg-soft" : ""} hover:bg-soft`}
             >
-              <span className="truncate">{o}</span>
-              {o === value && <Check size={14} className="text-brand" />}
+              <span className="flex min-w-0 items-center gap-2">
+                <span className="truncate">{o}</span>
+                {codes?.[o] && <span className="shrink-0 rounded bg-soft px-1.5 py-0.5 font-mono text-[11px] text-muted">{codes[o]}</span>}
+              </span>
+              {o === value && <Check size={14} className="shrink-0 text-brand" />}
             </button>
           </li>
         ))}
@@ -151,7 +171,10 @@ export default function Combobox({
         onClick={() => !disabled && setOpen((o) => !o)}
         className={`input flex w-full items-center justify-between gap-2 text-left disabled:opacity-60 ${invalid ? "border-red-400 ring-2 ring-red-100" : ""}`}
       >
-        <span className={value ? "truncate text-ink" : "truncate text-faint"}>{value || placeholder}</span>
+        <span className="flex min-w-0 items-center gap-2">
+          <span className={value ? "truncate text-ink" : "truncate text-faint"}>{value || placeholder}</span>
+          {value && codes?.[value] && <span className="shrink-0 font-mono text-[11px] text-faint">{codes[value]}</span>}
+        </span>
         <ChevronDown size={16} className="shrink-0 text-faint" />
       </button>
       {mounted && popup ? createPortal(popup, document.body) : null}

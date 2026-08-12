@@ -52,12 +52,14 @@ export default function ItemsEditor({
   products,
   sizes,
   errors = [],
+  productCodes,
 }: {
   items: ItemDraft[];
   onChange: (items: ItemDraft[]) => void;
   products: string[];
   sizes: string[];
   errors?: ItemError[];
+  productCodes?: Record<string, string>;
 }) {
   const errMsg = (e?: ItemError) => {
     if (!e) return "";
@@ -128,7 +130,7 @@ export default function ItemsEditor({
               <tr key={i} className={`border-t border-line align-top ${it.is_free ? "bg-brand-50/50" : ""}`}>
                 <td className="px-3 py-2 text-muted">{i + 1}</td>
                 <td className="px-3 py-2">
-                  <Combobox value={it.product} onChange={(v) => update(i, { product: v })} options={products} placeholder="เลือกกลิ่น" invalid={errors[i]?.product} />
+                  <Combobox value={it.product} onChange={(v) => update(i, { product: v })} options={products} placeholder="เลือกกลิ่น" invalid={errors[i]?.product} codes={productCodes} />
                   {errMsg(errors[i]) && (
                     <div className="mt-1 flex items-center gap-1 text-[11px] text-red-600"><AlertTriangle size={12} /> {errMsg(errors[i])}</div>
                   )}
@@ -176,7 +178,7 @@ export default function ItemsEditor({
                 <Trash2 size={16} />
               </button>
             </div>
-            <Combobox value={it.product} onChange={(v) => update(i, { product: v })} options={products} placeholder="เลือกกลิ่น" invalid={errors[i]?.product} />
+            <Combobox value={it.product} onChange={(v) => update(i, { product: v })} options={products} placeholder="เลือกกลิ่น" invalid={errors[i]?.product} codes={productCodes} />
             <div className="grid grid-cols-2 gap-2">
               <Combobox value={it.size} onChange={(v) => update(i, { size: v })}
                 options={it.is_free ? sizesFree : sizesNormal} allowCustom={!it.is_free} placeholder="ขนาด" invalid={errors[i]?.size} />

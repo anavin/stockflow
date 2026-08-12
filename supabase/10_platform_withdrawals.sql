@@ -1565,3 +1565,6 @@ alter table order_items add column if not exists spec text;
 -- 0007 แยกบทบาทงาน: admin (เจ้าของ) · creator (สร้างใบเบิก) · picker (จัดของ/ตัดสต๊อก)
 update users set role = 'creator' where role = 'staff';
 alter table users alter column role set default 'creator';
+
+-- 0008 รหัสสินค้า/กลิ่น (โชว์+ค้นหาในช่องเลือกกลิ่น)
+alter table public.products add column if not exists code text;
