@@ -12,6 +12,7 @@ type Preview = {
   errors: { row: number; message: string }[];
   noItemOrders: number;
   orderNos: string[];
+  unmatchedItems: number;
 };
 
 export default function ImportWizard() {
@@ -70,7 +71,7 @@ export default function ImportWizard() {
       >
         <UploadCloud size={36} className="text-brand" />
         <div className="text-sm font-medium text-ink">คลิกเพื่อเลือกไฟล์ หรือ ลากไฟล์มาวาง</div>
-        <div className="text-xs text-muted">รองรับ .xlsx, .xls, .csv — หัวตารางแถวแรก (เช่น sheet “Shopee”)</div>
+        <div className="text-xs text-muted">รองรับไฟล์ Shopee “Order.toship / Orders” (.xlsx, .xls, .csv) — ระบบเดากลิ่น/ขนาดให้อัตโนมัติ</div>
         {fileName && <div className="mt-1 inline-flex items-center gap-1 text-xs text-muted"><FileSpreadsheet size={14} /> {fileName}</div>}
         <input ref={inputRef} type="file" accept=".xlsx,.xls,.csv" className="hidden"
           onChange={(e) => { const f = e.target.files?.[0]; if (f) onFile(f); }} />
@@ -88,6 +89,21 @@ export default function ImportWizard() {
             <Stat label="แถวข้อมูล" value={preview.totalRows} />
             <Stat label="ข้อผิดพลาด" value={preview.errors.length} warn={preview.errors.length > 0} />
           </div>
+
+          {preview.orders.length > 0 && (
+            <div className="rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-800">
+              <div className="flex items-start gap-2">
+                <CheckCircle2 size={16} className="mt-0.5 shrink-0" />
+                <div>
+                  ระบบเดา <b>กลิ่น + ขนาด</b> จากชื่อสินค้า/SKU ของ Shopee ให้อัตโนมัติ และเติมจังหวัด/อำเภอ/ไปรษณีย์แล้ว
+                  <div className="mt-1 text-xs text-blue-700">
+                    หลังนำเข้า ให้เปิดแต่ละใบเพื่อ<b>เติมชื่อผู้รับ / เบอร์ / ที่อยู่</b> (Shopee ปิดบังไว้)
+                    {preview.unmatchedItems > 0 && <> และ<b>ตรวจกลิ่น {preview.unmatchedItems} รายการ</b>ที่เดาไม่ตรง (แสดงเป็นชื่อยาวผิดปกติในตารางด้านล่าง)</>}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
 
           {preview.orders.length === 0 && preview.noItemOrders > 0 && (
             <div className="space-y-3">

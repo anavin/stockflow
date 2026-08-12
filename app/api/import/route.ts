@@ -1,7 +1,9 @@
 import { NextResponse } from "next/server";
 import ExcelJS from "exceljs";
 import { getCurrentUser } from "@/lib/auth/session";
+import { can } from "@/lib/auth/roles";
 import { rowsToOrders } from "@/lib/import/parse-shopee";
+import { getProducts } from "@/lib/queries";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -10,6 +12,7 @@ export const maxDuration = 60;
 export async function POST(req: Request) {
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ ok: false, error: "กรุณาเข้าสู่ระบบ" }, { status: 401 });
+  if (!can.createOrders(user.role)) return NextResponse.json({ ok: false, error: "ไม่มีสิทธิ์นำเข้าใบเบิก" }, { status: 403 });
 
   const form = await req.formData();
   const file = form.get("file");
@@ -50,12 +53,16 @@ export async function POST(req: Request) {
           else if ("result" in v) v = (v as any).result;   // formula
         }
         if (v != null && v !== "") hasData = true;
-        obj[h] = v;
+        // บาง export มีหัวตารางซ้ำ (เช่น "จังหวัด"/"เขต/อำเภอ" ของที่อยู่ใบกำกับภาษี ที่มักว่าง)
+        // → เก็บค่าแรกที่ไม่ว่างไว้ อย่าให้คอลัมน์ซ้ำที่ว่างมาทับค่าจริง
+        if (obj[h] == null || obj[h] === "") obj[h] = v;
       });
       if (hasData) rows.push(obj);
     });
 
-    const result = rowsToOrders(rows);
+    // ส่งรายชื่อกลิ่นในระบบไปช่วยเดา "กลิ่น" จาก Shopee export (ชื่อสินค้า/SKU/ชื่อตัวเลือก)
+    const products = await getProducts();
+    const result = rowsToOrders(rows, products);
     return NextResponse.json({ ok: true, ...result });
   } catch (e: any) {
     return NextResponse.json({ ok: false, error: e?.message || "อ่านไฟล์ไม่สำเร็จ" }, { status: 400 });

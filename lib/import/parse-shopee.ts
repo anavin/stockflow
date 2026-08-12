@@ -73,6 +73,49 @@ export function toDateStr(v: any): string | null {
 
 const str = (v: any) => (v == null ? "" : String(v).trim());
 
+// --- Shopee export helpers: กลิ่น/ขนาดไม่ได้อยู่คอลัมน์เดียวชัดเจน ต้องเดาจากหลายช่อง ---
+const normLoose = (s: string) => (s || "").toLowerCase().replace(/[^a-z0-9ก-๙]/g, "");
+
+/** ดึงขนาด "N ml" จากผู้สมัครหลายช่อง (ชื่อตัวเลือก → SKU → ชื่อสินค้า) */
+function extractMl(...cands: string[]): string {
+  for (const s of cands) {
+    const m = (s || "").match(/(\d+(?:\.\d+)?)\s*ml/i);
+    if (m) return `${m[1]} ml`;
+  }
+  return "";
+}
+
+/** หา "กลิ่น" ที่ตรงกับรายการสินค้าในระบบ โดยดูว่าชื่อ master ตัวไหนโผล่ในข้อความ (ยาวสุดชนะ) */
+function matchMasterScent(hay: string, products: string[]): string {
+  const H = normLoose(hay);
+  if (!H) return "";
+  let best = "";
+  for (const p of products) {
+    const P = normLoose(p);
+    if (P.length >= 2 && H.includes(P) && P.length > normLoose(best).length) best = p;
+  }
+  return best;
+}
+
+/** เดา product(กลิ่น)+size จาก Shopee export เมื่อไม่มีคอลัมน์กลิ่นชัดเจน
+ *  - ขวดปกติ: ขนาดอยู่ "ชื่อตัวเลือก", กลิ่นอยู่ใน SKU/ชื่อสินค้า
+ *  - ตัวอย่าง 4ml: "ชื่อตัวเลือก" = กลิ่น, ขนาดอยู่ในชื่อสินค้า/SKU
+ *  จึงรวมทุกช่องเป็น haystack แล้ว match กับ master */
+function deriveProductSize(title: string, sku: string, variation: string, products: string[]): { product: string; size: string; matched: boolean } {
+  const size = extractMl(variation, sku, title);
+  const matched = matchMasterScent(`${variation} ${sku} ${title}`, products);
+  if (matched) return { product: matched, size, matched: true };
+  // fallback: ชื่อตัวเลือกที่ไม่ใช่ขนาด = น่าจะเป็นกลิ่น; ไม่งั้นถอดขนาด/รหัสออกจาก SKU
+  let guess = "";
+  if (variation && !/ml/i.test(variation)) guess = variation.split(/[,(/|]/)[0].trim();
+  else guess = sku.replace(/\d+(?:\.\d+)?\s*ml/ig, "").replace(/^lab/i, "").replace(/[-_]+/g, " ").trim();
+  return { product: guess || title, size, matched: false };
+}
+
+/** ตัด prefix "จังหวัด/อำเภอ/เขต" ให้ตรงกับ dropdown ในระบบ */
+const cleanProvince = (s: any) => str(s).replace(/^จังหวัด\s*/, "").replace(/^จ\.\s*/, "").trim();
+const cleanDistrict = (s: any) => str(s).replace(/^(อำเภอ|เขต|อ\.)\s*/, "").trim();
+
 export type ParseResult = {
   orders: OrderWithItems[];
   totalRows: number;
@@ -80,16 +123,18 @@ export type ParseResult = {
   errors: { row: number; message: string }[];
   noItemOrders: number;   // order numbers found but with no product/size rows
   orderNos: string[];     // all distinct order numbers seen (for match-print)
+  unmatchedItems: number; // รายการที่เดากลิ่นไม่ตรง master (ต้องให้ user ตรวจ)
 };
 
 /**
  * Convert flat rows (array of {header: value}) into grouped orders keyed by
  * Order No. Order-level fields come from the first row that carries them.
  */
-export function rowsToOrders(rows: Record<string, any>[]): ParseResult {
+export function rowsToOrders(rows: Record<string, any>[], products: string[] = []): ParseResult {
   const map = new Map<string, OrderWithItems>();
   const errors: { row: number; message: string }[] = [];
   let itemCount = 0;
+  let unmatchedItems = 0;
 
   rows.forEach((raw, idx) => {
     const rowNo = idx + 2; // + header row
@@ -97,13 +142,17 @@ export function rowsToOrders(rows: Record<string, any>[]): ParseResult {
     const r: Partial<Record<Field, any>> = {};
     for (const [k, v] of Object.entries(raw)) {
       const f = mapHeader(k);
-      if (f) r[f] = v;
+      // เก็บค่าแรกที่ไม่ว่างต่อ field (กันหัวตารางซ้ำที่ว่างมาทับ)
+      if (f && str(v) !== "" && str(r[f]) === "") r[f] = v;
     }
 
     const orderNo = str(r.order_no);
-    const product = str(r.product);
+    // ข้อมูลสินค้าดิบ: บาง export ไม่มีคอลัมน์กลิ่นชัดเจน (ชื่อสินค้า=title, ชื่อตัวเลือก=size/กลิ่น)
+    const title = str(r.product_label);
+    const skuRaw = str(r.sku);
+    const hasProductData = !!(str(r.product) || title || skuRaw);
     if (!orderNo) {
-      if (product) errors.push({ row: rowNo, message: "ไม่มี Order No." });
+      if (hasProductData) errors.push({ row: rowNo, message: "ไม่มี Order No." });
       return;
     }
 
@@ -122,8 +171,8 @@ export function rowsToOrders(rows: Record<string, any>[]): ParseResult {
         phone: str(r.phone) || null,
         customer_type: str(r.customer_type) || null,
         purchase_count: r.purchase_count ? Number(r.purchase_count) : null,
-        district: str(r.district) || null,
-        province: str(r.province) || null,
+        district: cleanDistrict(r.district) || null,
+        province: cleanProvince(r.province) || null,
         postcode: str(r.postcode) || null,
         address: str(r.address) || null,
         campaign: str(r.campaign) || null,
@@ -138,15 +187,23 @@ export function rowsToOrders(rows: Record<string, any>[]): ParseResult {
       const fill = (k: keyof OrderWithItems, v: any) => { if (!(ord as any)[k] && v) (ord as any)[k] = v; };
       fill("receiver", str(r.receiver));
       fill("phone", str(r.phone));
-      fill("province", str(r.province));
-      fill("district", str(r.district));
+      fill("province", cleanProvince(r.province));
+      fill("district", cleanDistrict(r.district));
       fill("postcode", str(r.postcode));
       fill("address", str(r.address));
       fill("customer_type", str(r.customer_type));
     }
 
-    if (product) {
-      const size = str(r.size);
+    if (hasProductData) {
+      // ถ้ามีคอลัมน์กลิ่นชัดเจน (format ภายในเดิม) ใช้ตรง ๆ; ไม่งั้นเดาจาก title/SKU/ชื่อตัวเลือก
+      let product = str(r.product);
+      let size = str(r.size);
+      if (!product) {
+        const d = deriveProductSize(title, skuRaw, size, products);
+        product = d.product;
+        size = d.size;
+        if (!d.matched) unmatchedItems += 1;
+      }
       const isFree = str(r.free) !== "";
       const item: OrderItem = {
         line_no: ord.items.length + 1,
@@ -155,8 +212,8 @@ export function rowsToOrders(rows: Record<string, any>[]): ParseResult {
         is_free: isFree,
         qty: r.qty != null && r.qty !== "" ? Number(r.qty) : 1,
         unit: "ขวด",
-        product_label: str(r.product_label) || buildProductLabel(product, size, isFree),
-        sku: str(r.sku) || null,
+        product_label: title || buildProductLabel(product, size, isFree),
+        sku: skuRaw || null,
       };
       ord.items.push(item);
       itemCount += 1;
@@ -168,5 +225,5 @@ export function rowsToOrders(rows: Record<string, any>[]): ParseResult {
   const all = [...map.values()];
   const orders = all.filter((o) => o.items.length > 0);
   const noItemOrders = all.length - orders.length;
-  return { orders, totalRows: rows.length, itemCount, errors, noItemOrders, orderNos: [...map.keys()] };
+  return { orders, totalRows: rows.length, itemCount, errors, noItemOrders, orderNos: [...map.keys()], unmatchedItems };
 }
