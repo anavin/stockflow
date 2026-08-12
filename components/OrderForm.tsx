@@ -264,12 +264,12 @@ export default function OrderForm({ products, sizes, provinces, postcodes, initi
             {dupWarn && <div className="mt-1 text-[11px] text-amber-600">{dupWarn}</div>}
           </div>
           <div>
-            <label className="label">วันที่</label>
-            <DatePicker value={f.doc_date} onChange={(v) => set({ doc_date: v })} />
-          </div>
-          <div>
             <label className="label">ชื่อลูกค้า / ร้าน</label>
             <input className="input" value={f.shop_name} onChange={(e) => set({ shop_name: e.target.value })} />
+          </div>
+          <div>
+            <label className="label">วันที่</label>
+            <DatePicker value={f.doc_date} onChange={(v) => set({ doc_date: v })} />
           </div>
           <div>
             <label className="label">ชื่อผู้ใช้ (Shopee)</label>
