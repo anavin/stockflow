@@ -345,7 +345,7 @@ export default function OrderForm({ products, sizes, provinces, postcodes, initi
           </div>
           <div className="md:col-span-2">
             <label className="label">ที่อยู่ (บ้านเลขที่ / ถนน / รายละเอียด)</label>
-            <textarea rows={2} className="input min-h-[40px]" value={f.address} onChange={(e) => set({ address: e.target.value })} />
+            <textarea rows={1} className="input !h-10 resize-none" value={f.address} onChange={(e) => set({ address: e.target.value })} />
           </div>
         </div>
       </section>
