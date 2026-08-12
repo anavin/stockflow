@@ -1576,3 +1576,6 @@ create table if not exists public.thai_postcodes (
   subdistrict text not null, postcode text not null
 );
 create index if not exists idx_thai_postcodes_zip on public.thai_postcodes (postcode);
+
+-- 0010 ตำบล/แขวง แยกช่อง (เติมจากรหัสไปรษณีย์) — ไม่กระทบข้อมูลเดิม
+alter table public.orders add column if not exists subdistrict text;

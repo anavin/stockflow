@@ -31,6 +31,7 @@ const orderSchema = z.object({
   customer_type: z.string().trim().optional().nullable(),
   purchase_count: z.coerce.number().int().optional().nullable(),
   district: z.string().trim().optional().nullable(),
+  subdistrict: z.string().trim().optional().nullable(),
   province: z.string().trim().optional().nullable(),
   postcode: z.string().trim().optional().nullable(),
   address: z.string().trim().optional().nullable(),
@@ -47,7 +48,7 @@ export type SaveResult = { ok: boolean; error?: string; order_no?: string; doc_n
 const ORDER_COLS = [
   "order_no", "platform", "doc_no", "doc_date", "month_label", "channel", "shop_name",
   "username", "receiver", "phone", "customer_type", "purchase_count", "district",
-  "province", "postcode", "address", "campaign", "note", "box_scent", "order_date",
+  "subdistrict", "province", "postcode", "address", "campaign", "note", "box_scent", "order_date",
 ];
 
 /** Allocate the next doc number for a platform/day atomically. */
@@ -94,7 +95,7 @@ export async function saveOrder(input: OrderInput): Promise<SaveResult> {
       const vals = [
         o.order_no, o.platform, docNo, o.doc_date || date.toISOString().slice(0, 10), ml,
         o.channel ?? o.platform, o.shop_name, o.username, o.receiver, o.phone, o.customer_type,
-        o.purchase_count ?? null, o.district, o.province, o.postcode, o.address, o.campaign,
+        o.purchase_count ?? null, o.district, o.subdistrict, o.province, o.postcode, o.address, o.campaign,
         o.note, o.box_scent, o.order_date,
       ];
       const ph = ORDER_COLS.map((_, i) => `$${i + 1}`).join(",");

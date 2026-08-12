@@ -126,7 +126,7 @@ function fmtDate(d?: any) {
 function Panel({ order, copyLabel }: { order: OrderWithItems; copyLabel: string }) {
   const items = order.items ?? [];
   const total = items.reduce((sum, it) => sum + (Number(it.qty) || 0), 0);
-  const addr = [order.address, order.district, order.province, order.postcode].filter(Boolean).join(" ");
+  const addr = [order.address, order.subdistrict, order.district, order.province, order.postcode].filter(Boolean).join(" ");
 
   // Density: shrink rows/fonts for big orders so it all fits ONE landscape page.
   // เพิ่มระดับย่อสำหรับใบใหญ่มาก (40–50 รายการ) กันตกขอบเงียบๆ.

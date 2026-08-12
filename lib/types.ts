@@ -24,6 +24,7 @@ export type Order = {
   customer_type?: string | null;
   purchase_count?: number | null;
   district?: string | null;
+  subdistrict?: string | null;
   province?: string | null;
   postcode?: string | null;
   address?: string | null;

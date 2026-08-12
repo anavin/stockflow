@@ -50,6 +50,7 @@ export default function OrderForm({ products, sizes, provinces, postcodes, initi
     purchase_count: initial?.purchase_count?.toString() ?? "",
     province: initial?.province ?? "",
     district: initial?.district ?? "",
+    subdistrict: initial?.subdistrict ?? "",
     postcode: initial?.postcode ?? "",
     address: initial?.address ?? "",
     campaign: initial?.campaign ?? "",
@@ -169,13 +170,15 @@ export default function OrderForm({ products, sizes, provinces, postcodes, initi
     return Array.from(new Set(postcodes.filter((p) => p.province === f.province).map((p) => p.district)));
   }, [postcodes, f.province]);
 
-  // เลือกจากผลค้นรหัสไปรษณีย์ → เติมจังหวัด/อำเภอ/รหัส + ใส่ตำบลไว้ต้นที่อยู่
+  // เลือกจากผลค้นรหัสไปรษณีย์ → เติมจังหวัด/อำเภอ/ตำบล/รหัส ให้ครบ
   function onPickPostcode(hit: PostcodeHit) {
     const bkk = hit.province === "กรุงเทพมหานคร";
-    const district = (bkk ? "เขต" : "อำเภอ") + hit.district;
-    const tambon = (bkk ? "แขวง" : "ตำบล") + hit.subdistrict;
-    const addr = (f.address || "").replace(/^(ตำบล|แขวง)\S+\s*/, "").trim();
-    set({ province: hit.province, district, postcode: hit.postcode, address: `${tambon} ${addr}`.trim() });
+    set({
+      province: hit.province,
+      district: (bkk ? "เขต" : "อำเภอ") + hit.district,
+      subdistrict: (bkk ? "แขวง" : "ตำบล") + hit.subdistrict,
+      postcode: hit.postcode,
+    });
   }
 
   function onProvince(v: string) {
@@ -333,12 +336,16 @@ export default function OrderForm({ products, sizes, provinces, postcodes, initi
             <Combobox value={f.district} onChange={onDistrict} options={districts} placeholder={f.province ? "เลือกอำเภอ/เขต" : "เลือกจังหวัดก่อน"} disabled={!f.province} />
           </div>
           <div>
+            <label className="label">ตำบล / แขวง</label>
+            <input className="input" value={f.subdistrict} onChange={(e) => set({ subdistrict: e.target.value })} placeholder="อัตโนมัติจากรหัสไปรษณีย์" />
+          </div>
+          <div>
             <label className="label">รหัสไปรษณีย์ <span className="text-faint">(พิมพ์เพื่อค้นตำบล/อำเภอ)</span></label>
             <PostcodeSearch value={f.postcode} onChange={(v) => set({ postcode: v })} onPick={onPickPostcode} placeholder="พิมพ์รหัส เช่น 10110" />
           </div>
           <div className="md:col-span-3">
             <label className="label">ที่อยู่ (บ้านเลขที่ / ถนน / รายละเอียด)</label>
-            <textarea className="input min-h-[64px]" value={f.address} onChange={(e) => set({ address: e.target.value })} />
+            <textarea rows={2} className="input min-h-[40px]" value={f.address} onChange={(e) => set({ address: e.target.value })} />
           </div>
         </div>
       </section>
