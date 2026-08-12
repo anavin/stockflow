@@ -23,10 +23,14 @@ export async function GET(req: Request) {
   const url = new URL(req.url);
   const search = url.searchParams.get("q") || undefined;
   const month = url.searchParams.get("month") || undefined;
+  const from = url.searchParams.get("from") || undefined;
+  const to = url.searchParams.get("to") || undefined;
 
   const params: any[] = ["Shopee"];
   const where = ["o.deleted_at is null", "o.platform = $1"];
   if (month) { params.push(month); where.push(`o.month_label = $${params.length}`); }
+  if (from) { params.push(from); where.push(`o.doc_date >= $${params.length}`); }
+  if (to) { params.push(to); where.push(`o.doc_date <= $${params.length}`); }
   if (search) { params.push(`%${search}%`); const p = `$${params.length}`; where.push(`(o.order_no ilike ${p} or o.doc_no ilike ${p} or o.receiver ilike ${p} or o.username ilike ${p})`); }
 
   const rows = await q<Row>(
