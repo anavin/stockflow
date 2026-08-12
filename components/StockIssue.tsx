@@ -180,7 +180,7 @@ function ResultCard({ entry, idx, isAdmin, onReverse }: { entry: Entry; idx: num
               <Printer size={13} /> พิมพ์
             </a>
           )}
-          {isAdmin && !reversed && (
+          {!reversed && (
             <button onClick={() => onReverse(res.order_no!, idx)} className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs text-muted hover:bg-red-50 hover:text-red-600">
               <Undo2 size={13} /> ยกเลิก
             </button>

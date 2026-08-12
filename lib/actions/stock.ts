@@ -185,16 +185,25 @@ export async function confirmIssueByOrder(
   }
 }
 
-/** ยกเลิกการตัดสต๊อก (คืนสต๊อก + เคลียร์ flag) — เฉพาะ admin */
+/** ยกเลิกการตัดสต๊อก (คืนสต๊อก + เคลียร์ flag)
+ *  admin = ใบไหนก็ได้ · picker = เฉพาะใบที่ตัวเองตัด และภายใน 24 ชม. */
 export async function reverseIssue(orderNo: string): Promise<{ ok: boolean; error?: string }> {
   const user = await getCurrentUser();
   if (!user) return { ok: false, error: "กรุณาเข้าสู่ระบบ" };
-  if (user.role !== "admin") return { ok: false, error: "เฉพาะผู้ดูแลระบบ" };
+  if (!can.issueStock(user.role)) return { ok: false, error: "ไม่มีสิทธิ์ยกเลิกการตัดสต๊อก" };
+  const isAdmin = user.role === "admin";
   const on = (orderNo || "").trim();
   try {
     await tx(async (run) => {
-      const [o] = await run<{ stock_issued_at: string | null }>(`select stock_issued_at from orders where order_no = $1`, [on]);
+      const [o] = await run<{ stock_issued_at: string | null; stock_issued_by: number | null; recent: boolean }>(
+        `select stock_issued_at, stock_issued_by,
+                (stock_issued_at > now() - interval '24 hours') as recent
+         from orders where order_no = $1`, [on]);
       if (!o?.stock_issued_at) throw new Error("ใบเบิกนี้ยังไม่ได้ตัดสต๊อก");
+      if (!isAdmin) {
+        if (o.stock_issued_by !== user.id) throw new Error("ยกเลิกได้เฉพาะใบที่คุณตัดเอง (ใบอื่นให้แอดมิน)");
+        if (!o.recent) throw new Error("เกิน 24 ชม. แล้ว — ให้แอดมินยกเลิกให้");
+      }
       // คืนสต๊อกจากสิ่งที่ "ตัดจริง" ที่บันทึกไว้ใน ledger (ไม่ใช่คำนวณใหม่จาก order_items)
       // → คืนตรง SKU/จำนวนที่ตัดไป แม้ชื่อจะถูก normalize-match หรือ order ถูกแก้ภายหลัง.
       // จำกัดเฉพาะรอบตัดล่าสุด (created_at >= stock_issued_at) กันคืนซ้ำจากรอบก่อนๆ.

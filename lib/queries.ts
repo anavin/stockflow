@@ -23,6 +23,16 @@ export async function getProducts(): Promise<string[]> {
   return rows.map((r) => r.name);
 }
 
+export type ProductAdminRow = { id: number; name: string; active: boolean; sort: number; used: number };
+/** รายชื่อกลิ่นทั้งหมด (รวมที่ปิดไว้) + จำนวนบรรทัดใบเบิกที่ใช้ชื่อนี้ — สำหรับหน้าจัดการ */
+export async function listProductsAdmin(): Promise<ProductAdminRow[]> {
+  return q<ProductAdminRow>(
+    `select p.id, p.name, p.active, p.sort,
+            (select count(*)::int from order_items i where i.product = p.name) as used
+     from products p order by p.active desc, p.sort, p.name`,
+  );
+}
+
 export async function getSizes(): Promise<string[]> {
   const rows = await q<{ label: string }>(`select label from sizes order by sort, label`);
   return rows.map((r) => r.label);

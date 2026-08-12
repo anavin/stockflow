@@ -4,7 +4,7 @@ import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { PLATFORMS } from "@/lib/config";
 import { can, ROLE_LABELS } from "@/lib/auth/roles";
-import { Package, PlusCircle, Upload, List, LogOut, Menu, X, Trash2, Users, ScanLine, Boxes, LayoutDashboard } from "lucide-react";
+import { Package, PlusCircle, Upload, List, LogOut, Menu, X, Trash2, Users, ScanLine, Boxes, LayoutDashboard, FlaskConical } from "lucide-react";
 
 // สีเอกลักษณ์ของแต่ละแพลตฟอร์ม (ใช้เป็นจุดสีในเมนู)
 const PLATFORM_COLORS: Record<string, string> = {
@@ -98,12 +98,20 @@ export default function Sidebar({ user }: { user: { full_name: string; username:
         )}
 
         {can.manageUsers(role) && (
-          <Link href="/users" onClick={() => setOpen(false)}
-            className={`mt-1 flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors ${
-              isActive("/users") ? "bg-soft font-medium text-ink" : "text-muted hover:bg-soft hover:text-ink"
-            }`}>
-            <Users size={16} /> จัดการผู้ใช้
-          </Link>
+          <>
+            <Link href="/products" onClick={() => setOpen(false)}
+              className={`mt-1 flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors ${
+                isActive("/products") ? "bg-soft font-medium text-ink" : "text-muted hover:bg-soft hover:text-ink"
+              }`}>
+              <FlaskConical size={16} /> จัดการกลิ่น
+            </Link>
+            <Link href="/users" onClick={() => setOpen(false)}
+              className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors ${
+                isActive("/users") ? "bg-soft font-medium text-ink" : "text-muted hover:bg-soft hover:text-ink"
+              }`}>
+              <Users size={16} /> จัดการผู้ใช้
+            </Link>
+          </>
         )}
 
         {orderNav.length > 0 && (
