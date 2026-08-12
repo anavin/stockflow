@@ -63,7 +63,7 @@ export default function Sidebar({ user }: { user: { full_name: string; username:
         </div>
       )}
 
-      <nav className="mt-2 flex-1 space-y-0.5 px-3">
+      <nav className="mt-2 flex-1 space-y-0.5 overflow-y-auto px-3">
         {[...dashNav, ...orderNav].map((n) => {
           const Icon = n.icon;
           return (
@@ -156,7 +156,7 @@ export default function Sidebar({ user }: { user: { full_name: string; username:
         </div>
       </div>
 
-      <aside className="no-print hidden md:block">{body}</aside>
+      <aside className="no-print hidden md:sticky md:top-0 md:block md:h-screen md:self-start">{body}</aside>
 
       {open && (
         <div className="no-print fixed inset-0 z-50 md:hidden">
