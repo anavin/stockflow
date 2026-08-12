@@ -1549,9 +1549,10 @@ alter table platform_withdrawals.stock_moves enable row level security;
 revoke all on all tables in schema platform_withdrawals from anon, authenticated;
 
 -- 0005 session expiry (TTL ฝั่ง server กัน token หลุดใช้ได้ตลอดกาล)
-alter table platform_withdrawals.user_sessions add column if not exists expires_at timestamptz;
-update platform_withdrawals.user_sessions set expires_at = created_at + interval '7 days' where expires_at is null;
-create index if not exists idx_user_sessions_expires on platform_withdrawals.user_sessions (expires_at);
+-- ตารางจริงบน prod อยู่ schema public → ต้องใช้ public.user_sessions (ไม่งั้นคอลัมน์ไม่ลงจริง)
+alter table public.user_sessions add column if not exists expires_at timestamptz;
+update public.user_sessions set expires_at = created_at + interval '7 days' where expires_at is null;
+create index if not exists idx_user_sessions_expires on public.user_sessions (expires_at);
 
 -- default search_path ที่ระดับ database — ใช้ได้กับทุก connection รวมทั้งผ่าน
 -- Cloudflare Hyperdrive (ที่ไม่ forward `options` startup param). ปลอดภัยเพราะ
