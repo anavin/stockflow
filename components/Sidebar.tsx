@@ -141,13 +141,19 @@ export default function Sidebar({ user }: { user: { full_name: string; username:
 
   return (
     <>
-      {/* mobile bar */}
-      <div className="no-print flex items-center justify-between border-b border-line bg-white px-4 py-3 md:hidden">
-        <div className="flex items-center gap-2 text-sm font-bold text-ink">
-          <div className="flex h-7 w-7 items-center justify-center rounded-md bg-brand text-xs font-bold text-white">เบิก</div>
-          ระบบเบิกสินค้า
+      {/* mobile bar — โชว์ชื่อผู้ใช้ + ปุ่มออกจากระบบ ทุกหน้าบนมือถือ (ไม่ต้องเปิดเมนูก่อน) */}
+      <div className="no-print flex items-center justify-between gap-2 border-b border-line bg-white px-4 py-3 md:hidden">
+        <div className="flex min-w-0 items-center gap-2 text-sm font-bold text-ink">
+          <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-brand text-xs font-bold text-white">เบิก</div>
+          <span className="truncate">ระบบเบิกสินค้า</span>
         </div>
-        <button className="btn-ghost px-2 py-1" onClick={() => setOpen(true)}><Menu size={18} /></button>
+        <div className="flex shrink-0 items-center gap-1">
+          <span className="max-w-[84px] truncate text-xs text-muted">{user.full_name || user.username}</span>
+          <form action="/api/logout" method="post">
+            <button className="btn-ghost px-2 py-1 text-muted" title="ออกจากระบบ" aria-label="ออกจากระบบ"><LogOut size={16} /></button>
+          </form>
+          <button className="btn-ghost px-2 py-1" onClick={() => setOpen(true)} aria-label="เมนู"><Menu size={18} /></button>
+        </div>
       </div>
 
       <aside className="no-print hidden md:block">{body}</aside>
