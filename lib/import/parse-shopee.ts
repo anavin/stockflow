@@ -75,6 +75,9 @@ const str = (v: any) => (v == null ? "" : String(v).trim());
 
 // --- Shopee export helpers: กลิ่น/ขนาดไม่ได้อยู่คอลัมน์เดียวชัดเจน ต้องเดาจากหลายช่อง ---
 const normLoose = (s: string) => (s || "").toLowerCase().replace(/[^a-z0-9ก-๙]/g, "");
+// คีย์จับคู่กลิ่น: ตัดหน่วยความเข้มข้น (EDT/EDP/EDC) ออกก่อน เพราะชื่อ Shopee เขียนเต็ม
+// "Eau de Toilette" ไม่ตรงกับ "(EDT)" ในชื่อ master → ไม่งั้นสินค้าที่มีวงเล็บ (EDT/EDP) จับไม่ติด
+const scentKey = (s: string) => normLoose((s || "").replace(/\bed[tpc]\b/gi, " "));
 
 /** ดึงขนาด "N ml" จากผู้สมัครหลายช่อง (ชื่อตัวเลือก → SKU → ชื่อสินค้า) */
 function extractMl(...cands: string[]): string {
@@ -89,10 +92,10 @@ function extractMl(...cands: string[]): string {
 function matchMasterScent(hay: string, products: string[]): string {
   const H = normLoose(hay);
   if (!H) return "";
-  let best = "";
+  let best = "", bestLen = 0;
   for (const p of products) {
-    const P = normLoose(p);
-    if (P.length >= 2 && H.includes(P) && P.length > normLoose(best).length) best = p;
+    const P = scentKey(p);
+    if (P.length >= 2 && H.includes(P) && P.length > bestLen) { best = p; bestLen = P.length; }
   }
   return best;
 }
