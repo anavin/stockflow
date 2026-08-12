@@ -343,7 +343,7 @@ export default function OrderForm({ products, sizes, provinces, postcodes, initi
             <label className="label">รหัสไปรษณีย์ <span className="text-faint">(พิมพ์เพื่อค้นตำบล/อำเภอ)</span></label>
             <PostcodeSearch value={f.postcode} onChange={(v) => set({ postcode: v })} onPick={onPickPostcode} placeholder="พิมพ์รหัส เช่น 10110" />
           </div>
-          <div className="md:col-span-3">
+          <div className="md:col-span-2">
             <label className="label">ที่อยู่ (บ้านเลขที่ / ถนน / รายละเอียด)</label>
             <textarea rows={2} className="input min-h-[40px]" value={f.address} onChange={(e) => set({ address: e.target.value })} />
           </div>
