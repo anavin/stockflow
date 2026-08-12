@@ -11,7 +11,7 @@ import { saveOrder, orderExists, customerHistory, type OrderInput } from "@/lib/
 import { CUSTOMER_TYPES } from "@/lib/config";
 import type { OrderWithItems } from "@/lib/types";
 import type { PostcodeRow } from "@/lib/queries";
-import { Save, Printer, CheckCircle2, AlertTriangle } from "lucide-react";
+import { Save, Printer, CheckCircle2, AlertTriangle, History } from "lucide-react";
 
 // เบอร์โทร: เก็บเฉพาะตัวเลข + - เว้นวรรค (กันพิมพ์ตัวอักษร)
 const cleanPhone = (v: string) => v.replace(/[^0-9\-+ ]/g, "");
@@ -68,7 +68,8 @@ export default function OrderForm({ products, sizes, provinces, postcodes, initi
   const [fieldErrors, setFieldErrors] = useState<{ receiver?: boolean; province?: boolean; address?: boolean }>({});
   const [dupWarn, setDupWarn] = useState("");     // Order No. ซ้ำ (create mode)
   const [dirty, setDirty] = useState(false);
-  const [hist, setHist] = useState<CustomerHistory | null>(null);   // การ์ดประวัติลูกค้าเก่า
+  const [hist, setHist] = useState<CustomerHistory | null>(null);   // ประวัติลูกค้าเก่า
+  const [histOpen, setHistOpen] = useState(true);                    // กาง/พับการ์ดประวัติ
 
   const set = (patch: Partial<typeof f>) => { setF((prev) => ({ ...prev, ...patch })); setDirty(true); };
 
@@ -112,6 +113,13 @@ export default function OrderForm({ products, sizes, provinces, postcodes, initi
   async function loadHistory(id: { phone?: string | null; username?: string | null; receiver?: string | null }) {
     const h = await customerHistory(id, { excludeOrderNo: initial?.order_no });
     setHist(h.orders.length > 0 ? h : null);
+    setHistOpen(true);
+  }
+
+  // กดปุ่ม "ตั้งเป็นลูกค้าเก่า" → เติม customer_type + จำนวนครั้งจากประวัติ
+  function markReturning() {
+    if (!hist) return;
+    set({ customer_type: "ลูกค้าเก่า", purchase_count: String((hist.total_orders || 0) + 1) });
   }
 
   // แก้ไขใบเดิมของลูกค้าเก่า → โหลดประวัติมาโชว์เทียบให้เลย
@@ -252,6 +260,27 @@ export default function OrderForm({ products, sizes, provinces, postcodes, initi
       {/* recipient */}
       <section className="card p-5">
         <h2 className="mb-4 text-sm font-semibold text-ink">ผู้รับ & ที่อยู่จัดส่ง</h2>
+
+        {/* ป้ายลูกค้าเก่า — เห็นชัดในหน้าแก้ไข + กดตั้ง/ดูประวัติได้ */}
+        {hist && (
+          <div className="mb-4 flex flex-wrap items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2">
+            <History size={15} className="text-amber-600" />
+            <span className="text-sm font-medium text-amber-800">ลูกค้าเก่า — เคยซื้อ {hist.total_orders} ครั้ง</span>
+            {hist.orders[0]?.doc_date && <span className="text-xs text-amber-700">ล่าสุด {hist.orders[0].doc_date}</span>}
+            <div className="ml-auto flex items-center gap-2">
+              {f.customer_type !== "ลูกค้าเก่า" && (
+                <button type="button" onClick={markReturning}
+                  className="rounded-md border border-amber-300 bg-white px-2 py-1 text-xs font-medium text-amber-700 hover:bg-amber-100">
+                  ตั้งเป็นลูกค้าเก่า · ครั้งที่ {hist.total_orders + 1}
+                </button>
+              )}
+              <button type="button" onClick={() => setHistOpen((v) => !v)} className="text-xs font-medium text-amber-700 underline">
+                {histOpen ? "ซ่อนประวัติ" : "ดูประวัติ"}
+              </button>
+            </div>
+          </div>
+        )}
+
         <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
           <div>
             <label className="label">ชื่อผู้รับ <span className="text-brand">*</span></label>
@@ -297,8 +326,8 @@ export default function OrderForm({ products, sizes, provinces, postcodes, initi
       </section>
 
       {/* การ์ดประวัติลูกค้าเก่า — เทียบข้อมูล กดเติมที่อยู่/รายการเอง */}
-      {hist && (
-        <CustomerHistoryCard hist={hist} onUseAddress={useHistoryAddress} onFillItems={fillItemsFromOrder} onClose={() => setHist(null)} />
+      {hist && histOpen && (
+        <CustomerHistoryCard hist={hist} onUseAddress={useHistoryAddress} onFillItems={fillItemsFromOrder} onClose={() => setHistOpen(false)} />
       )}
 
       {/* items */}
