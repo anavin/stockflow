@@ -75,22 +75,19 @@ export default function Combobox({
     return () => document.removeEventListener("mousedown", onDoc);
   }, []);
 
-  // ค้นหา: จัดอันดับ "ขึ้นต้นด้วยตัวอักษรที่พิมพ์" ก่อน แล้วค่อยที่มีอยู่กลางคำ
-  // ภายในอันดับเดียวกันคงลำดับเดิมของ options (เช่น ขนาดเรียงน้อย→มาก ไม่ถูกเรียงตัวอักษรทับ)
+  // ค้นหา: แสดงเฉพาะตัวที่ "ขึ้นต้นด้วยตัวอักษรที่พิมพ์" เท่านั้น (ชื่อ หรือ รหัส)
+  // ไม่เอาแบบมีอยู่กลางคำ (พิมพ์ "dr" → Dream/Droseros เท่านั้น ไม่เอา Teenage Dream)
+  // คงลำดับเดิมของ options (เช่น ขนาดเรียงน้อย→มาก ไม่ถูกเรียงตัวอักษรทับ)
   const filtered = useMemo(() => {
     const qq = query.trim().toLowerCase();
     if (!qq) return options.slice(0, 300);
     const idx = new Map(options.map((o, i) => [o, i]));
     const scored: { o: string; s: number }[] = [];
     for (const o of options) {
-      const name = o.toLowerCase();
-      const code = (codes?.[o] || "").toLowerCase();
-      let s = -1;
-      if (name.startsWith(qq)) s = 0;            // ชื่อขึ้นต้นตรง = มาก่อน
-      else if (code && code.startsWith(qq)) s = 1; // รหัสขึ้นต้นตรง
-      else if (name.includes(qq)) s = 2;          // ชื่อมีอยู่กลางคำ
-      else if (code && code.includes(qq)) s = 3;  // รหัสมีอยู่กลางคำ
-      if (s >= 0) scored.push({ o, s });
+      const nameHit = o.toLowerCase().startsWith(qq);
+      const codeHit = (codes?.[o] || "").toLowerCase().startsWith(qq);
+      if (nameHit) scored.push({ o, s: 0 });        // ชื่อขึ้นต้นตรง = มาก่อน
+      else if (codeHit) scored.push({ o, s: 1 });   // รหัสขึ้นต้นตรง
     }
     scored.sort((a, b) => a.s - b.s || (idx.get(a.o)! - idx.get(b.o)!));
     return scored.slice(0, 300).map((x) => x.o);
