@@ -25,7 +25,7 @@ export default function PostcodeSearch({
   function reposition() {
     const el = wrapRef.current; if (!el) return;
     const r = el.getBoundingClientRect();
-    setRect({ top: r.bottom + 4, left: r.left, width: Math.max(320, r.width) });
+    setRect({ top: r.bottom + 4, left: r.left, width: Math.max(360, r.width) });
   }
   useLayoutEffect(() => { if (open) reposition(); }, [open, list]);
   useEffect(() => {
@@ -72,10 +72,10 @@ export default function PostcodeSearch({
           const l = label(h);
           return (
             <li key={i}>
-              <button type="button" onClick={() => pick(h)} className="flex w-full items-center justify-between gap-2 px-3 py-2 text-left hover:bg-soft">
-                <span className="min-w-0 truncate text-sm">
-                  <span className="font-medium text-ink">{l.t}</span>{" "}
-                  <span className="text-muted">{l.a} · {h.province}</span>
+              <button type="button" onClick={() => pick(h)} className="flex w-full items-start justify-between gap-2 px-3 py-2 text-left hover:bg-soft">
+                <span className="min-w-0 text-sm leading-snug">
+                  <span className="font-medium text-ink">{l.t}</span> <span className="text-muted">{l.a}</span>
+                  <span className="block text-xs text-muted">{h.province}</span>
                 </span>
                 <span className="shrink-0 font-mono text-xs text-faint">{h.postcode}</span>
               </button>
