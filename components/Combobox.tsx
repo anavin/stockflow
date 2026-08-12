@@ -35,7 +35,7 @@ export default function Combobox({
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [hi, setHi] = useState(0);
-  const [rect, setRect] = useState<{ top: number; left: number; width: number } | null>(null);
+  const [rect, setRect] = useState<{ left: number; width: number; top?: number; bottom?: number; maxH: number } | null>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const popRef = useRef<HTMLDivElement>(null);
   const [mounted, setMounted] = useState(false);
@@ -46,7 +46,16 @@ export default function Combobox({
     const el = triggerRef.current;
     if (!el) return;
     const r = el.getBoundingClientRect();
-    setRect({ top: r.bottom + 4, left: r.left, width: r.width });
+    const vh = window.innerHeight;
+    const below = vh - r.bottom - 8;
+    const above = r.top - 8;
+    const cap = Math.round(vh * 0.7);
+    // มีที่ด้านล่างพอ (หรือมากกว่าด้านบน) → เปิดลง; ไม่งั้นเด้งขึ้นบน
+    if (below >= 240 || below >= above) {
+      setRect({ left: r.left, width: r.width, top: r.bottom + 4, maxH: Math.min(cap, below) });
+    } else {
+      setRect({ left: r.left, width: r.width, bottom: vh - r.top + 4, maxH: Math.min(cap, above) });
+    }
   }
 
   useLayoutEffect(() => {
@@ -106,10 +115,11 @@ export default function Combobox({
   const popup = open && rect && (
     <div
       ref={popRef}
-      style={{ position: "fixed", top: rect.top, left: rect.left, width: rect.width, zIndex: 60 }}
-      className="rounded-lg border border-line bg-white shadow-card"
+      style={{ position: "fixed", left: rect.left, width: rect.width, zIndex: 60, maxHeight: rect.maxH,
+        ...(rect.top != null ? { top: rect.top } : { bottom: rect.bottom }) }}
+      className="flex flex-col rounded-lg border border-line bg-white shadow-card"
     >
-      <div className="border-b border-line p-2">
+      <div className="shrink-0 border-b border-line p-2">
         <input
           autoFocus
           className="input py-1.5 text-sm"
@@ -127,7 +137,7 @@ export default function Combobox({
           }}
         />
       </div>
-      <ul className="max-h-60 overflow-auto py-1">
+      <ul className="min-h-0 flex-1 overflow-auto py-1">
         {filtered.length === 0 && !allowCustom && (
           <li className="px-3 py-2 text-sm text-faint">ไม่พบ</li>
         )}
