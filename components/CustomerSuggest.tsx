@@ -2,7 +2,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { searchCustomers, type CustomerSuggestion } from "@/lib/actions/orders";
-import { User, MapPin, Sparkles } from "lucide-react";
+import { User, MapPin, Sparkles, Phone } from "lucide-react";
 
 /**
  * Text input with existing-customer autocomplete. As the user types (debounced),
@@ -88,9 +88,11 @@ export default function CustomerSuggest({
                 <span className="text-sm font-medium text-ink">{c.receiver || c.username || "-"}</span>
                 <span className="chip bg-brand-50 text-brand-600">ซื้อมาแล้ว {c.total_orders} ครั้ง</span>
               </div>
-              <div className="mt-0.5 flex flex-wrap gap-x-3 text-xs text-muted">
+              <div className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-muted">
+                <span className="inline-flex items-center gap-0.5 font-medium text-ink">
+                  <Phone size={11} className="text-brand" /> {c.phone || <span className="font-normal text-faint">ไม่มีเบอร์</span>}
+                </span>
                 {c.username && <span>@{c.username}</span>}
-                {c.phone && <span>{c.phone}</span>}
                 {(c.province || c.district) && (
                   <span className="inline-flex items-center gap-0.5"><MapPin size={11} /> {[c.district, c.province].filter(Boolean).join(" ")}</span>
                 )}
