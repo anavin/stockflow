@@ -227,6 +227,114 @@ export async function searchCustomers(term: string): Promise<CustomerSuggestion[
   );
 }
 
+// --- ประวัติการซื้อรายออร์เดอร์ (ให้ดูเทียบ ก่อนตัดสินใจเติม) ---
+export type PastOrderItem = { product: string; size: string; is_free: boolean; qty: number };
+export type PastOrder = {
+  order_no: string; doc_no: string | null; doc_date: string | null;
+  province: string | null; district: string | null; postcode: string | null; address: string | null;
+  items: PastOrderItem[];
+};
+export type CustomerHistory = {
+  total_orders: number;
+  profile: { receiver: string | null; phone: string | null; province: string | null; district: string | null; postcode: string | null; address: string | null } | null;
+  orders: PastOrder[];   // ล่าสุดก่อน
+};
+
+// ค่าที่ถูกปกปิด (มี * เช่น Shopee mask) ใช้จับคู่ลูกค้าไม่ได้ → ถือว่าไม่มี
+const cleanId = (s?: string | null) => { const t = (s || "").trim(); return t && !t.includes("*") ? t : ""; };
+// จับคู่ลูกค้าเดิม: เบอร์ก่อน → username → ชื่อผู้รับ (อันแรกที่ไม่ว่างและไม่ถูกปกปิด)
+function customerKey(id: { phone?: string | null; username?: string | null; receiver?: string | null }) {
+  const phone = cleanId(id.phone), username = cleanId(id.username), receiver = cleanId(id.receiver);
+  if (phone) return { col: "phone", val: phone };
+  if (username) return { col: "username", val: username };
+  if (receiver) return { col: "receiver", val: receiver };
+  return null;
+}
+
+/** ประวัติการซื้อของลูกค้าคนนี้ (รายออร์เดอร์ ล่าสุดก่อน) — ใช้โชว์การ์ดเทียบข้อมูล */
+export async function customerHistory(
+  id: { phone?: string | null; username?: string | null; receiver?: string | null },
+  opts: { excludeOrderNo?: string; limit?: number } = {},
+): Promise<CustomerHistory> {
+  const user = await getCurrentUser();
+  const empty: CustomerHistory = { total_orders: 0, profile: null, orders: [] };
+  if (!user || !can.createOrders(user.role)) return empty;
+  const key = customerKey(id);
+  if (!key) return empty;
+  const exclude = (opts.excludeOrderNo || "").trim();
+  const limit = Math.min(opts.limit ?? 8, 20);
+  const params: any[] = [key.val];
+  let excl = "";
+  if (exclude) { params.push(exclude); excl = "and o.order_no <> $2"; }
+
+  const rows = await q<{ order_no: string; doc_no: string | null; doc_date: string | null; province: string | null; district: string | null; postcode: string | null; address: string | null; receiver: string | null; phone: string | null }>(
+    `select o.order_no, o.doc_no, to_char(o.doc_date,'YYYY-MM-DD') as doc_date,
+            o.province, o.district, o.postcode, o.address, o.receiver, o.phone
+     from orders o
+     where o.deleted_at is null and nullif(o.${key.col},'') = $1 ${excl}
+     order by o.doc_date desc nulls last, o.created_at desc`,
+    params,
+  );
+  if (rows.length === 0) return empty;
+  const top = rows.slice(0, limit);
+  const items = await q<{ order_no: string; product: string; size: string; is_free: boolean; qty: number }>(
+    `select order_no, product, size, is_free, qty::float8 as qty from order_items
+     where order_no = any($1) and coalesce(product,'') <> '' order by line_no`,
+    [top.map((r) => r.order_no)],
+  );
+  const byOrder = new Map<string, PastOrderItem[]>();
+  for (const it of items) {
+    const arr = byOrder.get(it.order_no) ?? [];
+    arr.push({ product: it.product, size: it.size, is_free: it.is_free, qty: Number(it.qty) });
+    byOrder.set(it.order_no, arr);
+  }
+  const orders: PastOrder[] = top.map((r) => ({
+    order_no: r.order_no, doc_no: r.doc_no, doc_date: r.doc_date,
+    province: r.province, district: r.district, postcode: r.postcode, address: r.address,
+    items: byOrder.get(r.order_no) ?? [],
+  }));
+  const p = rows[0];
+  return {
+    total_orders: rows.length,
+    profile: { receiver: p.receiver, phone: p.phone, province: p.province, district: p.district, postcode: p.postcode, address: p.address },
+    orders,
+  };
+}
+
+/** สรุปแบบเป็นชุด (สำหรับหน้า import) — คืน {จำนวนครั้ง, ที่อยู่ล่าสุด} เรียงตรงกับ ids ที่ส่งมา */
+export async function customersSummary(
+  ids: { phone?: string | null; username?: string | null; receiver?: string | null }[],
+): Promise<{ total_orders: number; last_address: string | null; last_date: string | null }[]> {
+  const blank = () => ({ total_orders: 0, last_address: null, last_date: null });
+  const user = await getCurrentUser();
+  if (!user || !can.createOrders(user.role)) return ids.map(blank);
+  const keys = ids.map((id) => customerKey(id));
+  const phones = new Set<string>(), usernames = new Set<string>(), receivers = new Set<string>();
+  for (const k of keys) {
+    if (k?.col === "phone") phones.add(k.val);
+    else if (k?.col === "username") usernames.add(k.val);
+    else if (k?.col === "receiver") receivers.add(k.val);
+  }
+  if (!phones.size && !usernames.size && !receivers.size) return ids.map(blank);
+  const rows = await q<{ phone: string | null; username: string | null; receiver: string | null; address: string | null; doc_date: string | null }>(
+    `select phone, username, receiver, address, to_char(doc_date,'YYYY-MM-DD') as doc_date
+     from orders where deleted_at is null and (
+       nullif(phone,'') = any($1) or nullif(username,'') = any($2) or nullif(receiver,'') = any($3)
+     )`,
+    [[...phones], [...usernames], [...receivers]],
+  );
+  const idx = { phone: new Map<string, any[]>(), username: new Map<string, any[]>(), receiver: new Map<string, any[]>() };
+  const add = (m: Map<string, any[]>, k: string | null, v: any) => { if (!k) return; const a = m.get(k) ?? []; a.push(v); m.set(k, a); };
+  for (const r of rows) { add(idx.phone, r.phone, r); add(idx.username, r.username, r); add(idx.receiver, r.receiver, r); }
+  return keys.map((k) => {
+    if (!k) return blank();
+    const m = (idx as any)[k.col].get(k.val) as any[] | undefined;
+    if (!m || m.length === 0) return blank();
+    const latest = [...m].sort((a, b) => String(b.doc_date || "").localeCompare(String(a.doc_date || "")))[0];
+    return { total_orders: m.length, last_address: latest.address ?? null, last_date: latest.doc_date ?? null };
+  });
+}
+
 export type MatchRow = { order_no: string; doc_no: string | null; receiver: string | null; province: string | null; item_count: number };
 export type MatchResult = { found: MatchRow[]; missing: string[] };
 

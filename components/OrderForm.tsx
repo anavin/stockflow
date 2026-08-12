@@ -4,9 +4,10 @@ import { useRouter } from "next/navigation";
 import Combobox from "./Combobox";
 import DatePicker from "./DatePicker";
 import CustomerSuggest from "./CustomerSuggest";
+import CustomerHistoryCard from "./CustomerHistoryCard";
 import ItemsEditor, { emptyItem, itemErrorOf, hasItemError, type ItemDraft, type ItemError } from "./ItemsEditor";
-import type { CustomerSuggestion } from "@/lib/actions/orders";
-import { saveOrder, orderExists, type OrderInput } from "@/lib/actions/orders";
+import type { CustomerSuggestion, CustomerHistory, PastOrder } from "@/lib/actions/orders";
+import { saveOrder, orderExists, customerHistory, type OrderInput } from "@/lib/actions/orders";
 import { CUSTOMER_TYPES } from "@/lib/config";
 import type { OrderWithItems } from "@/lib/types";
 import type { PostcodeRow } from "@/lib/queries";
@@ -67,6 +68,7 @@ export default function OrderForm({ products, sizes, provinces, postcodes, initi
   const [fieldErrors, setFieldErrors] = useState<{ receiver?: boolean; province?: boolean; address?: boolean }>({});
   const [dupWarn, setDupWarn] = useState("");     // Order No. ซ้ำ (create mode)
   const [dirty, setDirty] = useState(false);
+  const [hist, setHist] = useState<CustomerHistory | null>(null);   // การ์ดประวัติลูกค้าเก่า
 
   const set = (patch: Partial<typeof f>) => { setF((prev) => ({ ...prev, ...patch })); setDirty(true); };
 
@@ -92,7 +94,8 @@ export default function OrderForm({ products, sizes, provinces, postcodes, initi
     if (itemErrors.length) setItemErrors([]);
   }
 
-  // เลือกลูกค้าเดิม → เติมที่อยู่ + ตั้ง "ลูกค้าเก่า" + "ซื้อครั้งที่" + รายการที่เคยซื้อ อัตโนมัติ
+  // เลือกลูกค้าเดิม → เติมตัวตน (ชื่อ/เบอร์) + ตั้ง "ลูกค้าเก่า"/นับครั้ง อัตโนมัติ
+  // ส่วนที่อยู่ + รายการสินค้า = ให้ดูจากการ์ดประวัติแล้วกดเติมเอง (กันลอกผิดครั้ง)
   function fillFromCustomer(c: CustomerSuggestion) {
     setDirty(true);
     setF((prev) => ({
@@ -100,29 +103,45 @@ export default function OrderForm({ products, sizes, provinces, postcodes, initi
       receiver: c.receiver ?? prev.receiver,
       phone: c.phone ?? prev.phone,
       username: c.username ?? prev.username,
-      province: c.province ?? prev.province,
-      district: c.district ?? prev.district,
-      postcode: c.postcode ?? prev.postcode,
-      address: c.address ?? prev.address,
       customer_type: "ลูกค้าเก่า",
       purchase_count: String((c.total_orders || 0) + 1),
     }));
+    loadHistory({ phone: c.phone, username: c.username, receiver: c.receiver });
+  }
 
-    // เติมรายการที่เคยซื้อ (เฉพาะตอนตารางยังว่าง เพื่อไม่ทับของที่กรอกไว้)
-    const isEmptyItems = items.every((it) => !it.product.trim());
-    if (c.past_items && c.past_items.length > 0 && isEmptyItems) {
-      setItemErrors([]);
-      setItems(
-        c.past_items.map((p) => ({
-          product: p.product,
-          size: p.size ?? "",
-          is_free: !!p.is_free,
-          qty: Number(p.qty) > 0 ? Number(p.qty) : 1,
-          unit: "ขวด",
-          sku: "",
-        })),
-      );
+  async function loadHistory(id: { phone?: string | null; username?: string | null; receiver?: string | null }) {
+    const h = await customerHistory(id, { excludeOrderNo: initial?.order_no });
+    setHist(h.orders.length > 0 ? h : null);
+  }
+
+  // แก้ไขใบเดิมของลูกค้าเก่า → โหลดประวัติมาโชว์เทียบให้เลย
+  useEffect(() => {
+    if (editing && (initial?.phone || initial?.username || initial?.receiver)) {
+      loadHistory({ phone: initial?.phone, username: initial?.username, receiver: initial?.receiver });
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // คัดลอกที่อยู่จากการ์ดประวัติเข้าฟอร์ม
+  function useHistoryAddress() {
+    if (!hist?.profile) return;
+    const p = hist.profile;
+    set({ province: p.province ?? "", district: p.district ?? "", postcode: p.postcode ?? "", address: p.address ?? "" });
+  }
+
+  // เติมรายการจากออร์เดอร์ครั้งก่อน (ถ้าตารางว่าง = แทนที่, ถ้ามีของแล้ว = ต่อท้าย)
+  function fillItemsFromOrder(o: PastOrder) {
+    const draft: ItemDraft[] = o.items.map((it) => ({
+      product: it.product, size: it.size ?? "", is_free: !!it.is_free,
+      qty: Number(it.qty) > 0 ? Number(it.qty) : 1, unit: "ขวด", sku: "",
+    }));
+    if (draft.length === 0) return;
+    setItemErrors([]);
+    setItems((prev) => {
+      const kept = prev.filter((it) => it.product.trim());
+      return [...kept, ...draft];
+    });
+    setDirty(true);
   }
 
   // province → district options
@@ -276,6 +295,11 @@ export default function OrderForm({ products, sizes, provinces, postcodes, initi
           </div>
         </div>
       </section>
+
+      {/* การ์ดประวัติลูกค้าเก่า — เทียบข้อมูล กดเติมที่อยู่/รายการเอง */}
+      {hist && (
+        <CustomerHistoryCard hist={hist} onUseAddress={useHistoryAddress} onFillItems={fillItemsFromOrder} onClose={() => setHist(null)} />
+      )}
 
       {/* items */}
       <section className="card p-5">

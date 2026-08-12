@@ -1,9 +1,11 @@
 "use client";
-import { useRef, useState } from "react";
+import { Fragment, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { bulkSaveOrders, matchOrders, type MatchResult } from "@/lib/actions/orders";
+import { bulkSaveOrders, matchOrders, customersSummary, customerHistory, type MatchResult, type CustomerHistory } from "@/lib/actions/orders";
 import type { OrderWithItems } from "@/lib/types";
-import { UploadCloud, FileSpreadsheet, CheckCircle2, AlertTriangle, Printer, Link2 } from "lucide-react";
+import { UploadCloud, FileSpreadsheet, CheckCircle2, AlertTriangle, Printer, Link2, History, ChevronDown } from "lucide-react";
+
+type CustSummary = { total_orders: number; last_address: string | null; last_date: string | null };
 
 type Preview = {
   orders: OrderWithItems[];
@@ -24,6 +26,8 @@ export default function ImportWizard() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [savedMsg, setSavedMsg] = useState("");
+  const [cust, setCust] = useState<CustSummary[] | null>(null);              // สรุปลูกค้าเก่า/ใหม่ ต่อออร์เดอร์
+  const [expanded, setExpanded] = useState<Record<number, CustomerHistory | "loading">>({});  // ประวัติที่กางดู
 
   async function runMatch() {
     if (!preview) return;
@@ -35,7 +39,7 @@ export default function ImportWizard() {
   }
 
   async function onFile(file: File) {
-    setError(""); setSavedMsg(""); setPreview(null); setMatch(null); setFileName(file.name);
+    setError(""); setSavedMsg(""); setPreview(null); setMatch(null); setCust(null); setExpanded({}); setFileName(file.name);
     setBusy(true);
     const fd = new FormData();
     fd.append("file", file);
@@ -44,10 +48,23 @@ export default function ImportWizard() {
       const data = await res.json();
       if (!data.ok) { setError(data.error || "อ่านไฟล์ไม่สำเร็จ"); setBusy(false); return; }
       setPreview(data);
+      // ตรวจว่าออร์เดอร์ไหนเป็นลูกค้าเก่า (จับจากเบอร์/username/ชื่อ)
+      if (data.orders?.length) {
+        customersSummary(data.orders.map((o: OrderWithItems) => ({ phone: o.phone, username: o.username, receiver: o.receiver })))
+          .then(setCust).catch(() => {});
+      }
     } catch {
       setError("อัปโหลดไม่สำเร็จ");
     }
     setBusy(false);
+  }
+
+  // กด "ดูประวัติ" ในหน้า import → โหลดประวัติรายออร์เดอร์ของลูกค้าคนนั้น
+  async function toggleHistory(idx: number, o: OrderWithItems) {
+    if (expanded[idx]) { setExpanded((p) => { const n = { ...p }; delete n[idx]; return n; }); return; }
+    setExpanded((p) => ({ ...p, [idx]: "loading" }));
+    const h = await customerHistory({ phone: o.phone, username: o.username, receiver: o.receiver }, { limit: 6 });
+    setExpanded((p) => ({ ...p, [idx]: h }));
   }
 
   async function confirmImport() {
@@ -173,25 +190,69 @@ export default function ImportWizard() {
                   <tr>
                     <th className="px-4 py-2">Order No.</th>
                     <th className="px-4 py-2">ผู้รับ</th>
+                    <th className="px-4 py-2">ลูกค้า</th>
                     <th className="px-4 py-2">จังหวัด</th>
                     <th className="px-4 py-2">รายการ</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {preview.orders.slice(0, 200).map((o) => (
-                    <tr key={o.order_no} className="border-t border-line align-top">
-                      <td className="px-4 py-2 font-mono text-xs">{o.order_no}</td>
-                      <td className="px-4 py-2">{o.receiver || o.username || "—"}</td>
-                      <td className="px-4 py-2 text-muted">{o.province || "—"}</td>
-                      <td className="px-4 py-2 text-xs text-muted">
-                        {o.items.map((it, i) => (
-                          <span key={i} className="mr-1 inline-block">
-                            {it.product} {it.size}{it.is_free ? " (Free)" : ""} ×{it.qty}{i < o.items.length - 1 ? "," : ""}
-                          </span>
-                        ))}
-                      </td>
-                    </tr>
-                  ))}
+                  {preview.orders.slice(0, 200).map((o, i) => {
+                    const cs = cust?.[i];
+                    const returning = cs && cs.total_orders > 0;
+                    const exp = expanded[i];
+                    return (
+                      <Fragment key={o.order_no}>
+                        <tr className="border-t border-line align-top">
+                          <td className="px-4 py-2 font-mono text-xs">{o.order_no}</td>
+                          <td className="px-4 py-2">{o.receiver || o.username || "—"}</td>
+                          <td className="px-4 py-2">
+                            {cs == null ? (
+                              <span className="text-xs text-faint">…</span>
+                            ) : returning ? (
+                              <button type="button" onClick={() => toggleHistory(i, o)}
+                                className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-700 hover:bg-amber-100">
+                                <History size={12} /> เก่า ×{cs.total_orders}
+                                <ChevronDown size={12} className={exp ? "rotate-180 transition" : "transition"} />
+                              </button>
+                            ) : (
+                              <span className="chip bg-green-50 text-green-700">ใหม่</span>
+                            )}
+                          </td>
+                          <td className="px-4 py-2 text-muted">{o.province || "—"}</td>
+                          <td className="px-4 py-2 text-xs text-muted">
+                            {o.items.map((it, k) => (
+                              <span key={k} className="mr-1 inline-block">
+                                {it.product} {it.size}{it.is_free ? " (Free)" : ""} ×{it.qty}{k < o.items.length - 1 ? "," : ""}
+                              </span>
+                            ))}
+                          </td>
+                        </tr>
+                        {exp && (
+                          <tr className="border-t border-line bg-amber-50/30">
+                            <td colSpan={5} className="px-4 py-2">
+                              {exp === "loading" ? (
+                                <span className="text-xs text-muted">กำลังโหลดประวัติ…</span>
+                              ) : exp.orders.length === 0 ? (
+                                <span className="text-xs text-muted">ไม่พบประวัติ</span>
+                              ) : (
+                                <div className="space-y-1">
+                                  {exp.profile && (exp.profile.address || exp.profile.province) && (
+                                    <div className="text-xs text-muted">ที่อยู่เดิม · {[exp.profile.address, [exp.profile.district, exp.profile.province].filter(Boolean).join(" "), exp.profile.postcode].filter(Boolean).join(" ")}</div>
+                                  )}
+                                  {exp.orders.map((po) => (
+                                    <div key={po.order_no} className="text-xs text-ink">
+                                      <span className="mr-2 font-medium text-muted">{po.doc_date || "-"}</span>
+                                      {po.items.map((it) => `${it.product}${it.size ? ` ${it.size}` : ""} ×${it.qty}`).join(", ")}
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                            </td>
+                          </tr>
+                        )}
+                      </Fragment>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
@@ -202,7 +263,7 @@ export default function ImportWizard() {
             <button className="btn-primary" disabled={busy || preview.orders.length === 0} onClick={confirmImport}>
               {busy ? "กำลังบันทึก…" : `ยืนยันนำเข้า ${preview.orders.length} ออร์เดอร์`}
             </button>
-            <button className="btn-ghost" disabled={busy} onClick={() => { setPreview(null); setFileName(""); }}>เลือกไฟล์ใหม่</button>
+            <button className="btn-ghost" disabled={busy} onClick={() => { setPreview(null); setFileName(""); setCust(null); setExpanded({}); }}>เลือกไฟล์ใหม่</button>
           </div>
           <p className="text-xs text-faint">* ออร์เดอร์ที่มี Order No. ซ้ำกับในระบบจะถูกอัปเดตทับ</p>
         </div>
