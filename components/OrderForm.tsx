@@ -112,8 +112,16 @@ export default function OrderForm({ products, sizes, provinces, postcodes, initi
 
   async function loadHistory(id: { phone?: string | null; username?: string | null; receiver?: string | null }) {
     const h = await customerHistory(id, { excludeOrderNo: initial?.order_no });
-    setHist(h.orders.length > 0 ? h : null);
+    const returning = h.orders.length > 0;
+    setHist(returning ? h : null);
     setHistOpen(true);
+    // เจอว่าเป็นลูกค้าเก่า → เติม "ลูกค้าเก่า" + จำนวนครั้งให้อัตโนมัติ
+    // (เฉพาะตอนช่องยังว่าง เพื่อไม่ทับค่าที่ตั้งเอง เช่นตั้งเป็น "ลูกค้าใหม่" ไว้)
+    if (returning) {
+      setF((prev) => (prev.customer_type
+        ? prev
+        : { ...prev, customer_type: "ลูกค้าเก่า", purchase_count: String((h.total_orders || 0) + 1) }));
+    }
   }
 
   // กดปุ่ม "ตั้งเป็นลูกค้าเก่า" → เติม customer_type + จำนวนครั้งจากประวัติ
