@@ -4,11 +4,11 @@ import { q } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth/session";
 import { can } from "@/lib/auth/roles";
 
-// จัดการรายชื่อกลิ่น (master products) — เฉพาะแอดมิน
+// จัดการรายชื่อกลิ่น (master products) — admin + ฝ่ายสร้างใบเบิก (creator)
 async function gate() {
   const user = await getCurrentUser();
   if (!user) return { error: "กรุณาเข้าสู่ระบบ" as const };
-  if (!can.manageUsers(user.role)) return { error: "เฉพาะผู้ดูแลระบบ" as const };
+  if (!can.createOrders(user.role)) return { error: "ไม่มีสิทธิ์จัดการกลิ่น" as const };
   return { user };
 }
 

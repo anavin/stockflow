@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { requireAdmin } from "@/lib/auth/require-user";
+import { requireCreator } from "@/lib/auth/require-user";
 import { listProductsAdmin } from "@/lib/queries";
 import ProductsManager from "@/components/ProductsManager";
 import { ChevronLeft } from "lucide-react";
@@ -7,7 +7,7 @@ import { ChevronLeft } from "lucide-react";
 export const dynamic = "force-dynamic";
 
 export default async function ProductsPage() {
-  await requireAdmin();
+  await requireCreator();
   const products = await listProductsAdmin();
   return (
     <div className="mx-auto max-w-4xl px-4 py-6 md:px-8">

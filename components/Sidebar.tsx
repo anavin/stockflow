@@ -97,21 +97,21 @@ export default function Sidebar({ user }: { user: { full_name: string; username:
           </>
         )}
 
+        {can.createOrders(role) && (
+          <Link href="/products" onClick={() => setOpen(false)}
+            className={`mt-1 flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors ${
+              isActive("/products") ? "bg-soft font-medium text-ink" : "text-muted hover:bg-soft hover:text-ink"
+            }`}>
+            <FlaskConical size={16} /> จัดการกลิ่น
+          </Link>
+        )}
         {can.manageUsers(role) && (
-          <>
-            <Link href="/products" onClick={() => setOpen(false)}
-              className={`mt-1 flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors ${
-                isActive("/products") ? "bg-soft font-medium text-ink" : "text-muted hover:bg-soft hover:text-ink"
-              }`}>
-              <FlaskConical size={16} /> จัดการกลิ่น
-            </Link>
-            <Link href="/users" onClick={() => setOpen(false)}
-              className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors ${
-                isActive("/users") ? "bg-soft font-medium text-ink" : "text-muted hover:bg-soft hover:text-ink"
-              }`}>
-              <Users size={16} /> จัดการผู้ใช้
-            </Link>
-          </>
+          <Link href="/users" onClick={() => setOpen(false)}
+            className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors ${
+              isActive("/users") ? "bg-soft font-medium text-ink" : "text-muted hover:bg-soft hover:text-ink"
+            }`}>
+            <Users size={16} /> จัดการผู้ใช้
+          </Link>
         )}
 
         {orderNav.length > 0 && (
