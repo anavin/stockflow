@@ -199,10 +199,15 @@ export default function OrderForm({ products, sizes, provinces, postcodes, initi
     }
     setItemErrors([]);
 
+    // เปิดแท็บพิมพ์ทันทีตอนคลิก (ยังอยู่ใน user gesture) — กัน popup blocker บล็อก
+    // เพราะถ้าเปิดหลัง await saveOrder เบราว์เซอร์จะถือว่าไม่ใช่การคลิกแล้ว บล็อกทันที
+    const printWin = thenPrint ? window.open("about:blank", "_blank") : null;
+
     // เตือน Order No. ซ้ำ (สร้างใหม่) — ยืนยันก่อนเขียนทับ
     if (!editing) {
       const dup = await orderExists(f.order_no);
       if (dup.exists && !window.confirm(`Order No. "${f.order_no}" มีอยู่แล้วในระบบ (${dup.deleted ? "ในถังขยะ" : dup.doc_no || "-"})\nบันทึกต่อจะเขียนทับข้อมูลเดิม — ต้องการดำเนินการต่อหรือไม่?`)) {
+        printWin?.close();
         return;
       }
     }
@@ -216,11 +221,13 @@ export default function OrderForm({ products, sizes, provinces, postcodes, initi
       })),
     };
     const res = await saveOrder(payload);
-    if (!res.ok) { setBusy(false); setError(res.error || "บันทึกไม่สำเร็จ"); return; }
+    if (!res.ok) { printWin?.close(); setBusy(false); setError(res.error || "บันทึกไม่สำเร็จ"); return; }
     setDirty(false);   // บันทึกแล้ว → ไม่ต้องเตือนตอนออก
     setSavedMsg(`บันทึกแล้ว ✓ (${res.doc_no || res.order_no})`);
-    if (thenPrint) {
-      window.open(`/api/print/${encodeURIComponent(res.order_no!)}`, "_blank");
+    if (thenPrint && res.order_no) {
+      const url = `/api/print/${encodeURIComponent(res.order_no)}`;
+      if (printWin) printWin.location.href = url;     // ชี้แท็บที่เปิดไว้ไปที่ PDF
+      else window.open(url, "_blank");                // เผื่อ open แรกถูกบล็อก
     }
     setTimeout(() => { router.push("/shopee"); router.refresh(); }, 700);
   }
