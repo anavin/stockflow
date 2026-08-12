@@ -157,6 +157,26 @@ export async function deleteOrder(orderNo: string): Promise<{ ok: boolean; error
   }
 }
 
+/** ลบหลายใบพร้อมกัน (ย้ายเข้าถังขยะ) — เลือกติ๊กในหน้ารายการ */
+export async function bulkDeleteOrders(orderNos: string[]): Promise<{ ok: boolean; deleted: number; error?: string }> {
+  const user = await getCurrentUser();
+  if (!user) return { ok: false, deleted: 0, error: "กรุณาเข้าสู่ระบบ" };
+  if (!can.createOrders(user.role)) return { ok: false, deleted: 0, error: "ไม่มีสิทธิ์จัดการใบเบิก (เฉพาะฝ่ายสร้างใบเบิก)" };
+  const list = Array.from(new Set((orderNos || []).map((s) => String(s).trim()).filter(Boolean)));
+  if (list.length === 0) return { ok: true, deleted: 0 };
+  try {
+    const rows = await q<{ order_no: string }>(
+      `update orders set deleted_at = now(), deleted_by = $2 where order_no = any($1) and deleted_at is null returning order_no`,
+      [list, user.id],
+    );
+    revalidatePath("/shopee");
+    revalidatePath("/shopee/trash");
+    return { ok: true, deleted: rows.length };
+  } catch (e: any) {
+    return { ok: false, deleted: 0, error: e?.message || "ลบไม่สำเร็จ" };
+  }
+}
+
 /** Restore from trash. */
 export async function restoreOrder(orderNo: string): Promise<{ ok: boolean; error?: string }> {
   const user = await getCurrentUser();
