@@ -207,6 +207,36 @@ export async function purgeOrder(orderNo: string): Promise<{ ok: boolean; error?
   }
 }
 
+/** กู้คืนหลายใบพร้อมกัน (จากถังขยะ) */
+export async function bulkRestoreOrders(orderNos: string[]): Promise<{ ok: boolean; done: number; error?: string }> {
+  const user = await getCurrentUser();
+  if (!user) return { ok: false, done: 0, error: "กรุณาเข้าสู่ระบบ" };
+  if (!can.createOrders(user.role)) return { ok: false, done: 0, error: "ไม่มีสิทธิ์จัดการใบเบิก (เฉพาะฝ่ายสร้างใบเบิก)" };
+  const list = Array.from(new Set((orderNos || []).map((s) => String(s).trim()).filter(Boolean)));
+  if (list.length === 0) return { ok: true, done: 0 };
+  try {
+    const rows = await q<{ order_no: string }>(
+      `update orders set deleted_at = null, deleted_by = null where order_no = any($1) and deleted_at is not null returning order_no`, [list]);
+    revalidatePath("/shopee"); revalidatePath("/shopee/trash");
+    return { ok: true, done: rows.length };
+  } catch (e: any) { return { ok: false, done: 0, error: e?.message || "กู้คืนไม่สำเร็จ" }; }
+}
+
+/** ลบถาวรหลายใบพร้อมกัน (จากถังขยะเท่านั้น) */
+export async function bulkPurgeOrders(orderNos: string[]): Promise<{ ok: boolean; done: number; error?: string }> {
+  const user = await getCurrentUser();
+  if (!user) return { ok: false, done: 0, error: "กรุณาเข้าสู่ระบบ" };
+  if (!can.createOrders(user.role)) return { ok: false, done: 0, error: "ไม่มีสิทธิ์จัดการใบเบิก (เฉพาะฝ่ายสร้างใบเบิก)" };
+  const list = Array.from(new Set((orderNos || []).map((s) => String(s).trim()).filter(Boolean)));
+  if (list.length === 0) return { ok: true, done: 0 };
+  try {
+    const rows = await q<{ order_no: string }>(
+      `delete from orders where order_no = any($1) and deleted_at is not null returning order_no`, [list]);
+    revalidatePath("/shopee/trash");
+    return { ok: true, done: rows.length };
+  } catch (e: any) { return { ok: false, done: 0, error: e?.message || "ลบถาวรไม่สำเร็จ" }; }
+}
+
 export type PastItem = { product: string; size: string | null; is_free: boolean; qty: number };
 export type CustomerSuggestion = {
   username: string | null; receiver: string | null; phone: string | null;
