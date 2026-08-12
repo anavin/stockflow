@@ -67,7 +67,7 @@ export default function PostcodeSearch({
       <div className="border-b border-line px-3 py-1.5 text-[11px] font-medium text-muted">
         <MapPin size={12} className="mr-1 inline" /> เลือกตำบล / อำเภอ — คลิกเพื่อเติมที่อยู่
       </div>
-      <ul className="max-h-72 overflow-auto py-1">
+      <ul className="max-h-[70vh] overflow-auto py-1">
         {list.map((h, i) => {
           const l = label(h);
           return (
