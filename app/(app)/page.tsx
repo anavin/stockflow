@@ -155,7 +155,12 @@ export default async function Dashboard() {
                     <div className="font-mono text-xs text-ink">{o.order_no}</div>
                     <div className="truncate text-xs text-muted">{o.receiver || o.username || "—"}{o.province ? ` · ${o.province}` : ""}</div>
                   </div>
-                  <span className="chip shrink-0 bg-brand-50 text-brand-600">{o.item_count} รายการ</span>
+                  <div className="flex shrink-0 items-center gap-2">
+                    {o.stock_issued_at
+                      ? <span className="chip bg-green-50 text-green-700">ตัดแล้ว</span>
+                      : <span className="chip bg-amber-50 text-amber-700">รอตัด</span>}
+                    <span className="chip bg-brand-50 text-brand-600">{o.item_count} รายการ</span>
+                  </div>
                 </Link>
               ))}
             </div>
