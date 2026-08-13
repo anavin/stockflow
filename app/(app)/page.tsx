@@ -14,7 +14,7 @@ export default async function Dashboard() {
   const [s, lowStock, recent, top, trend, daily] = await Promise.all([
     dashboardStats(),
     listStock({ lowOnly: true, limit: 6 }),
-    listOrders({ platform: "Shopee", limit: 6 }),
+    listOrders({ platform: "Shopee", limit: 20 }),
     topProducts(10),
     ordersTrend(6),
     dailyIssueStatus("Shopee", 14),
@@ -148,7 +148,7 @@ export default async function Dashboard() {
           {recent.length === 0 ? (
             <p className="py-8 text-center text-sm text-muted">ยังไม่มีออร์เดอร์</p>
           ) : (
-            <div className="divide-y divide-line/70">
+            <div className="max-h-[420px] divide-y divide-line/70 overflow-auto">
               {recent.map((o) => (
                 <Link key={o.order_no} href={`/shopee/${encodeURIComponent(o.order_no)}`} className="-mx-2 flex items-center justify-between rounded-lg px-2 py-2 hover:bg-soft">
                   <div className="min-w-0">
@@ -244,7 +244,9 @@ function DailyIssueTable({ data }: { data: { day: string; orders: number; issued
             const pct = d.orders > 0 ? Math.round((d.issued / d.orders) * 100) : 0;
             return (
               <tr key={d.day} className={`border-t border-line ${d.pending > 0 ? "bg-amber-50/40" : ""}`}>
-                <td className="whitespace-nowrap py-2 pr-3">{fmt(d.day)}</td>
+                <td className="whitespace-nowrap py-2 pr-3">
+                  <Link href={`/shopee?from=${d.day}&to=${d.day}`} className="font-medium text-ink hover:text-brand-600 hover:underline">{fmt(d.day)}</Link>
+                </td>
                 <td className="py-2 pr-3 text-right font-medium text-ink">
                   <Link href={`/shopee?from=${d.day}&to=${d.day}`} className="hover:underline">{d.orders.toLocaleString()}</Link>
                 </td>
