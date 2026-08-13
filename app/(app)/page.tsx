@@ -17,7 +17,7 @@ export default async function Dashboard() {
     listOrders({ platform: "Shopee", limit: 20 }),
     topProducts(10),
     ordersTrend(6),
-    dailyIssueStatus("Shopee", 14),
+    dailyIssueStatus("Shopee", 5),
   ]);
 
   const fulfill = s.ordersTotal > 0 ? s.issuedTotal / s.ordersTotal : 0;
@@ -100,10 +100,10 @@ export default async function Dashboard() {
       </div>
 
       {/* ── รายวัน: ออร์เดอร์เข้ามา vs ตัดสต๊อกแล้ว ── */}
-      <section className="card mt-4 p-5">
-        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-          <h2 className="flex items-center gap-2 text-sm font-semibold text-ink"><CalendarCheck size={15} className="text-brand" /> ออร์เดอร์รายวัน · ตัดสต๊อกแล้วกี่ใบ</h2>
-          <span className="text-xs text-muted">14 วันล่าสุด (ตามวันที่ใบเบิก) · <span className="text-amber-600">เหลือง = ยังมีที่รอตัด</span></span>
+      <section className="card mt-4 max-w-lg p-4">
+        <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+          <h2 className="flex items-center gap-2 text-xs font-semibold text-ink"><CalendarCheck size={14} className="text-brand" /> ออร์เดอร์รายวัน · ตัดสต๊อกแล้วกี่ใบ</h2>
+          <span className="text-[11px] text-muted">5 วันล่าสุด (ตามวันที่สั่งซื้อ)</span>
         </div>
         <DailyIssueTable data={daily} />
       </section>
@@ -229,8 +229,8 @@ function DailyIssueTable({ data }: { data: { day: string; orders: number; issued
   const fmt = (d: string) => new Date(d + "T00:00:00").toLocaleDateString("th-TH", { day: "numeric", month: "short" });
   return (
     <div className="overflow-x-auto">
-      <table className="w-full text-sm">
-        <thead className="text-left text-xs text-muted">
+      <table className="w-full text-xs">
+        <thead className="text-left text-[11px] text-muted">
           <tr>
             <th className="pb-2 pr-3 font-medium">วันที่</th>
             <th className="pb-2 pr-3 text-right font-medium">ออร์เดอร์</th>
@@ -244,21 +244,21 @@ function DailyIssueTable({ data }: { data: { day: string; orders: number; issued
             const pct = d.orders > 0 ? Math.round((d.issued / d.orders) * 100) : 0;
             return (
               <tr key={d.day} className={`border-t border-line ${d.pending > 0 ? "bg-amber-50/40" : ""}`}>
-                <td className="whitespace-nowrap py-2 pr-3">
+                <td className="whitespace-nowrap py-1.5 pr-3">
                   <Link href={`/shopee?from=${d.day}&to=${d.day}`} className="font-medium text-ink hover:text-brand-600 hover:underline">{fmt(d.day)}</Link>
                 </td>
-                <td className="py-2 pr-3 text-right font-medium text-ink">
+                <td className="py-1.5 pr-3 text-right font-medium text-ink">
                   <Link href={`/shopee?from=${d.day}&to=${d.day}`} className="hover:underline">{d.orders.toLocaleString()}</Link>
                 </td>
-                <td className="py-2 pr-3 text-right text-emerald-600">
+                <td className="py-1.5 pr-3 text-right text-emerald-600">
                   <Link href={`/shopee?from=${d.day}&to=${d.day}&issued=yes`} className="hover:underline">{d.issued.toLocaleString()}</Link>
                 </td>
-                <td className={`py-2 pr-3 text-right ${d.pending > 0 ? "font-semibold text-amber-600" : "text-faint"}`}>
+                <td className={`py-1.5 pr-3 text-right ${d.pending > 0 ? "font-semibold text-amber-600" : "text-faint"}`}>
                   {d.pending > 0
                     ? <Link href={`/shopee?from=${d.day}&to=${d.day}&issued=no`} className="hover:underline">{d.pending.toLocaleString()}</Link>
                     : "—"}
                 </td>
-                <td className="hidden py-2 sm:table-cell">
+                <td className="hidden py-1.5 sm:table-cell">
                   <div className="flex items-center gap-2">
                     <div className="h-2 min-w-[80px] flex-1 overflow-hidden rounded-full bg-soft">
                       <div className="h-full rounded-full bg-emerald-500" style={{ width: `${pct}%` }} />
