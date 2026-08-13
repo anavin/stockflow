@@ -74,13 +74,15 @@ export async function getProvinces(): Promise<string[]> {
 }
 
 // ---- orders ----------------------------------------------------------------
-export async function listOrders(opts: { platform?: string; search?: string; month?: string; from?: string; to?: string; limit?: number; offset?: number } = {}): Promise<OrderRow[]> {
+export async function listOrders(opts: { platform?: string; search?: string; month?: string; from?: string; to?: string; issued?: "yes" | "no"; limit?: number; offset?: number } = {}): Promise<OrderRow[]> {
   const where: string[] = ["o.deleted_at is null"];
   const params: any[] = [];
   if (opts.platform) { params.push(opts.platform); where.push(`o.platform = $${params.length}`); }
   if (opts.month) { params.push(opts.month); where.push(`o.month_label = $${params.length}`); }
   if (opts.from) { params.push(opts.from); where.push(`o.doc_date >= $${params.length}`); }
   if (opts.to) { params.push(opts.to); where.push(`o.doc_date <= $${params.length}`); }
+  if (opts.issued === "yes") where.push(`o.stock_issued_at is not null`);
+  else if (opts.issued === "no") where.push(`o.stock_issued_at is null`);
   if (opts.search) {
     params.push(`%${opts.search}%`);
     const p = `$${params.length}`;
@@ -102,13 +104,15 @@ export async function listOrders(opts: { platform?: string; search?: string; mon
   return rows.map(normOrder);
 }
 
-export async function countOrders(opts: { platform?: string; search?: string; month?: string; from?: string; to?: string } = {}): Promise<number> {
+export async function countOrders(opts: { platform?: string; search?: string; month?: string; from?: string; to?: string; issued?: "yes" | "no" } = {}): Promise<number> {
   const where: string[] = ["deleted_at is null"];
   const params: any[] = [];
   if (opts.platform) { params.push(opts.platform); where.push(`platform = $${params.length}`); }
   if (opts.month) { params.push(opts.month); where.push(`month_label = $${params.length}`); }
   if (opts.from) { params.push(opts.from); where.push(`doc_date >= $${params.length}`); }
   if (opts.to) { params.push(opts.to); where.push(`doc_date <= $${params.length}`); }
+  if (opts.issued === "yes") where.push(`stock_issued_at is not null`);
+  else if (opts.issued === "no") where.push(`stock_issued_at is null`);
   if (opts.search) {
     params.push(`%${opts.search}%`);
     const p = `$${params.length}`;

@@ -240,9 +240,17 @@ function DailyIssueTable({ data }: { data: { day: string; orders: number; issued
             return (
               <tr key={d.day} className={`border-t border-line ${d.pending > 0 ? "bg-amber-50/40" : ""}`}>
                 <td className="whitespace-nowrap py-2 pr-3">{fmt(d.day)}</td>
-                <td className="py-2 pr-3 text-right font-medium text-ink">{d.orders.toLocaleString()}</td>
-                <td className="py-2 pr-3 text-right text-emerald-600">{d.issued.toLocaleString()}</td>
-                <td className={`py-2 pr-3 text-right ${d.pending > 0 ? "font-semibold text-amber-600" : "text-faint"}`}>{d.pending > 0 ? d.pending.toLocaleString() : "—"}</td>
+                <td className="py-2 pr-3 text-right font-medium text-ink">
+                  <Link href={`/shopee?from=${d.day}&to=${d.day}`} className="hover:underline">{d.orders.toLocaleString()}</Link>
+                </td>
+                <td className="py-2 pr-3 text-right text-emerald-600">
+                  <Link href={`/shopee?from=${d.day}&to=${d.day}&issued=yes`} className="hover:underline">{d.issued.toLocaleString()}</Link>
+                </td>
+                <td className={`py-2 pr-3 text-right ${d.pending > 0 ? "font-semibold text-amber-600" : "text-faint"}`}>
+                  {d.pending > 0
+                    ? <Link href={`/shopee?from=${d.day}&to=${d.day}&issued=no`} className="hover:underline">{d.pending.toLocaleString()}</Link>
+                    : "—"}
+                </td>
                 <td className="hidden py-2 sm:table-cell">
                   <div className="flex items-center gap-2">
                     <div className="h-2 min-w-[80px] flex-1 overflow-hidden rounded-full bg-soft">

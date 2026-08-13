@@ -89,6 +89,7 @@ export default function OrdersTable({ orders }: { orders: OrderRow[] }) {
                 <th className="px-4 py-3">วันที่</th>
                 <th className="px-4 py-3">ผู้รับ</th>
                 <th className="px-4 py-3">จังหวัด</th>
+                <th className="px-4 py-3">สถานะ</th>
                 <th className="px-4 py-3 text-center">รายการ</th>
                 <th className="px-4 py-3 text-right">จัดการ</th>
               </tr>
@@ -107,6 +108,11 @@ export default function OrdersTable({ orders }: { orders: OrderRow[] }) {
                     <td className="px-4 py-3 text-muted">{o.doc_date || "—"}</td>
                     <td className="px-4 py-3">{o.receiver || o.username || "—"}</td>
                     <td className="px-4 py-3 text-muted">{o.province || "—"}</td>
+                    <td className="px-4 py-3">
+                      {o.stock_issued_at
+                        ? <span className="chip bg-green-50 text-green-700">ตัดแล้ว</span>
+                        : <span className="chip bg-amber-50 text-amber-700">รอตัด</span>}
+                    </td>
                     <td className="px-4 py-3 text-center">
                       <span className="chip bg-brand-50 text-brand-600">{o.item_count}</span>
                     </td>

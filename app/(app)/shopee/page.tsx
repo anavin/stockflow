@@ -9,16 +9,17 @@ export const dynamic = "force-dynamic";
 
 const PAGE_SIZE = 50;
 
-export default async function ShopeePage({ searchParams }: { searchParams: Promise<{ q?: string; month?: string; from?: string; to?: string; page?: string }> }) {
+export default async function ShopeePage({ searchParams }: { searchParams: Promise<{ q?: string; month?: string; from?: string; to?: string; issued?: string; page?: string }> }) {
   await requireCreator();
-  const { q, month, from, to, page } = await searchParams;
+  const { q, month, from, to, issued, page } = await searchParams;
+  const iss = issued === "yes" || issued === "no" ? issued : undefined;
   const pageNum = Math.max(1, Number(page) || 1);
   const offset = (pageNum - 1) * PAGE_SIZE;
 
   const [orders, months, total] = await Promise.all([
-    listOrders({ platform: "Shopee", search: q, month, from, to, limit: PAGE_SIZE, offset }),
+    listOrders({ platform: "Shopee", search: q, month, from, to, issued: iss, limit: PAGE_SIZE, offset }),
     getMonths("Shopee"),
-    countOrders({ platform: "Shopee", search: q, month, from, to }),
+    countOrders({ platform: "Shopee", search: q, month, from, to, issued: iss }),
   ]);
 
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
@@ -30,6 +31,7 @@ export default async function ShopeePage({ searchParams }: { searchParams: Promi
     if (month) sp.set("month", month);
     if (from) sp.set("from", from);
     if (to) sp.set("to", to);
+    if (iss) sp.set("issued", iss);
     for (const [k, v] of Object.entries(extra ?? {})) if (v) sp.set(k, v);
     return sp.toString();
   };
@@ -53,7 +55,7 @@ export default async function ShopeePage({ searchParams }: { searchParams: Promi
         </div>
       </div>
 
-      <ShopeeFilters q={q} month={month} from={from} to={to} months={months} />
+      <ShopeeFilters q={q} month={month} from={from} to={to} issued={iss} months={months} />
 
       <OrdersTable orders={orders} />
 

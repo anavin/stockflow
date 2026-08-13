@@ -3,28 +3,30 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Search, X, CalendarDays } from "lucide-react";
 
-export default function ShopeeFilters({ q, month, from, to, months }: { q?: string; month?: string; from?: string; to?: string; months: string[] }) {
+export default function ShopeeFilters({ q, month, from, to, issued, months }: { q?: string; month?: string; from?: string; to?: string; issued?: string; months: string[] }) {
   const router = useRouter();
   const [search, setSearch] = useState(q ?? "");
   const [df, setDf] = useState(from ?? "");   // จากวันที่
   const [dt, setDt] = useState(to ?? "");     // ถึงวันที่
 
   // รวมค่าปัจจุบัน + ค่าที่เพิ่งเปลี่ยน แล้ว push URL (กรองทันที)
-  function go(next: { q?: string; month?: string; from?: string; to?: string } = {}) {
+  function go(next: { q?: string; month?: string; from?: string; to?: string; issued?: string } = {}) {
     const sp = new URLSearchParams();
     const vq = next.q ?? search;
     const vm = next.month ?? month ?? "";
     const vf = next.from ?? df;
     const vt = next.to ?? dt;
+    const vi = next.issued ?? issued ?? "";
     if (vq) sp.set("q", vq);
     if (vm) sp.set("month", vm);
     if (vf) sp.set("from", vf);
     if (vt) sp.set("to", vt);
+    if (vi) sp.set("issued", vi);
     const s = sp.toString();
     router.push(`/shopee${s ? "?" + s : ""}`);
   }
 
-  const hasFilter = !!(search || month || df || dt);
+  const hasFilter = !!(search || month || df || dt || issued);
 
   return (
     <form className="mb-4 flex flex-wrap items-center gap-2" onSubmit={(e) => { e.preventDefault(); go(); }}>
@@ -37,6 +39,13 @@ export default function ShopeeFilters({ q, month, from, to, months }: { q?: stri
       <select className="input w-auto" value={month ?? ""} onChange={(e) => go({ month: e.target.value })}>
         <option value="">ทุกเดือน</option>
         {months.map((m) => <option key={m} value={m}>{m}</option>)}
+      </select>
+
+      {/* สถานะตัดสต๊อก */}
+      <select className="input w-auto" value={issued ?? ""} onChange={(e) => go({ issued: e.target.value })}>
+        <option value="">ทุกสถานะ</option>
+        <option value="no">🟡 รอตัดสต๊อก</option>
+        <option value="yes">🟢 ตัดสต๊อกแล้ว</option>
       </select>
 
       {/* ช่วงวันที่ (ตามวันที่ใบเบิก) — เลือกแล้วกรองทันที */}
