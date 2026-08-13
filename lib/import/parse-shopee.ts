@@ -23,7 +23,7 @@ def("size", "size", "ขนาด");
 def("free", "free", "ของแถม");
 def("qty", "จำนวน", "qty", "quantity");
 def("product_label", "ชื่อสินค้า", "productname");
-def("note", "note", "หมายเหตุ");
+def("note", "note", "หมายเหตุ", "หมายเหตุจากผู้ซื้อ", "หมายเหตุผู้ซื้อ", "buyer note", "note from buyer", "buyer's message");
 def("campaign", "campaign", "แคมเปญ");
 def("username", "ชื่อผู้ใช้", "username");
 def("receiver", "ชื่อผู้รับ", "ผู้รับ", "receiver", "name");

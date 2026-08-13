@@ -184,7 +184,7 @@ function Panel({ order, copyLabel }: { order: OrderWithItems; copyLabel: string 
         <Field label="ที่อยู่" value={addr} full />
         <Field label="แคมเปญ" value={order.campaign} />
         <Field label="ฉีดกลิ่นกล่อง" value={order.box_scent} />
-        {order.note ? <Field label="หมายเหตุ" value={order.note} full /> : null}
+        <Field label="หมายเหตุ" value={order.note} full />
       </View>
 
       {/* items table */}
