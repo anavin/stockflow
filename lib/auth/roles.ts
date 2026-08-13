@@ -32,8 +32,8 @@ export const can = {
   viewStock: (role?: string | null) => { const r = norm(role); return r === "admin" || r === "picker"; },
   /** ยกเลิกการตัด / รับเข้า / ปรับยอดสต๊อก = เจ้าของเท่านั้น */
   manageStock: (role?: string | null) => norm(role) === "admin",
-  /** ดูแดชบอร์ดภาพรวม + กลิ่นขายดี = เจ้าของเท่านั้น */
-  viewDashboard: (role?: string | null) => norm(role) === "admin",
+  /** ดูแดชบอร์ดภาพรวม + กลิ่นขายดี = เจ้าของ + ฝ่ายจัดของ/ตัดสต๊อก */
+  viewDashboard: (role?: string | null) => { const r = norm(role); return r === "admin" || r === "picker"; },
   /** จัดการผู้ใช้ */
   manageUsers: (role?: string | null) => norm(role) === "admin",
 };
