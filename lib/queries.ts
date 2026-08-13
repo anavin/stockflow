@@ -42,6 +42,22 @@ export async function listProductsAdmin(): Promise<ProductAdminRow[]> {
   );
 }
 
+export type DailyIssue = { day: string; orders: number; issued: number; pending: number };
+/** รายวัน: ออร์เดอร์ที่เข้ามา (ตามวันที่ใบเบิก) เทียบกับที่ตัดสต๊อกแล้ว */
+export async function dailyIssueStatus(platform = "Shopee", days = 14): Promise<DailyIssue[]> {
+  const rows = await q<{ day: string; orders: number; issued: number }>(
+    `select to_char(doc_date,'YYYY-MM-DD') as day,
+            count(*)::int as orders,
+            count(stock_issued_at)::int as issued
+     from orders
+     where deleted_at is null and platform = $1 and doc_date is not null
+     group by to_char(doc_date,'YYYY-MM-DD')
+     order by day desc limit $2`,
+    [platform, days],
+  );
+  return rows.map((r) => ({ day: r.day, orders: Number(r.orders), issued: Number(r.issued), pending: Number(r.orders) - Number(r.issued) }));
+}
+
 export async function getSizes(): Promise<string[]> {
   const rows = await q<{ label: string }>(`select label from sizes order by sort, label`);
   return rows.map((r) => r.label);

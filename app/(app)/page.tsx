@@ -1,9 +1,9 @@
 import Link from "next/link";
 import { requireDashboard } from "@/lib/auth/require-user";
-import { dashboardStats, listStock, listOrders, topProducts, ordersTrend } from "@/lib/queries";
+import { dashboardStats, listStock, listOrders, topProducts, ordersTrend, dailyIssueStatus } from "@/lib/queries";
 import {
   PlusCircle, ScanLine, Boxes, AlertTriangle, PackageCheck, ClipboardList,
-  ArrowRight, ShoppingBag, TrendingUp, Sparkles, Clock,
+  ArrowRight, ShoppingBag, TrendingUp, Sparkles, Clock, CalendarCheck,
 } from "lucide-react";
 
 export const dynamic = "force-dynamic";
@@ -11,12 +11,13 @@ export const dynamic = "force-dynamic";
 export default async function Dashboard() {
   const user = await requireDashboard();
   // ยิงขนานผ่าน pool (เร็ว) — บน Vercel/Node connection pool รองรับ concurrent query ปกติ
-  const [s, lowStock, recent, top, trend] = await Promise.all([
+  const [s, lowStock, recent, top, trend, daily] = await Promise.all([
     dashboardStats(),
     listStock({ lowOnly: true, limit: 6 }),
     listOrders({ platform: "Shopee", limit: 6 }),
     topProducts(10),
     ordersTrend(6),
+    dailyIssueStatus("Shopee", 14),
   ]);
 
   const fulfill = s.ordersTotal > 0 ? s.issuedTotal / s.ordersTotal : 0;
@@ -97,6 +98,15 @@ export default async function Dashboard() {
           <TrendBars data={trend} />
         </section>
       </div>
+
+      {/* ── รายวัน: ออร์เดอร์เข้ามา vs ตัดสต๊อกแล้ว ── */}
+      <section className="card mt-4 p-5">
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+          <h2 className="flex items-center gap-2 text-sm font-semibold text-ink"><CalendarCheck size={15} className="text-brand" /> ออร์เดอร์รายวัน · ตัดสต๊อกแล้วกี่ใบ</h2>
+          <span className="text-xs text-muted">14 วันล่าสุด (ตามวันที่ใบเบิก) · <span className="text-amber-600">เหลือง = ยังมีที่รอตัด</span></span>
+        </div>
+        <DailyIssueTable data={daily} />
+      </section>
 
       {/* ── lists: low stock · recent orders ── */}
       <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-2">
@@ -209,6 +219,47 @@ function Kpi({ label, value, sub, icon, href, tone }: {
 }
 
 /** SVG donut ring showing a 0..1 ratio. */
+function DailyIssueTable({ data }: { data: { day: string; orders: number; issued: number; pending: number }[] }) {
+  if (data.length === 0) return <p className="text-sm text-muted">ยังไม่มีข้อมูล</p>;
+  const fmt = (d: string) => new Date(d + "T00:00:00").toLocaleDateString("th-TH", { day: "numeric", month: "short" });
+  return (
+    <div className="overflow-x-auto">
+      <table className="w-full text-sm">
+        <thead className="text-left text-xs text-muted">
+          <tr>
+            <th className="pb-2 pr-3 font-medium">วันที่</th>
+            <th className="pb-2 pr-3 text-right font-medium">ออร์เดอร์</th>
+            <th className="pb-2 pr-3 text-right font-medium">ตัดแล้ว</th>
+            <th className="pb-2 pr-3 text-right font-medium">รอตัด</th>
+            <th className="hidden pb-2 font-medium sm:table-cell">ความคืบหน้า</th>
+          </tr>
+        </thead>
+        <tbody>
+          {data.map((d) => {
+            const pct = d.orders > 0 ? Math.round((d.issued / d.orders) * 100) : 0;
+            return (
+              <tr key={d.day} className={`border-t border-line ${d.pending > 0 ? "bg-amber-50/40" : ""}`}>
+                <td className="whitespace-nowrap py-2 pr-3">{fmt(d.day)}</td>
+                <td className="py-2 pr-3 text-right font-medium text-ink">{d.orders.toLocaleString()}</td>
+                <td className="py-2 pr-3 text-right text-emerald-600">{d.issued.toLocaleString()}</td>
+                <td className={`py-2 pr-3 text-right ${d.pending > 0 ? "font-semibold text-amber-600" : "text-faint"}`}>{d.pending > 0 ? d.pending.toLocaleString() : "—"}</td>
+                <td className="hidden py-2 sm:table-cell">
+                  <div className="flex items-center gap-2">
+                    <div className="h-2 min-w-[80px] flex-1 overflow-hidden rounded-full bg-soft">
+                      <div className="h-full rounded-full bg-emerald-500" style={{ width: `${pct}%` }} />
+                    </div>
+                    <span className="w-9 text-right text-xs text-muted">{pct}%</span>
+                  </div>
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
 function Ring({ value }: { value: number }) {
   const pct = Math.round(value * 100);
   const r = 26, c = 2 * Math.PI * r;
