@@ -108,8 +108,8 @@ export default async function Dashboard() {
         <DailyIssueTable data={daily} />
       </section>
 
-      {/* ── lists: low stock · recent orders ── */}
-      <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-2">
+      {/* ── low stock ── */}
+      <div className="mt-4 grid grid-cols-1 gap-4">
         {/* low stock */}
         <section className="card p-5">
           <div className="mb-3 flex items-center justify-between">
@@ -148,9 +148,9 @@ export default async function Dashboard() {
           {recent.length === 0 ? (
             <p className="py-8 text-center text-sm text-muted">ยังไม่มีออร์เดอร์</p>
           ) : (
-            <div className="max-h-[420px] divide-y divide-line/70 overflow-auto">
+            <div className="grid grid-cols-1 gap-x-6 sm:grid-cols-2 xl:grid-cols-3">
               {recent.map((o) => (
-                <Link key={o.order_no} href={`/shopee/${encodeURIComponent(o.order_no)}`} className="-mx-2 flex items-center justify-between rounded-lg px-2 py-2 hover:bg-soft">
+                <Link key={o.order_no} href={`/shopee/${encodeURIComponent(o.order_no)}`} className="-mx-2 flex items-center justify-between gap-2 rounded-lg border-b border-line/70 px-2 py-2 hover:bg-soft">
                   <div className="min-w-0">
                     <div className="font-mono text-xs text-ink">{o.order_no}</div>
                     <div className="truncate text-xs text-muted">{o.receiver || o.username || "—"}{o.province ? ` · ${o.province}` : ""}</div>
