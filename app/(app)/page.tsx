@@ -99,37 +99,37 @@ export default async function Dashboard() {
         </section>
       </div>
 
-      {/* ── รายวัน: ออร์เดอร์เข้ามา vs ตัดสต๊อกแล้ว ── */}
-      <section className="card mt-4 max-w-lg p-4">
-        <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-          <h2 className="flex items-center gap-2 text-xs font-semibold text-ink"><CalendarCheck size={14} className="text-brand" /> ออร์เดอร์รายวัน · ตัดสต๊อกแล้วกี่ใบ</h2>
-          <span className="text-[11px] text-muted">5 วันล่าสุด (ตามวันที่สั่งซื้อ)</span>
-        </div>
-        <DailyIssueTable data={daily} />
-      </section>
+      {/* ── รายวัน + สต๊อกที่ต้องเติม (วางข้างกัน) ── */}
+      <div className="mt-4 grid grid-cols-1 items-start gap-4 lg:grid-cols-2">
+        {/* daily */}
+        <section className="card p-4">
+          <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+            <h2 className="flex items-center gap-2 text-xs font-semibold text-ink"><CalendarCheck size={14} className="text-brand" /> ออร์เดอร์รายวัน · ตัดสต๊อกแล้วกี่ใบ</h2>
+            <span className="text-[11px] text-muted">5 วันล่าสุด (ตามวันที่สั่งซื้อ)</span>
+          </div>
+          <DailyIssueTable data={daily} />
+        </section>
 
-      {/* ── low stock ── */}
-      <div className="mt-4 grid grid-cols-1 gap-4">
-        {/* low stock */}
-        <section className="card p-5">
-          <div className="mb-3 flex items-center justify-between">
-            <h2 className="flex items-center gap-2 text-sm font-semibold text-ink"><AlertTriangle size={15} className="text-amber-500" /> สต๊อกที่ต้องเติม (≤10)</h2>
-            <Link href="/stock?low=1" className="inline-flex items-center gap-1 text-xs font-medium text-brand-600">ทั้งหมด <ArrowRight size={12} /></Link>
+        {/* low stock (ย่อเล็ก) */}
+        <section className="card p-4">
+          <div className="mb-2 flex items-center justify-between">
+            <h2 className="flex items-center gap-2 text-xs font-semibold text-ink"><AlertTriangle size={14} className="text-amber-500" /> สต๊อกที่ต้องเติม (≤10)</h2>
+            <Link href="/stock?low=1" className="inline-flex items-center gap-1 text-[11px] font-medium text-brand-600">ทั้งหมด <ArrowRight size={11} /></Link>
           </div>
           {lowStock.length === 0 ? (
-            <p className="py-8 text-center text-sm text-muted">สต๊อกเพียงพอทั้งหมด 👍</p>
+            <p className="py-6 text-center text-xs text-muted">สต๊อกเพียงพอทั้งหมด 👍</p>
           ) : (
-            <div className="space-y-2">
+            <div className="space-y-1.5">
               {lowStock.map((r) => {
                 const pct = Math.max(0, Math.min(100, (Number(r.qty) / 10) * 100));
                 const neg = Number(r.qty) < 0;
                 return (
                   <div key={`${r.product}|${r.size}`} className="group">
-                    <div className="flex items-center justify-between text-sm">
+                    <div className="flex items-center justify-between text-xs">
                       <span className="truncate"><span className="font-medium text-ink">{r.product}</span> <span className="text-faint">{r.size}</span></span>
                       <span className={`chip shrink-0 ${neg ? "bg-red-50 text-red-600" : "bg-amber-50 text-amber-700"}`}>{r.qty}</span>
                     </div>
-                    <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-soft">
+                    <div className="mt-1 h-1 w-full overflow-hidden rounded-full bg-soft">
                       <div className={`h-full rounded-full ${neg ? "bg-red-500" : "bg-amber-400"}`} style={{ width: `${neg ? 100 : pct}%` }} />
                     </div>
                   </div>
@@ -138,7 +138,10 @@ export default async function Dashboard() {
             </div>
           )}
         </section>
+      </div>
 
+      {/* ── recent orders (full width) ── */}
+      <div className="mt-4">
         {/* recent orders */}
         <section className="card p-5">
           <div className="mb-3 flex items-center justify-between">
