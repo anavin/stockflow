@@ -102,8 +102,8 @@ export default async function Dashboard() {
       {/* ── รายวัน + สต๊อกที่ต้องเติม (วางข้างกัน) ── */}
       <div className="mt-4 grid grid-cols-1 items-stretch gap-4 lg:grid-cols-2">
         {/* daily */}
-        <section className="card p-4">
-          <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+        <section className="card flex flex-col p-4">
+          <div className="mb-2 flex shrink-0 flex-wrap items-center justify-between gap-2">
             <h2 className="flex items-center gap-2 text-xs font-semibold text-ink"><CalendarCheck size={14} className="text-brand" /> ออร์เดอร์รายวัน · ตัดสต๊อกแล้วกี่ใบ</h2>
             <span className="text-[11px] text-muted">5 วันล่าสุด (ตามวันที่สั่งซื้อ)</span>
           </div>
@@ -231,8 +231,8 @@ function DailyIssueTable({ data }: { data: { day: string; orders: number; issued
   if (data.length === 0) return <p className="text-sm text-muted">ยังไม่มีข้อมูล</p>;
   const fmt = (d: string) => new Date(d + "T00:00:00").toLocaleDateString("th-TH", { day: "numeric", month: "short" });
   return (
-    <div className="overflow-x-auto">
-      <table className="w-full text-xs">
+    <div className="flex-1 overflow-x-auto">
+      <table className="h-full w-full text-xs">
         <thead className="text-left text-[11px] text-muted">
           <tr>
             <th className="pb-2 pr-3 font-medium">วันที่</th>
