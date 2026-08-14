@@ -81,14 +81,16 @@ export default async function Dashboard() {
 
         {/* stock health */}
         <section className="card p-5">
-          <h2 className="flex items-center gap-2 text-sm font-semibold text-ink"><Boxes size={15} /> สุขภาพสต๊อก</h2>
-          <p className="mt-0.5 text-xs text-muted">{s.skus.toLocaleString()} SKU ทั้งหมด</p>
-          <HealthBar normal={normal} low={s.low} negative={s.negative} />
-          <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs">
-            <Legend color="bg-emerald-500" label="ปกติ" n={normal} />
-            <Legend color="bg-amber-400" label="ใกล้หมด" n={s.low} />
-            <Legend color="bg-red-500" label="ติดลบ" n={s.negative} />
+          <div className="mb-3 flex items-center justify-between">
+            <h2 className="flex items-center gap-2 text-sm font-semibold text-ink"><Boxes size={15} /> สุขภาพสต๊อก</h2>
+            <span className="text-xs text-muted">{s.skus.toLocaleString()} SKU</span>
           </div>
+          <div className="grid grid-cols-3 gap-2">
+            <StockStat label="ปกติ" n={normal} total={s.skus} tone="green" />
+            <StockStat label="ใกล้หมด" n={s.low} total={s.skus} tone="amber" href="/stock?low=1" />
+            <StockStat label="ติดลบ" n={s.negative} total={s.skus} tone="red" href="/stock?low=1" />
+          </div>
+          <HealthBar normal={normal} low={s.low} negative={s.negative} />
         </section>
 
         {/* orders trend */}
@@ -227,6 +229,25 @@ function Kpi({ label, value, sub, icon, href, tone }: {
 }
 
 /** SVG donut ring showing a 0..1 ratio. */
+function StockStat({ label, n, total, tone, href }: { label: string; n: number; total: number; tone: "green" | "amber" | "red"; href?: string }) {
+  const t = {
+    green: { bg: "bg-emerald-50", text: "text-emerald-700", dot: "bg-emerald-500", ring: "" },
+    amber: { bg: "bg-amber-50", text: "text-amber-700", dot: "bg-amber-400", ring: "" },
+    red: { bg: "bg-red-50", text: "text-red-600", dot: "bg-red-500", ring: n > 0 ? "ring-1 ring-red-200" : "" },
+  }[tone];
+  const pct = total > 0 ? Math.round((n / total) * 100) : 0;
+  const inner = (
+    <div className={`rounded-xl px-2 py-2.5 text-center ${t.bg} ${t.ring} ${href ? "transition hover:brightness-95" : ""}`}>
+      <div className={`text-2xl font-bold leading-none ${t.text}`}>{n.toLocaleString()}</div>
+      <div className="mt-1.5 flex items-center justify-center gap-1 text-[11px] text-muted">
+        <span className={`inline-block h-1.5 w-1.5 rounded-full ${t.dot}`} /> {label}
+      </div>
+      <div className="text-[10px] text-faint">{pct}%</div>
+    </div>
+  );
+  return href ? <Link href={href} className="block">{inner}</Link> : inner;
+}
+
 function DailyIssueTable({ data }: { data: { day: string; orders: number; issued: number; pending: number }[] }) {
   if (data.length === 0) return <p className="text-sm text-muted">ยังไม่มีข้อมูล</p>;
   const fmt = (d: string) => new Date(d + "T00:00:00").toLocaleDateString("th-TH", { day: "numeric", month: "short" });
@@ -304,15 +325,6 @@ function HealthBar({ normal, low, negative }: { normal: number; low: number; neg
       {negative > 0 && <div className="h-full rounded-full bg-red-500" style={{ width: seg(negative) }} />}
       {normal + low + negative === 0 && <div className="h-full w-full rounded-full bg-soft" />}
     </div>
-  );
-}
-
-function Legend({ color, label, n }: { color: string; label: string; n: number }) {
-  return (
-    <span className="inline-flex items-center gap-1.5 text-muted">
-      <span className={`inline-block h-2 w-2 rounded-full ${color}`} />
-      {label} <b className="font-semibold text-ink">{n.toLocaleString()}</b>
-    </span>
   );
 }
 
