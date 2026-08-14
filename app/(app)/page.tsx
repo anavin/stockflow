@@ -100,7 +100,7 @@ export default async function Dashboard() {
       </div>
 
       {/* ── รายวัน + สต๊อกที่ต้องเติม (วางข้างกัน) ── */}
-      <div className="mt-4 grid grid-cols-1 items-start gap-4 lg:grid-cols-2">
+      <div className="mt-4 grid grid-cols-1 items-stretch gap-4 lg:grid-cols-2">
         {/* daily */}
         <section className="card p-4">
           <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
