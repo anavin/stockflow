@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { getProducts, getSizes, getProvinces, getPostcodes, getProductCodes } from "@/lib/queries";
+import { getProducts, getSizes, getProvinces, getPostcodes, getProductCodes, getProductTypes } from "@/lib/queries";
 import OrderForm from "@/components/OrderForm";
 import { ChevronLeft } from "lucide-react";
 import { requireCreator } from "@/lib/auth/require-user";
@@ -8,8 +8,8 @@ export const dynamic = "force-dynamic";
 
 export default async function NewOrderPage() {
   await requireCreator();
-  const [products, sizes, provinces, postcodes, productCodes] = await Promise.all([
-    getProducts(), getSizes(), getProvinces(), getPostcodes(), getProductCodes(),
+  const [products, sizes, provinces, postcodes, productCodes, productTypes] = await Promise.all([
+    getProducts(), getSizes(), getProvinces(), getPostcodes(), getProductCodes(), getProductTypes(),
   ]);
 
   return (
@@ -18,7 +18,7 @@ export default async function NewOrderPage() {
         <ChevronLeft size={16} /> กลับ
       </Link>
       <h1 className="mb-6 text-xl font-bold text-ink">สร้างใบเบิก Shopee</h1>
-      <OrderForm products={products} sizes={sizes} provinces={provinces} postcodes={postcodes} productCodes={productCodes} />
+      <OrderForm products={products} sizes={sizes} provinces={provinces} postcodes={postcodes} productCodes={productCodes} productTypes={productTypes} />
     </div>
   );
 }

@@ -12,14 +12,21 @@ async function gate() {
   return { user };
 }
 
-export async function createProduct(name: string, code?: string): Promise<{ ok: boolean; error?: string }> {
+export async function createProduct(name: string, code?: string, ptype?: string): Promise<{ ok: boolean; error?: string }> {
   const g = await gate(); if ("error" in g) return { ok: false, error: g.error };
   const n = (name || "").trim();
   if (!n) return { ok: false, error: "กรอกชื่อกลิ่น" };
   const [dup] = await q(`select 1 from products where lower(name) = lower($1)`, [n]);
   if (dup) return { ok: false, error: "มีกลิ่นนี้อยู่แล้ว" };
-  await q(`insert into products (name, code, active, sort) values ($1, $2, true, coalesce((select max(sort) from products),0)+1)`,
-    [n, (code || "").trim() || null]);
+  await q(`insert into products (name, code, ptype, active, sort) values ($1, $2, $3, true, coalesce((select max(sort) from products),0)+1)`,
+    [n, (code || "").trim() || null, (ptype || "").trim() || null]);
+  revalidatePath("/products");
+  return { ok: true };
+}
+
+export async function setProductType(id: number, ptype: string): Promise<{ ok: boolean; error?: string }> {
+  const g = await gate(); if ("error" in g) return { ok: false, error: g.error };
+  await q(`update products set ptype = $2 where id = $1`, [id, (ptype || "").trim() || null]);
   revalidatePath("/products");
   return { ok: true };
 }

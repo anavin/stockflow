@@ -84,8 +84,8 @@ const s = StyleSheet.create({
   signLabel: { fontSize: 7, color: C.muted },
 });
 
-// column widths for a ~378pt panel (# / สินค้า / ขนาด / จำนวน / Free / หน่วย / SKU)
-const COL = [18, 138, 44, 36, 30, 34, 62];
+// column widths for a ~378pt panel (# / ประเภท / สินค้า / ขนาด / จำนวน / Free / หน่วย / SKU)
+const COL = [16, 46, 104, 42, 34, 28, 30, 62];
 
 function Barcode({ value, width = 250, height = 50 }: { value: string; width?: number; height?: number }) {
   const bc = code39(value);
@@ -123,8 +123,16 @@ function fmtDate(d?: any) {
   return String(d).slice(0, 10);
 }
 
+// เรียงรายการในใบพิมพ์: ประเภทน้ำหอม → ชื่อกลิ่น (ก-๙/A-Z) → ขนาดใหญ่ก่อน
+const TYPE_ORDER = ["Le Parfum", "EDP+", "EDT", "EDP"];
+const typeRank = (t?: string | null) => { const i = TYPE_ORDER.indexOf(String(t || "").trim()); return i < 0 ? 9 : i; };
+const mlOf = (sz?: string | null) => { const m = String(sz || "").match(/(\d+(?:\.\d+)?)/); return m ? parseFloat(m[1]) : 0; };
+
 function Panel({ order, copyLabel }: { order: OrderWithItems; copyLabel: string }) {
-  const items = order.items ?? [];
+  const items = [...(order.items ?? [])].sort((a, b) =>
+    typeRank(a.ptype) - typeRank(b.ptype)
+    || String(a.product || "").localeCompare(String(b.product || ""), "th")
+    || mlOf(b.size) - mlOf(a.size));
   const total = items.reduce((sum, it) => sum + (Number(it.qty) || 0), 0);
   const addr = [order.address, order.subdistrict, order.district, order.province, order.postcode].filter(Boolean).join(" ");
 
@@ -190,25 +198,26 @@ function Panel({ order, copyLabel }: { order: OrderWithItems; copyLabel: string 
       {/* items table */}
       <View>
         <View style={s.th}>
-          {["#", "สินค้า (EDP)", "ขนาด", "จำนวน", "Free", "หน่วย", "SKU"].map((h, i) => (
-            <Text key={i} style={[s.cell, s.hCell, { width: COL[i], textAlign: i === 3 ? "right" : "left" }]}>{h}</Text>
+          {["#", "ประเภท", "สินค้า (EDP)", "ขนาด", "จำนวน", "Free", "หน่วย", "SKU"].map((h, i) => (
+            <Text key={i} style={[s.cell, s.hCell, { width: COL[i], textAlign: i === 4 ? "right" : "left" }]}>{h}</Text>
           ))}
         </View>
         {items.map((it, i) => (
           <View key={i} style={[s.tr, rowStyle]} wrap={false}>
             <Text style={[s.cell, cStyle, { width: COL[0], color: C.faint }]}>{i + 1}</Text>
-            <Text style={[s.cell, cStyle, { width: COL[1], fontWeight: "bold" }]}>{T(it.product)}</Text>
-            <Text style={[s.cell, cStyle, { width: COL[2] }]}>{T(it.size)}</Text>
-            <Text style={[s.cell, cStyle, { width: COL[3], textAlign: "right", fontWeight: "bold" }]}>{Number(it.qty) || 0}</Text>
-            <Text style={[s.cell, cStyle, { width: COL[4], color: it.is_free ? C.brand : C.faint }]}>{it.is_free ? "Free" : "-"}</Text>
-            <Text style={[s.cell, cStyle, { width: COL[5] }]}>{T(it.unit)}</Text>
-            <Text style={[s.cell, cStyle, { width: COL[6], fontSize: cfs - 0.8 }]}>{T(it.sku)}</Text>
+            <Text style={[s.cell, cStyle, { width: COL[1], color: C.faint }]}>{T(it.ptype)}</Text>
+            <Text style={[s.cell, cStyle, { width: COL[2], fontWeight: "bold" }]}>{T(it.product)}</Text>
+            <Text style={[s.cell, cStyle, { width: COL[3] }]}>{T(it.size)}</Text>
+            <Text style={[s.cell, cStyle, { width: COL[4], textAlign: "right", fontWeight: "bold" }]}>{Number(it.qty) || 0}</Text>
+            <Text style={[s.cell, cStyle, { width: COL[5], color: it.is_free ? C.brand : C.faint }]}>{it.is_free ? "Free" : "-"}</Text>
+            <Text style={[s.cell, cStyle, { width: COL[6] }]}>{T(it.unit)}</Text>
+            <Text style={[s.cell, cStyle, { width: COL[7], fontSize: cfs - 0.8 }]}>{T(it.sku)}</Text>
           </View>
         ))}
         <View style={s.foot}>
-          <Text style={[s.cell, cStyle, { width: COL[0] + COL[1] + COL[2], textAlign: "right", fontWeight: "bold" }]}>รวมทั้งสิ้น</Text>
-          <Text style={[s.cell, cStyle, { width: COL[3], textAlign: "right", fontWeight: "bold" }]}>{total}</Text>
-          <Text style={[s.cell, cStyle, { width: COL[4] + COL[5] + COL[6] }]}> </Text>
+          <Text style={[s.cell, cStyle, { width: COL[0] + COL[1] + COL[2] + COL[3], textAlign: "right", fontWeight: "bold" }]}>รวมทั้งสิ้น</Text>
+          <Text style={[s.cell, cStyle, { width: COL[4], textAlign: "right", fontWeight: "bold" }]}>{total}</Text>
+          <Text style={[s.cell, cStyle, { width: COL[5] + COL[6] + COL[7] }]}> </Text>
         </View>
       </View>
 

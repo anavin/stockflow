@@ -32,11 +32,20 @@ export async function getProductCodes(): Promise<Record<string, string>> {
   return m;
 }
 
-export type ProductAdminRow = { id: number; name: string; code: string | null; active: boolean; sort: number; used: number };
-/** รายชื่อกลิ่นทั้งหมด (รวมที่ปิดไว้) + รหัส + จำนวนบรรทัดใบเบิกที่ใช้ชื่อนี้ — สำหรับหน้าจัดการ */
+/** map ชื่อกลิ่น → ประเภทน้ำหอม (โชว์ในฟอร์ม/ใบพิมพ์) */
+export async function getProductTypes(): Promise<Record<string, string>> {
+  const rows = await q<{ name: string; ptype: string | null }>(
+    `select name, ptype from products where active and coalesce(ptype,'') <> ''`);
+  const m: Record<string, string> = {};
+  for (const r of rows) if (r.ptype) m[r.name] = r.ptype;
+  return m;
+}
+
+export type ProductAdminRow = { id: number; name: string; code: string | null; ptype: string | null; active: boolean; sort: number; used: number };
+/** รายชื่อกลิ่นทั้งหมด (รวมที่ปิดไว้) + รหัส + ประเภท + จำนวนบรรทัดใบเบิกที่ใช้ชื่อนี้ — สำหรับหน้าจัดการ */
 export async function listProductsAdmin(): Promise<ProductAdminRow[]> {
   return q<ProductAdminRow>(
-    `select p.id, p.name, p.code, p.active, p.sort,
+    `select p.id, p.name, p.code, p.ptype, p.active, p.sort,
             (select count(*)::int from order_items i where i.product = p.name) as used
      from products p order by p.active desc, p.sort, p.name`,
   );
@@ -149,7 +158,8 @@ export async function getOrder(orderNo: string, opts: { includeDeleted?: boolean
   );
   if (!order) return null;
   const items = await q<OrderItem>(
-    `select id, line_no, product, size, is_free, qty::float8 as qty, unit, product_label, sku
+    `select id, line_no, product, size, is_free, qty::float8 as qty, unit, product_label, sku,
+            (select p.ptype from products p where p.name = order_items.product limit 1) as ptype
      from order_items where order_no = $1 order by line_no, id`,
     [orderNo],
   );

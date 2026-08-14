@@ -1579,3 +1579,6 @@ create index if not exists idx_thai_postcodes_zip on public.thai_postcodes (post
 
 -- 0010 ตำบล/แขวง แยกช่อง (เติมจากรหัสไปรษณีย์) — ไม่กระทบข้อมูลเดิม
 alter table public.orders add column if not exists subdistrict text;
+
+-- 0011 ประเภทน้ำหอม (Le Parfum/EDP+/EDT/EDP) ต่อกลิ่น — โชว์+เรียงในใบพิมพ์
+alter table public.products add column if not exists ptype text;

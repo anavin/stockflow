@@ -1,3 +1,5 @@
+export const PERFUME_TYPES = ["Le Parfum", "EDP+", "EDT", "EDP"] as const;
+
 export type OrderItem = {
   id?: number;
   line_no: number;
@@ -8,6 +10,7 @@ export type OrderItem = {
   unit: string;
   product_label?: string;
   sku?: string | null;
+  ptype?: string | null;   // ประเภทน้ำหอม (จาก products) — ใช้โชว์/เรียงในใบพิมพ์
 };
 
 export type Order = {

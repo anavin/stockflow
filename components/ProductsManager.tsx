@@ -1,14 +1,16 @@
 "use client";
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { createProduct, renameProduct, setProductActive, setProductCode } from "@/lib/actions/products";
+import { createProduct, renameProduct, setProductActive, setProductCode, setProductType } from "@/lib/actions/products";
 import type { ProductAdminRow } from "@/lib/queries";
+import { PERFUME_TYPES } from "@/lib/types";
 import { Plus, Check, X, Pencil, Search, CheckCircle2 } from "lucide-react";
 
 export default function ProductsManager({ products }: { products: ProductAdminRow[] }) {
   const router = useRouter();
   const [name, setName] = useState("");
   const [code, setCode] = useState("");
+  const [ptype, setPtype] = useState("");
   const [q, setQ] = useState("");
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState("");
@@ -27,10 +29,15 @@ export default function ProductsManager({ products }: { products: ProductAdminRo
   async function add(e: React.FormEvent) {
     e.preventDefault();
     setError(""); setMsg(""); setBusy(true);
-    const res = await createProduct(name, code);
+    const res = await createProduct(name, code, ptype);
     setBusy(false);
     if (!res.ok) { setError(res.error || "เพิ่มไม่สำเร็จ"); return; }
-    setMsg(`เพิ่มกลิ่น "${name.trim()}" แล้ว`); setName(""); setCode(""); router.refresh();
+    setMsg(`เพิ่มกลิ่น "${name.trim()}" แล้ว`); setName(""); setCode(""); setPtype(""); router.refresh();
+  }
+  async function changeType(id: number, v: string) {
+    const res = await setProductType(id, v);
+    if (!res.ok) { alert(res.error); return; }
+    router.refresh();
   }
   async function saveRename(id: number) {
     const res = await renameProduct(id, editVal);
@@ -54,7 +61,11 @@ export default function ProductsManager({ products }: { products: ProductAdminRo
         <h2 className="mb-3 flex items-center gap-2 text-sm font-semibold text-ink"><Plus size={16} /> เพิ่มกลิ่นใหม่</h2>
         <div className="flex flex-wrap gap-2">
           <input className="input flex-1 min-w-[220px]" value={name} onChange={(e) => setName(e.target.value)} placeholder="ชื่อกลิ่น เช่น Volt - Twilight (EDT)" />
-          <input className="input w-32 font-mono" value={code} onChange={(e) => setCode(e.target.value)} placeholder="รหัส (ไม่บังคับ)" />
+          <input className="input w-28 font-mono" value={code} onChange={(e) => setCode(e.target.value)} placeholder="รหัส" />
+          <select className="input w-36" value={ptype} onChange={(e) => setPtype(e.target.value)}>
+            <option value="">ประเภท…</option>
+            {PERFUME_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
+          </select>
           <button className="btn-primary" disabled={busy}>{busy ? "กำลังเพิ่ม…" : "เพิ่มกลิ่น"}</button>
         </div>
         {error && <p className="mt-2 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
@@ -76,13 +87,14 @@ export default function ProductsManager({ products }: { products: ProductAdminRo
             <tr>
               <th className="px-4 py-3">ชื่อกลิ่น</th>
               <th className="px-4 py-3">รหัส</th>
+              <th className="px-4 py-3">ประเภท</th>
               <th className="px-4 py-3 text-center">ใช้ในใบเบิก</th>
               <th className="px-4 py-3 text-center">สถานะ</th>
               <th className="px-4 py-3 text-right">จัดการ</th>
             </tr>
           </thead>
           <tbody>
-            {filtered.length === 0 && <tr><td colSpan={5} className="px-4 py-10 text-center text-muted">ไม่พบกลิ่น</td></tr>}
+            {filtered.length === 0 && <tr><td colSpan={6} className="px-4 py-10 text-center text-muted">ไม่พบกลิ่น</td></tr>}
             {filtered.map((p) => (
               <tr key={p.id} className={`border-t border-line ${!p.active ? "bg-soft/40" : ""}`}>
                 <td className="px-4 py-2.5">
@@ -111,6 +123,13 @@ export default function ProductsManager({ products }: { products: ProductAdminRo
                       {p.code ? <span className="text-ink">{p.code}</span> : <span className="text-faint">— เพิ่มรหัส</span>}
                     </button>
                   )}
+                </td>
+                <td className="px-4 py-2.5">
+                  <select value={p.ptype ?? ""} onChange={(e) => changeType(p.id, e.target.value)}
+                    className="input h-8 w-28 py-0 text-xs" title="ประเภทน้ำหอม">
+                    <option value="">—</option>
+                    {PERFUME_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
+                  </select>
                 </td>
                 <td className="px-4 py-2.5 text-center text-muted">{p.used > 0 ? p.used.toLocaleString() : "—"}</td>
                 <td className="px-4 py-2.5 text-center">
