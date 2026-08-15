@@ -51,6 +51,25 @@ export async function listProductsAdmin(): Promise<ProductAdminRow[]> {
   );
 }
 
+export type ScentBarcode = { size: string; barcode: string; sku: string | null; grade: string | null };
+/** ขนาด+บาร์โค้ด (EAN จาก CTW) ต่อกลิ่น — คีย์ = ชื่อกลิ่น lower/trim; เรียงตามขนาดเล็ก→ใหญ่ */
+export async function getScentBarcodes(): Promise<Record<string, ScentBarcode[]>> {
+  let rows: (ScentBarcode & { scent: string })[] = [];
+  try {
+    rows = await q<ScentBarcode & { scent: string }>(
+      `select scent, size, barcode, sku, grade,
+              coalesce(nullif(regexp_replace(size, '[^0-9.]', '', 'g'), '')::numeric, 0) as ml
+         from product_barcodes order by lower(btrim(scent)), ml`,
+    );
+  } catch { return {}; }  // ตารางยังไม่ถูกสร้าง (prod ยังไม่รัน SQL)
+  const map: Record<string, ScentBarcode[]> = {};
+  for (const r of rows) {
+    const k = r.scent.trim().toLowerCase();
+    (map[k] ??= []).push({ size: r.size, barcode: r.barcode, sku: r.sku, grade: r.grade });
+  }
+  return map;
+}
+
 export type DailyIssue = { day: string; orders: number; issued: number; pending: number };
 /** รายวัน: ออร์เดอร์ที่เข้ามา (ตามวันที่ใบเบิก) เทียบกับที่ตัดสต๊อกแล้ว */
 export async function dailyIssueStatus(platform = "Shopee", days = 14): Promise<DailyIssue[]> {
