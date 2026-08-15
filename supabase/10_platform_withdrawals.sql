@@ -1,4 +1,9 @@
 -- ============================================================================
+-- ⚠️ prod ของแอปนี้เก็บข้อมูลจริงใน schema `public` (ไม่ใช่ platform_withdrawals)
+--    ส่วนต้นของไฟล์นี้ (0001–0004) สร้างตารางใน platform_withdrawals ตามของเก่า
+--    → "อย่ารันทั้งไฟล์บน prod ที่ใช้ public" เพราะจะสร้างตารางเปล่าซ้ำ + repoint search_path
+--    ถ้าจะอัปเดต prod (public) ให้รันเฉพาะบล็อกที่ขึ้นต้นด้วย `public.` (เช่น supabase/prod_public.sql)
+-- ============================================================================
 -- Supabase / Postgres setup for the platform_withdrawals app.
 -- Run ONCE on the shared kp-labparfumo project (Dashboard → SQL editor).
 -- After running: Dashboard → API → Exposed schemas → add `platform_withdrawals`.
@@ -1554,10 +1559,10 @@ alter table public.user_sessions add column if not exists expires_at timestamptz
 update public.user_sessions set expires_at = created_at + interval '7 days' where expires_at is null;
 create index if not exists idx_user_sessions_expires on public.user_sessions (expires_at);
 
--- default search_path ที่ระดับ database — ใช้ได้กับทุก connection รวมทั้งผ่าน
--- Cloudflare Hyperdrive (ที่ไม่ forward `options` startup param). ปลอดภัยเพราะ
--- project นี้ dedicated ให้แอปเดียว (labparfumo-core).
-alter database postgres set search_path to platform_withdrawals, public;
+-- default search_path ที่ระดับ database.
+-- ⚠️ prod เก็บข้อมูลจริงใน schema `public` (ไม่ใช่ platform_withdrawals) — ต้องชี้ public
+-- ไม่งั้นแอปจะไปอ่านตารางเปล่าใน platform_withdrawals แล้ว 500 ทั้งเว็บ.
+alter database postgres set search_path to "$user", public;
 
 -- 0006 verify-before-issue: spec ต่อรายการ (สแกน/กรอก SKU+Spec ก่อนยืนยันตัดสต๊อก)
 alter table order_items add column if not exists spec text;
