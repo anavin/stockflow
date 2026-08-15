@@ -214,9 +214,11 @@ export default function ProductsManager({
                       {sizes.length === 0 ? (
                         <span className="text-xs text-faint">—</span>
                       ) : (
-                        <button onClick={() => setOpenId(open ? null : p.id)} className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-xs text-brand-600 hover:bg-brand-50">
-                          {open ? <ChevronDown size={13} /> : <ChevronRight size={13} />}
-                          {sizes.length} ขนาด
+                        <button onClick={() => setOpenId(open ? null : p.id)} className="flex flex-wrap items-center gap-1 text-left" title="กดดูบาร์โค้ด EAN">
+                          {sizes.map((s) => (
+                            <span key={s.barcode} className="chip bg-soft text-ink text-[11px]">{s.size.replace(/\.$/, "")}</span>
+                          ))}
+                          {open ? <ChevronDown size={12} className="text-faint" /> : <ChevronRight size={12} className="text-faint" />}
                         </button>
                       )}
                     </td>
