@@ -70,20 +70,21 @@ export default function OrdersTable({ orders }: { orders: OrderRow[] }) {
       {/* แถบเลือก — โผล่เมื่อมีการติ๊ก */}
       {sel.size > 0 && (
         <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-brand-200 bg-brand-50/50 px-4 py-2.5">
-          <div className="flex items-center gap-2 text-sm text-ink">
+          {/* ซ้าย: ตัวนับ + ปุ่มลบแบบจาง (แยกจากปุ่มพิมพ์คนละฝั่ง กันเผลอกด) */}
+          <div className="flex items-center gap-3 text-sm text-ink">
             <button onClick={() => setSel(new Set())} className="text-muted hover:text-ink" title="ล้างที่เลือก"><X size={16} /></button>
-            เลือกไว้ <b>{sel.size}</b> รายการ
-          </div>
-          <div className="flex items-center gap-2">
-            <button onClick={onBulkPrint} disabled={bulkBusy}
-              className="inline-flex items-center gap-1.5 rounded-lg border border-line bg-white px-3 py-1.5 text-sm font-medium text-ink hover:bg-soft disabled:opacity-50">
-              <Printer size={15} /> พิมพ์ที่เลือก ({sel.size})
-            </button>
+            <span>เลือกไว้ <b>{sel.size}</b> รายการ</span>
             <button onClick={onBulkDelete} disabled={bulkBusy}
-              className="inline-flex items-center gap-1.5 rounded-lg bg-red-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-50">
-              <Trash2 size={15} /> {bulkBusy ? "กำลังลบ…" : `ลบที่เลือก (${sel.size})`}
+              className="inline-flex items-center gap-1 rounded-lg border border-line bg-white px-2.5 py-1 text-xs font-medium text-muted transition-colors hover:border-red-300 hover:bg-red-50 hover:text-red-600 disabled:opacity-50"
+              title="ย้ายที่เลือกไปถังขยะ">
+              <Trash2 size={14} /> {bulkBusy ? "กำลังลบ…" : "ลบ"}
             </button>
           </div>
+          {/* ขวา: ปุ่มพิมพ์เป็นปุ่มหลักเด่น */}
+          <button onClick={onBulkPrint} disabled={bulkBusy}
+            className="inline-flex items-center gap-1.5 rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white hover:bg-brand-600 disabled:opacity-50">
+            <Printer size={16} /> พิมพ์ที่เลือก ({sel.size})
+          </button>
         </div>
       )}
 
