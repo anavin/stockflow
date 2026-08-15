@@ -8,7 +8,7 @@
  * names, order numbers) are Latin.
  */
 import { Document, Page, Text, View, StyleSheet, Font, Svg, Rect } from "@react-pdf/renderer";
-import { code39 } from "./code39";
+import { code128 } from "./code128";
 import { COMPANY_NAME, COMPANY_NAME_EN } from "@/lib/config";
 import { NOTO_SANS_THAI_REGULAR, NOTO_SANS_THAI_BOLD } from "./fonts";
 import type { OrderWithItems } from "@/lib/types";
@@ -88,7 +88,7 @@ const s = StyleSheet.create({
 const COL = [16, 46, 104, 42, 34, 28, 30, 62];
 
 function Barcode({ value, width = 250, height = 50 }: { value: string; width?: number; height?: number }) {
-  const bc = code39(value);
+  const bc = code128(value);
   const scale = width / bc.totalModules;
   return (
     <Svg width={width} height={height}>
@@ -177,7 +177,7 @@ function Panel({ order, copyLabel }: { order: OrderWithItems; copyLabel: string 
         </View>
         <View style={s.bcRight}>
           <Barcode value={order.order_no} width={185} height={bcH} />
-          <Text style={s.bcText}>{`*${order.order_no}*`}</Text>
+          <Text style={s.bcText}>{order.order_no}</Text>
         </View>
       </View>
 

@@ -71,7 +71,7 @@ function Panel({ order, copyLabel }: { order: OrderWithItems; copyLabel: string 
         </div>
         <div style={{ textAlign: "center" }}>
           <Barcode value={order.order_no} height={34} width={1.3} />
-          <div style={{ fontSize: 7, color: C.muted, marginTop: 1 }}>{`*${order.order_no}*`}</div>
+          <div style={{ fontSize: 7, color: C.muted, marginTop: 1 }}>{order.order_no}</div>
         </div>
       </div>
 
