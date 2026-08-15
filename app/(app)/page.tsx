@@ -68,15 +68,34 @@ export default async function Dashboard() {
       {/* ── highlights: fulfillment · stock health · trend ── */}
       <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-3">
         {/* fulfillment ring */}
-        <section className="card flex items-center gap-4 p-5">
-          <Ring value={fulfill} />
-          <div className="min-w-0">
-            <h2 className="text-sm font-semibold text-ink">อัตราการตัดสต๊อก</h2>
-            <p className="mt-0.5 text-xs text-muted">ตัดแล้ว {s.issuedTotal.toLocaleString()} จาก {s.ordersTotal.toLocaleString()} ใบ</p>
-            <Link href="/stock/issue" className="mt-2 inline-flex items-center gap-1 text-xs font-medium text-brand-600">
-              ไปตัดสต๊อก <ArrowRight size={12} />
-            </Link>
+        <section className="card flex flex-col p-5">
+          <h2 className="text-sm font-semibold text-ink">อัตราการตัดสต๊อก</h2>
+          <div className="mt-3 flex items-center gap-5">
+            <Ring value={fulfill} />
+            <div className="min-w-0 flex-1 space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="inline-flex items-center gap-1.5 text-xs text-muted">
+                  <span className="h-2 w-2 rounded-full" style={{ backgroundColor: "rgb(var(--brand))" }} /> ตัดแล้ว
+                </span>
+                <b className="text-sm text-ink">{s.issuedTotal.toLocaleString()}</b>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="inline-flex items-center gap-1.5 text-xs text-muted">
+                  <span className="h-2 w-2 rounded-full bg-amber-400" /> รอตัด
+                </span>
+                <b className="text-sm text-amber-600">{s.pendingIssue.toLocaleString()}</b>
+              </div>
+              <div className="flex items-center justify-between border-t border-line pt-2">
+                <span className="text-xs text-faint">ทั้งหมด</span>
+                <b className="text-sm text-ink">{s.ordersTotal.toLocaleString()} ใบ</b>
+              </div>
+            </div>
           </div>
+          <Link href="/stock/issue"
+            className="mt-4 inline-flex items-center justify-center gap-1 rounded-lg px-3 py-2 text-xs font-medium text-white transition-opacity hover:opacity-90"
+            style={{ backgroundColor: "rgb(var(--brand))" }}>
+            <ScanLine size={13} /> ไปตัดสต๊อก
+          </Link>
         </section>
 
         {/* stock health */}
@@ -301,15 +320,17 @@ function DailyIssueTable({ data }: { data: { day: string; orders: number; issued
 
 function Ring({ value }: { value: number }) {
   const pct = Math.round(value * 100);
-  const r = 26, c = 2 * Math.PI * r;
+  const r = 34, c = 2 * Math.PI * r;
   const off = c * (1 - Math.max(0, Math.min(1, value)));
   return (
-    <svg width="72" height="72" viewBox="0 0 72 72" className="shrink-0 -rotate-90">
-      <circle cx="36" cy="36" r={r} fill="none" stroke="#e6e9f0" strokeWidth="8" />
-      <circle cx="36" cy="36" r={r} fill="none" style={{ stroke: "rgb(var(--brand))" }} strokeWidth="8" strokeLinecap="round"
+    <svg width="94" height="94" viewBox="0 0 94 94" className="shrink-0 -rotate-90">
+      <circle cx="47" cy="47" r={r} fill="none" stroke="#eef1f6" strokeWidth="9" />
+      <circle cx="47" cy="47" r={r} fill="none" style={{ stroke: "rgb(var(--brand))" }} strokeWidth="9" strokeLinecap="round"
         strokeDasharray={c} strokeDashoffset={off} />
-      <text x="36" y="36" transform="rotate(90 36 36)" textAnchor="middle" dominantBaseline="central"
-        className="fill-ink" style={{ fontSize: 15, fontWeight: 700 }}>{pct}%</text>
+      <text x="47" y="43" transform="rotate(90 47 47)" textAnchor="middle" dominantBaseline="central"
+        className="fill-ink" style={{ fontSize: 21, fontWeight: 700 }}>{pct}%</text>
+      <text x="47" y="60" transform="rotate(90 47 47)" textAnchor="middle" dominantBaseline="central"
+        className="fill-faint" style={{ fontSize: 8 }}>ตัดแล้ว</text>
     </svg>
   );
 }
