@@ -1,7 +1,12 @@
--- Mapping ประเภทน้ำหอมต่อกลิ่น (จากเจ้าของ) — match case-insensitive + trim
+-- Mapping ประเภทน้ำหอมต่อกลิ่น (default จากเจ้าของ) — match case-insensitive + trim
 -- ค่าตรงกับ CTW: PARFUM(=Le Parfum) / EDP+ / EDT / EDP
 
--- EDT (53 กลิ่น)  [Virgin X ในระบบ = VirginX]
+-- White velour ยังไม่มีในระบบ → เพิ่มใหม่ (EDT) ถ้ายังไม่มี
+insert into products (name, ptype, active, sort)
+select 'White velour', 'EDT', true, coalesce((select max(sort) from products),0)+1
+ where not exists (select 1 from products where lower(btrim(name)) = 'white velour');
+
+-- EDT (54 กลิ่น)  [Virgin X ในระบบ = VirginX]
 update products set ptype = 'EDT' where lower(btrim(name)) in (
     '1000 thousand',     'angel',     'aqua',     'argentum',
     'atlantis',     'beyond',     'blind magnolia',     'buoyant',
@@ -14,9 +19,9 @@ update products set ptype = 'EDT' where lower(btrim(name)) in (
     'shadow de bacci light',     'sicilia',     'silver',     'soir',
     'teenage dream',     'vandal',     'velvet oud',     'victory',
     'vintage',     'virginx',     'vivid',     'voyage',
-    'wealth',     'zeus',     'volt - nifty (edt)',     'volt - elite (edt)',
-    'volt - twilight (edt)',     'volt - savoury (edt)',     'volt - aware (edt)',     'volt - you (edt)',
-    'volt - benign (edt)'
+    'wealth',     'zeus',     'white velour',     'volt - nifty (edt)',
+    'volt - elite (edt)',     'volt - twilight (edt)',     'volt - savoury (edt)',     'volt - aware (edt)',
+    'volt - you (edt)',     'volt - benign (edt)'
 );
 
 -- EDP+ (7 กลิ่น)
@@ -25,7 +30,7 @@ update products set ptype = 'EDP+' where lower(btrim(name)) in (
     'sparkling mandarin',     'tropical leather',     'blackest black'
 );
 
--- PARFUM = Le Parfum (4 กลิ่น)  [Gambling34+35 ในระบบ = Gambling 34+35]
+-- PARFUM = Le Parfum (4 กลิ่น)  [Gambling34+35 ในระบบ = Gambling 34+35; What = ตัวเปล่า]
 update products set ptype = 'PARFUM' where lower(btrim(name)) in (
     'gambling 34+35',     'queen',     'savoury',     'what'
 );
