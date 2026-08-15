@@ -41,11 +41,11 @@ export async function getProductTypes(): Promise<Record<string, string>> {
   return m;
 }
 
-export type ProductAdminRow = { id: number; name: string; code: string | null; ptype: string | null; active: boolean; sort: number; used: number };
-/** รายชื่อกลิ่นทั้งหมด (รวมที่ปิดไว้) + รหัส + ประเภท + จำนวนบรรทัดใบเบิกที่ใช้ชื่อนี้ — สำหรับหน้าจัดการ */
+export type ProductAdminRow = { id: number; name: string; code: string | null; barcode: string | null; ptype: string | null; active: boolean; sort: number; used: number };
+/** รายชื่อกลิ่นทั้งหมด (รวมที่ปิดไว้) + รหัส + บาร์โค้ด + ประเภท + จำนวนบรรทัดใบเบิกที่ใช้ชื่อนี้ — สำหรับหน้าจัดการ */
 export async function listProductsAdmin(): Promise<ProductAdminRow[]> {
   return q<ProductAdminRow>(
-    `select p.id, p.name, p.code, p.ptype, p.active, p.sort,
+    `select p.id, p.name, p.code, p.barcode, p.ptype, p.active, p.sort,
             (select count(*)::int from order_items i where i.product = p.name) as used
      from products p order by p.active desc, p.sort, p.name`,
   );

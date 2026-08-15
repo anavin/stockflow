@@ -36,7 +36,10 @@ export default async function EditOrderPage({ params }: { params: Promise<{ orde
             </Link>
           ) : null}
           <a href={`/api/print/${encodeURIComponent(decoded)}`} target="_blank" rel="noreferrer" className="btn-ghost">
-            <Printer size={16} /> พิมพ์ใบเบิก
+            <Printer size={16} /> พิมพ์ใบเบิก (PDF)
+          </a>
+          <a href={`/print/withdrawal/${encodeURIComponent(decoded)}`} target="_blank" rel="noreferrer" className="btn-ghost">
+            <Printer size={16} /> พิมพ์ (เว็บ)
           </a>
         </div>
       </div>

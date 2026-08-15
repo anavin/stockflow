@@ -44,8 +44,20 @@ html, body {
   .chip  { @apply inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium; }
 }
 
-/* Print: hide app chrome, show only the print target */
+/* Print: hide app chrome, show only the print target.
+   Safari-safe recipe (จาก CTW): flow ปกติ top-down, ห้าม fixed-size flex box,
+   .print-area overflow ต้อง visible ไม่งั้น PDF ออกมาว่าง. ใบเบิก = A4 แนวนอน. */
 @media print {
-  body { background: #fff; }
+  html, body { background: #fff !important; }
   .no-print { display: none !important; }
+  @page { size: A4 landscape; margin: 8mm; }
+
+  html, body { margin: 0 !important; padding: 0 !important; }
+  .print-area { overflow: visible !important; padding: 0 !important; min-height: 0 !important; }
+  .wd-sheet { break-inside: avoid; page-break-inside: avoid; }
+  .wd-sheet table { page-break-inside: auto; }
+  .wd-sheet tr { page-break-inside: avoid; }
+  .wd-sheet thead { display: table-header-group; }
+  /* สีพื้น/แท่งบาร์โค้ดต้องพิมพ์จริง (ไม่ถูกเบราว์เซอร์ตัดทิ้ง) */
+  * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
 }

@@ -1580,5 +1580,12 @@ create index if not exists idx_thai_postcodes_zip on public.thai_postcodes (post
 -- 0010 ตำบล/แขวง แยกช่อง (เติมจากรหัสไปรษณีย์) — ไม่กระทบข้อมูลเดิม
 alter table public.orders add column if not exists subdistrict text;
 
--- 0011 ประเภทน้ำหอม (Le Parfum/EDP+/EDT/EDP) ต่อกลิ่น — โชว์+เรียงในใบพิมพ์
+-- 0011 ประเภทน้ำหอม (PARFUM/EDP+/EDT/EDP) ต่อกลิ่น — โชว์+เรียงในใบพิมพ์
 alter table public.products add column if not exists ptype text;
+
+-- 0012 ปรับค่าประเภทให้ตรงกับ CTW (products.grade ใช้ "PARFUM" ไม่ใช่ "Le Parfum")
+update public.products set ptype = 'PARFUM' where ptype = 'Le Parfum';
+
+-- 0013 mapping ชื่อกลิ่น ↔ barcode (Code128) ให้ต่อกับ CTW (lab-parfumo-central.products.barcode)
+alter table public.products add column if not exists barcode text;
+create index if not exists idx_products_barcode on public.products (barcode);

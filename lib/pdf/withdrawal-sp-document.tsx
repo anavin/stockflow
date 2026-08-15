@@ -124,7 +124,7 @@ function fmtDate(d?: any) {
 }
 
 // เรียงรายการในใบพิมพ์: ประเภทน้ำหอม → ชื่อกลิ่น (ก-๙/A-Z) → ขนาดใหญ่ก่อน
-const TYPE_ORDER = ["Le Parfum", "EDP+", "EDT", "EDP"];
+const TYPE_ORDER = ["PARFUM", "EDP+", "EDT", "EDP"];
 const typeRank = (t?: string | null) => { const i = TYPE_ORDER.indexOf(String(t || "").trim()); return i < 0 ? 9 : i; };
 const mlOf = (sz?: string | null) => { const m = String(sz || "").match(/(\d+(?:\.\d+)?)/); return m ? parseFloat(m[1]) : 0; };
 

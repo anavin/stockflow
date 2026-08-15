@@ -1,7 +1,7 @@
 "use client";
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { createProduct, renameProduct, setProductActive, setProductCode, setProductType } from "@/lib/actions/products";
+import { createProduct, renameProduct, setProductActive, setProductCode, setProductType, setProductBarcode } from "@/lib/actions/products";
 import type { ProductAdminRow } from "@/lib/queries";
 import { PERFUME_TYPES } from "@/lib/types";
 import { Plus, Check, X, Pencil, Search, CheckCircle2 } from "lucide-react";
@@ -11,6 +11,7 @@ export default function ProductsManager({ products }: { products: ProductAdminRo
   const [name, setName] = useState("");
   const [code, setCode] = useState("");
   const [ptype, setPtype] = useState("");
+  const [barcode, setBarcode] = useState("");
   const [q, setQ] = useState("");
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState("");
@@ -19,20 +20,27 @@ export default function ProductsManager({ products }: { products: ProductAdminRo
   const [editVal, setEditVal] = useState("");
   const [codeId, setCodeId] = useState<number | null>(null);   // แก้รหัส inline
   const [codeVal, setCodeVal] = useState("");
+  const [barId, setBarId] = useState<number | null>(null);     // แก้บาร์โค้ด inline
+  const [barVal, setBarVal] = useState("");
 
   const filtered = useMemo(() => {
     const t = q.trim().toLowerCase();
-    return t ? products.filter((p) => p.name.toLowerCase().includes(t) || (p.code ?? "").toLowerCase().includes(t)) : products;
+    return t ? products.filter((p) => p.name.toLowerCase().includes(t) || (p.code ?? "").toLowerCase().includes(t) || (p.barcode ?? "").toLowerCase().includes(t)) : products;
   }, [products, q]);
   const activeCount = products.filter((p) => p.active).length;
 
   async function add(e: React.FormEvent) {
     e.preventDefault();
     setError(""); setMsg(""); setBusy(true);
-    const res = await createProduct(name, code, ptype);
+    const res = await createProduct(name, code, ptype, barcode);
     setBusy(false);
     if (!res.ok) { setError(res.error || "เพิ่มไม่สำเร็จ"); return; }
-    setMsg(`เพิ่มกลิ่น "${name.trim()}" แล้ว`); setName(""); setCode(""); setPtype(""); router.refresh();
+    setMsg(`เพิ่มกลิ่น "${name.trim()}" แล้ว`); setName(""); setCode(""); setPtype(""); setBarcode(""); router.refresh();
+  }
+  async function saveBarcode(id: number) {
+    const res = await setProductBarcode(id, barVal);
+    if (!res.ok) { alert(res.error); return; }
+    setBarId(null); router.refresh();
   }
   async function changeType(id: number, v: string) {
     const res = await setProductType(id, v);
@@ -62,6 +70,7 @@ export default function ProductsManager({ products }: { products: ProductAdminRo
         <div className="flex flex-wrap gap-2">
           <input className="input flex-1 min-w-[220px]" value={name} onChange={(e) => setName(e.target.value)} placeholder="ชื่อกลิ่น เช่น Volt - Twilight (EDT)" />
           <input className="input w-28 font-mono" value={code} onChange={(e) => setCode(e.target.value)} placeholder="รหัส" />
+          <input className="input w-36 font-mono" value={barcode} onChange={(e) => setBarcode(e.target.value)} placeholder="บาร์โค้ด CTW" />
           <select className="input w-36" value={ptype} onChange={(e) => setPtype(e.target.value)}>
             <option value="">ประเภท…</option>
             {PERFUME_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
@@ -70,7 +79,7 @@ export default function ProductsManager({ products }: { products: ProductAdminRo
         </div>
         {error && <p className="mt-2 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
         {msg && <p className="mt-2 flex items-center gap-1 rounded-lg bg-green-50 px-3 py-2 text-sm text-green-700"><CheckCircle2 size={14} /> {msg}</p>}
-        <p className="mt-2 text-xs text-faint">กลิ่นที่เพิ่มจะขึ้นใน dropdown ตอนสร้างใบเบิก + ช่วยให้ import จับกลิ่นได้ · แก้ชื่อมีผลกับใบใหม่ (ใบเก่ายังเป็นชื่อเดิม)</p>
+        <p className="mt-2 text-xs text-faint">กลิ่นที่เพิ่มจะขึ้นใน dropdown ตอนสร้างใบเบิก + ช่วยให้ import จับกลิ่นได้ · แก้ชื่อมีผลกับใบใหม่ (ใบเก่ายังเป็นชื่อเดิม) · บาร์โค้ด CTW = คีย์ผูกกับระบบขายหน้าร้าน</p>
       </form>
 
       <div className="flex items-center justify-between gap-2">
@@ -87,6 +96,7 @@ export default function ProductsManager({ products }: { products: ProductAdminRo
             <tr>
               <th className="px-4 py-3">ชื่อกลิ่น</th>
               <th className="px-4 py-3">รหัส</th>
+              <th className="px-4 py-3">บาร์โค้ด CTW</th>
               <th className="px-4 py-3">ประเภท</th>
               <th className="px-4 py-3 text-center">ใช้ในใบเบิก</th>
               <th className="px-4 py-3 text-center">สถานะ</th>
@@ -94,7 +104,7 @@ export default function ProductsManager({ products }: { products: ProductAdminRo
             </tr>
           </thead>
           <tbody>
-            {filtered.length === 0 && <tr><td colSpan={6} className="px-4 py-10 text-center text-muted">ไม่พบกลิ่น</td></tr>}
+            {filtered.length === 0 && <tr><td colSpan={7} className="px-4 py-10 text-center text-muted">ไม่พบกลิ่น</td></tr>}
             {filtered.map((p) => (
               <tr key={p.id} className={`border-t border-line ${!p.active ? "bg-soft/40" : ""}`}>
                 <td className="px-4 py-2.5">
@@ -121,6 +131,21 @@ export default function ProductsManager({ products }: { products: ProductAdminRo
                     <button onClick={() => { setCodeId(p.id); setCodeVal(p.code ?? ""); }}
                       className="rounded px-1.5 py-0.5 font-mono text-xs hover:bg-soft">
                       {p.code ? <span className="text-ink">{p.code}</span> : <span className="text-faint">— เพิ่มรหัส</span>}
+                    </button>
+                  )}
+                </td>
+                <td className="px-4 py-2.5">
+                  {barId === p.id ? (
+                    <div className="flex items-center gap-1">
+                      <input autoFocus className="input h-8 w-32 py-0 font-mono text-xs" value={barVal} onChange={(e) => setBarVal(e.target.value)}
+                        onKeyDown={(e) => { if (e.key === "Enter") saveBarcode(p.id); if (e.key === "Escape") setBarId(null); }} placeholder="บาร์โค้ด CTW" />
+                      <button onClick={() => saveBarcode(p.id)} className="rounded-md p-1 text-green-600 hover:bg-green-50" title="บันทึก"><Check size={15} /></button>
+                      <button onClick={() => setBarId(null)} className="rounded-md p-1 text-muted hover:bg-soft" title="ยกเลิก"><X size={15} /></button>
+                    </div>
+                  ) : (
+                    <button onClick={() => { setBarId(p.id); setBarVal(p.barcode ?? ""); }}
+                      className="rounded px-1.5 py-0.5 font-mono text-xs hover:bg-soft">
+                      {p.barcode ? <span className="text-ink">{p.barcode}</span> : <span className="text-faint">— ผูกบาร์โค้ด</span>}
                     </button>
                   )}
                 </td>

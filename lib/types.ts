@@ -1,4 +1,5 @@
-export const PERFUME_TYPES = ["Le Parfum", "EDP+", "EDT", "EDP"] as const;
+// ค่าตรงกับ products.grade ของระบบขายหน้าร้าน CTW (lab-parfumo-central)
+export const PERFUME_TYPES = ["PARFUM", "EDP+", "EDT", "EDP"] as const;
 
 export type OrderItem = {
   id?: number;
