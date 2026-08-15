@@ -234,21 +234,37 @@ function Panel({ order, copyLabel }: { order: OrderWithItems; copyLabel: string 
   );
 }
 
+function OrderPage({ order }: { order: OrderWithItems }) {
+  return (
+    <Page size="A4" orientation="landscape" style={s.page}>
+      <View style={s.pageRow}>
+        <Panel order={order} copyLabel="ต้นฉบับ · ORIGINAL" />
+        <View style={s.divider}>
+          <View style={s.dividerLine} />
+          <Text style={s.cutLabel}>ตัด</Text>
+          <View style={s.dividerLine} />
+        </View>
+        <Panel order={order} copyLabel="สำเนา · COPY" />
+      </View>
+    </Page>
+  );
+}
+
 export function WithdrawalDocument({ order }: { order: OrderWithItems }) {
   registerFontOnce();
   return (
     <Document title={`ใบเบิก ${order.doc_no || order.order_no}`} author="Lab Parfumo">
-      <Page size="A4" orientation="landscape" style={s.page}>
-        <View style={s.pageRow}>
-          <Panel order={order} copyLabel="ต้นฉบับ · ORIGINAL" />
-          <View style={s.divider}>
-            <View style={s.dividerLine} />
-            <Text style={s.cutLabel}>ตัด</Text>
-            <View style={s.dividerLine} />
-          </View>
-          <Panel order={order} copyLabel="สำเนา · COPY" />
-        </View>
-      </Page>
+      <OrderPage order={order} />
+    </Document>
+  );
+}
+
+/** ใบเบิกหลายใบในไฟล์เดียว (1 ออร์เดอร์ = 1 หน้า) — สำหรับพิมพ์ที่เลือกทีเดียว */
+export function WithdrawalDocumentMulti({ orders }: { orders: OrderWithItems[] }) {
+  registerFontOnce();
+  return (
+    <Document title={`ใบเบิก ${orders.length} ใบ`} author="Lab Parfumo">
+      {orders.map((o) => <OrderPage key={o.order_no} order={o} />)}
     </Document>
   );
 }

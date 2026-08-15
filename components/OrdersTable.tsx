@@ -48,6 +48,13 @@ export default function OrdersTable({ orders }: { orders: OrderRow[] }) {
     router.refresh();
   }
 
+  function onBulkPrint() {
+    const list = [...sel];
+    if (list.length === 0) return;
+    const qs = list.map((n) => encodeURIComponent(n)).join(",");
+    window.open(`/api/print-bulk?orders=${qs}`, "_blank", "noopener");
+  }
+
   if (orders.length === 0) {
     return (
       <div className="card flex flex-col items-center gap-3 py-16 text-center">
@@ -67,10 +74,16 @@ export default function OrdersTable({ orders }: { orders: OrderRow[] }) {
             <button onClick={() => setSel(new Set())} className="text-muted hover:text-ink" title="ล้างที่เลือก"><X size={16} /></button>
             เลือกไว้ <b>{sel.size}</b> รายการ
           </div>
-          <button onClick={onBulkDelete} disabled={bulkBusy}
-            className="inline-flex items-center gap-1.5 rounded-lg bg-red-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-50">
-            <Trash2 size={15} /> {bulkBusy ? "กำลังลบ…" : `ลบที่เลือก (${sel.size})`}
-          </button>
+          <div className="flex items-center gap-2">
+            <button onClick={onBulkPrint} disabled={bulkBusy}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-line bg-white px-3 py-1.5 text-sm font-medium text-ink hover:bg-soft disabled:opacity-50">
+              <Printer size={15} /> พิมพ์ที่เลือก ({sel.size})
+            </button>
+            <button onClick={onBulkDelete} disabled={bulkBusy}
+              className="inline-flex items-center gap-1.5 rounded-lg bg-red-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-50">
+              <Trash2 size={15} /> {bulkBusy ? "กำลังลบ…" : `ลบที่เลือก (${sel.size})`}
+            </button>
+          </div>
         </div>
       )}
 
