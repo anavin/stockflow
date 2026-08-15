@@ -4,7 +4,7 @@ import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { PLATFORMS } from "@/lib/config";
 import { can, ROLE_LABELS } from "@/lib/auth/roles";
-import { Package, PlusCircle, Upload, List, LogOut, Menu, X, Trash2, Users, ScanLine, Boxes, LayoutDashboard, FlaskConical } from "lucide-react";
+import { Package, PlusCircle, Upload, List, LogOut, Menu, X, Trash2, Users, ScanLine, Boxes, LayoutDashboard, FlaskConical, Tags } from "lucide-react";
 
 // สีเอกลักษณ์ของแต่ละแพลตฟอร์ม (ใช้เป็นจุดสีในเมนู)
 const PLATFORM_COLORS: Record<string, string> = {
@@ -100,9 +100,17 @@ export default function Sidebar({ user }: { user: { full_name: string; username:
         {can.createOrders(role) && (
           <Link href="/products" onClick={() => setOpen(false)}
             className={`mt-1 flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors ${
-              isActive("/products") ? "bg-soft font-medium text-ink" : "text-muted hover:bg-soft hover:text-ink"
+              isActive("/products", true) ? "bg-soft font-medium text-ink" : "text-muted hover:bg-soft hover:text-ink"
             }`}>
             <FlaskConical size={16} /> จัดการกลิ่น
+          </Link>
+        )}
+        {can.createOrders(role) && (
+          <Link href="/products/mapping" onClick={() => setOpen(false)}
+            className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors ${
+              isActive("/products/mapping") ? "bg-soft font-medium text-ink" : "text-muted hover:bg-soft hover:text-ink"
+            }`}>
+            <Tags size={16} /> จับคู่ประเภท
           </Link>
         )}
         {can.manageUsers(role) && (

@@ -24,6 +24,26 @@ export async function createProduct(name: string, code?: string, ptype?: string,
   return { ok: true };
 }
 
+/** ตั้งประเภทน้ำหอมหลายกลิ่นพร้อมกัน (หน้า mapping) — ptype ว่าง = ล้างเป็น null */
+export async function bulkSetProductTypes(
+  updates: { id: number; ptype: string }[],
+): Promise<{ ok: boolean; error?: string; count?: number }> {
+  const g = await gate(); if ("error" in g) return { ok: false, error: g.error };
+  const rows = (updates || []).filter((u) => Number.isFinite(u.id));
+  if (rows.length === 0) return { ok: true, count: 0 };
+  const ids = rows.map((u) => u.id);
+  const types = rows.map((u) => (u.ptype || "").trim() || null);
+  await q(
+    `update products p set ptype = v.ptype
+       from (select unnest($1::int[]) as id, unnest($2::text[]) as ptype) v
+      where p.id = v.id`,
+    [ids, types],
+  );
+  revalidatePath("/products");
+  revalidatePath("/products/mapping");
+  return { ok: true, count: rows.length };
+}
+
 export async function setProductBarcode(id: number, barcode: string): Promise<{ ok: boolean; error?: string }> {
   const g = await gate(); if ("error" in g) return { ok: false, error: g.error };
   await q(`update products set barcode = $2 where id = $1`, [id, (barcode || "").trim() || null]);
