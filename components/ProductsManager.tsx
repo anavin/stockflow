@@ -131,7 +131,7 @@ export default function ProductsManager({
         <table className="w-full text-sm">
           <thead className="bg-soft text-left text-xs text-muted">
             <tr>
-              <th className="px-4 py-3">ชื่อกลิ่น</th>
+              <th className="px-4 py-3 whitespace-nowrap">ชื่อกลิ่น</th>
               <th className="px-3 py-3">ประเภท</th>
               <th className="px-3 py-3">ขนาด + บาร์โค้ด (CTW)</th>
               <th className="px-3 py-3 text-center">ใช้</th>
@@ -146,7 +146,7 @@ export default function ProductsManager({
               return (
                 <Fragment key={p.id}>
                   <tr className={`border-t border-line ${!p.active ? "bg-soft/40" : ""}`}>
-                    <td className="px-4 py-2.5 align-top">
+                    <td className="px-4 py-2.5 align-top whitespace-nowrap">
                       {editId === p.id ? (
                         <div className="flex items-center gap-1">
                           <input autoFocus className="input h-8 py-0" value={editVal} onChange={(e) => setEditVal(e.target.value)}
