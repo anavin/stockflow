@@ -44,6 +44,27 @@ export async function bulkSetProductTypes(
   return { ok: true, count: rows.length };
 }
 
+/** เพิ่มบาร์โค้ด (ขนาด+EAN) ให้กลิ่นเอง — เก็บใน product_barcodes เดียวกับข้อมูล CTW */
+export async function addScentBarcode(scent: string, size: string, barcode: string, sku?: string): Promise<{ ok: boolean; error?: string }> {
+  const g = await gate(); if ("error" in g) return { ok: false, error: g.error };
+  const sc = (scent || "").trim(), sz = (size || "").trim(), bc = (barcode || "").trim();
+  if (!sc) return { ok: false, error: "ไม่พบชื่อกลิ่น" };
+  if (!sz || !bc) return { ok: false, error: "กรอกขนาดและบาร์โค้ด" };
+  const [dup] = await q(`select 1 from product_barcodes where barcode = $1`, [bc]);
+  if (dup) return { ok: false, error: "บาร์โค้ดนี้มีอยู่แล้ว" };
+  await q(`insert into product_barcodes (scent, size, barcode, sku) values ($1, $2, $3, $4)`,
+    [sc, sz, bc, (sku || "").trim() || null]);
+  revalidatePath("/products");
+  return { ok: true };
+}
+
+export async function deleteScentBarcode(id: number): Promise<{ ok: boolean; error?: string }> {
+  const g = await gate(); if ("error" in g) return { ok: false, error: g.error };
+  await q(`delete from product_barcodes where id = $1`, [id]);
+  revalidatePath("/products");
+  return { ok: true };
+}
+
 export async function setProductBarcode(id: number, barcode: string): Promise<{ ok: boolean; error?: string }> {
   const g = await gate(); if ("error" in g) return { ok: false, error: g.error };
   await q(`update products set barcode = $2 where id = $1`, [id, (barcode || "").trim() || null]);

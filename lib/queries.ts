@@ -51,13 +51,13 @@ export async function listProductsAdmin(): Promise<ProductAdminRow[]> {
   );
 }
 
-export type ScentBarcode = { size: string; barcode: string; sku: string | null; grade: string | null };
-/** ขนาด+บาร์โค้ด (EAN จาก CTW) ต่อกลิ่น — คีย์ = ชื่อกลิ่น lower/trim; เรียงตามขนาดเล็ก→ใหญ่ */
+export type ScentBarcode = { id: number; size: string; barcode: string; sku: string | null; grade: string | null };
+/** ขนาด+บาร์โค้ด (EAN จาก CTW + ที่ user เพิ่มเอง) ต่อกลิ่น — คีย์ = ชื่อกลิ่น lower/trim; เรียงขนาดเล็ก→ใหญ่ */
 export async function getScentBarcodes(): Promise<Record<string, ScentBarcode[]>> {
   let rows: (ScentBarcode & { scent: string })[] = [];
   try {
     rows = await q<ScentBarcode & { scent: string }>(
-      `select scent, size, barcode, sku, grade,
+      `select id, scent, size, barcode, sku, grade,
               coalesce(nullif(regexp_replace(size, '[^0-9.]', '', 'g'), '')::numeric, 0) as ml
          from product_barcodes order by lower(btrim(scent)), ml`,
     );
@@ -65,7 +65,7 @@ export async function getScentBarcodes(): Promise<Record<string, ScentBarcode[]>
   const map: Record<string, ScentBarcode[]> = {};
   for (const r of rows) {
     const k = r.scent.trim().toLowerCase();
-    (map[k] ??= []).push({ size: r.size, barcode: r.barcode, sku: r.sku, grade: r.grade });
+    (map[k] ??= []).push({ id: r.id, size: r.size, barcode: r.barcode, sku: r.sku, grade: r.grade });
   }
   return map;
 }

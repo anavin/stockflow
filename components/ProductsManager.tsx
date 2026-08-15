@@ -1,7 +1,7 @@
 "use client";
 import { Fragment, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { createProduct, renameProduct, setProductActive, setProductType, bulkSetProductTypes } from "@/lib/actions/products";
+import { createProduct, renameProduct, setProductActive, setProductType, bulkSetProductTypes, addScentBarcode, deleteScentBarcode } from "@/lib/actions/products";
 import type { ProductAdminRow, ScentBarcode } from "@/lib/queries";
 import { PERFUME_TYPES } from "@/lib/types";
 import { Plus, Check, X, Pencil, Search, CheckCircle2 } from "lucide-react";
@@ -26,6 +26,11 @@ export default function ProductsManager({
   const [editId, setEditId] = useState<number | null>(null);
   const [editVal, setEditVal] = useState("");
   const [bulkType, setBulkType] = useState("");
+  // เพิ่มบาร์โค้ดเองต่อกลิ่น
+  const [addId, setAddId] = useState<number | null>(null);
+  const [aSize, setASize] = useState("");
+  const [aBarcode, setABarcode] = useState("");
+  const [aSku, setASku] = useState("");
 
   const sizesFor = (n: string) => sizesByScent[n.trim().toLowerCase()] ?? [];
 
@@ -63,6 +68,16 @@ export default function ProductsManager({
   }
   async function toggle(p: ProductAdminRow) {
     const res = await setProductActive(p.id, !p.active); if (!res.ok) { alert(res.error); return; } router.refresh();
+  }
+  function openAdd(id: number) { setAddId(id); setASize(""); setABarcode(""); setASku(""); }
+  async function saveBarcode(scent: string) {
+    const res = await addScentBarcode(scent, aSize, aBarcode, aSku);
+    if (!res.ok) { alert(res.error); return; }
+    setAddId(null); router.refresh();
+  }
+  async function delBarcode(id: number) {
+    if (!confirm("ลบบาร์โค้ดนี้?")) return;
+    const res = await deleteScentBarcode(id); if (!res.ok) { alert(res.error); return; } router.refresh();
   }
   async function applyBulk() {
     const rows = filtered;
@@ -165,19 +180,33 @@ export default function ProductsManager({
                       </select>
                     </td>
                     <td className="px-3 py-2.5">
-                      {sizes.length === 0 ? (
-                        <span className="text-xs text-faint">— ไม่มีข้อมูลจาก CTW</span>
-                      ) : (
-                        <div className="flex flex-wrap gap-1.5">
-                          {sizes.map((s) => (
-                            <div key={s.barcode} className="flex items-center gap-2 rounded-lg border border-line bg-white px-2.5 py-1">
-                              <span className="text-xs font-semibold text-ink">{s.size.replace(/\.$/, "")}</span>
-                              <span className="font-mono text-xs text-muted">{s.barcode}</span>
-                              {s.sku && <span className="text-[11px] text-faint">{s.sku}</span>}
-                            </div>
-                          ))}
-                        </div>
-                      )}
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        {sizes.length === 0 && addId !== p.id && (
+                          <span className="text-xs text-faint">— ยังไม่มีบาร์โค้ด</span>
+                        )}
+                        {sizes.map((s) => (
+                          <div key={s.id} className="flex items-center gap-2 rounded-lg border border-line bg-white px-2.5 py-1">
+                            <span className="text-xs font-semibold text-ink">{s.size.replace(/\.$/, "")}</span>
+                            <span className="font-mono text-xs text-muted">{s.barcode}</span>
+                            {s.sku && <span className="text-[11px] text-faint">{s.sku}</span>}
+                            <button onClick={() => delBarcode(s.id)} className="text-faint hover:text-red-500" title="ลบบาร์โค้ดนี้"><X size={12} /></button>
+                          </div>
+                        ))}
+                        {addId === p.id ? (
+                          <div className="flex items-center gap-1 rounded-lg border border-brand/40 bg-brand-50/40 px-1.5 py-1">
+                            <input autoFocus className="input h-7 w-16 py-0 text-xs" value={aSize} onChange={(e) => setASize(e.target.value)} placeholder="ขนาด" />
+                            <input className="input h-7 w-36 py-0 font-mono text-xs" value={aBarcode} onChange={(e) => setABarcode(e.target.value)}
+                              onKeyDown={(e) => { if (e.key === "Enter") saveBarcode(p.name); if (e.key === "Escape") setAddId(null); }} placeholder="บาร์โค้ด" />
+                            <input className="input h-7 w-24 py-0 text-xs" value={aSku} onChange={(e) => setASku(e.target.value)} placeholder="SKU (ถ้ามี)" />
+                            <button onClick={() => saveBarcode(p.name)} className="rounded-md p-1 text-green-600 hover:bg-green-50" title="บันทึก"><Check size={15} /></button>
+                            <button onClick={() => setAddId(null)} className="rounded-md p-1 text-muted hover:bg-soft" title="ยกเลิก"><X size={15} /></button>
+                          </div>
+                        ) : (
+                          <button onClick={() => openAdd(p.id)} className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs text-brand-600 hover:bg-brand-50">
+                            <Plus size={12} /> เพิ่มบาร์โค้ด
+                          </button>
+                        )}
+                      </div>
                     </td>
                     <td className="px-3 py-2.5 text-center align-top text-muted">{p.used > 0 ? p.used.toLocaleString() : "—"}</td>
                     <td className="px-3 py-2.5 text-center align-top">
