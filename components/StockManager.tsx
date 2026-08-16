@@ -124,28 +124,6 @@ export default function StockManager({ rows, products, sizes, initialLow, isAdmi
     setSkuList((l) => (l.includes(s) ? l : [...l, s]));
     setSkuInput("");
   }
-  // โหมดใส่จำนวน: บาร์โค้ดเดียวกัน หลายชิ้น → รันเลข SKU ต่อจาก "SKU เริ่มต้น" อัตโนมัติ
-  const [qtyStart, setQtyStart] = useState("");
-  const [qtyN, setQtyN] = useState("");
-  function genSequence() {
-    setErr(""); setMsg("");
-    const start = qtyStart.trim();
-    const n = parseInt(qtyN, 10);
-    if (!start) { setErr("ใส่ SKU เริ่มต้น เช่น TA-0001"); return; }
-    if (!n || n < 1) { setErr("ใส่จำนวนชิ้น (1–500)"); return; }
-    if (n > 500) { setErr("รับเข้าครั้งละไม่เกิน 500 ชิ้น"); return; }
-    // เพิ่มเลขท้ายสุด (คงจำนวนหลัก 0 นำหน้า) เช่น TA-0001 → TA-0001..TA-0020
-    const m = start.match(/^(.*?)(\d+)(\D*)$/);
-    const seq: string[] = [];
-    if (m) {
-      const [, pre, num, suf] = m; const w = num.length; const base = parseInt(num, 10);
-      for (let i = 0; i < n; i++) seq.push(`${pre}${String(base + i).padStart(w, "0")}${suf}`);
-    } else {
-      for (let i = 1; i <= n; i++) seq.push(`${start}-${i}`);   // ไม่มีเลข → ต่อ -1..-n
-    }
-    setSkuList((l) => { const ex = new Set(l); return [...l, ...seq.filter((s) => !ex.has(s))]; });
-    setQtyStart(""); setQtyN("");
-  }
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState("");
   const [err, setErr] = useState("");
@@ -251,23 +229,7 @@ export default function StockManager({ rows, products, sizes, initialLow, isAdmi
               <Plus size={15} /> เพิ่มลงรายการ{hasCur ? ` (${curCount})` : ""}
             </button>
           </div>
-          {/* หลายชิ้นบาร์โค้ดเดียวกัน — ใส่ SKU เริ่มต้น + จำนวน → รันเลขให้อัตโนมัติ */}
-          <div className="mt-2 flex flex-wrap items-center gap-2 rounded-lg border border-dashed border-line bg-soft/40 p-2">
-            <span className="text-xs text-muted">บาร์โค้ดเดียวกันหลายชิ้น:</span>
-            <input value={qtyStart} onChange={(e) => setQtyStart(e.target.value)}
-              onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); genSequence(); } }}
-              className="input h-9 w-40 font-mono text-sm" placeholder="SKU เริ่มต้น" title="เช่น TA-0001" />
-            <span className="text-xs text-muted">×</span>
-            <input value={qtyN} onChange={(e) => setQtyN(e.target.value.replace(/[^0-9]/g, ""))}
-              onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); genSequence(); } }}
-              className="input h-9 w-24 text-sm" placeholder="จำนวน" inputMode="numeric" />
-            <button type="button" onClick={genSequence} className="btn-ghost h-9 whitespace-nowrap text-sm" disabled={busy}>
-              <Plus size={14} /> สร้าง SKU
-            </button>
-            {qtyStart.trim() && Number(qtyN) > 0 && (
-              <span className="text-[11px] text-faint">→ {qtyStart.trim()} … (รันต่อ {qtyN} เลข)</span>
-            )}
-          </div>
+          <p className="mt-1 text-[11px] text-faint">สแกนบาร์โค้ดครั้งเดียว แล้วสแกน/ใส่ SKU ของแต่ละชิ้นได้เรื่อยๆ (ไม่ต้องสแกนบาร์โค้ดใหม่)</p>
           {skuList.length > 0 && (
             <div className="mt-3 overflow-hidden rounded-lg border border-line">
               <table className="w-full text-sm">
