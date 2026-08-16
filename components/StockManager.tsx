@@ -107,6 +107,7 @@ export default function StockManager({ rows, products, sizes, initialLow, isAdmi
   const [f, setF] = useState({ barcode: "", product: "", size: "", grade: "", note: "" });
   const [skuList, setSkuList] = useState<string[]>([]);   // SKU รายชิ้นที่ user สแกน/ใส่เอง
   const [skuInput, setSkuInput] = useState("");
+  const todayStr = new Date().toLocaleDateString("th-TH", { day: "2-digit", month: "2-digit", year: "numeric" });
   const skuRef = useRef<HTMLInputElement>(null);
   async function doResolveBarcode() {
     if (!f.barcode.trim()) return;
@@ -197,24 +198,24 @@ export default function StockManager({ rows, products, sizes, initialLow, isAdmi
               <table className="w-full text-sm">
                 <thead className="bg-soft text-left text-xs text-muted">
                   <tr>
-                    <th className="w-10 px-3 py-2">#</th>
+                    <th className="px-3 py-2">Barcode</th>
                     <th className="px-3 py-2">SKU</th>
-                    <th className="px-3 py-2">บาร์โค้ด</th>
-                    <th className="px-3 py-2">กลิ่น</th>
-                    <th className="px-3 py-2">ขนาด</th>
+                    <th className="px-3 py-2">รายชื่อ</th>
+                    <th className="px-3 py-2">Type</th>
+                    <th className="px-3 py-2">วันที่รับเข้า</th>
                     <th className="w-12 px-3 py-2 text-right">ลบ</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {skuList.map((s, i) => {
+                  {skuList.map((s) => {
                     const bc = skuOf(f.product, f.size) || f.barcode.trim();
                     return (
                     <tr key={s} className="border-t border-line">
-                      <td className="px-3 py-1.5 text-muted">{i + 1}</td>
-                      <td className="px-3 py-1.5 font-mono text-xs text-ink">{s}</td>
                       <td className="px-3 py-1.5 font-mono text-xs text-muted">{bc || "—"}</td>
-                      <td className="px-3 py-1.5">{f.product || "—"}</td>
-                      <td className="px-3 py-1.5 text-muted">{f.size || "—"}</td>
+                      <td className="px-3 py-1.5 font-mono text-xs text-ink">{s}</td>
+                      <td className="px-3 py-1.5">{f.product || "—"} <span className="text-muted">{f.size}</span></td>
+                      <td className="px-3 py-1.5">{f.grade ? <span className="chip bg-brand-50 text-brand-600">{f.grade}</span> : <span className="text-faint">—</span>}</td>
+                      <td className="px-3 py-1.5 text-muted">{todayStr}</td>
                       <td className="px-3 py-1.5 text-right">
                         <button type="button" onClick={() => setSkuList((l) => l.filter((x) => x !== s))} className="text-faint hover:text-red-500"><X size={14} /></button>
                       </td>
