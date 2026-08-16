@@ -3,7 +3,7 @@ import { requireStock } from "@/lib/auth/require-user";
 import { can } from "@/lib/auth/roles";
 import { listUnits, unitCounts } from "@/lib/queries";
 import UnitsManager from "@/components/UnitsManager";
-import { ChevronLeft, ScanBarcode, Search } from "lucide-react";
+import { ChevronLeft, ScanBarcode, Search, FileDown } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
@@ -12,6 +12,7 @@ export default async function UnitsPage({ searchParams }: { searchParams: Promis
   const canEdit = can.manageStock(me.role);
   const { q, status, product, size } = await searchParams;
   const [units, counts] = await Promise.all([listUnits({ search: q, status, product, size, limit: 1000 }), unitCounts()]);
+  const exportQs = new URLSearchParams(Object.entries({ q, status, product, size }).filter(([, v]) => v) as [string, string][]).toString();
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-6 md:px-8">
@@ -23,6 +24,7 @@ export default async function UnitsPage({ searchParams }: { searchParams: Promis
           <h1 className="flex items-center gap-2 text-xl font-bold text-ink"><ScanBarcode size={18} /> ติดตาม SKU (รายชิ้น)</h1>
           <p className="mt-0.5 text-sm text-muted">อยู่คลัง <b className="text-green-700">{counts.in_stock.toLocaleString()}</b> · ตัดออกแล้ว <b className="text-ink">{counts.issued.toLocaleString()}</b> ชิ้น — ค้น SKU เพื่อดูว่าไปออเดอร์ไหน ใครซื้อ</p>
         </div>
+        <a href={`/api/stock/units-export${exportQs ? `?${exportQs}` : ""}`} className="btn-ghost text-sm"><FileDown size={15} /> Export Excel</a>
       </div>
 
       {(product || size) && (

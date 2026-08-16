@@ -153,6 +153,26 @@ export async function unitCounts(): Promise<{ in_stock: number; issued: number }
   } catch { return { in_stock: 0, issued: 0 }; }
 }
 
+export type UnitMismatch = { product: string; size: string; units: number; qty: number };
+/** ตรวจความตรง: (กลิ่น,ขนาด) ที่มี SKU รายชิ้น (in_stock) แต่จำนวนไม่ตรงยอดรวม
+ *  — normalize ชื่อ+ขนาดแบบเดียวกับ matchStockSku; เฉพาะที่มี unit เท่านั้น (ไม่เตือนสินค้าที่ไม่ได้ใช้ SKU) */
+export async function stockUnitMismatches(): Promise<UnitMismatch[]> {
+  try {
+    return await q<UnitMismatch>(
+      `with u as (
+         select regexp_replace(lower(btrim(product)),'[^a-z0-9ก-๙]','','g') as pk, btrim(lower(size),' .') as sk,
+                max(product) as product, max(size) as size, count(*)::int as units
+         from stock_unit where status='in_stock' group by 1,2),
+       s as (
+         select regexp_replace(lower(btrim(product)),'[^a-z0-9ก-๙]','','g') as pk, btrim(lower(size),' .') as sk,
+                sum(qty)::float8 as qty from stock group by 1,2)
+       select u.product, u.size, u.units, coalesce(s.qty,0)::float8 as qty
+       from u left join s on s.pk=u.pk and s.sk=u.sk
+       where u.units <> coalesce(s.qty,0)
+       order by u.product, u.size`);
+  } catch { return []; }
+}
+
 /** SKU (EAN) ต่อ (กลิ่น+ขนาด) — คีย์ = normalize(scent)|normalize(size) → barcode */
 export async function getSkuLookup(): Promise<Record<string, string>> {
   const nz = (s: string) => (s || "").toLowerCase().replace(/[^a-z0-9ก-๙]/g, "");
