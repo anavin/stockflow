@@ -106,29 +106,18 @@ export default function StockManager({ rows, products, sizes, initialLow, isAdmi
   // ---- รับเข้า / นำเข้าไฟล์ (admin) ----
   const [f, setF] = useState({ barcode: "", product: "", size: "", grade: "", note: "" });
   const [skuList, setSkuList] = useState<string[]>([]);   // SKU รายชิ้นของกลิ่นที่กำลังกรอก
-  const [skuInput, setSkuInput] = useState("");
   type BatchLine = { product: string; size: string; grade: string; barcode: string; skus: string[] };
   const [batch, setBatch] = useState<BatchLine[]>([]);    // ตะกร้า: หลายกลิ่น/ขนาด รับเข้าทีเดียว
-  const skuRef = useRef<HTMLInputElement>(null);
+  const qtyRef = useRef<HTMLInputElement>(null);
   async function doResolveBarcode() {
     if (!f.barcode.trim()) return;
     setErr(""); setMsg("");
     const res = await resolveSku(f.barcode);   // resolve จากบาร์โค้ดสินค้า (EAN) → กลิ่น+ขนาด
     if (!res.ok) { setErr(res.error || "ไม่พบบาร์โค้ด"); return; }
     setF((s) => ({ ...s, product: res.product!, size: res.size!, grade: res.grade || "" }));
-    setTimeout(() => skuRef.current?.focus(), 0);
+    setTimeout(() => qtyRef.current?.focus(), 0);   // โฟกัสช่อง "จำนวน" ต่อทันที
   }
-  function addSku(v: string) {
-    const s = v.trim(); if (!s) return;
-    setSkuList((l) => {
-      if (l.some((x) => x.trim() === s)) return l;            // กันซ้ำ
-      const idx = l.findIndex((x) => !x.trim());              // มีช่องว่าง → เติมช่องแรก
-      if (idx >= 0) { const c = [...l]; c[idx] = s; return c; }
-      return [...l, s];
-    });
-    setSkuInput("");
-  }
-  // สร้างช่องกรอกเปล่า N ช่อง (บาร์โค้ดเดียวกันหลายชิ้น) — user พิมพ์ SKU เองแต่ละช่อง
+  // สร้างช่องกรอกเปล่า N ช่อง (ตามจำนวนที่รับเข้า) — user พิมพ์ SKU เองแต่ละช่อง
   const [slotN, setSlotN] = useState("");
   const setSkuAt = (i: number, v: string) => setSkuList((l) => l.map((x, k) => (k === i ? v : x)));
   const removeSkuAt = (i: number) => setSkuList((l) => l.filter((_, k) => k !== i));
@@ -165,12 +154,9 @@ export default function StockManager({ rows, products, sizes, initialLow, isAdmi
     } catch { setErr("อัปโหลดไม่สำเร็จ"); }
     setBusy(false);
   }
-  // SKU ของกลิ่นที่กำลังกรอก (รวมที่ค้างในช่อง input) — ตัดช่องว่าง + กันซ้ำ
-  const currentSkus = () => {
-    const all = skuInput.trim() ? [...skuList, skuInput.trim()] : skuList;
-    return [...new Set(all.map((s) => s.trim()).filter(Boolean))];
-  };
-  const resetEntry = () => { setF({ barcode: "", product: "", size: "", grade: "", note: "" }); setSkuList([]); setSkuInput(""); setSlotN(""); };
+  // SKU ของกลิ่นที่กำลังกรอก — ตัดช่องว่าง + กันซ้ำ
+  const currentSkus = () => [...new Set(skuList.map((s) => s.trim()).filter(Boolean))];
+  const resetEntry = () => { setF({ barcode: "", product: "", size: "", grade: "", note: "" }); setSkuList([]); setSlotN(""); };
   const batchTotal = batch.reduce((n, l) => n + l.skus.length, 0);
   const curCount = currentSkus().length;
   const hasCur = !!(f.product && f.size && curCount);
@@ -234,43 +220,45 @@ export default function StockManager({ rows, products, sizes, initialLow, isAdmi
               className="input flex-1 min-w-[220px] font-mono" placeholder="สแกนบาร์โค้ดสินค้า (EAN) → เดากลิ่น/ขนาด" />
             <button type="button" onClick={doResolveBarcode} className="btn-ghost"><Search size={15} /> ค้นหา</button>
           </div>
-          {/* 2) กลิ่น/ขนาด (เลือกเองได้) */}
+          {/* 2) รายการที่เจอ (เลือก/แก้เองได้) */}
           <div className="mb-2 grid grid-cols-1 gap-2 md:grid-cols-[1fr_160px_1fr]">
             <Combobox value={f.product} onChange={(v) => setF((s) => ({ ...s, product: v }))} options={products} placeholder="เลือกกลิ่น" />
             <Combobox value={f.size} onChange={(v) => setF((s) => ({ ...s, size: v }))} options={sizes} placeholder="ขนาด" />
             <input className="input" value={f.note} onChange={(e) => setF((s) => ({ ...s, note: e.target.value }))} placeholder="หมายเหตุ (ถ้ามี)" />
           </div>
-          {/* 3) สแกน/ใส่ SKU รายชิ้น (1 ขวด = 1 SKU) */}
-          <label className="label flex items-center gap-1"><ScanBarcode size={13} /> สแกน / ใส่ SKU รายชิ้น (1 ขวด = 1 SKU · กด Enter ทีละชิ้น)</label>
-          <div className="flex flex-wrap gap-2">
-            <input ref={skuRef} value={skuInput} onChange={(e) => setSkuInput(e.target.value)}
-              onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addSku(skuInput); } }}
-              className="input flex-1 min-w-[220px] font-mono" placeholder="สแกน SKU ของชิ้นสินค้า แล้ว Enter" />
-            <button type="button" onClick={addToBatch} className="btn-ghost whitespace-nowrap" disabled={busy || !hasCur}>
-              <Plus size={15} /> เพิ่มลงรายการ{hasCur ? ` (${curCount})` : ""}
-            </button>
-          </div>
-          {/* บาร์โค้ดเดียวกันหลายชิ้น — ใส่จำนวน → สร้างช่องกรอกเปล่า (user พิมพ์ SKU เอง) */}
-          <div className="mt-2 flex flex-wrap items-center gap-2">
-            <span className="text-xs text-muted">บาร์โค้ดเดียวกันหลายชิ้น → สร้างช่องกรอก:</span>
-            <input value={slotN} onChange={(e) => setSlotN(e.target.value.replace(/[^0-9]/g, ""))}
-              onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addSlots(); } }}
-              className="input h-9 w-24 text-sm" placeholder="จำนวน" inputMode="numeric" />
-            <button type="button" onClick={addSlots} className="btn-ghost h-9 whitespace-nowrap text-sm" disabled={busy}>
-              <Plus size={14} /> เพิ่มช่องกรอก
-            </button>
-            <span className="text-[11px] text-faint">แล้วพิมพ์/สแกน SKU ลงแต่ละช่อง (Enter เลื่อนช่องถัดไป)</span>
-          </div>
+
+          {/* 3) รายการที่เจอ + จำนวนที่รับเข้า → สร้างช่องกรอก SKU */}
+          {f.product && f.size ? (
+            <div className="mt-1 rounded-lg border border-brand-200 bg-brand-50/40 p-3">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="flex flex-wrap items-center gap-2 text-sm">
+                  <span className="font-semibold text-ink">{f.product}</span>
+                  <span className="chip bg-white text-muted">{f.size}</span>
+                  {f.grade && <span className="chip bg-brand-50 text-brand-600">{f.grade}</span>}
+                  {(skuOf(f.product, f.size) || f.barcode.trim()) && <span className="font-mono text-xs text-faint">{skuOf(f.product, f.size) || f.barcode.trim()}</span>}
+                </div>
+                <div className="flex items-center gap-2">
+                  <label className="text-xs font-medium text-ink">รับเข้ากี่ชิ้น?</label>
+                  <input ref={qtyRef} value={slotN} onChange={(e) => setSlotN(e.target.value.replace(/[^0-9]/g, ""))}
+                    onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addSlots(); } }}
+                    className="input h-9 w-24 text-sm" placeholder="จำนวน" inputMode="numeric" />
+                  <button type="button" onClick={addSlots} className="btn-primary h-9 whitespace-nowrap text-sm" disabled={busy}>
+                    <Plus size={14} /> สร้างช่องกรอก
+                  </button>
+                </div>
+              </div>
+              <p className="mt-1.5 flex items-center gap-1 text-[11px] text-faint"><ScanBarcode size={12} /> ใส่จำนวน → เกิดช่องกรอก SKU ตามจำนวน แล้วพิมพ์/สแกน SKU ลงแต่ละช่อง (1 ขวด = 1 SKU · Enter เลื่อนช่องถัดไป)</p>
+            </div>
+          ) : (
+            <p className="mt-1 text-xs text-faint">สแกนบาร์โค้ดหรือเลือกกลิ่น/ขนาดก่อน แล้วระบุจำนวนที่จะรับเข้า</p>
+          )}
 
           {skuList.length > 0 && (
             <div className="mt-3 rounded-lg border border-line p-3">
               <div className="mb-2 flex flex-wrap items-center justify-between gap-2 text-xs">
-                <span className="text-muted">
-                  {f.product || "กลิ่นนี้"} <b className="text-ink">{f.size}</b>
-                  {f.grade ? <> · <span className="chip bg-brand-50 text-brand-600">{f.grade}</span></> : null}
-                  {(skuOf(f.product, f.size) || f.barcode.trim()) ? <> · <span className="font-mono text-faint">{skuOf(f.product, f.size) || f.barcode.trim()}</span></> : null}
-                </span>
-                <span className="text-muted">กรอกแล้ว <b className="text-ink">{curCount}</b>/{skuList.length}
+                <span className="flex items-center gap-1 font-medium text-ink"><ScanBarcode size={13} /> กรอก SKU รายชิ้น ({skuList.length} ช่อง)</span>
+                <span className="text-muted">กรอกแล้ว <b className="text-green-700">{curCount}</b>/{skuList.length}
+                  <button type="button" onClick={() => setSkuList((l) => [...l, ""])} className="ml-3 text-brand-600 hover:underline">+ เพิ่มช่อง</button>
                   <button type="button" onClick={() => setSkuList([])} className="ml-2 hover:text-ink">ล้างทั้งหมด</button>
                 </span>
               </div>
@@ -279,7 +267,7 @@ export default function StockManager({ rows, products, sizes, initialLow, isAdmi
                   <div key={i} className="flex items-center gap-1">
                     <span className="w-5 shrink-0 text-right text-[11px] text-faint">{i + 1}</span>
                     <input id={`sku-slot-${i}`} value={s} onChange={(e) => setSkuAt(i, e.target.value)}
-                      onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); const nx = document.getElementById(`sku-slot-${i + 1}`) as HTMLInputElement | null; nx ? nx.focus() : skuRef.current?.focus(); } }}
+                      onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); const nx = document.getElementById(`sku-slot-${i + 1}`) as HTMLInputElement | null; if (nx) nx.focus(); else (e.target as HTMLInputElement).blur(); } }}
                       className="input h-8 flex-1 font-mono text-xs" placeholder={`SKU #${i + 1}`} />
                     <button type="button" onClick={() => removeSkuAt(i)} className="shrink-0 text-faint hover:text-red-500" title="ลบช่องนี้"><X size={13} /></button>
                   </div>
@@ -336,12 +324,18 @@ export default function StockManager({ rows, products, sizes, initialLow, isAdmi
           <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
             <span className="text-xs text-muted">
               {grandTotal > 0
-                ? <>รวมที่จะรับเข้า <b className="text-ink">{grandTotal}</b> ชิ้น · {grandLines} กลิ่น/ขนาด{hasCur && batch.length > 0 ? " (รวมกลิ่นที่ค้างในช่อง)" : ""}</>
-                : "สแกน SKU → กด 'เพิ่มลงรายการ' เพื่อสะสมหลายกลิ่น แล้วรับเข้าทีเดียว"}
+                ? <>รวมที่จะรับเข้า <b className="text-ink">{grandTotal}</b> ชิ้น · {grandLines} กลิ่น/ขนาด{hasCur && batch.length > 0 ? " (รวมกลิ่นที่กำลังกรอก)" : ""}</>
+                : "กรอก SKU แล้วกด 'รับเข้าทั้งหมด' — หรือ 'เพิ่มลงรายการ' เพื่อสะสมหลายกลิ่นก่อน"}
             </span>
-            <button type="submit" className="btn-primary" disabled={busy || grandTotal === 0}>
-              {busy ? "กำลังรับเข้า…" : `รับเข้าทั้งหมด (${grandTotal} ชิ้น)`}
-            </button>
+            <div className="flex gap-2">
+              <button type="button" onClick={addToBatch} className="btn-ghost whitespace-nowrap" disabled={busy || !hasCur}
+                title="สะสมกลิ่นนี้ไว้ แล้วรับกลิ่นถัดไปต่อ">
+                <Plus size={15} /> เพิ่มลงรายการ{hasCur ? ` (${curCount})` : ""}
+              </button>
+              <button type="submit" className="btn-primary" disabled={busy || grandTotal === 0}>
+                {busy ? "กำลังรับเข้า…" : `รับเข้าทั้งหมด (${grandTotal} ชิ้น)`}
+              </button>
+            </div>
           </div>
           {err && <p className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{err}</p>}
           {msg && <p className="mt-3 flex items-center gap-1 rounded-lg bg-green-50 px-3 py-2 text-sm text-green-700"><CheckCircle2 size={14} /> {msg}</p>}
