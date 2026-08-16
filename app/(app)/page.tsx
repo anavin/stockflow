@@ -84,11 +84,13 @@ export default async function Dashboard() {
       </div>
 
       {/* ── highlights: fulfillment · stock health · trend ── */}
-      <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-3">
+      <div className="mt-4 grid grid-cols-1 items-stretch gap-4 md:grid-cols-3">
         {/* fulfillment ring */}
-        <section className="card flex flex-col p-5">
-          <h2 className="text-sm font-semibold text-ink">อัตราการตัดสต๊อก</h2>
-          <div className="mt-3 flex items-center gap-5">
+        <section className="card flex h-full flex-col p-5">
+          <header className="flex h-6 items-center justify-between">
+            <h2 className="flex items-center gap-2 text-sm font-semibold text-ink"><ScanLine size={15} /> อัตราการตัดสต๊อก</h2>
+          </header>
+          <div className="mt-4 flex flex-1 items-center gap-5">
             <Ring value={fulfill} />
             <div className="min-w-0 flex-1 space-y-2">
               <div className="flex items-center justify-between">
@@ -117,24 +119,38 @@ export default async function Dashboard() {
         </section>
 
         {/* stock health */}
-        <section className="card p-5">
-          <div className="mb-3 flex items-center justify-between">
+        <section className="card flex h-full flex-col p-5">
+          <header className="flex h-6 items-center justify-between">
             <h2 className="flex items-center gap-2 text-sm font-semibold text-ink"><Boxes size={15} /> สุขภาพสต๊อก</h2>
             <span className="text-xs text-muted">{s.skus.toLocaleString()} SKU</span>
+          </header>
+          <div className="mt-4 flex flex-1 flex-col justify-center">
+            <div className="grid grid-cols-3 gap-2">
+              <StockStat label="ปกติ" n={normal} total={s.skus} tone="green" />
+              <StockStat label="ใกล้หมด" n={s.low} total={s.skus} tone="amber" href="/stock?low=1" />
+              <StockStat label="ติดลบ" n={s.negative} total={s.skus} tone="red" href="/stock?low=1" />
+            </div>
+            <HealthBar normal={normal} low={s.low} negative={s.negative} />
           </div>
-          <div className="grid grid-cols-3 gap-2">
-            <StockStat label="ปกติ" n={normal} total={s.skus} tone="green" />
-            <StockStat label="ใกล้หมด" n={s.low} total={s.skus} tone="amber" href="/stock?low=1" />
-            <StockStat label="ติดลบ" n={s.negative} total={s.skus} tone="red" href="/stock?low=1" />
-          </div>
-          <HealthBar normal={normal} low={s.low} negative={s.negative} />
+          <Link href="/stock"
+            className="mt-4 inline-flex items-center justify-center gap-1 rounded-lg border border-line px-3 py-2 text-xs font-medium text-ink transition-colors hover:bg-soft">
+            <Boxes size={13} /> ดูสต๊อกทั้งหมด
+          </Link>
         </section>
 
         {/* orders trend */}
-        <section className="card p-5">
-          <h2 className="flex items-center gap-2 text-sm font-semibold text-ink"><TrendingUp size={15} /> ใบเบิกรายเดือน</h2>
-          <p className="mt-0.5 text-xs text-muted">6 เดือนล่าสุด</p>
-          <TrendBars data={trend} />
+        <section className="card flex h-full flex-col p-5">
+          <header className="flex h-6 items-center justify-between">
+            <h2 className="flex items-center gap-2 text-sm font-semibold text-ink"><TrendingUp size={15} /> ใบเบิกรายเดือน</h2>
+            <span className="text-xs text-muted">6 เดือนล่าสุด</span>
+          </header>
+          <div className="flex flex-1 flex-col justify-center">
+            <TrendBars data={trend} />
+          </div>
+          <Link href="/shopee"
+            className="mt-4 inline-flex items-center justify-center gap-1 rounded-lg border border-line px-3 py-2 text-xs font-medium text-ink transition-colors hover:bg-soft">
+            <ClipboardList size={13} /> ดูใบเบิกทั้งหมด
+          </Link>
         </section>
       </div>
 
