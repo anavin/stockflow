@@ -109,7 +109,6 @@ export default function StockManager({ rows, products, sizes, initialLow, isAdmi
   const [skuInput, setSkuInput] = useState("");
   type BatchLine = { product: string; size: string; grade: string; barcode: string; skus: string[] };
   const [batch, setBatch] = useState<BatchLine[]>([]);    // ตะกร้า: หลายกลิ่น/ขนาด รับเข้าทีเดียว
-  const todayStr = new Date().toLocaleDateString("th-TH", { day: "2-digit", month: "2-digit", year: "numeric" });
   const skuRef = useRef<HTMLInputElement>(null);
   async function doResolveBarcode() {
     if (!f.barcode.trim()) return;
@@ -121,8 +120,27 @@ export default function StockManager({ rows, products, sizes, initialLow, isAdmi
   }
   function addSku(v: string) {
     const s = v.trim(); if (!s) return;
-    setSkuList((l) => (l.includes(s) ? l : [...l, s]));
+    setSkuList((l) => {
+      if (l.some((x) => x.trim() === s)) return l;            // กันซ้ำ
+      const idx = l.findIndex((x) => !x.trim());              // มีช่องว่าง → เติมช่องแรก
+      if (idx >= 0) { const c = [...l]; c[idx] = s; return c; }
+      return [...l, s];
+    });
     setSkuInput("");
+  }
+  // สร้างช่องกรอกเปล่า N ช่อง (บาร์โค้ดเดียวกันหลายชิ้น) — user พิมพ์ SKU เองแต่ละช่อง
+  const [slotN, setSlotN] = useState("");
+  const setSkuAt = (i: number, v: string) => setSkuList((l) => l.map((x, k) => (k === i ? v : x)));
+  const removeSkuAt = (i: number) => setSkuList((l) => l.filter((_, k) => k !== i));
+  function addSlots() {
+    setErr("");
+    const n = parseInt(slotN, 10);
+    if (!n || n < 1) { setErr("ใส่จำนวนช่อง (1–500)"); return; }
+    if (skuList.length + n > 500) { setErr("รวมแล้วเกิน 500 ช่อง"); return; }
+    const at = skuList.length;
+    setSkuList((l) => [...l, ...Array(n).fill("")]);
+    setSlotN("");
+    setTimeout(() => document.getElementById(`sku-slot-${at}`)?.focus(), 0);
   }
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState("");
@@ -147,9 +165,12 @@ export default function StockManager({ rows, products, sizes, initialLow, isAdmi
     } catch { setErr("อัปโหลดไม่สำเร็จ"); }
     setBusy(false);
   }
-  // SKU ของกลิ่นที่กำลังกรอก (รวมที่ค้างในช่อง input)
-  const currentSkus = () => (skuInput.trim() ? [...skuList, skuInput.trim()] : skuList);
-  const resetEntry = () => { setF({ barcode: "", product: "", size: "", grade: "", note: "" }); setSkuList([]); setSkuInput(""); };
+  // SKU ของกลิ่นที่กำลังกรอก (รวมที่ค้างในช่อง input) — ตัดช่องว่าง + กันซ้ำ
+  const currentSkus = () => {
+    const all = skuInput.trim() ? [...skuList, skuInput.trim()] : skuList;
+    return [...new Set(all.map((s) => s.trim()).filter(Boolean))];
+  };
+  const resetEntry = () => { setF({ barcode: "", product: "", size: "", grade: "", note: "" }); setSkuList([]); setSkuInput(""); setSlotN(""); };
   const batchTotal = batch.reduce((n, l) => n + l.skus.length, 0);
   const curCount = currentSkus().length;
   const hasCur = !!(f.product && f.size && curCount);
@@ -229,41 +250,40 @@ export default function StockManager({ rows, products, sizes, initialLow, isAdmi
               <Plus size={15} /> เพิ่มลงรายการ{hasCur ? ` (${curCount})` : ""}
             </button>
           </div>
-          <p className="mt-1 text-[11px] text-faint">สแกนบาร์โค้ดครั้งเดียว แล้วสแกน/ใส่ SKU ของแต่ละชิ้นได้เรื่อยๆ (ไม่ต้องสแกนบาร์โค้ดใหม่)</p>
+          {/* บาร์โค้ดเดียวกันหลายชิ้น — ใส่จำนวน → สร้างช่องกรอกเปล่า (user พิมพ์ SKU เอง) */}
+          <div className="mt-2 flex flex-wrap items-center gap-2">
+            <span className="text-xs text-muted">บาร์โค้ดเดียวกันหลายชิ้น → สร้างช่องกรอก:</span>
+            <input value={slotN} onChange={(e) => setSlotN(e.target.value.replace(/[^0-9]/g, ""))}
+              onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addSlots(); } }}
+              className="input h-9 w-24 text-sm" placeholder="จำนวน" inputMode="numeric" />
+            <button type="button" onClick={addSlots} className="btn-ghost h-9 whitespace-nowrap text-sm" disabled={busy}>
+              <Plus size={14} /> เพิ่มช่องกรอก
+            </button>
+            <span className="text-[11px] text-faint">แล้วพิมพ์/สแกน SKU ลงแต่ละช่อง (Enter เลื่อนช่องถัดไป)</span>
+          </div>
+
           {skuList.length > 0 && (
-            <div className="mt-3 overflow-hidden rounded-lg border border-line">
-              <table className="w-full text-sm">
-                <thead className="bg-soft text-left text-xs text-muted">
-                  <tr>
-                    <th className="px-3 py-2">Barcode</th>
-                    <th className="px-3 py-2">SKU</th>
-                    <th className="px-3 py-2">รายชื่อ</th>
-                    <th className="px-3 py-2">Type</th>
-                    <th className="px-3 py-2">วันที่รับเข้า</th>
-                    <th className="w-12 px-3 py-2 text-right">ลบ</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {skuList.map((s) => {
-                    const bc = skuOf(f.product, f.size) || f.barcode.trim();
-                    return (
-                    <tr key={s} className="border-t border-line">
-                      <td className="px-3 py-1.5 font-mono text-xs text-muted">{bc || "—"}</td>
-                      <td className="px-3 py-1.5 font-mono text-xs text-ink">{s}</td>
-                      <td className="px-3 py-1.5">{f.product || "—"} <span className="text-muted">{f.size}</span></td>
-                      <td className="px-3 py-1.5">{f.grade ? <span className="chip bg-brand-50 text-brand-600">{f.grade}</span> : <span className="text-faint">—</span>}</td>
-                      <td className="px-3 py-1.5 text-muted">{todayStr}</td>
-                      <td className="px-3 py-1.5 text-right">
-                        <button type="button" onClick={() => setSkuList((l) => l.filter((x) => x !== s))} className="text-faint hover:text-red-500"><X size={14} /></button>
-                      </td>
-                    </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-              <div className="flex items-center justify-between bg-soft/40 px-3 py-1.5 text-xs text-muted">
-                <span>{f.product || "กลิ่นนี้"} {f.size} — <b className="text-ink">{skuList.length}</b> ชิ้น (ยังไม่เพิ่มลงรายการ)</span>
-                <button type="button" onClick={() => setSkuList([])} className="hover:text-ink">ล้าง</button>
+            <div className="mt-3 rounded-lg border border-line p-3">
+              <div className="mb-2 flex flex-wrap items-center justify-between gap-2 text-xs">
+                <span className="text-muted">
+                  {f.product || "กลิ่นนี้"} <b className="text-ink">{f.size}</b>
+                  {f.grade ? <> · <span className="chip bg-brand-50 text-brand-600">{f.grade}</span></> : null}
+                  {(skuOf(f.product, f.size) || f.barcode.trim()) ? <> · <span className="font-mono text-faint">{skuOf(f.product, f.size) || f.barcode.trim()}</span></> : null}
+                </span>
+                <span className="text-muted">กรอกแล้ว <b className="text-ink">{curCount}</b>/{skuList.length}
+                  <button type="button" onClick={() => setSkuList([])} className="ml-2 hover:text-ink">ล้างทั้งหมด</button>
+                </span>
+              </div>
+              <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-3 md:grid-cols-4">
+                {skuList.map((s, i) => (
+                  <div key={i} className="flex items-center gap-1">
+                    <span className="w-5 shrink-0 text-right text-[11px] text-faint">{i + 1}</span>
+                    <input id={`sku-slot-${i}`} value={s} onChange={(e) => setSkuAt(i, e.target.value)}
+                      onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); const nx = document.getElementById(`sku-slot-${i + 1}`) as HTMLInputElement | null; nx ? nx.focus() : skuRef.current?.focus(); } }}
+                      className="input h-8 flex-1 font-mono text-xs" placeholder={`SKU #${i + 1}`} />
+                    <button type="button" onClick={() => removeSkuAt(i)} className="shrink-0 text-faint hover:text-red-500" title="ลบช่องนี้"><X size={13} /></button>
+                  </div>
+                ))}
               </div>
             </div>
           )}
