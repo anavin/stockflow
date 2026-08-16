@@ -33,12 +33,10 @@ export default function Sidebar({ user }: { user: { full_name: string; username:
         { href: "/shopee/trash", label: "ถังขยะ", icon: Trash2 },
       ]
     : [];
-  const stockNav = can.viewStock(role)
-    ? [
-        { href: "/stock/issue", label: "ตัดสต๊อก (สแกน)", icon: ScanLine },
-        { href: "/stock", label: "สต๊อกคงเหลือ", icon: Boxes, exact: true },
-      ]
-    : [];
+  const stockNav = [
+    ...(can.issueStock(role) ? [{ href: "/stock/issue", label: "ตัดสต๊อก (สแกน)", icon: ScanLine }] : []),
+    ...(can.viewStock(role) ? [{ href: "/stock", label: "สต๊อกคงเหลือ", icon: Boxes, exact: true }] : []),
+  ];
 
   const isActive = (href: string, exact?: boolean) =>
     exact ? pathname === href : pathname.startsWith(href);

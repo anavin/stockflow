@@ -15,7 +15,7 @@ export default async function UsersPage() {
         <ChevronLeft size={16} /> กลับ
       </Link>
       <h1 className="mb-1 text-xl font-bold text-ink">จัดการผู้ใช้</h1>
-      <p className="mb-6 text-sm text-muted">เพิ่ม/ปิดใช้งานบัญชี และกำหนดบทบาท — สร้างใบเบิก · จัดของ/ตัดสต๊อก · แอดมิน (แยกงานกันไม่ให้ทำข้าม)</p>
+      <p className="mb-6 text-sm text-muted">เพิ่ม/ปิดใช้งานบัญชี และกำหนดบทบาท — 4 บทบาท: ฝ่ายขาย · ฝ่ายจัดของ · ฝ่ายคลัง · แอดมิน (แยกงานกันไม่ให้ทำข้ามสิทธิ์)</p>
       <UsersManager users={users} meId={me.id} />
     </div>
   );

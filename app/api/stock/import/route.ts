@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import ExcelJS from "exceljs";
 import { getCurrentUser } from "@/lib/auth/session";
+import { can } from "@/lib/auth/roles";
 import { parseStockWorkbook } from "@/lib/import/parse-stock";
 import { tx, q } from "@/lib/db";
 import { revalidatePath } from "next/cache";
@@ -13,7 +14,7 @@ export const maxDuration = 60;
 export async function POST(req: Request) {
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ ok: false, error: "กรุณาเข้าสู่ระบบ" }, { status: 401 });
-  if (user.role !== "admin") return NextResponse.json({ ok: false, error: "เฉพาะผู้ดูแลระบบ (admin)" }, { status: 403 });
+  if (!can.manageStock(user.role)) return NextResponse.json({ ok: false, error: "เฉพาะผู้ดูแลระบบ / ฝ่ายคลัง" }, { status: 403 });
 
   const form = await req.formData();
   const file = form.get("file");

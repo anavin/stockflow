@@ -1,5 +1,7 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { requireStock } from "@/lib/auth/require-user";
+import { can, homeFor } from "@/lib/auth/roles";
 import { stockSummary, getSpecOptionsForIssue } from "@/lib/queries";
 import StockIssue from "@/components/StockIssue";
 import { Boxes, History, ClipboardList, Tags } from "lucide-react";
@@ -8,6 +10,7 @@ export const dynamic = "force-dynamic";
 
 export default async function StockIssuePage({ searchParams }: { searchParams: Promise<{ order?: string }> }) {
   const me = await requireStock();
+  if (!can.issueStock(me.role)) redirect(homeFor(me.role));   // ฝ่ายคลังไม่ตัดสต๊อก
   const { order } = await searchParams;
   const [sum, specOptions] = await Promise.all([stockSummary(), getSpecOptionsForIssue()]);
   return (

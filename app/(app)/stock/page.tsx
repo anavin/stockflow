@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { requireStock } from "@/lib/auth/require-user";
+import { can } from "@/lib/auth/roles";
 import { listStock, getProducts, getSizes, stockSummary } from "@/lib/queries";
 import StockManager from "@/components/StockManager";
 import { ScanLine, FileDown } from "lucide-react";
@@ -8,7 +9,7 @@ export const dynamic = "force-dynamic";
 
 export default async function StockPage({ searchParams }: { searchParams: Promise<{ low?: string }> }) {
   const me = await requireStock();
-  const isAdmin = me.role === "admin";
+  const isAdmin = can.manageStock(me.role);   // admin + ฝ่ายคลัง = แก้สต๊อกได้
   const { low } = await searchParams;
   const [rows, products, sizes, sum] = await Promise.all([
     listStock({ limit: 5000 }),

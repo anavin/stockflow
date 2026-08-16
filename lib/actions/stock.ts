@@ -21,11 +21,11 @@ function pickAutoSpec(size: string, grade: string | null, rules: { sizes: string
   return "";
 }
 
-/** แก้ไขสต๊อก (รับเข้า/ปรับยอด/นำเข้า/ยกเลิก) = เฉพาะ admin */
-async function requireAdmin() {
+/** แก้ไขสต๊อก (รับเข้า/ปรับยอด/นำเข้า) = เจ้าของ (admin) + ฝ่ายคลัง (stock) */
+async function requireStockEdit() {
   const user = await getCurrentUser();
   if (!user) return { error: "กรุณาเข้าสู่ระบบ" as const };
-  if (user.role !== "admin") return { error: "เฉพาะผู้ดูแลระบบ (admin) เท่านั้นที่แก้ไขสต๊อกได้" as const };
+  if (!can.manageStock(user.role)) return { error: "เฉพาะผู้ดูแลระบบ / ฝ่ายคลัง เท่านั้นที่แก้ไขสต๊อกได้" as const };
   return { user };
 }
 
@@ -257,7 +257,7 @@ export async function reverseIssue(orderNo: string): Promise<{ ok: boolean; erro
 
 /** รับสินค้าเข้าสต๊อก (+qty) */
 export async function receiveStock(product: string, size: string, qty: number, note?: string): Promise<{ ok: boolean; error?: string; balance?: number }> {
-  const gate = await requireAdmin();
+  const gate = await requireStockEdit();
   if ("error" in gate) return { ok: false, error: gate.error };
   const user = gate.user;
   if (!product?.trim() || !size?.trim()) return { ok: false, error: "เลือกสินค้า + ขนาด" };
@@ -282,7 +282,7 @@ export async function receiveStock(product: string, size: string, qty: number, n
 
 /** ปรับยอดสต๊อกเป็นค่าที่นับได้ (set) — บันทึกส่วนต่างเป็น movement */
 export async function adjustStock(product: string, size: string, newQty: number, note?: string): Promise<{ ok: boolean; error?: string }> {
-  const gate = await requireAdmin();
+  const gate = await requireStockEdit();
   if ("error" in gate) return { ok: false, error: gate.error };
   const user = gate.user;
   const target = Number(newQty);
