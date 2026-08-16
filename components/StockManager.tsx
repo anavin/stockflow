@@ -1,12 +1,14 @@
 "use client";
 import { Fragment, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import dynamic from "next/dynamic";
 import Link from "next/link";
 import Combobox from "./Combobox";
+const CameraScan = dynamic(() => import("./CameraScan"), { ssr: false });
 import { receiveStock, receiveUnitsBatch, adjustStock, resolveSku } from "@/lib/actions/stock";
 import type { StockRow } from "@/lib/queries";
 import { PERFUME_TYPES } from "@/lib/types";
-import { PackagePlus, CheckCircle2, Search, History, FileUp, FileDown, Lock, Check, RotateCcw, ClipboardCheck, ChevronDown, ChevronRight, ScanBarcode, X, Plus } from "lucide-react";
+import { PackagePlus, CheckCircle2, Search, History, FileUp, FileDown, Lock, Check, RotateCcw, ClipboardCheck, ChevronDown, ChevronRight, ScanBarcode, X, Plus, Camera } from "lucide-react";
 
 type Status = "all" | "normal" | "low" | "out" | "neg";
 const keyOf = (r: StockRow) => `${r.product}|${r.size}`;
@@ -109,12 +111,15 @@ export default function StockManager({ rows, products, sizes, initialLow, isAdmi
   type BatchLine = { product: string; size: string; grade: string; barcode: string; skus: string[] };
   const [batch, setBatch] = useState<BatchLine[]>([]);    // ตะกร้า: หลายกลิ่น/ขนาด รับเข้าทีเดียว
   const qtyRef = useRef<HTMLInputElement>(null);
-  async function doResolveBarcode() {
-    if (!f.barcode.trim()) return;
+  const [scanOpen, setScanOpen] = useState(false);   // กล้องสแกนบาร์โค้ด
+  async function doResolveBarcode(code?: string) {
+    const bc = (code ?? f.barcode).trim();
+    if (!bc) return;
     setErr(""); setMsg("");
-    const res = await resolveSku(f.barcode);   // resolve จากบาร์โค้ดสินค้า (EAN) → กลิ่น+ขนาด
+    if (code != null) setF((s) => ({ ...s, barcode: code }));
+    const res = await resolveSku(bc);   // resolve จากบาร์โค้ดสินค้า (EAN) → กลิ่น+ขนาด
     if (!res.ok) { setErr(res.error || "ไม่พบบาร์โค้ด"); return; }
-    setF((s) => ({ ...s, product: res.product!, size: res.size!, grade: res.grade || "" }));
+    setF((s) => ({ ...s, barcode: bc, product: res.product!, size: res.size!, grade: res.grade || "" }));
     setTimeout(() => qtyRef.current?.focus(), 0);   // โฟกัสช่อง "จำนวน" ต่อทันที
   }
   // สร้างช่องกรอกเปล่า N ช่อง (ตามจำนวนที่รับเข้า) — user พิมพ์ SKU เองแต่ละช่อง
@@ -217,8 +222,9 @@ export default function StockManager({ rows, products, sizes, initialLow, isAdmi
           <div className="mb-2 flex flex-wrap gap-2">
             <input value={f.barcode} onChange={(e) => setF((s) => ({ ...s, barcode: e.target.value }))}
               onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); doResolveBarcode(); } }}
-              className="input flex-1 min-w-[220px] font-mono" placeholder="สแกนบาร์โค้ดสินค้า (EAN) → เดากลิ่น/ขนาด" />
-            <button type="button" onClick={doResolveBarcode} className="btn-ghost"><Search size={15} /> ค้นหา</button>
+              className="input flex-1 min-w-[200px] font-mono" placeholder="สแกนบาร์โค้ดสินค้า (EAN) → เดากลิ่น/ขนาด" />
+            <button type="button" onClick={() => setScanOpen(true)} className="btn-ghost" title="สแกนด้วยกล้อง"><Camera size={15} /> สแกน</button>
+            <button type="button" onClick={() => doResolveBarcode()} className="btn-ghost"><Search size={15} /> ค้นหา</button>
           </div>
           {/* 2) รายการที่เจอ (เลือก/แก้เองได้) */}
           <div className="mb-2 grid grid-cols-1 gap-2 md:grid-cols-[1fr_160px_1fr]">
@@ -339,6 +345,7 @@ export default function StockManager({ rows, products, sizes, initialLow, isAdmi
           </div>
           {err && <p className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{err}</p>}
           {msg && <p className="mt-3 flex items-center gap-1 rounded-lg bg-green-50 px-3 py-2 text-sm text-green-700"><CheckCircle2 size={14} /> {msg}</p>}
+          {scanOpen && <CameraScan onClose={() => setScanOpen(false)} onScan={(code) => { setScanOpen(false); doResolveBarcode(code); }} />}
         </form>
       )}
 
