@@ -203,8 +203,18 @@ export async function confirmIssueByOrder(
       }
       return runIssue(run, on, user.id);
     });
+    // ผูก SKU รายชิ้น → order (best-effort, ไม่ทำให้การตัดล้มถ้าตาราง stock_unit ยังไม่มี)
+    if (out.ok) {
+      try {
+        for (const e of entries) {
+          const sku = (e.sku || "").trim();
+          if (sku) await q(`update stock_unit set status = 'issued', order_no = $1, issued_at = now(), issued_by = $2 where btrim(sku) = $3 and status = 'in_stock'`, [on, user.id, sku]);
+        }
+      } catch { /* stock_unit ยังไม่พร้อม — ข้าม (traceability เสริม) */ }
+    }
     revalidatePath("/stock");
     revalidatePath("/stock/moves");
+    revalidatePath("/stock/units");
     return out;
   } catch (e: any) {
     return { ok: false, error: e?.message || "ตัดสต๊อกไม่สำเร็จ" };
@@ -296,6 +306,49 @@ export async function receiveStock(product: string, size: string, qty: number, n
   } catch (e: any) {
     return { ok: false, error: e?.message || "รับเข้าไม่สำเร็จ" };
   }
+}
+
+/** รับเข้า + สร้าง SKU รายชิ้น (serial): รหัสกลิ่น-ขนาด-เลขรัน เช่น THD-50-000123 */
+export async function receiveUnits(product: string, size: string, qty: number, barcode?: string): Promise<{ ok: boolean; error?: string; skus?: string[]; balance?: number; prefix?: string }> {
+  const gate = await requireStockEdit();
+  if ("error" in gate) return { ok: false, error: gate.error };
+  const user = gate.user;
+  const p = (product || "").trim(), sz = (size || "").trim();
+  const n = Math.floor(Number(qty));
+  if (!p || !sz) return { ok: false, error: "เลือกสินค้า + ขนาด" };
+  if (!(n > 0)) return { ok: false, error: "จำนวนต้องมากกว่า 0" };
+  if (n > 500) return { ok: false, error: "รับเข้าครั้งละไม่เกิน 500 ชิ้น" };
+  try {
+    const out = await tx<{ skus: string[]; balance: number; prefix: string }>(async (run) => {
+      const [pr] = await run<{ code: string | null; ptype: string | null }>(
+        `select code, ptype from products where lower(btrim(name)) = lower(btrim($1)) limit 1`, [p]);
+      const codePart = ((pr?.code || p).toUpperCase().replace(/[^A-Z0-9ก-๙]/g, "").slice(0, 6)) || "SKU";
+      const sizePart = (sz.match(/[0-9.]+/)?.[0] || "").replace(".", "");
+      const prefix = `${codePart}-${sizePart}`;
+      const [c] = await run<{ seq: number }>(
+        `insert into sku_counters (prefix, seq) values ($1, $2) on conflict (prefix) do update set seq = sku_counters.seq + $2 returning seq`, [prefix, n]);
+      const end = c.seq, start = end - n + 1;
+      const grade = pr?.ptype || null, bc = (barcode || "").trim() || null;
+      const skus: string[] = [];
+      for (let s = start; s <= end; s++) {
+        const sku = `${prefix}-${String(s).padStart(6, "0")}`;
+        skus.push(sku);
+        await run(`insert into stock_unit (sku, product, size, grade, barcode, received_by) values ($1,$2,$3,$4,$5,$6)`,
+          [sku, p, sz, grade, bc, user.id]);
+      }
+      // sync ยอดรวม (+n) + movement
+      const m = await matchStockSku(run, p, sz);
+      const [row] = await run<{ qty: number }>(
+        `insert into stock (product, size, qty, updated_at) values ($1,$2,$3,now())
+         on conflict (product, size) do update set qty = stock.qty + $3, updated_at = now()
+         returning qty::float8 as qty`, [m.product, m.size, n]);
+      await run(`insert into stock_moves (product, size, qty_change, balance, reason, note, sku, created_by)
+                 values ($1,$2,$3,$4,'receive',$5,$6,$7)`, [m.product, m.size, n, row.qty, `gen ${n} SKU`, prefix, user.id]);
+      return { skus, balance: row.qty, prefix };
+    });
+    revalidatePath("/stock"); revalidatePath("/stock/moves"); revalidatePath("/stock/units");
+    return { ok: true, ...out };
+  } catch (e: any) { return { ok: false, error: e?.message || "รับเข้าไม่สำเร็จ" }; }
 }
 
 /** ปรับยอดสต๊อกเป็นค่าที่นับได้ (set) — บันทึกส่วนต่างเป็น movement */

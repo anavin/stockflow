@@ -3,7 +3,7 @@ import { requireStock } from "@/lib/auth/require-user";
 import { can } from "@/lib/auth/roles";
 import { listStock, getProducts, getSizes, stockSummary, getDiscontinued, getSkuLookup } from "@/lib/queries";
 import StockManager from "@/components/StockManager";
-import { ScanLine, FileDown } from "lucide-react";
+import { ScanLine, FileDown, ScanBarcode } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
@@ -24,6 +24,7 @@ export default async function StockPage({ searchParams }: { searchParams: Promis
           <p className="text-sm text-muted">{sum.skus.toLocaleString()} รายการ (SKU) · ใกล้หมด {sum.low.toLocaleString()} · ตัดสต๊อกแล้ว {sum.issuedOrders.toLocaleString()} ใบ</p>
         </div>
         <div className="flex gap-2">
+          <Link href="/stock/units" className="btn-ghost"><ScanBarcode size={16} /> ติดตาม SKU</Link>
           <a href="/api/export/stock" className="btn-ghost"><FileDown size={16} /> Export</a>
           <Link href="/stock/issue" className="btn-primary"><ScanLine size={16} /> ตัดสต๊อก (สแกน)</Link>
         </div>

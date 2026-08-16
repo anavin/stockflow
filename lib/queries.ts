@@ -99,6 +99,36 @@ export async function getActiveSpecRules(): Promise<{ sizes: string; grades: str
   } catch { return []; }
 }
 
+export type UnitRow = {
+  sku: string; product: string; size: string; grade: string | null; barcode: string | null;
+  status: string; order_no: string | null; buyer: string | null; receiver: string | null; phone: string | null;
+  received_at: string; issued_at: string | null;
+};
+/** ติดตาม SKU รายชิ้น — ค้นด้วย SKU/กลิ่น/order + สถานะ; join orders เพื่อรู้ผู้ซื้อ */
+export async function listUnits(opts: { search?: string; status?: string; limit?: number } = {}): Promise<UnitRow[]> {
+  const params: any[] = [];
+  const where: string[] = [];
+  if (opts.search) { params.push(`%${opts.search}%`); const i = params.length; where.push(`(su.sku ilike $${i} or su.product ilike $${i} or coalesce(su.order_no,'') ilike $${i})`); }
+  if (opts.status) { params.push(opts.status); where.push(`su.status = $${params.length}`); }
+  const limit = Math.min(opts.limit ?? 500, 2000);
+  try {
+    return await q<UnitRow>(
+      `select su.sku, su.product, su.size, su.grade, su.barcode, su.status, su.order_no,
+              o.shop_name as buyer, o.receiver, o.phone, su.received_at, su.issued_at
+       from stock_unit su left join orders o on o.order_no = su.order_no
+       ${where.length ? "where " + where.join(" and ") : ""}
+       order by su.id desc limit ${limit}`, params);
+  } catch { return []; }
+}
+export async function unitCounts(): Promise<{ in_stock: number; issued: number }> {
+  try {
+    const [r] = await q<{ in_stock: number; issued: number }>(
+      `select count(*) filter (where status='in_stock')::int as in_stock,
+              count(*) filter (where status='issued')::int as issued from stock_unit`);
+    return { in_stock: r?.in_stock ?? 0, issued: r?.issued ?? 0 };
+  } catch { return { in_stock: 0, issued: 0 }; }
+}
+
 /** SKU (EAN) ต่อ (กลิ่น+ขนาด) — คีย์ = normalize(scent)|normalize(size) → barcode */
 export async function getSkuLookup(): Promise<Record<string, string>> {
   const nz = (s: string) => (s || "").toLowerCase().replace(/[^a-z0-9ก-๙]/g, "");

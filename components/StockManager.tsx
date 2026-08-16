@@ -3,10 +3,10 @@ import { Fragment, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Combobox from "./Combobox";
-import { receiveStock, adjustStock, resolveSku } from "@/lib/actions/stock";
+import { receiveStock, receiveUnits, adjustStock, resolveSku } from "@/lib/actions/stock";
 import type { StockRow } from "@/lib/queries";
 import { PERFUME_TYPES } from "@/lib/types";
-import { PackagePlus, CheckCircle2, Search, History, FileUp, FileDown, Lock, Check, RotateCcw, ClipboardCheck, ChevronDown, ChevronRight } from "lucide-react";
+import { PackagePlus, CheckCircle2, Search, History, FileUp, FileDown, Lock, Check, RotateCcw, ClipboardCheck, ChevronDown, ChevronRight, Printer, ScanBarcode } from "lucide-react";
 
 type Status = "all" | "normal" | "low" | "out" | "neg";
 const keyOf = (r: StockRow) => `${r.product}|${r.size}`;
@@ -129,12 +129,14 @@ export default function StockManager({ rows, products, sizes, initialLow, isAdmi
     } catch { setErr("อัปโหลดไม่สำเร็จ"); }
     setBusy(false);
   }
+  const [lastSkus, setLastSkus] = useState<string[]>([]);
   async function receive(e: React.FormEvent) {
     e.preventDefault(); setErr(""); setMsg(""); setBusy(true);
-    const res = await receiveStock(f.product, f.size, Number(f.qty), f.note, f.sku);
+    const res = await receiveUnits(f.product, f.size, Number(f.qty), f.sku);   // f.sku = บาร์โค้ด EAN ที่สแกน
     setBusy(false);
     if (!res.ok) { setErr(res.error || "รับเข้าไม่สำเร็จ"); return; }
-    setMsg(`รับเข้า ${f.product} ${f.size} +${f.qty} → คงเหลือ ${res.balance}${f.sku ? ` · SKU ${f.sku}` : ""}`);
+    setMsg(`รับเข้า ${f.product} ${f.size} +${f.qty} → คงเหลือ ${res.balance} · สร้าง SKU ${res.skus?.length ?? 0} ชิ้น`);
+    setLastSkus(res.skus || []);
     setF({ sku: "", product: "", size: "", grade: "", qty: "", note: "" }); router.refresh();
   }
 
@@ -182,6 +184,18 @@ export default function StockManager({ rows, products, sizes, initialLow, isAdmi
           </div>
           {err && <p className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{err}</p>}
           {msg && <p className="mt-3 flex items-center gap-1 rounded-lg bg-green-50 px-3 py-2 text-sm text-green-700"><CheckCircle2 size={14} /> {msg}</p>}
+          {lastSkus.length > 0 && (
+            <div className="mt-3 rounded-lg border border-line bg-soft/40 p-3">
+              <div className="mb-1.5 flex items-center justify-between">
+                <span className="flex items-center gap-1 text-sm font-medium text-ink"><ScanBarcode size={14} /> SKU ที่สร้าง ({lastSkus.length} ชิ้น)</span>
+                <a href={`/print/sku-labels?skus=${encodeURIComponent(lastSkus.join(","))}`} target="_blank" rel="noreferrer" className="btn-ghost text-xs"><Printer size={13} /> พิมพ์ป้าย SKU</a>
+              </div>
+              <div className="flex flex-wrap gap-1 font-mono text-[11px] text-muted">
+                {lastSkus.slice(0, 60).map((s) => <span key={s} className="rounded border border-line bg-white px-1.5 py-0.5">{s}</span>)}
+                {lastSkus.length > 60 && <span className="px-1">…อีก {lastSkus.length - 60}</span>}
+              </div>
+            </div>
+          )}
         </form>
       )}
 

@@ -4,7 +4,7 @@ import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { PLATFORMS } from "@/lib/config";
 import { can, ROLE_LABELS, roleList } from "@/lib/auth/roles";
-import { Package, PlusCircle, Upload, List, LogOut, Menu, X, Trash2, Users, ScanLine, Boxes, LayoutDashboard, FlaskConical } from "lucide-react";
+import { Package, PlusCircle, Upload, List, LogOut, Menu, X, Trash2, Users, ScanLine, Boxes, LayoutDashboard, FlaskConical, ScanBarcode } from "lucide-react";
 
 // สีเอกลักษณ์ของแต่ละแพลตฟอร์ม (ใช้เป็นจุดสีในเมนู)
 const PLATFORM_COLORS: Record<string, string> = {
@@ -36,6 +36,7 @@ export default function Sidebar({ user }: { user: { full_name: string; username:
   const stockNav = [
     ...(can.issueStock(role) ? [{ href: "/stock/issue", label: "ตัดสต๊อก (สแกน)", icon: ScanLine }] : []),
     ...(can.viewStock(role) ? [{ href: "/stock", label: "สต๊อกคงเหลือ", icon: Boxes, exact: true }] : []),
+    ...(can.viewStock(role) ? [{ href: "/stock/units", label: "ติดตาม SKU", icon: ScanBarcode }] : []),
   ];
 
   const isActive = (href: string, exact?: boolean) =>
