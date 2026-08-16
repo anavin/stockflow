@@ -198,7 +198,7 @@ function Panel({ order, copyLabel }: { order: OrderWithItems; copyLabel: string 
       {/* items table */}
       <View>
         <View style={s.th}>
-          {["#", "ประเภท", "สินค้า (EDP)", "ขนาด", "จำนวน", "Free", "หน่วย", "SKU"].map((h, i) => (
+          {["#", "Grade", "สินค้า (EDP)", "ขนาด", "จำนวน", "Free", "หน่วย", "SKU"].map((h, i) => (
             <Text key={i} style={[s.cell, s.hCell, { width: COL[i], textAlign: i === 4 ? "right" : "left" }]}>{h}</Text>
           ))}
         </View>
@@ -211,7 +211,7 @@ function Panel({ order, copyLabel }: { order: OrderWithItems; copyLabel: string 
             <Text style={[s.cell, cStyle, { width: COL[4], textAlign: "right", fontWeight: "bold" }]}>{Number(it.qty) || 0}</Text>
             <Text style={[s.cell, cStyle, { width: COL[5], color: it.is_free ? C.brand : C.faint }]}>{it.is_free ? "Free" : "-"}</Text>
             <Text style={[s.cell, cStyle, { width: COL[6] }]}>{T(it.unit)}</Text>
-            <Text style={[s.cell, cStyle, { width: COL[7], fontSize: cfs - 0.8 }]}>{T(it.sku)}</Text>
+            <Text style={[s.cell, cStyle, { width: COL[7], fontSize: cfs - 0.8 }]}>{it.sku || ""}</Text>
           </View>
         ))}
         <View style={s.foot}>

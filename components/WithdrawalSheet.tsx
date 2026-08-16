@@ -94,7 +94,7 @@ function Panel({ order, copyLabel }: { order: OrderWithItems; copyLabel: string 
         <thead>
           <tr>
             <th style={{ ...th, width: 18 }}>#</th>
-            <th style={{ ...th, width: 46 }}>ประเภท</th>
+            <th style={{ ...th, width: 46 }}>Grade</th>
             <th style={th}>รายการ</th>
             <th style={{ ...th, width: 48 }}>ขนาด</th>
             <th style={{ ...th, width: 36, textAlign: "right" }}>จำนวน</th>
@@ -113,7 +113,7 @@ function Panel({ order, copyLabel }: { order: OrderWithItems; copyLabel: string 
               <td style={{ ...td, textAlign: "right", fontWeight: 700 }}>{Number(it.qty) || 0}</td>
               <td style={{ ...td, color: it.is_free ? C.brand : C.faint }}>{it.is_free ? "Free" : "-"}</td>
               <td style={td}>{T(it.unit)}</td>
-              <td style={{ ...td, fontSize: 7 }}>{T(it.sku)}</td>
+              <td style={{ ...td, fontSize: 7 }}>{it.sku || ""}</td>
             </tr>
           ))}
           <tr>
