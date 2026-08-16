@@ -2025,3 +2025,66 @@ select * from (values
   ('50 ml','EDP','สี่เหลี่ยม',3), ('30 ml,50 ml','EDP+,PARFUM','ลูกเต๋า',4)
 ) as v(sizes, grades, spec, sort)
 where not exists (select 1 from public.spec_rules);
+
+-- 0018 อัพเดทเกรดต่อกลิ่น (จาก catalog ล่าสุด, Le Parfum→PARFUM, Volt→EDT)
+
+-- EDP (67)
+update public.products set ptype = 'EDP' where lower(btrim(name)) in (
+  '1000 thousand',   'apple cinnamon',   'argentum',   'atlantis',
+  'aqua',   'angel',   'beyond',   'blind magnolia',
+  'buoyant',   'celeb',   'cherry dance',   'cherry shade',
+  'cocoa gourmet',   'code red',   'dionysusx',   'dream island',
+  'dynasty',   'eden',   'elite',   'excalibur (edp)',
+  'feel light',   'found peony',   'fortuna',   'frisky',
+  'gentle elixir',   'hercules',   'ischyros',   'la belle',
+  'laven',   'legendary',   'lure',   'make way',
+  'mellow',   'men in black',   'moonlight',   'never blue',
+  'nouveau',   'oak&berry',   'passion',   'perfect pear',
+  'persist',   'rosarine',   'rose oud',   'secret of peach',
+  'senorita',   'shadow de bacci light',   'sicilia',   'silver',
+  'soul of the fire',   'spring',   'soir',   'teenage dream',
+  'tidy',   'vandal',   'velvet oud',   'victory',
+  'vintage',   'virginx',   'vivid',   'voyage',
+  'wealth',   'what (edp)',   'zeus',   'deep',
+  'gemini',   'shine',   'prince'
+);
+
+-- EDP+ (8)
+update public.products set ptype = 'EDP+' where lower(btrim(name)) in (
+  'amber spangle',   'blackest black',   'impression',   'legend of oud',
+  'luscious santal',   'patchouli absolute',   'sparkling mandarin',   'tropical leather'
+);
+
+-- EDT (13)
+update public.products set ptype = 'EDT' where lower(btrim(name)) in (
+  'relax',   'thai perfume (น้ำปรุง)',   'volt - aware (edt)',   'volt - benign (edt)',
+  'volt - elite (edt)',   'volt - gentle (edt)',   'volt - nifty (edt)',   'volt - perfect pear (edt)',
+  'volt - savoury (edt)',   'volt - twilight (edt)',   'volt - vandal (edt)',   'volt - what (edt)',
+  'volt - you (edt)'
+);
+
+-- PARFUM (6)
+update public.products set ptype = 'PARFUM' where lower(btrim(name)) in (
+  'cerise sucree',   'excalibur extrait',   'gambling 34+35',   'queen',
+  'savoury',   'what'
+);
+
+-- Car Perfume (4)
+update public.products set ptype = 'Car Perfume' where lower(btrim(name)) in (
+  'car parfumo cool mint',   'car parfumo earthy ozone',   'car parfumo fresh lemon',   'car parfumo ozone fresh'
+);
+
+-- 0019 อัพเดทรายการสเป็กชุดใหม่
+-- อัพเดทรายการสเป็กชุดใหม่ (ปิดของเก่า → เปิด/เพิ่มชุดใหม่)
+update public.spec_options set active = false;
+insert into public.spec_options (label, sort, active, for_bag) values
+  ('ฝาสีเงิน10ml', 1, true, false), ('ฝาสีดำ10ml', 2, true, false), ('ขวดกลม10ml', 3, true, false),
+  ('สี่เหลี่ยม', 4, true, false), ('ซองซิป', 5, true, false), ('X-Secret', 6, true, false), ('Tryme', 7, true, false),
+  ('ลูกเต๋า', 8, true, false), ('Pack', 9, true, false), ('Box Set', 10, true, false), ('ทรงสูง', 11, true, false),
+  ('ขวด90', 12, true, false), ('Size S', 13, true, true), ('Size M', 14, true, true), ('Car Parfume', 15, true, false),
+  ('1.2ml (45หลอด)', 16, true, false), ('น้ำปรุง', 17, true, false), ('Cloth', 18, true, false)
+on conflict (label) do update set sort = excluded.sort, active = true, for_bag = excluded.for_bag;
+
+-- ปรับกฎเลือกอัตโนมัติให้ชี้ชื่อสเป็กใหม่ (ฝาสีเงิน→ฝาสีเงิน10ml, ฝาสีดำ→ฝาสีดำ10ml)
+update public.spec_rules set spec = 'ฝาสีเงิน10ml' where spec = 'ฝาสีเงิน';
+update public.spec_rules set spec = 'ฝาสีดำ10ml'   where spec = 'ฝาสีดำ';

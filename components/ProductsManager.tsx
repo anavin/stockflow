@@ -174,9 +174,10 @@ export default function ProductsManager({
                       )}
                     </td>
                     <td className="px-3 py-2.5 align-top">
-                      <select value={p.ptype ?? ""} onChange={(e) => changeType(p.id, e.target.value)} className="input h-8 w-24 py-0 text-xs" title="Grade น้ำหอม">
+                      <select value={p.ptype ?? ""} onChange={(e) => changeType(p.id, e.target.value)} className="input h-8 w-28 py-0 text-xs" title="Grade น้ำหอม">
                         <option value="">—</option>
                         {PERFUME_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
+                        {p.ptype && !(PERFUME_TYPES as readonly string[]).includes(p.ptype) && <option value={p.ptype}>{p.ptype}</option>}
                       </select>
                     </td>
                     <td className="px-3 py-2.5">
