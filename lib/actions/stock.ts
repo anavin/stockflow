@@ -308,46 +308,40 @@ export async function receiveStock(product: string, size: string, qty: number, n
   }
 }
 
-/** รับเข้า + สร้าง SKU รายชิ้น (serial): รหัสกลิ่น-ขนาด-เลขรัน เช่น THD-50-000123 */
-export async function receiveUnits(product: string, size: string, qty: number, barcode?: string): Promise<{ ok: boolean; error?: string; skus?: string[]; balance?: number; prefix?: string }> {
+/** รับเข้ารายชิ้น: user ใส่/สแกน SKU เอง (ไม่ gen) — 1 SKU = 1 ชิ้น, กันซ้ำ */
+export async function receiveUnits(product: string, size: string, skus: string[], barcode?: string): Promise<{ ok: boolean; error?: string; added?: number; balance?: number; skus?: string[]; dupes?: string[] }> {
   const gate = await requireStockEdit();
   if ("error" in gate) return { ok: false, error: gate.error };
   const user = gate.user;
   const p = (product || "").trim(), sz = (size || "").trim();
-  const n = Math.floor(Number(qty));
+  const list = [...new Set((skus || []).map((s) => s.trim()).filter(Boolean))];
   if (!p || !sz) return { ok: false, error: "เลือกสินค้า + ขนาด" };
-  if (!(n > 0)) return { ok: false, error: "จำนวนต้องมากกว่า 0" };
-  if (n > 500) return { ok: false, error: "รับเข้าครั้งละไม่เกิน 500 ชิ้น" };
+  if (!list.length) return { ok: false, error: "สแกน/ใส่ SKU อย่างน้อย 1 ชิ้น" };
+  if (list.length > 500) return { ok: false, error: "รับเข้าครั้งละไม่เกิน 500 ชิ้น" };
   try {
-    const out = await tx<{ skus: string[]; balance: number; prefix: string }>(async (run) => {
-      const [pr] = await run<{ code: string | null; ptype: string | null }>(
-        `select code, ptype from products where lower(btrim(name)) = lower(btrim($1)) limit 1`, [p]);
-      const codePart = ((pr?.code || p).toUpperCase().replace(/[^A-Z0-9ก-๙]/g, "").slice(0, 6)) || "SKU";
-      const sizePart = (sz.match(/[0-9.]+/)?.[0] || "").replace(".", "");
-      const prefix = `${codePart}-${sizePart}`;
-      const [c] = await run<{ seq: number }>(
-        `insert into sku_counters (prefix, seq) values ($1, $2) on conflict (prefix) do update set seq = sku_counters.seq + $2 returning seq`, [prefix, n]);
-      const end = c.seq, start = end - n + 1;
+    const out = await tx<{ added: number; balance: number; dupes: string[] }>(async (run) => {
+      const [pr] = await run<{ ptype: string | null }>(`select ptype from products where lower(btrim(name)) = lower(btrim($1)) limit 1`, [p]);
       const grade = pr?.ptype || null, bc = (barcode || "").trim() || null;
-      const skus: string[] = [];
-      for (let s = start; s <= end; s++) {
-        const sku = `${prefix}-${String(s).padStart(6, "0")}`;
-        skus.push(sku);
+      const dupes: string[] = []; let added = 0;
+      for (const sku of list) {
+        const [ex] = await run<{ x: number }>(`select 1 as x from stock_unit where btrim(sku) = $1 limit 1`, [sku]);
+        if (ex) { dupes.push(sku); continue; }
         await run(`insert into stock_unit (sku, product, size, grade, barcode, received_by) values ($1,$2,$3,$4,$5,$6)`,
           [sku, p, sz, grade, bc, user.id]);
+        added++;
       }
-      // sync ยอดรวม (+n) + movement
+      if (added === 0) throw new Error("SKU ที่ใส่มีอยู่ในระบบแล้วทั้งหมด");
       const m = await matchStockSku(run, p, sz);
       const [row] = await run<{ qty: number }>(
         `insert into stock (product, size, qty, updated_at) values ($1,$2,$3,now())
          on conflict (product, size) do update set qty = stock.qty + $3, updated_at = now()
-         returning qty::float8 as qty`, [m.product, m.size, n]);
-      await run(`insert into stock_moves (product, size, qty_change, balance, reason, note, sku, created_by)
-                 values ($1,$2,$3,$4,'receive',$5,$6,$7)`, [m.product, m.size, n, row.qty, `gen ${n} SKU`, prefix, user.id]);
-      return { skus, balance: row.qty, prefix };
+         returning qty::float8 as qty`, [m.product, m.size, added]);
+      await run(`insert into stock_moves (product, size, qty_change, balance, reason, note, created_by)
+                 values ($1,$2,$3,$4,'receive',$5,$6)`, [m.product, m.size, added, row.qty, `รับเข้า ${added} SKU`, user.id]);
+      return { added, balance: row.qty, dupes };
     });
     revalidatePath("/stock"); revalidatePath("/stock/moves"); revalidatePath("/stock/units");
-    return { ok: true, ...out };
+    return { ok: true, ...out, skus: list };
   } catch (e: any) { return { ok: false, error: e?.message || "รับเข้าไม่สำเร็จ" }; }
 }
 

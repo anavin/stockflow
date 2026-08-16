@@ -6,7 +6,7 @@ import Combobox from "./Combobox";
 import { receiveStock, receiveUnits, adjustStock, resolveSku } from "@/lib/actions/stock";
 import type { StockRow } from "@/lib/queries";
 import { PERFUME_TYPES } from "@/lib/types";
-import { PackagePlus, CheckCircle2, Search, History, FileUp, FileDown, Lock, Check, RotateCcw, ClipboardCheck, ChevronDown, ChevronRight, Printer, ScanBarcode } from "lucide-react";
+import { PackagePlus, CheckCircle2, Search, History, FileUp, FileDown, Lock, Check, RotateCcw, ClipboardCheck, ChevronDown, ChevronRight, Printer, ScanBarcode, X } from "lucide-react";
 
 type Status = "all" | "normal" | "low" | "out" | "neg";
 const keyOf = (r: StockRow) => `${r.product}|${r.size}`;
@@ -104,15 +104,22 @@ export default function StockManager({ rows, products, sizes, initialLow, isAdmi
   }
 
   // ---- รับเข้า / นำเข้าไฟล์ (admin) ----
-  const [f, setF] = useState({ sku: "", product: "", size: "", grade: "", qty: "", note: "" });
-  const qtyRef = useRef<HTMLInputElement>(null);
-  async function doResolveSku() {
-    if (!f.sku.trim()) return;
+  const [f, setF] = useState({ barcode: "", product: "", size: "", grade: "", note: "" });
+  const [skuList, setSkuList] = useState<string[]>([]);   // SKU รายชิ้นที่ user สแกน/ใส่เอง
+  const [skuInput, setSkuInput] = useState("");
+  const skuRef = useRef<HTMLInputElement>(null);
+  async function doResolveBarcode() {
+    if (!f.barcode.trim()) return;
     setErr(""); setMsg("");
-    const res = await resolveSku(f.sku);
-    if (!res.ok) { setErr(res.error || "ไม่พบ SKU"); return; }
+    const res = await resolveSku(f.barcode);   // resolve จากบาร์โค้ดสินค้า (EAN) → กลิ่น+ขนาด
+    if (!res.ok) { setErr(res.error || "ไม่พบบาร์โค้ด"); return; }
     setF((s) => ({ ...s, product: res.product!, size: res.size!, grade: res.grade || "" }));
-    setTimeout(() => qtyRef.current?.focus(), 0);
+    setTimeout(() => skuRef.current?.focus(), 0);
+  }
+  function addSku(v: string) {
+    const s = v.trim(); if (!s) return;
+    setSkuList((l) => (l.includes(s) ? l : [...l, s]));
+    setSkuInput("");
   }
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState("");
@@ -132,12 +139,14 @@ export default function StockManager({ rows, products, sizes, initialLow, isAdmi
   const [lastSkus, setLastSkus] = useState<string[]>([]);
   async function receive(e: React.FormEvent) {
     e.preventDefault(); setErr(""); setMsg(""); setBusy(true);
-    const res = await receiveUnits(f.product, f.size, Number(f.qty), f.sku);   // f.sku = บาร์โค้ด EAN ที่สแกน
+    const all = skuInput.trim() ? [...skuList, skuInput.trim()] : skuList;   // เผื่อยังพิมพ์ค้างในช่อง
+    const res = await receiveUnits(f.product, f.size, all, f.barcode);
     setBusy(false);
     if (!res.ok) { setErr(res.error || "รับเข้าไม่สำเร็จ"); return; }
-    setMsg(`รับเข้า ${f.product} ${f.size} +${f.qty} → คงเหลือ ${res.balance} · สร้าง SKU ${res.skus?.length ?? 0} ชิ้น`);
-    setLastSkus(res.skus || []);
-    setF({ sku: "", product: "", size: "", grade: "", qty: "", note: "" }); router.refresh();
+    const dup = res.dupes?.length ? ` · ข้ามซ้ำ ${res.dupes.length}` : "";
+    setMsg(`รับเข้า ${f.product} ${f.size} +${res.added} ชิ้น → คงเหลือ ${res.balance}${dup}`);
+    setLastSkus((res.skus || []).filter((s) => !(res.dupes || []).includes(s)));
+    setF({ barcode: "", product: "", size: "", grade: "", note: "" }); setSkuList([]); setSkuInput(""); router.refresh();
   }
 
   return (
@@ -162,26 +171,39 @@ export default function StockManager({ rows, products, sizes, initialLow, isAdmi
                 onChange={(e) => { const file = e.target.files?.[0]; if (file) importFile(file); }} />
             </div>
           </div>
-          {/* 1) สแกน SKU → เดากลิ่น+ขนาดให้ */}
+          {/* 1) สแกนบาร์โค้ดสินค้า (EAN) → เดากลิ่น+ขนาด */}
           <div className="mb-2 flex flex-wrap gap-2">
-            <input value={f.sku} onChange={(e) => setF((s) => ({ ...s, sku: e.target.value }))}
-              onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); doResolveSku(); } }}
-              className="input flex-1 min-w-[220px] font-mono" placeholder="สแกน / กรอก SKU (บาร์โค้ด) แล้ว Enter" />
-            <button type="button" onClick={doResolveSku} className="btn-ghost"><Search size={15} /> ค้นหา SKU</button>
+            <input value={f.barcode} onChange={(e) => setF((s) => ({ ...s, barcode: e.target.value }))}
+              onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); doResolveBarcode(); } }}
+              className="input flex-1 min-w-[220px] font-mono" placeholder="สแกนบาร์โค้ดสินค้า (EAN) → เดากลิ่น/ขนาด" />
+            <button type="button" onClick={doResolveBarcode} className="btn-ghost"><Search size={15} /> ค้นหา</button>
           </div>
-          {f.product && f.sku && (
-            <div className="mb-2 flex items-center gap-2 rounded-lg bg-brand-50 px-3 py-1.5 text-sm text-brand-600">
-              พบ: <b className="text-ink">{f.product}</b> {f.grade && <span className="chip bg-white text-brand-600">{f.grade}</span>} · {f.size}
-            </div>
-          )}
-          {/* 2) กลิ่น/ขนาด (เติมอัตโนมัติจาก SKU หรือเลือกเองได้) + จำนวน */}
-          <div className="grid grid-cols-1 gap-2 md:grid-cols-[1fr_140px_120px_1fr_auto]">
+          {/* 2) กลิ่น/ขนาด (เลือกเองได้) */}
+          <div className="mb-2 grid grid-cols-1 gap-2 md:grid-cols-[1fr_160px_1fr]">
             <Combobox value={f.product} onChange={(v) => setF((s) => ({ ...s, product: v }))} options={products} placeholder="เลือกกลิ่น" />
             <Combobox value={f.size} onChange={(v) => setF((s) => ({ ...s, size: v }))} options={sizes} placeholder="ขนาด" />
-            <input ref={qtyRef} type="number" min={1} className="input" value={f.qty} onChange={(e) => setF((s) => ({ ...s, qty: e.target.value }))} placeholder="จำนวน" />
             <input className="input" value={f.note} onChange={(e) => setF((s) => ({ ...s, note: e.target.value }))} placeholder="หมายเหตุ (ถ้ามี)" />
-            <button className="btn-primary" disabled={busy}>{busy ? "…" : "รับเข้า"}</button>
           </div>
+          {/* 3) สแกน/ใส่ SKU รายชิ้น (user ใส่เอง) */}
+          <label className="label flex items-center gap-1"><ScanBarcode size={13} /> สแกน / ใส่ SKU รายชิ้น (กด Enter ทีละชิ้น)</label>
+          <div className="flex flex-wrap gap-2">
+            <input ref={skuRef} value={skuInput} onChange={(e) => setSkuInput(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addSku(skuInput); } }}
+              className="input flex-1 min-w-[220px] font-mono" placeholder="สแกน SKU ของชิ้นสินค้า แล้ว Enter" />
+            <button type="submit" className="btn-primary" disabled={busy || (skuList.length === 0 && !skuInput.trim())}>
+              {busy ? "…" : `รับเข้า (${skuList.length + (skuInput.trim() ? 1 : 0)} ชิ้น)`}
+            </button>
+          </div>
+          {skuList.length > 0 && (
+            <div className="mt-2 flex flex-wrap items-center gap-1">
+              {skuList.map((s) => (
+                <span key={s} className="inline-flex items-center gap-1 rounded-md border border-line bg-white px-2 py-0.5 font-mono text-xs text-ink">
+                  {s}<button type="button" onClick={() => setSkuList((l) => l.filter((x) => x !== s))} className="text-faint hover:text-red-500"><X size={11} /></button>
+                </span>
+              ))}
+              <button type="button" onClick={() => setSkuList([])} className="ml-1 text-xs text-muted hover:text-ink">ล้างทั้งหมด</button>
+            </div>
+          )}
           {err && <p className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{err}</p>}
           {msg && <p className="mt-3 flex items-center gap-1 rounded-lg bg-green-50 px-3 py-2 text-sm text-green-700"><CheckCircle2 size={14} /> {msg}</p>}
           {lastSkus.length > 0 && (
