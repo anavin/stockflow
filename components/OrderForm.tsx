@@ -13,7 +13,7 @@ import { saveOrder, orderExists, customerHistory, type OrderInput } from "@/lib/
 import { CUSTOMER_TYPES } from "@/lib/config";
 import type { OrderWithItems } from "@/lib/types";
 import type { PostcodeRow } from "@/lib/queries";
-import { Save, Printer, CheckCircle2, AlertTriangle, History } from "lucide-react";
+import { Save, Printer, CheckCircle2, AlertTriangle, History, Zap } from "lucide-react";
 
 // เบอร์โทร: เก็บเฉพาะตัวเลข + - เว้นวรรค (กันพิมพ์ตัวอักษร)
 const cleanPhone = (v: string) => v.replace(/[^0-9\-+ ]/g, "");
@@ -379,7 +379,14 @@ export default function OrderForm({ products, sizes, provinces, postcodes, initi
             <DatePicker value={f.order_date} onChange={(v) => set({ order_date: v })} />
           </div>
           <div className="md:col-span-3">
-            <label className="label">หมายเหตุ (Note)</label>
+            <div className="mb-1 flex items-center gap-2">
+              <label className="label mb-0">หมายเหตุ (Note)</label>
+              <button type="button" onClick={() => set({ note: f.note.trim() === "ส่งทันที" ? "" : "ส่งทันที" })}
+                className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-xs font-medium transition-colors ${
+                  f.note.trim() === "ส่งทันที" ? "border-brand-200 bg-brand-50 text-brand-600" : "border-line bg-white text-muted hover:bg-soft"}`}>
+                <Zap size={12} /> ส่งทันที
+              </button>
+            </div>
             <textarea className="input min-h-[56px]" value={f.note} onChange={(e) => set({ note: e.target.value })} />
           </div>
         </div>
