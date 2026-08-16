@@ -8,7 +8,7 @@ import { can } from "@/lib/auth/roles";
 async function gate() {
   const user = await getCurrentUser();
   if (!user) return { error: "กรุณาเข้าสู่ระบบ" as const };
-  if (!can.issueStock(user.role)) return { error: "ไม่มีสิทธิ์จัดการสเป็ก" as const };
+  if (!can.issueStock(user.role) && !can.createOrders(user.role)) return { error: "ไม่มีสิทธิ์จัดการสเป็ก" as const };
   return { user };
 }
 function done() {

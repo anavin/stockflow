@@ -14,7 +14,7 @@ export async function GET(req: Request) {
   if (!user) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
 
   const raw = new URL(req.url).searchParams.get("orders") || "";
-  const nos = raw.split(",").map((s) => decodeURIComponent(s.trim())).filter(Boolean);
+  const nos = raw.split(",").map((s) => decodeURIComponent(s.trim())).filter(Boolean).slice(0, 200);
   if (nos.length === 0) return NextResponse.json({ error: "ไม่ได้เลือกใบเบิก" }, { status: 400 });
 
   const fetched = await Promise.all(nos.map((n) => getOrder(n)));

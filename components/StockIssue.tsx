@@ -118,10 +118,18 @@ export default function StockIssue({ isAdmin, initialOrder, specOptions = [] }: 
                   <span className="text-xs text-muted">จำนวน {it.qty} · {it.tracked ? `คงเหลือ ${it.stock}` : "ไม่ตัดสต๊อก"}</span>
                 </div>
                 <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
-                  <div className="flex gap-1">
-                    <input className="input flex-1 font-mono text-sm" placeholder="สแกน/กรอก SKU"
-                      value={form[it.line_no]?.sku || ""} onChange={(e) => setField(it.line_no, "sku", e.target.value)} />
-                    <button type="button" onClick={() => setSkuScanLine(it.line_no)} className="btn-ghost shrink-0 px-2" title="สแกน SKU ด้วยกล้อง"><Camera size={16} /></button>
+                  <div>
+                    <div className="flex gap-1">
+                      <input className="input flex-1 font-mono text-sm" placeholder="สแกน/กรอก SKU"
+                        value={form[it.line_no]?.sku || ""} onChange={(e) => setField(it.line_no, "sku", e.target.value)} />
+                      <button type="button" onClick={() => setSkuScanLine(it.line_no)} className="btn-ghost shrink-0 px-2" title="สแกน SKU ด้วยกล้อง"><Camera size={16} /></button>
+                    </div>
+                    {it.ctw_barcode && (
+                      <button type="button" onClick={() => setField(it.line_no, "sku", it.ctw_barcode!)}
+                        className="mt-1 font-mono text-[11px] text-brand-600 hover:underline" title="กดเพื่อใส่เป็น SKU">
+                        EAN (CTW): {it.ctw_barcode} — กดใช้
+                      </button>
+                    )}
                   </div>
                   {(() => {
                     const cur = form[it.line_no]?.spec || "";

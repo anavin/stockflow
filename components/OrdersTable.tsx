@@ -51,6 +51,8 @@ export default function OrdersTable({ orders }: { orders: OrderRow[] }) {
   function onBulkPrint() {
     const list = [...sel];
     if (list.length === 0) return;
+    if (list.length > 200) { alert("เลือกได้สูงสุด 200 ใบต่อการพิมพ์ 1 ครั้ง — กรุณาแบ่งพิมพ์เป็นชุด"); return; }
+    if (list.length > 50 && !confirm(`เลือก ${list.length} ใบ — สร้างไฟล์ PDF จำนวนมากอาจใช้เวลาสักครู่ ดำเนินการต่อ?`)) return;
     const qs = list.map((n) => encodeURIComponent(n)).join(",");
     window.open(`/api/print-bulk?orders=${qs}`, "_blank", "noopener");
   }

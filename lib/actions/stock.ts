@@ -4,7 +4,7 @@ import { q, tx } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth/session";
 import { can } from "@/lib/auth/roles";
 import { isStockTracked } from "@/lib/config";
-import { getActiveSpecRules } from "@/lib/queries";
+import { getActiveSpecRules, getScentBarcodes } from "@/lib/queries";
 
 // ---- auto-select spec ตามขนาด + Grade (จากตาราง spec_rules) --------------------
 const normSize = (s: string) => (s || "").toLowerCase().replace(/[^0-9a-z]/g, "");
@@ -138,7 +138,7 @@ export async function issueStockByOrder(orderNo: string): Promise<IssueResult> {
 export type IssueItemPreview = {
   line_no: number; product: string; size: string; qty: number; unit: string;
   is_free: boolean; sku: string | null; spec: string | null; stock: number; tracked: boolean;
-  grade: string | null; is_bag: boolean;
+  grade: string | null; is_bag: boolean; ctw_barcode: string | null;
 };
 export type IssueLookup = {
   ok: boolean; error?: string; alreadyIssued?: boolean;
@@ -161,11 +161,12 @@ export async function lookupOrderForIssue(orderNo: string): Promise<IssueLookup>
 
   const items = await q<{ line_no: number; product: string; size: string; qty: number; unit: string; is_free: boolean; sku: string | null; spec: string | null; grade: string | null }>(
     `select line_no, product, size, qty::float8 as qty, unit, is_free, sku, spec,
-            (select p.ptype from products p where p.name = order_items.product limit 1) as grade
+            (select p.ptype from products p where lower(btrim(p.name)) = lower(btrim(order_items.product)) limit 1) as grade
      from order_items where order_no = $1 and coalesce(product,'') <> '' order by line_no`, [on]);
   if (items.length === 0) return { ok: false, error: "ใบเบิกไม่มีรายการสินค้า" };
 
   const rules = await getActiveSpecRules();
+  const bcMap = await getScentBarcodes();  // ทนทาน: คืน {} ถ้าตาราง product_barcodes ยังไม่มี
   const withStock: IssueItemPreview[] = [];
   for (const it of items) {
     // ยอดคงเหลือที่โชว์ต้องมาจาก SKU แถวเดียวกับที่จะตัดจริง (normalize ชื่อ+ขนาดเหมือน matchStockSku)
@@ -175,7 +176,10 @@ export async function lookupOrderForIssue(orderNo: string): Promise<IssueLookup>
     const bag = isBagProduct(it.product);
     // เลือกสเป็กอัตโนมัติ: ใช้ค่าที่เคยกรอกไว้ก่อน ถ้าไม่มีค่อยเดาจากกฎ (เฉพาะสินค้าที่ไม่ใช่ถุง)
     const spec = it.spec || (bag ? "" : pickAutoSpec(it.size, it.grade, rules));
-    withStock.push({ ...it, spec, stock: s?.qty ?? 0, tracked: isStockTracked(it.size), is_bag: bag });
+    // บาร์โค้ด CTW ที่ตรงกับ (กลิ่น + ขนาด) — match ใน JS
+    const szKey = normSize(it.size);
+    const ctw_barcode = (bcMap[it.product.trim().toLowerCase()] || []).find((b) => normSize(b.size) === szKey)?.barcode ?? null;
+    withStock.push({ ...it, spec, stock: s?.qty ?? 0, tracked: isStockTracked(it.size), is_bag: bag, ctw_barcode });
   }
   return { ok: true, order_no: on, doc_no: order.doc_no, note: order.note, items: withStock };
 }

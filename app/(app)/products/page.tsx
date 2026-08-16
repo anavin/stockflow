@@ -2,7 +2,7 @@ import Link from "next/link";
 import { requireCreator } from "@/lib/auth/require-user";
 import { listProductsAdmin, getScentBarcodes } from "@/lib/queries";
 import ProductsManager from "@/components/ProductsManager";
-import { ChevronLeft } from "lucide-react";
+import { ChevronLeft, Tags } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
@@ -14,8 +14,13 @@ export default async function ProductsPage() {
       <Link href="/" className="mb-4 inline-flex items-center gap-1 text-sm text-muted hover:text-ink">
         <ChevronLeft size={16} /> กลับ
       </Link>
-      <h1 className="mb-1 text-xl font-bold text-ink">จัดการกลิ่น</h1>
-      <p className="mb-6 text-sm text-muted">เพิ่ม / แก้ชื่อ / รหัส / บาร์โค้ด / ประเภท / ขนาด — ที่เดียวจบ · มีผลกับ dropdown ตอนสร้างใบเบิก และการจับกลิ่นตอน import</p>
+      <div className="mb-6 flex items-start justify-between gap-3">
+        <div>
+          <h1 className="mb-1 text-xl font-bold text-ink">จัดการกลิ่น</h1>
+          <p className="text-sm text-muted">เพิ่ม / แก้ชื่อ / รหัส / บาร์โค้ด / Grade / ขนาด — ที่เดียวจบ · มีผลกับ dropdown ตอนสร้างใบเบิก และการจับกลิ่นตอน import</p>
+        </div>
+        <Link href="/stock/specs" className="btn-ghost shrink-0"><Tags size={16} /> จัดการสเป็ก</Link>
+      </div>
       <ProductsManager products={products} sizesByScent={sizesByScent} />
     </div>
   );

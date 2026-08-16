@@ -141,7 +141,7 @@ export default function ItemsEditor({
                 <td className="px-3 py-2 text-muted">{i + 1}</td>
                 <td className="px-3 py-2">
                   <Combobox value={it.product} onChange={(v) => update(i, { product: v })} options={products} placeholder="เลือกกลิ่น" invalid={errors[i]?.product} codes={productCodes} />
-                  {productTypes?.[it.product] && <div className="mt-1 text-[11px] text-muted">ประเภท: <span className="font-medium text-ink">{productTypes[it.product]}</span></div>}
+                  {productTypes?.[it.product] && <div className="mt-1 text-[11px] text-muted">Grade: <span className="font-medium text-ink">{productTypes[it.product]}</span></div>}
                   {errMsg(errors[i]) && (
                     <div className="mt-1 flex items-center gap-1 text-[11px] text-red-600"><AlertTriangle size={12} /> {errMsg(errors[i])}</div>
                   )}
@@ -191,7 +191,7 @@ export default function ItemsEditor({
               </button>
             </div>
             <Combobox value={it.product} onChange={(v) => update(i, { product: v })} options={products} placeholder="เลือกกลิ่น" invalid={errors[i]?.product} codes={productCodes} />
-            {productTypes?.[it.product] && <div className="text-[11px] text-muted">ประเภท: <span className="font-medium text-ink">{productTypes[it.product]}</span></div>}
+            {productTypes?.[it.product] && <div className="text-[11px] text-muted">Grade: <span className="font-medium text-ink">{productTypes[it.product]}</span></div>}
             <div className="grid grid-cols-2 gap-2">
               <Combobox value={it.size} onChange={(v) => update(i, { size: v })}
                 options={isBagProduct(it.product) ? BAG_SIZES : (it.is_free ? sizesFree : sizesNormal)}
