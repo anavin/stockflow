@@ -3,7 +3,7 @@ import { Fragment, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Combobox from "./Combobox";
-import { receiveStock, adjustStock } from "@/lib/actions/stock";
+import { receiveStock, adjustStock, resolveSku } from "@/lib/actions/stock";
 import type { StockRow } from "@/lib/queries";
 import { PERFUME_TYPES } from "@/lib/types";
 import { PackagePlus, CheckCircle2, Search, History, FileUp, FileDown, Lock, Check, RotateCcw, ClipboardCheck, ChevronDown, ChevronRight } from "lucide-react";
@@ -18,11 +18,12 @@ function statusOf(qty: number) {
   return { label: "ปกติ", cls: "bg-green-50 text-green-700", dot: "bg-green-500" };
 }
 
-export default function StockManager({ rows, products, sizes, initialLow, isAdmin, discontinued = {} }:
-  { rows: StockRow[]; products: string[]; sizes: string[]; initialLow?: boolean; isAdmin: boolean; discontinued?: Record<string, string[]> }) {
+export default function StockManager({ rows, products, sizes, initialLow, isAdmin, discontinued = {}, skuMap = {} }:
+  { rows: StockRow[]; products: string[]; sizes: string[]; initialLow?: boolean; isAdmin: boolean; discontinued?: Record<string, string[]>; skuMap?: Record<string, string> }) {
   const router = useRouter();
   const normKey = (s: string) => (s || "").toLowerCase().replace(/[^a-z0-9ก-๙]/g, "");
   const isDisc = (product: string, size: string) => (discontinued[normKey(product)] ?? []).includes(normKey(size));
+  const skuOf = (product: string, size: string) => skuMap[`${normKey(product)}|${normKey(size)}`] ?? "";
 
   // ---- filters ----
   const [search, setSearch] = useState("");
@@ -45,10 +46,12 @@ export default function StockManager({ rows, products, sizes, initialLow, isAdmi
     });
   }, [rows, search, grade, size, status]);
   const hasFilter = !!(search || grade || size || status !== "all");
-  // เรียง: Grade a-z (ไม่ระบุท้ายสุด) → ชื่อ A-Z → ขนาดใหญ่→เล็ก
+  // เรียง: เกรดน้ำหอม (A-Z) ก่อน → หมวดอื่น เช่น Car Perfume (A-Z) → ไม่ระบุ ท้ายสุด; ในกลุ่ม: ชื่อ A-Z → ขนาดใหญ่→เล็ก
   const mlOf = (s: string) => { const m = String(s || "").match(/(\d+(?:\.\d+)?)/); return m ? parseFloat(m[1]) : 0; };
+  const gradeBucket = (g: string | null) => !g ? 2 : (PERFUME_TYPES as readonly string[]).includes(g) ? 0 : 1;
   const sorted = useMemo(() => [...filtered].sort((a, b) =>
-    (a.grade || "zzz").localeCompare(b.grade || "zzz", "en")
+    gradeBucket(a.grade) - gradeBucket(b.grade)
+    || (a.grade || "zzz").localeCompare(b.grade || "zzz", "en")
     || a.product.localeCompare(b.product, "en")
     || mlOf(b.size) - mlOf(a.size)
   ), [filtered]);
@@ -66,8 +69,8 @@ export default function StockManager({ rows, products, sizes, initialLow, isAdmi
   const toggleGroup = (g: string) => setCollapsed((s) => { const n = new Set(s); n.has(g) ? n.delete(g) : n.add(g); return n; });
 
   function exportCsv() {
-    const header = ["Grade", "สินค้า", "ขนาด", "คงเหลือ", "สถานะ", "เลิกผลิต"];
-    const lines = sorted.map((r) => [r.grade || "", r.product, r.size, r.qty, statusOf(r.qty).label, isDisc(r.product, r.size) ? "เลิกผลิต" : ""]
+    const header = ["Grade", "สินค้า", "ขนาด", "SKU", "คงเหลือ", "สถานะ", "เลิกผลิต"];
+    const lines = sorted.map((r) => [r.grade || "", r.product, r.size, skuOf(r.product, r.size), r.qty, statusOf(r.qty).label, isDisc(r.product, r.size) ? "เลิกผลิต" : ""]
       .map((c) => `"${String(c).replace(/"/g, '""')}"`).join(","));
     const csv = "﻿" + [header.join(","), ...lines].join("\n");
     const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
@@ -99,7 +102,16 @@ export default function StockManager({ rows, products, sizes, initialLow, isAdmi
   }
 
   // ---- รับเข้า / นำเข้าไฟล์ (admin) ----
-  const [f, setF] = useState({ product: "", size: "", qty: "", note: "" });
+  const [f, setF] = useState({ sku: "", product: "", size: "", grade: "", qty: "", note: "" });
+  const qtyRef = useRef<HTMLInputElement>(null);
+  async function doResolveSku() {
+    if (!f.sku.trim()) return;
+    setErr(""); setMsg("");
+    const res = await resolveSku(f.sku);
+    if (!res.ok) { setErr(res.error || "ไม่พบ SKU"); return; }
+    setF((s) => ({ ...s, product: res.product!, size: res.size!, grade: res.grade || "" }));
+    setTimeout(() => qtyRef.current?.focus(), 0);
+  }
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState("");
   const [err, setErr] = useState("");
@@ -117,11 +129,11 @@ export default function StockManager({ rows, products, sizes, initialLow, isAdmi
   }
   async function receive(e: React.FormEvent) {
     e.preventDefault(); setErr(""); setMsg(""); setBusy(true);
-    const res = await receiveStock(f.product, f.size, Number(f.qty), f.note);
+    const res = await receiveStock(f.product, f.size, Number(f.qty), f.note, f.sku);
     setBusy(false);
     if (!res.ok) { setErr(res.error || "รับเข้าไม่สำเร็จ"); return; }
-    setMsg(`รับเข้า ${f.product} ${f.size} +${f.qty} → คงเหลือ ${res.balance}`);
-    setF({ product: "", size: "", qty: "", note: "" }); router.refresh();
+    setMsg(`รับเข้า ${f.product} ${f.size} +${f.qty} → คงเหลือ ${res.balance}${f.sku ? ` · SKU ${f.sku}` : ""}`);
+    setF({ sku: "", product: "", size: "", grade: "", qty: "", note: "" }); router.refresh();
   }
 
   return (
@@ -146,10 +158,23 @@ export default function StockManager({ rows, products, sizes, initialLow, isAdmi
                 onChange={(e) => { const file = e.target.files?.[0]; if (file) importFile(file); }} />
             </div>
           </div>
+          {/* 1) สแกน SKU → เดากลิ่น+ขนาดให้ */}
+          <div className="mb-2 flex flex-wrap gap-2">
+            <input value={f.sku} onChange={(e) => setF((s) => ({ ...s, sku: e.target.value }))}
+              onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); doResolveSku(); } }}
+              className="input flex-1 min-w-[220px] font-mono" placeholder="สแกน / กรอก SKU (บาร์โค้ด) แล้ว Enter" />
+            <button type="button" onClick={doResolveSku} className="btn-ghost"><Search size={15} /> ค้นหา SKU</button>
+          </div>
+          {f.product && f.sku && (
+            <div className="mb-2 flex items-center gap-2 rounded-lg bg-brand-50 px-3 py-1.5 text-sm text-brand-600">
+              พบ: <b className="text-ink">{f.product}</b> {f.grade && <span className="chip bg-white text-brand-600">{f.grade}</span>} · {f.size}
+            </div>
+          )}
+          {/* 2) กลิ่น/ขนาด (เติมอัตโนมัติจาก SKU หรือเลือกเองได้) + จำนวน */}
           <div className="grid grid-cols-1 gap-2 md:grid-cols-[1fr_140px_120px_1fr_auto]">
             <Combobox value={f.product} onChange={(v) => setF((s) => ({ ...s, product: v }))} options={products} placeholder="เลือกกลิ่น" />
             <Combobox value={f.size} onChange={(v) => setF((s) => ({ ...s, size: v }))} options={sizes} placeholder="ขนาด" />
-            <input type="number" min={1} className="input" value={f.qty} onChange={(e) => setF((s) => ({ ...s, qty: e.target.value }))} placeholder="จำนวน" />
+            <input ref={qtyRef} type="number" min={1} className="input" value={f.qty} onChange={(e) => setF((s) => ({ ...s, qty: e.target.value }))} placeholder="จำนวน" />
             <input className="input" value={f.note} onChange={(e) => setF((s) => ({ ...s, note: e.target.value }))} placeholder="หมายเหตุ (ถ้ามี)" />
             <button className="btn-primary" disabled={busy}>{busy ? "…" : "รับเข้า"}</button>
           </div>
@@ -201,20 +226,21 @@ export default function StockManager({ rows, products, sizes, initialLow, isAdmi
                 <th className="px-4 py-3">สินค้า</th>
                 <th className="px-3 py-3">Grade</th>
                 <th className="px-3 py-3">ขนาด</th>
+                <th className="px-3 py-3">SKU</th>
                 <th className="px-3 py-3 text-right">คงเหลือ (ระบบ)</th>
                 <th className="px-3 py-3">สถานะ</th>
                 {isAdmin && <th className="px-3 py-3 text-right">นับได้จริง / ปรับยอด</th>}
               </tr>
             </thead>
             <tbody>
-              {groups.length === 0 && <tr><td colSpan={isAdmin ? 6 : 5} className="px-4 py-12 text-center text-muted">ไม่พบสินค้าตามตัวกรอง</td></tr>}
+              {groups.length === 0 && <tr><td colSpan={isAdmin ? 7 : 6} className="px-4 py-12 text-center text-muted">ไม่พบสินค้าตามตัวกรอง</td></tr>}
               {groups.map((grp) => {
                 const open = !collapsed.has(grp.grade);
                 return (
                   <Fragment key={grp.grade}>
                     {/* หัวข้อกลุ่ม Grade + สรุป (คลิกพับ/ขยาย) */}
                     <tr className="border-t border-line bg-soft/70">
-                      <td colSpan={isAdmin ? 6 : 5} className="px-4 py-2">
+                      <td colSpan={isAdmin ? 7 : 6} className="px-4 py-2">
                         <button onClick={() => toggleGroup(grp.grade)} className="flex w-full items-center gap-2 text-left text-xs font-semibold text-ink">
                           {open ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
                           <span className="uppercase tracking-wide">{grp.grade}</span>
@@ -236,6 +262,7 @@ export default function StockManager({ rows, products, sizes, initialLow, isAdmi
                           </td>
                           <td className="px-3 py-2.5">{r.grade ? <span className="chip bg-brand-50 text-brand-600">{r.grade}</span> : <span className="text-faint">—</span>}</td>
                           <td className={`px-3 py-2.5 ${disc ? "text-red-600 line-through" : "text-muted"}`}>{r.size}</td>
+                          <td className="px-3 py-2.5">{skuOf(r.product, r.size) ? <span className="font-mono text-xs text-ink">{skuOf(r.product, r.size)}</span> : <span className="text-faint">—</span>}</td>
                           <td className="px-3 py-2.5 text-right">
                             <span className={`font-semibold tabular-nums ${r.qty < 0 ? "text-red-600" : r.qty <= 10 ? "text-amber-600" : "text-ink"}`}>{r.qty}</span>
                           </td>

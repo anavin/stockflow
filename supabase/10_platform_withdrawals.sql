@@ -2120,3 +2120,6 @@ insert into public.discontinued_sku (scent, size) values
   ('Volt - Elite (EDT)', '10 ml'), ('Volt - Gentle (EDT)', '10 ml'), ('Volt - Nifty (EDT)', '10 ml'),
   ('Volt - Perfect Pear (EDT)', '10 ml'), ('Volt - Savoury (EDT)', '10 ml'), ('Volt - You (EDT)', '10 ml')
 on conflict (scent, size) do nothing;
+
+-- 0022 กำกับ SKU ในประวัติสต๊อก (รับเข้า)
+alter table public.stock_moves add column if not exists sku text;

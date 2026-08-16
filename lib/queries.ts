@@ -99,6 +99,17 @@ export async function getActiveSpecRules(): Promise<{ sizes: string; grades: str
   } catch { return []; }
 }
 
+/** SKU (EAN) ต่อ (กลิ่น+ขนาด) — คีย์ = normalize(scent)|normalize(size) → barcode */
+export async function getSkuLookup(): Promise<Record<string, string>> {
+  const nz = (s: string) => (s || "").toLowerCase().replace(/[^a-z0-9ก-๙]/g, "");
+  try {
+    const rows = await q<{ scent: string; size: string; barcode: string }>(`select scent, size, barcode from product_barcodes`);
+    const m: Record<string, string> = {};
+    for (const r of rows) m[`${nz(r.scent)}|${nz(r.size)}`] = r.barcode;
+    return m;
+  } catch { return {}; }
+}
+
 /** เลิกผลิตต่อขนาด — คีย์ = ชื่อกลิ่น (normalize), ค่า = ขนาดที่เลิกผลิต (normalize) */
 export async function getDiscontinued(): Promise<Record<string, string[]>> {
   const norm = (s: string) => (s || "").toLowerCase().replace(/[^a-z0-9ก-๙]/g, "");

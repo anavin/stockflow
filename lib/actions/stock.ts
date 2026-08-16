@@ -256,7 +256,24 @@ export async function reverseIssue(orderNo: string): Promise<{ ok: boolean; erro
 }
 
 /** รับสินค้าเข้าสต๊อก (+qty) */
-export async function receiveStock(product: string, size: string, qty: number, note?: string): Promise<{ ok: boolean; error?: string; balance?: number }> {
+/** สแกน/กรอก SKU (บาร์โค้ด) → หากลิ่น+ขนาดจาก product_barcodes (map ชื่อเข้ากับ master) */
+export async function resolveSku(sku: string): Promise<{ ok: boolean; product?: string; size?: string; grade?: string | null; error?: string }> {
+  const gate = await requireStockEdit();
+  if ("error" in gate) return { ok: false, error: gate.error };
+  const s = (sku || "").trim();
+  if (!s) return { ok: false, error: "สแกน/กรอก SKU" };
+  try {
+    const [b] = await q<{ scent: string; size: string; grade: string | null }>(
+      `select scent, size, grade from product_barcodes where btrim(barcode) = $1 limit 1`, [s]);
+    if (!b) return { ok: false, error: `ไม่พบ SKU ${s} ในระบบ` };
+    // map ชื่อกลิ่นให้ตรงกับ products master (normalize) เพื่อให้ยอดสต๊อกลงแถวเดียวกัน
+    const [p] = await q<{ name: string }>(
+      `select name from products where regexp_replace(lower(btrim(name)),'[^a-z0-9ก-๙]','','g') = regexp_replace(lower(btrim($1)),'[^a-z0-9ก-๙]','','g') limit 1`, [b.scent]);
+    return { ok: true, product: p?.name ?? b.scent, size: b.size, grade: b.grade };
+  } catch { return { ok: false, error: "ค้นหา SKU ไม่สำเร็จ (ตาราง product_barcodes ยังไม่พร้อม?)" }; }
+}
+
+export async function receiveStock(product: string, size: string, qty: number, note?: string, sku?: string): Promise<{ ok: boolean; error?: string; balance?: number }> {
   const gate = await requireStockEdit();
   if ("error" in gate) return { ok: false, error: gate.error };
   const user = gate.user;
@@ -265,12 +282,13 @@ export async function receiveStock(product: string, size: string, qty: number, n
   if (!(amt > 0)) return { ok: false, error: "จำนวนต้องมากกว่า 0" };
   try {
     const balance = await tx<number>(async (run) => {
+      const m = await matchStockSku(run, product.trim(), size.trim());   // normalize ให้ตรงแถวสต๊อกเดิม
       const [row] = await run<{ qty: number }>(
         `insert into stock (product, size, qty, updated_at) values ($1,$2,$3,now())
          on conflict (product, size) do update set qty = stock.qty + $3, updated_at = now()
-         returning qty::float8 as qty`, [product.trim(), size.trim(), amt]);
-      await run(`insert into stock_moves (product, size, qty_change, balance, reason, note, created_by)
-                 values ($1,$2,$3,$4,'receive',$5,$6)`, [product.trim(), size.trim(), amt, row.qty, note || null, user.id]);
+         returning qty::float8 as qty`, [m.product, m.size, amt]);
+      await run(`insert into stock_moves (product, size, qty_change, balance, reason, note, sku, created_by)
+                 values ($1,$2,$3,$4,'receive',$5,$6,$7)`, [m.product, m.size, amt, row.qty, note || null, (sku || "").trim() || null, user.id]);
       return row.qty;
     });
     revalidatePath("/stock"); revalidatePath("/stock/moves");
