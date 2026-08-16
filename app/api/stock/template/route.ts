@@ -23,6 +23,7 @@ export async function GET() {
   ];
   ws.getRow(1).font = { bold: true };
   ws.getRow(1).fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFF5F3EF" } };
+  ws.views = [{ state: "frozen", ySplit: 1 }];   // ตรึงหัวตารางไว้ตอนเลื่อน
 
   // pre-fill ทุก SKU จาก product_barcodes → map ชื่อกลิ่นเข้ากับ products master (ถ้าตรง)
   let rows: { sku: string; product: string; size: string; grade: string | null }[] = [];
@@ -45,6 +46,9 @@ export async function GET() {
     ws.addRow({ sku: "8857128011188", product: "1000 Thousand", size: "50 ml.", grade: "EDP", qty: "" });
     ws.addRow({ sku: "", product: "Aqua", size: "30 ml.", grade: "EDP", qty: "" });
   }
+
+  ws.getColumn("qty").numFmt = "0";        // กรอกได้เฉพาะจำนวนเต็ม
+  ws.getColumn("sku").font = { name: "Consolas" };
 
   // ชีตอ้างอิงกลิ่น/ขนาด
   const [products, sizes] = await Promise.all([getProducts(), getSizes()]);
