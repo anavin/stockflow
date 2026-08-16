@@ -2,7 +2,7 @@
 import { useEffect, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import { lookupOrderForIssue, confirmIssueByOrder, reverseIssue, type IssueResult, type IssueLookup } from "@/lib/actions/stock";
-import { ScanLine, CheckCircle2, AlertTriangle, XCircle, Undo2, Camera, PackageCheck, X, Printer, StickyNote } from "lucide-react";
+import { ScanLine, CheckCircle2, AlertTriangle, XCircle, Undo2, Camera, PackageCheck, X, Printer, StickyNote, ClipboardList } from "lucide-react";
 
 const CameraScan = dynamic(() => import("./CameraScan"), { ssr: false });
 
@@ -71,7 +71,9 @@ export default function StockIssue({ isAdmin, initialOrder, specOptions = [] }: 
   }, []);
 
   return (
-    <div className="space-y-5">
+    <div className="grid items-start gap-5 lg:grid-cols-5">
+      {/* ซ้าย: สแกน + ตรวจรายการ */}
+      <div className="space-y-5 lg:col-span-3">
       {!preview ? (
         <form onSubmit={(e) => { e.preventDefault(); lookup(); }} className="card p-5">
           <label className="label flex items-center gap-1"><ScanLine size={14} /> สแกน / กรอก Order No. (ดึงรายการมาตรวจก่อนตัด)</label>
@@ -144,18 +146,23 @@ export default function StockIssue({ isAdmin, initialOrder, specOptions = [] }: 
           </button>
         </div>
       )}
+      </div>
+
+      {/* ขวา: ผลล่าสุด */}
+      <div className="space-y-3 lg:col-span-2">
+        <h3 className="flex items-center gap-2 text-sm font-semibold text-ink"><ClipboardList size={15} className="text-brand" /> ผลล่าสุด</h3>
+        {log.length > 0 ? (
+          log.map((e, i) => <ResultCard key={i} entry={e} idx={i} isAdmin={isAdmin} onReverse={onReverse} />)
+        ) : (
+          <div className="card p-6 text-center text-sm text-muted">ยังไม่มีการตัดสต๊อกในรอบนี้ — สแกนใบเบิกด้านซ้ายเพื่อเริ่ม</div>
+        )}
+      </div>
 
       {scanOpen && (
         <CameraScan onClose={() => setScanOpen(false)} onScan={(code) => { setScanOpen(false); lookup(code); }} />
       )}
       {skuScanLine != null && (
         <CameraScan onClose={() => setSkuScanLine(null)} onScan={(code) => { setField(skuScanLine, "sku", code); setSkuScanLine(null); }} />
-      )}
-
-      {log.length > 0 && (
-        <div className="space-y-3">
-          {log.map((e, i) => <ResultCard key={i} entry={e} idx={i} isAdmin={isAdmin} onReverse={onReverse} />)}
-        </div>
       )}
     </div>
   );
