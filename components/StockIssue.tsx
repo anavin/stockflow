@@ -223,7 +223,7 @@ function ResultCard({ entry, idx, isAdmin, onReverse }: { entry: Entry; idx: num
       <div className="mt-3 overflow-hidden rounded-lg border border-line">
         <table className="w-full text-sm">
           <thead className="bg-soft text-left text-xs text-muted">
-            <tr><th className="px-3 py-1.5">สินค้า</th><th className="px-3 py-1.5">ขนาด</th><th className="px-3 py-1.5 text-right">ตัด</th><th className="px-3 py-1.5 text-right">คงเหลือ</th></tr>
+            <tr><th className="px-3 py-1.5">กลิ่น</th><th className="px-3 py-1.5">ขนาด</th><th className="px-3 py-1.5 text-right">ตัด</th><th className="px-3 py-1.5 text-right">คงเหลือ</th></tr>
           </thead>
           <tbody>
             {res.lines!.map((l, i) => (

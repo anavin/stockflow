@@ -34,7 +34,7 @@ export default async function StockPage({ searchParams }: { searchParams: Promis
           <p className="flex items-center gap-2 text-sm font-semibold text-amber-800">
             <AlertTriangle size={15} /> จำนวน SKU รายชิ้นไม่ตรงยอดรวม ({mismatches.length} รายการ)
           </p>
-          <p className="mt-0.5 text-xs text-amber-700">SKU ที่อยู่คลัง (นับรายชิ้น) ไม่เท่ากับยอดคงเหลือ — อาจตัดยอดโดยไม่สแกน SKU หรือปรับยอดมือ</p>
+          <p className="mt-0.5 text-xs text-amber-700">SKU ที่อยู่คลัง (นับรายชิ้น) ไม่เท่ากับยอดคงเหลือ — อาจตัดสต๊อกโดยไม่สแกน SKU หรือปรับยอดมือ</p>
           <div className="mt-2 flex flex-wrap gap-2">
             {mismatches.slice(0, 12).map((m, i) => (
               <Link key={i} href={`/stock/units?product=${encodeURIComponent(m.product)}&size=${encodeURIComponent(m.size)}&status=in_stock`}

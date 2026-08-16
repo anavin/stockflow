@@ -4,7 +4,7 @@ import { q, tx } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth/session";
 import { can } from "@/lib/auth/roles";
 import { isStockTracked } from "@/lib/config";
-import { getActiveSpecRules, getScentBarcodes } from "@/lib/queries";
+import { getActiveSpecRules, getScentBarcodes, stockGapFor } from "@/lib/queries";
 
 // ---- auto-select spec ตามขนาด + Grade (จากตาราง spec_rules) --------------------
 const normSize = (s: string) => (s || "").toLowerCase().replace(/[^0-9a-z]/g, "");
@@ -417,6 +417,10 @@ export async function assignUnitSkus(product: string, size: string, skus: string
   const list = [...new Set((skus || []).map((s) => s.trim()).filter(Boolean))];
   if (!p || !sz) return { ok: false, error: "ไม่พบสินค้า/ขนาด" };
   if (!list.length) return { ok: false, error: "กรอก SKU อย่างน้อย 1 ชิ้น" };
+  // กันผูกเกินยอด — ผูกได้ไม่เกิน gap (จำนวนที่ยังไม่มี SKU)
+  const g = await stockGapFor(p, sz);
+  if (g.gap <= 0) return { ok: false, error: `ยอด SKU ครบแล้ว (มี SKU ${g.units} = ยอด ${g.qty})` };
+  if (list.length > g.gap) list.length = g.gap;   // ตัดส่วนเกินทิ้ง ผูกแค่พอดี gap
   // เกรด + บาร์โค้ด (นอก tx กันพังถ้า product_barcodes ยังไม่มีบน prod)
   let grade: string | null = null, barcode: string | null = null;
   try { const [pr] = await q<{ ptype: string | null }>(`select ptype from products where lower(btrim(name)) = lower(btrim($1)) limit 1`, [p]); grade = pr?.ptype ?? null; } catch { /* ไม่มี */ }

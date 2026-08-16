@@ -29,7 +29,7 @@ export default async function StockMovesPage({ searchParams }: { searchParams: P
               <tr>
                 <th className="px-4 py-3">เวลา</th>
                 <th className="px-4 py-3">ประเภท</th>
-                <th className="px-4 py-3">สินค้า</th>
+                <th className="px-4 py-3">กลิ่น</th>
                 <th className="px-4 py-3">ขนาด</th>
                 <th className="px-4 py-3 text-right">เปลี่ยน</th>
                 <th className="px-4 py-3 text-right">คงเหลือ</th>

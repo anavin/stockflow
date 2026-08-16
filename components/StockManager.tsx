@@ -403,7 +403,7 @@ export default function StockManager({ rows, products, sizes, initialLow, isAdmi
           <table className="w-full text-sm">
             <thead className="bg-soft text-left text-xs text-muted">
               <tr>
-                <th className="px-4 py-3">สินค้า</th>
+                <th className="px-4 py-3">กลิ่น</th>
                 <th className="px-3 py-3">Grade</th>
                 <th className="px-3 py-3">ขนาด</th>
                 <th className="px-3 py-3">Barcode</th>

@@ -59,8 +59,8 @@ export default function UnitsManager({ units, canEdit, reconcile }: { units: Uni
             <tr>
               <th className="px-4 py-3">Barcode</th>
               <th className="px-3 py-3">SKU</th>
-              <th className="px-3 py-3">รายชื่อ</th>
-              <th className="px-3 py-3">Type</th>
+              <th className="px-3 py-3">กลิ่น</th>
+              <th className="px-3 py-3">Grade</th>
               <th className="px-3 py-3">วันที่รับเข้า</th>
               <th className="px-3 py-3">สถานะ</th>
               <th className="px-3 py-3">ออเดอร์ / ผู้ซื้อ</th>
@@ -100,7 +100,7 @@ export default function UnitsManager({ units, canEdit, reconcile }: { units: Uni
                     <td className="px-3 py-2.5">
                       <div className="flex items-center justify-end gap-1">
                         {u.source === "order" ? (
-                          <span className="text-[11px] text-faint" title="SKU นี้บันทึกตอนตัดยอด (ยังไม่ได้รับเข้าแบบรายชิ้น) — แก้/ลบที่ใบเบิก">จากใบเบิก</span>
+                          <span className="text-[11px] text-faint" title="SKU นี้บันทึกตอนตัดสต๊อก (ยังไม่ได้รับเข้าแบบรายชิ้น) — แก้/ลบที่ใบเบิก">จากใบเบิก</span>
                         ) : editing ? (
                           <>
                             <button onClick={() => saveEdit(u.sku)} disabled={busy} title="บันทึก"
