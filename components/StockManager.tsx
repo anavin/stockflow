@@ -199,23 +199,28 @@ export default function StockManager({ rows, products, sizes, initialLow, isAdmi
                   <tr>
                     <th className="w-10 px-3 py-2">#</th>
                     <th className="px-3 py-2">SKU</th>
+                    <th className="px-3 py-2">บาร์โค้ด</th>
                     <th className="px-3 py-2">กลิ่น</th>
                     <th className="px-3 py-2">ขนาด</th>
                     <th className="w-12 px-3 py-2 text-right">ลบ</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {skuList.map((s, i) => (
+                  {skuList.map((s, i) => {
+                    const bc = skuOf(f.product, f.size) || f.barcode.trim();
+                    return (
                     <tr key={s} className="border-t border-line">
                       <td className="px-3 py-1.5 text-muted">{i + 1}</td>
                       <td className="px-3 py-1.5 font-mono text-xs text-ink">{s}</td>
+                      <td className="px-3 py-1.5 font-mono text-xs text-muted">{bc || "—"}</td>
                       <td className="px-3 py-1.5">{f.product || "—"}</td>
                       <td className="px-3 py-1.5 text-muted">{f.size || "—"}</td>
                       <td className="px-3 py-1.5 text-right">
                         <button type="button" onClick={() => setSkuList((l) => l.filter((x) => x !== s))} className="text-faint hover:text-red-500"><X size={14} /></button>
                       </td>
                     </tr>
-                  ))}
+                    );
+                  })}
                 </tbody>
               </table>
               <div className="flex items-center justify-between bg-soft/40 px-3 py-1.5 text-xs text-muted">
