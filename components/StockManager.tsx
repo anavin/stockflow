@@ -1,5 +1,5 @@
 "use client";
-import { useMemo, useRef, useState } from "react";
+import { Fragment, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Combobox from "./Combobox";
@@ -43,6 +43,15 @@ export default function StockManager({ rows, products, sizes, initialLow, isAdmi
     });
   }, [rows, search, grade, size, status]);
   const hasFilter = !!(search || grade || size || status !== "all");
+  // เรียง: Grade (PARFUM→EDP+→EDT→EDP→อื่น→ไม่ระบุ) → ชื่อ A-Z → ขนาดใหญ่→เล็ก
+  const GRADE_ORDER = ["PARFUM", "EDP+", "EDT", "EDP"];
+  const gradeRank = (g: string | null) => { const i = GRADE_ORDER.indexOf(g || ""); return i < 0 ? (g ? 98 : 99) : i; };
+  const mlOf = (s: string) => { const m = String(s || "").match(/(\d+(?:\.\d+)?)/); return m ? parseFloat(m[1]) : 0; };
+  const sorted = useMemo(() => [...filtered].sort((a, b) =>
+    gradeRank(a.grade) - gradeRank(b.grade)
+    || a.product.localeCompare(b.product, "en")
+    || mlOf(b.size) - mlOf(a.size)
+  ), [filtered]);
   function clearFilters() { setSearch(""); setGrade(""); setSize(""); setStatus("all"); }
 
   // ---- stocktake (ปรับยอดนับได้จริง) ----
@@ -173,14 +182,23 @@ export default function StockManager({ rows, products, sizes, initialLow, isAdmi
               </tr>
             </thead>
             <tbody>
-              {filtered.length === 0 && <tr><td colSpan={isAdmin ? 6 : 5} className="px-4 py-12 text-center text-muted">ไม่พบสินค้าตามตัวกรอง</td></tr>}
-              {filtered.map((r) => {
+              {sorted.length === 0 && <tr><td colSpan={isAdmin ? 6 : 5} className="px-4 py-12 text-center text-muted">ไม่พบสินค้าตามตัวกรอง</td></tr>}
+              {sorted.map((r, idx) => {
                 const st = statusOf(r.qty);
                 const k = keyOf(r);
                 const val = counted[k] ?? String(r.qty);
                 const dirty = counted[k] !== undefined && counted[k] !== "" && Number(counted[k]) !== r.qty;
+                const showHeader = idx === 0 || sorted[idx - 1].grade !== r.grade;
                 return (
-                  <tr key={k} className="border-t border-line hover:bg-soft/40">
+                  <Fragment key={k}>
+                  {showHeader && (
+                    <tr className="border-t border-line bg-soft/70">
+                      <td colSpan={isAdmin ? 6 : 5} className="px-4 py-2 text-xs font-semibold uppercase tracking-wide text-muted">
+                        {r.grade || "ไม่ระบุ Grade"}
+                      </td>
+                    </tr>
+                  )}
+                  <tr className="border-t border-line hover:bg-soft/40">
                     <td className="px-4 py-2.5 font-medium text-ink">{r.product}</td>
                     <td className="px-3 py-2.5">{r.grade ? <span className="chip bg-brand-50 text-brand-600">{r.grade}</span> : <span className="text-faint">—</span>}</td>
                     <td className="px-3 py-2.5 text-muted">{r.size}</td>
@@ -211,6 +229,7 @@ export default function StockManager({ rows, products, sizes, initialLow, isAdmi
                       </td>
                     )}
                   </tr>
+                  </Fragment>
                 );
               })}
             </tbody>
