@@ -3,10 +3,10 @@ import { Fragment, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Combobox from "./Combobox";
-import { receiveStock, receiveUnits, adjustStock, resolveSku } from "@/lib/actions/stock";
+import { receiveStock, receiveUnitsBatch, adjustStock, resolveSku } from "@/lib/actions/stock";
 import type { StockRow } from "@/lib/queries";
 import { PERFUME_TYPES } from "@/lib/types";
-import { PackagePlus, CheckCircle2, Search, History, FileUp, FileDown, Lock, Check, RotateCcw, ClipboardCheck, ChevronDown, ChevronRight, ScanBarcode, X } from "lucide-react";
+import { PackagePlus, CheckCircle2, Search, History, FileUp, FileDown, Lock, Check, RotateCcw, ClipboardCheck, ChevronDown, ChevronRight, ScanBarcode, X, Plus } from "lucide-react";
 
 type Status = "all" | "normal" | "low" | "out" | "neg";
 const keyOf = (r: StockRow) => `${r.product}|${r.size}`;
@@ -105,8 +105,10 @@ export default function StockManager({ rows, products, sizes, initialLow, isAdmi
 
   // ---- รับเข้า / นำเข้าไฟล์ (admin) ----
   const [f, setF] = useState({ barcode: "", product: "", size: "", grade: "", note: "" });
-  const [skuList, setSkuList] = useState<string[]>([]);   // SKU รายชิ้นที่ user สแกน/ใส่เอง
+  const [skuList, setSkuList] = useState<string[]>([]);   // SKU รายชิ้นของกลิ่นที่กำลังกรอก
   const [skuInput, setSkuInput] = useState("");
+  type BatchLine = { product: string; size: string; grade: string; barcode: string; skus: string[] };
+  const [batch, setBatch] = useState<BatchLine[]>([]);    // ตะกร้า: หลายกลิ่น/ขนาด รับเข้าทีเดียว
   const todayStr = new Date().toLocaleDateString("th-TH", { day: "2-digit", month: "2-digit", year: "numeric" });
   const skuRef = useRef<HTMLInputElement>(null);
   async function doResolveBarcode() {
@@ -145,15 +147,39 @@ export default function StockManager({ rows, products, sizes, initialLow, isAdmi
     } catch { setErr("อัปโหลดไม่สำเร็จ"); }
     setBusy(false);
   }
-  async function receive(e: React.FormEvent) {
-    e.preventDefault(); setErr(""); setMsg(""); setBusy(true);
-    const all = skuInput.trim() ? [...skuList, skuInput.trim()] : skuList;   // เผื่อยังพิมพ์ค้างในช่อง
-    const res = await receiveUnits(f.product, f.size, all, f.barcode);
+  // SKU ของกลิ่นที่กำลังกรอก (รวมที่ค้างในช่อง input)
+  const currentSkus = () => (skuInput.trim() ? [...skuList, skuInput.trim()] : skuList);
+  const resetEntry = () => { setF({ barcode: "", product: "", size: "", grade: "", note: "" }); setSkuList([]); setSkuInput(""); };
+  const batchTotal = batch.reduce((n, l) => n + l.skus.length, 0);
+  const curCount = currentSkus().length;
+  const hasCur = !!(f.product && f.size && curCount);
+  const grandTotal = batchTotal + (hasCur ? curCount : 0);
+  const grandLines = batch.length + (hasCur ? 1 : 0);
+
+  // เพิ่มกลิ่นปัจจุบันลงตะกร้า แล้วเคลียร์ช่องเพื่อกรอกกลิ่นถัดไป
+  function addToBatch() {
+    setErr(""); setMsg("");
+    if (!f.product || !f.size) { setErr("เลือกกลิ่น + ขนาดก่อนเพิ่มลงรายการ"); return; }
+    const skus = currentSkus();
+    if (!skus.length) { setErr("สแกน/ใส่ SKU อย่างน้อย 1 ชิ้น"); return; }
+    setBatch((b) => [...b, { product: f.product, size: f.size, grade: f.grade, barcode: f.barcode.trim(), skus }]);
+    resetEntry();
+  }
+  const removeBatchLine = (i: number) => setBatch((b) => b.filter((_, x) => x !== i));
+
+  // รับเข้าทั้งตะกร้า (+ กลิ่นที่ค้างในช่อง ถ้ามี) ทีเดียว
+  async function submitBatch(e: React.FormEvent) {
+    e.preventDefault(); setErr(""); setMsg("");
+    const lines: BatchLine[] = [...batch];
+    if (hasCur) lines.push({ product: f.product, size: f.size, grade: f.grade, barcode: f.barcode.trim(), skus: currentSkus() });
+    if (!lines.length) { setErr("ยังไม่มีรายการรับเข้า — สแกน SKU แล้วกด 'เพิ่มลงรายการ'"); return; }
+    setBusy(true);
+    const res = await receiveUnitsBatch(lines.map((l) => ({ product: l.product, size: l.size, skus: l.skus, barcode: l.barcode })));
     setBusy(false);
     if (!res.ok) { setErr(res.error || "รับเข้าไม่สำเร็จ"); return; }
     const dup = res.dupes?.length ? ` · ข้ามซ้ำ ${res.dupes.length}` : "";
-    setMsg(`รับเข้า ${f.product} ${f.size} +${res.added} ชิ้น → คงเหลือ ${res.balance}${dup}`);
-    setF({ barcode: "", product: "", size: "", grade: "", note: "" }); setSkuList([]); setSkuInput(""); router.refresh();
+    setMsg(`รับเข้า ${res.added} ชิ้น (${res.perLine?.length ?? lines.length} รายการ)${dup}`);
+    setBatch([]); resetEntry(); router.refresh();
   }
 
   return (
@@ -166,7 +192,7 @@ export default function StockManager({ rows, products, sizes, initialLow, isAdmi
 
       {/* รับเข้า + นำเข้าไฟล์ (admin) */}
       {isAdmin && (
-        <form onSubmit={receive} className="card p-5">
+        <form onSubmit={submitBatch} className="card p-5">
           <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
             <h2 className="flex items-center gap-2 text-sm font-semibold text-ink"><PackagePlus size={16} /> รับสินค้าเข้าสต๊อก</h2>
             <div className="flex gap-2">
@@ -191,14 +217,14 @@ export default function StockManager({ rows, products, sizes, initialLow, isAdmi
             <Combobox value={f.size} onChange={(v) => setF((s) => ({ ...s, size: v }))} options={sizes} placeholder="ขนาด" />
             <input className="input" value={f.note} onChange={(e) => setF((s) => ({ ...s, note: e.target.value }))} placeholder="หมายเหตุ (ถ้ามี)" />
           </div>
-          {/* 3) สแกน/ใส่ SKU รายชิ้น (user ใส่เอง) */}
-          <label className="label flex items-center gap-1"><ScanBarcode size={13} /> สแกน / ใส่ SKU รายชิ้น (กด Enter ทีละชิ้น)</label>
+          {/* 3) สแกน/ใส่ SKU รายชิ้น (1 ขวด = 1 SKU) */}
+          <label className="label flex items-center gap-1"><ScanBarcode size={13} /> สแกน / ใส่ SKU รายชิ้น (1 ขวด = 1 SKU · กด Enter ทีละชิ้น)</label>
           <div className="flex flex-wrap gap-2">
             <input ref={skuRef} value={skuInput} onChange={(e) => setSkuInput(e.target.value)}
               onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addSku(skuInput); } }}
               className="input flex-1 min-w-[220px] font-mono" placeholder="สแกน SKU ของชิ้นสินค้า แล้ว Enter" />
-            <button type="submit" className="btn-primary" disabled={busy || (skuList.length === 0 && !skuInput.trim())}>
-              {busy ? "…" : `รับเข้า (${skuList.length + (skuInput.trim() ? 1 : 0)} ชิ้น)`}
+            <button type="button" onClick={addToBatch} className="btn-ghost whitespace-nowrap" disabled={busy || !hasCur}>
+              <Plus size={15} /> เพิ่มลงรายการ{hasCur ? ` (${curCount})` : ""}
             </button>
           </div>
           {skuList.length > 0 && (
@@ -233,11 +259,57 @@ export default function StockManager({ rows, products, sizes, initialLow, isAdmi
                 </tbody>
               </table>
               <div className="flex items-center justify-between bg-soft/40 px-3 py-1.5 text-xs text-muted">
-                <span>รวม <b className="text-ink">{skuList.length}</b> ชิ้น</span>
-                <button type="button" onClick={() => setSkuList([])} className="hover:text-ink">ล้างทั้งหมด</button>
+                <span>{f.product || "กลิ่นนี้"} {f.size} — <b className="text-ink">{skuList.length}</b> ชิ้น (ยังไม่เพิ่มลงรายการ)</span>
+                <button type="button" onClick={() => setSkuList([])} className="hover:text-ink">ล้าง</button>
               </div>
             </div>
           )}
+
+          {/* ตะกร้า: หลายกลิ่น/ขนาด รับเข้าทีเดียว */}
+          {batch.length > 0 && (
+            <div className="mt-3 overflow-hidden rounded-lg border border-brand-200">
+              <div className="bg-brand-50/60 px-3 py-1.5 text-xs font-medium text-brand-700">รายการที่จะรับเข้า — {batch.length} กลิ่น/ขนาด · {batchTotal} ชิ้น</div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead className="bg-soft text-left text-xs text-muted">
+                    <tr>
+                      <th className="px-3 py-2">กลิ่น</th>
+                      <th className="px-3 py-2">ขนาด</th>
+                      <th className="px-3 py-2">Grade</th>
+                      <th className="px-3 py-2">Barcode</th>
+                      <th className="px-3 py-2 text-right">จำนวน</th>
+                      <th className="w-12 px-3 py-2 text-right">ลบ</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {batch.map((l, i) => (
+                      <tr key={i} className="border-t border-line">
+                        <td className="px-3 py-1.5 font-medium text-ink">{l.product}</td>
+                        <td className="px-3 py-1.5 text-muted">{l.size}</td>
+                        <td className="px-3 py-1.5">{l.grade ? <span className="chip bg-brand-50 text-brand-600">{l.grade}</span> : <span className="text-faint">—</span>}</td>
+                        <td className="px-3 py-1.5 font-mono text-xs text-muted">{l.barcode || "—"}</td>
+                        <td className="px-3 py-1.5 text-right font-semibold tabular-nums text-ink">{l.skus.length}</td>
+                        <td className="px-3 py-1.5 text-right">
+                          <button type="button" onClick={() => removeBatchLine(i)} className="text-faint hover:text-red-500" title="ลบรายการนี้"><X size={14} /></button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
+            <span className="text-xs text-muted">
+              {grandTotal > 0
+                ? <>รวมที่จะรับเข้า <b className="text-ink">{grandTotal}</b> ชิ้น · {grandLines} กลิ่น/ขนาด{hasCur && batch.length > 0 ? " (รวมกลิ่นที่ค้างในช่อง)" : ""}</>
+                : "สแกน SKU → กด 'เพิ่มลงรายการ' เพื่อสะสมหลายกลิ่น แล้วรับเข้าทีเดียว"}
+            </span>
+            <button type="submit" className="btn-primary" disabled={busy || grandTotal === 0}>
+              {busy ? "กำลังรับเข้า…" : `รับเข้าทั้งหมด (${grandTotal} ชิ้น)`}
+            </button>
+          </div>
           {err && <p className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{err}</p>}
           {msg && <p className="mt-3 flex items-center gap-1 rounded-lg bg-green-50 px-3 py-2 text-sm text-green-700"><CheckCircle2 size={14} /> {msg}</p>}
         </form>

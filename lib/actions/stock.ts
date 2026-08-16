@@ -350,6 +350,63 @@ export async function receiveUnits(product: string, size: string, skus: string[]
   } catch (e: any) { return { ok: false, error: e?.message || "รับเข้าไม่สำเร็จ" }; }
 }
 
+/** รับเข้าหลายกลิ่น/ขนาดพร้อมกัน (ตะกร้า) — tx เดียว, กัน SKU ซ้ำข้ามทุกบรรทัด */
+export async function receiveUnitsBatch(
+  lines: { product: string; size: string; skus: string[]; barcode?: string }[],
+): Promise<{ ok: boolean; error?: string; added?: number; dupes?: string[]; perLine?: { product: string; size: string; added: number; balance: number }[] }> {
+  const gate = await requireStockEdit();
+  if ("error" in gate) return { ok: false, error: gate.error };
+  const user = gate.user;
+  const norm = (lines || [])
+    .map((l) => ({
+      product: (l.product || "").trim(), size: (l.size || "").trim(),
+      barcode: (l.barcode || "").trim() || null,
+      skus: [...new Set((l.skus || []).map((s) => s.trim()).filter(Boolean))],
+    }))
+    .filter((l) => l.product && l.size && l.skus.length);
+  if (!norm.length) return { ok: false, error: "ไม่มีรายการที่จะรับเข้า" };
+  const total = norm.reduce((n, l) => n + l.skus.length, 0);
+  if (total > 1000) return { ok: false, error: "รับเข้าครั้งละไม่เกิน 1000 ชิ้น" };
+  try {
+    const out = await tx<{ added: number; dupes: string[]; perLine: { product: string; size: string; added: number; balance: number }[] }>(async (run) => {
+      const seen = new Set<string>();   // กันซ้ำข้ามทุกบรรทัดในชุดเดียวกัน
+      const dupes: string[] = [];
+      const perLine: { product: string; size: string; added: number; balance: number }[] = [];
+      for (const l of norm) {
+        const [pr] = await run<{ ptype: string | null }>(`select ptype from products where lower(btrim(name)) = lower(btrim($1)) limit 1`, [l.product]);
+        const grade = pr?.ptype || null;
+        let added = 0;
+        for (const sku of l.skus) {
+          if (seen.has(sku)) { dupes.push(sku); continue; }
+          seen.add(sku);
+          const [ex] = await run<{ x: number }>(`select 1 as x from stock_unit where btrim(sku) = $1 limit 1`, [sku]);
+          if (ex) { dupes.push(sku); continue; }
+          await run(`insert into stock_unit (sku, product, size, grade, barcode, received_by) values ($1,$2,$3,$4,$5,$6)`,
+            [sku, l.product, l.size, grade, l.barcode, user.id]);
+          added++;
+        }
+        let balance = 0;
+        if (added > 0) {
+          const m = await matchStockSku(run, l.product, l.size);
+          const [row] = await run<{ qty: number }>(
+            `insert into stock (product, size, qty, updated_at) values ($1,$2,$3,now())
+             on conflict (product, size) do update set qty = stock.qty + $3, updated_at = now()
+             returning qty::float8 as qty`, [m.product, m.size, added]);
+          balance = row.qty;
+          await run(`insert into stock_moves (product, size, qty_change, balance, reason, note, created_by)
+                     values ($1,$2,$3,$4,'receive',$5,$6)`, [m.product, m.size, added, balance, `รับเข้า ${added} SKU`, user.id]);
+        }
+        perLine.push({ product: l.product, size: l.size, added, balance });
+      }
+      const totalAdded = perLine.reduce((n, p) => n + p.added, 0);
+      if (totalAdded === 0) throw new Error("SKU ที่ใส่มีอยู่ในระบบแล้วทั้งหมด");
+      return { added: totalAdded, dupes, perLine };
+    });
+    revalidatePath("/stock"); revalidatePath("/stock/moves"); revalidatePath("/stock/units");
+    return { ok: true, ...out };
+  } catch (e: any) { return { ok: false, error: e?.message || "รับเข้าไม่สำเร็จ" }; }
+}
+
 /** แก้ SKU รายชิ้น (แก้เลขที่พิมพ์ผิด) */
 export async function updateUnitSku(oldSku: string, newSku: string): Promise<{ ok: boolean; error?: string }> {
   const gate = await requireStockEdit();
