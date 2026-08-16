@@ -6,14 +6,17 @@ import type { ProductAdminRow, ScentBarcode } from "@/lib/queries";
 import { PERFUME_TYPES } from "@/lib/types";
 import { Plus, Check, X, Pencil, Search, CheckCircle2 } from "lucide-react";
 
-type Filter = "all" | "untyped" | "typed";
+type Filter = "all" | "untyped" | "typed" | "discontinued";
+const normKey = (s: string) => (s || "").toLowerCase().replace(/[^a-z0-9ก-๙]/g, "");
 
 export default function ProductsManager({
   products,
   sizesByScent = {},
+  discontinued = {},
 }: {
   products: ProductAdminRow[];
   sizesByScent?: Record<string, ScentBarcode[]>;
+  discontinued?: Record<string, string[]>;
 }) {
   const router = useRouter();
   const [name, setName] = useState("");
@@ -33,16 +36,20 @@ export default function ProductsManager({
   const [aSku, setASku] = useState("");
 
   const sizesFor = (n: string) => sizesByScent[n.trim().toLowerCase()] ?? [];
+  const discSizes = (n: string) => discontinued[normKey(n)] ?? [];     // ขนาดที่เลิกผลิตของกลิ่นนี้ (normalized)
+  const isDisc = (n: string, size: string) => discSizes(n).includes(normKey(size));
 
   const filtered = useMemo(() => {
     const t = q.trim().toLowerCase();
     return products.filter((p) => {
       if (filter === "untyped" && p.ptype) return false;
       if (filter === "typed" && !p.ptype) return false;
+      if (filter === "discontinued" && discSizes(p.name).length === 0) return false;
       if (t && !p.name.toLowerCase().includes(t)) return false;
       return true;
     });
-  }, [products, q, filter]);
+  }, [products, q, filter, discontinued]);
+  const discCount = useMemo(() => products.filter((p) => discSizes(p.name).length > 0).length, [products, discontinued]);
 
   const counts = useMemo(() => {
     const c: Record<string, number> = { "": 0 };
@@ -113,6 +120,7 @@ export default function ProductsManager({
         <span className="chip bg-soft text-ink">ทั้งหมด {products.length}</span>
         {PERFUME_TYPES.map((t) => <span key={t} className="chip bg-brand-50 text-brand-600">{t} {counts[t] ?? 0}</span>)}
         <span className={`chip ${(counts[""] ?? 0) > 0 ? "bg-amber-50 text-amber-700" : "bg-soft text-muted"}`}>ยังไม่ระบุ Grade {counts[""] ?? 0}</span>
+        {discCount > 0 && <span className="chip bg-red-50 text-red-600">เลิกผลิต {discCount}</span>}
       </div>
 
       {/* toolbar: ค้นหา + ฟิลเตอร์ + ตั้งประเภทหลายแถว */}
@@ -123,10 +131,10 @@ export default function ProductsManager({
             <input className="input pl-9" value={q} onChange={(e) => setQ(e.target.value)} placeholder="ค้นหากลิ่น" />
           </div>
           <div className="flex overflow-hidden rounded-lg border border-line text-sm">
-            {(["all", "untyped", "typed"] as Filter[]).map((f) => (
+            {(["all", "untyped", "typed", "discontinued"] as Filter[]).map((f) => (
               <button key={f} type="button" onClick={() => setFilter(f)}
                 className={`px-3 py-2 ${filter === f ? "bg-brand text-white" : "bg-white text-muted hover:bg-soft"}`}>
-                {f === "all" ? "ทั้งหมด" : f === "untyped" ? "ยังไม่ระบุ Grade" : "ระบุแล้ว"}
+                {f === "all" ? "ทั้งหมด" : f === "untyped" ? "ยังไม่ระบุ Grade" : f === "typed" ? "ระบุแล้ว" : "ยกเลิกการผลิต"}
               </button>
             ))}
           </div>
@@ -185,13 +193,22 @@ export default function ProductsManager({
                         {sizes.length === 0 && addId !== p.id && (
                           <span className="text-xs text-faint">— ยังไม่มีบาร์โค้ด</span>
                         )}
-                        {sizes.map((s) => (
-                          <div key={s.id} className="flex items-center gap-2 rounded-lg border border-line bg-white px-2.5 py-1">
-                            <span className="text-xs font-semibold text-ink">{s.size.replace(/\.$/, "")}</span>
-                            <span className="font-mono text-xs text-muted">{s.barcode}</span>
-                            {s.sku && <span className="text-[11px] text-faint">{s.sku}</span>}
-                            <button onClick={() => delBarcode(s.id)} className="text-faint hover:text-red-500" title="ลบบาร์โค้ดนี้"><X size={12} /></button>
-                          </div>
+                        {sizes.map((s) => {
+                          const disc = isDisc(p.name, s.size);
+                          return (
+                            <div key={s.id} className={`flex items-center gap-2 rounded-lg border px-2.5 py-1 ${disc ? "border-red-200 bg-red-50/60" : "border-line bg-white"}`}>
+                              <span className={`text-xs font-semibold ${disc ? "text-red-600 line-through" : "text-ink"}`}>{s.size.replace(/\.$/, "")}</span>
+                              <span className="font-mono text-xs text-muted">{s.barcode}</span>
+                              {s.sku && <span className="text-[11px] text-faint">{s.sku}</span>}
+                              {disc && <span className="text-[10px] font-medium text-red-600">เลิกผลิต</span>}
+                              <button onClick={() => delBarcode(s.id)} className="text-faint hover:text-red-500" title="ลบบาร์โค้ดนี้"><X size={12} /></button>
+                            </div>
+                          );
+                        })}
+                        {discSizes(p.name).filter((dk) => !sizes.some((s) => normKey(s.size) === dk)).map((dk) => (
+                          <span key={"d" + dk} className="inline-flex items-center gap-1 rounded-lg border border-red-200 bg-red-50/60 px-2.5 py-1 text-xs font-medium text-red-600">
+                            <span className="line-through">{dk.replace(/ml$/, " ml")}</span> เลิกผลิต
+                          </span>
                         ))}
                         {addId === p.id ? (
                           <div className="flex items-center gap-1 rounded-lg border border-brand/40 bg-brand-50/40 px-1.5 py-1">
