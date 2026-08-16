@@ -23,31 +23,36 @@ function norm(role?: string | null): string {
   const r = (role || "").trim();
   return r === "staff" ? "creator" : r;
 }
+/** 1 user มีได้หลายสิทธิ์ — เก็บเป็น comma เช่น "creator,stock" */
+export function roleList(role?: string | null): string[] {
+  return (role || "").split(",").map((r) => norm(r.trim())).filter(Boolean);
+}
+const hasAny = (role: string | null | undefined, set: string[]) => roleList(role).some((r) => set.includes(r));
 
-/** ความสามารถแยกตามงาน — เช็คที่นี่ที่เดียว */
+/** ความสามารถแยกตามงาน — เช็คที่นี่ที่เดียว (ผ่านทุกสิทธิ์ที่ user มี) */
 export const can = {
   /** สร้าง/แก้ไข/นำเข้า/ลบ ใบเบิก */
-  createOrders: (role?: string | null) => { const r = norm(role); return r === "admin" || r === "creator"; },
+  createOrders: (role?: string | null) => hasAny(role, ["admin", "creator"]),
   /** สแกน + ตัดสต๊อก (ใส่ SKU/Spec) */
-  issueStock: (role?: string | null) => { const r = norm(role); return r === "admin" || r === "picker"; },
+  issueStock: (role?: string | null) => hasAny(role, ["admin", "picker"]),
   /** ดูสต๊อกคงเหลือ / ประวัติ = เจ้าของ + จัดของ + คลัง */
-  viewStock: (role?: string | null) => { const r = norm(role); return r === "admin" || r === "picker" || r === "stock"; },
+  viewStock: (role?: string | null) => hasAny(role, ["admin", "picker", "stock"]),
   /** รับเข้า / ปรับยอด / นับสต๊อก / ยกเลิกการตัด = เจ้าของ + ฝ่ายคลัง */
-  manageStock: (role?: string | null) => { const r = norm(role); return r === "admin" || r === "stock"; },
+  manageStock: (role?: string | null) => hasAny(role, ["admin", "stock"]),
   /** ดูแดชบอร์ดภาพรวม + กลิ่นขายดี = เจ้าของ + จัดของ + คลัง */
-  viewDashboard: (role?: string | null) => { const r = norm(role); return r === "admin" || r === "picker" || r === "stock"; },
+  viewDashboard: (role?: string | null) => hasAny(role, ["admin", "picker", "stock"]),
   /** จัดการผู้ใช้ */
-  manageUsers: (role?: string | null) => norm(role) === "admin",
+  manageUsers: (role?: string | null) => hasAny(role, ["admin"]),
 };
 
 /** หน้าแรกที่ควรพาไปหลัง login / เวลาถูกกันสิทธิ์ (ไม่ให้ตาย/วนลูป)
  *  บทบาทที่ไม่รู้จัก/ว่าง → /no-access (หน้าที่ต้องแค่ login) กันวนลูป redirect */
 export function homeFor(role?: string | null): string {
-  const r = norm(role);
-  if (r === "admin") return "/";
-  if (r === "picker") return "/stock/issue";
-  if (r === "stock") return "/stock";
-  if (r === "creator") return "/shopee";
+  const rs = roleList(role);
+  if (rs.includes("admin")) return "/";
+  if (rs.includes("creator")) return "/shopee";
+  if (rs.includes("picker")) return "/stock/issue";
+  if (rs.includes("stock")) return "/stock";
   return "/no-access";
 }
 

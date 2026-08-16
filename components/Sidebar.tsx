@@ -3,7 +3,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { PLATFORMS } from "@/lib/config";
-import { can, ROLE_LABELS } from "@/lib/auth/roles";
+import { can, ROLE_LABELS, roleList } from "@/lib/auth/roles";
 import { Package, PlusCircle, Upload, List, LogOut, Menu, X, Trash2, Users, ScanLine, Boxes, LayoutDashboard, FlaskConical } from "lucide-react";
 
 // สีเอกลักษณ์ของแต่ละแพลตฟอร์ม (ใช้เป็นจุดสีในเมนู)
@@ -128,7 +128,7 @@ export default function Sidebar({ user }: { user: { full_name: string; username:
       <div className="border-t border-line p-3">
         <div className="mb-2 px-2">
           <div className="text-sm font-medium text-ink">{user.full_name || user.username}</div>
-          <div className="text-[11px] text-muted">@{user.username} · {ROLE_LABELS[user.role] || user.role}</div>
+          <div className="text-[11px] text-muted">@{user.username} · {roleList(user.role).map((r) => ROLE_LABELS[r] || r).join(" · ") || user.role}</div>
         </div>
         <form action="/api/logout" method="post">
           <button className="btn-ghost w-full justify-start text-muted"><LogOut size={16} /> ออกจากระบบ</button>

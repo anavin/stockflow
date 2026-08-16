@@ -12,10 +12,15 @@ async function requireAdminUser() {
   return { user };
 }
 
+const ALLOWED_ROLES = ["admin", "creator", "picker", "stock"];
+function cleanRoles(v: string): string[] {
+  return [...new Set((v || "").split(",").map((r) => r.trim()).filter((r) => ALLOWED_ROLES.includes(r)))];
+}
+
 const createSchema = z.object({
   username: z.string().trim().min(3, "ชื่อผู้ใช้อย่างน้อย 3 ตัว").regex(/^[a-zA-Z0-9._-]+$/, "ใช้ได้เฉพาะ a-z 0-9 . _ -"),
   full_name: z.string().trim().default(""),
-  role: z.enum(["admin", "creator", "picker", "stock"]).default("creator"),
+  role: z.string().default("creator"),   // comma-separated ได้หลายสิทธิ์
   password: z.string(),
 });
 
@@ -26,6 +31,8 @@ export async function createUser(input: unknown): Promise<{ ok: boolean; error?:
   const parsed = createSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? "ข้อมูลไม่ถูกต้อง" };
   const { username, full_name, role, password } = parsed.data;
+  const roles = cleanRoles(role);
+  if (!roles.length) return { ok: false, error: "เลือกบทบาทอย่างน้อย 1 อย่าง" };
 
   const pw = validatePassword(password, username);
   if (!pw.ok) return { ok: false, error: pw.message };
@@ -35,7 +42,7 @@ export async function createUser(input: unknown): Promise<{ ok: boolean; error?:
 
   await q(
     `insert into users (username, password_hash, full_name, role) values ($1,$2,$3,$4)`,
-    [username, await hashBcrypt(password), full_name, role],
+    [username, await hashBcrypt(password), full_name, roles.join(",")],
   );
   revalidatePath("/users");
   return { ok: true };
@@ -50,12 +57,13 @@ export async function setUserActive(id: number, active: boolean): Promise<{ ok: 
   return { ok: true };
 }
 
-export async function setUserRole(id: number, role: string): Promise<{ ok: boolean; error?: string }> {
+export async function setUserRoles(id: number, roles: string[]): Promise<{ ok: boolean; error?: string }> {
   const gate = await requireAdminUser();
   if ("error" in gate) return { ok: false, error: gate.error };
-  if (!["admin", "creator", "picker", "stock"].includes(role)) return { ok: false, error: "บทบาทไม่ถูกต้อง" };
-  if (gate.user.id === id && role !== "admin") return { ok: false, error: "เปลี่ยนบทบาทตัวเองออกจากแอดมินไม่ได้" };
-  await q(`update users set role = $2 where id = $1`, [id, role]);
+  const clean = cleanRoles((roles || []).join(","));
+  if (!clean.length) return { ok: false, error: "เลือกบทบาทอย่างน้อย 1 อย่าง" };
+  if (gate.user.id === id && !clean.includes("admin")) return { ok: false, error: "เอาสิทธิ์แอดมินของตัวเองออกไม่ได้" };
+  await q(`update users set role = $2 where id = $1`, [id, clean.join(",")]);
   revalidatePath("/users");
   return { ok: true };
 }

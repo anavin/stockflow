@@ -1,10 +1,10 @@
 "use client";
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { createUser, setUserActive, resetPassword, setUserRole } from "@/lib/actions/users";
-import { ROLE_LABELS, ROLE_DESC } from "@/lib/auth/roles";
+import { createUser, setUserActive, resetPassword, setUserRoles } from "@/lib/actions/users";
+import { ROLE_LABELS, ROLE_DESC, roleList } from "@/lib/auth/roles";
 import type { UserRow } from "@/lib/queries";
-import { UserPlus, KeyRound, CheckCircle2, Search, Shield, FileText, ScanLine, Boxes, Users } from "lucide-react";
+import { UserPlus, KeyRound, CheckCircle2, Search, Shield, FileText, ScanLine, Boxes, Users, Check } from "lucide-react";
 
 // ลำดับบทบาทในหน้านี้ (ขาย → จัดของ → คลัง → แอดมิน)
 const ROLE_OPTS = ["creator", "picker", "stock", "admin"] as const;
@@ -21,7 +21,7 @@ type SFilter = "all" | "active" | "inactive";
 
 export default function UsersManager({ users, meId }: { users: UserRow[]; meId: number }) {
   const router = useRouter();
-  const [form, setForm] = useState({ username: "", full_name: "", role: "creator", password: "" });
+  const [form, setForm] = useState<{ username: string; full_name: string; roles: string[]; password: string }>({ username: "", full_name: "", roles: ["creator"], password: "" });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [msg, setMsg] = useState("");
@@ -30,13 +30,14 @@ export default function UsersManager({ users, meId }: { users: UserRow[]; meId: 
   const [statusF, setStatusF] = useState<SFilter>("all");
 
   const set = (p: Partial<typeof form>) => setForm((f) => ({ ...f, ...p }));
-  const countActive = (role: string) => users.filter((u) => u.is_active && u.role === role).length;
+  const countActive = (role: string) => users.filter((u) => u.is_active && roleList(u.role).includes(role)).length;
+  const toggleFormRole = (r: string) => setForm((f) => ({ ...f, roles: f.roles.includes(r) ? f.roles.filter((x) => x !== r) : [...f.roles, r] }));
 
   const filtered = useMemo(() => {
     const t = search.trim().toLowerCase();
     return users.filter((u) => {
       if (t && !(u.username.toLowerCase().includes(t) || (u.full_name || "").toLowerCase().includes(t))) return false;
-      if (roleF && u.role !== roleF) return false;
+      if (roleF && !roleList(u.role).includes(roleF)) return false;
       if (statusF === "active" && !u.is_active) return false;
       if (statusF === "inactive" && u.is_active) return false;
       return true;
@@ -45,14 +46,15 @@ export default function UsersManager({ users, meId }: { users: UserRow[]; meId: 
 
   async function add(e: React.FormEvent) {
     e.preventDefault(); setError(""); setMsg(""); setBusy(true);
-    const res = await createUser(form); setBusy(false);
+    const res = await createUser({ ...form, role: form.roles.join(",") }); setBusy(false);
     if (!res.ok) { setError(res.error || "เพิ่มไม่สำเร็จ"); return; }
     setMsg(`เพิ่มผู้ใช้ "${form.username}" แล้ว`);
-    setForm({ username: "", full_name: "", role: "creator", password: "" }); router.refresh();
+    setForm({ username: "", full_name: "", roles: ["creator"], password: "" }); router.refresh();
   }
-  async function changeRole(u: UserRow, role: string) {
-    if (role === u.role) return;
-    const res = await setUserRole(u.id, role); if (!res.ok) alert(res.error); router.refresh();
+  async function toggleRole(u: UserRow, role: string) {
+    const cur = roleList(u.role);
+    const next = cur.includes(role) ? cur.filter((r) => r !== role) : [...cur, role];
+    const res = await setUserRoles(u.id, next); if (!res.ok) { alert(res.error); return; } router.refresh();
   }
   async function toggle(u: UserRow) {
     const res = await setUserActive(u.id, !u.is_active); if (!res.ok) { alert(res.error); return; } router.refresh();
@@ -95,11 +97,19 @@ export default function UsersManager({ users, meId }: { users: UserRow[]; meId: 
             <input className="input" value={form.full_name} onChange={(e) => set({ full_name: e.target.value })} />
           </div>
           <div>
-            <label className="label">บทบาท / สิทธิ์</label>
-            <select className="input" value={form.role} onChange={(e) => set({ role: e.target.value })}>
-              {ROLE_OPTS.map((r) => <option key={r} value={r}>{ROLE_LABELS[r]}</option>)}
-            </select>
-            <p className="mt-1 text-xs text-faint">{ROLE_DESC[form.role]}</p>
+            <label className="label">บทบาท / สิทธิ์ (เลือกได้หลายอย่าง)</label>
+            <div className="flex flex-wrap gap-1.5">
+              {ROLE_OPTS.map((r) => {
+                const on = form.roles.includes(r);
+                return (
+                  <button key={r} type="button" onClick={() => toggleFormRole(r)}
+                    className={`inline-flex items-center gap-1 rounded-md border px-2.5 py-1.5 text-xs font-medium transition-colors ${on ? `${ROLE_META[r].chip} ${ROLE_META[r].ring}` : "border-line bg-white text-muted hover:bg-soft"}`}>
+                    {on && <Check size={12} />} {ROLE_LABELS[r]}
+                  </button>
+                );
+              })}
+            </div>
+            <p className="mt-1 text-xs text-faint">{form.roles.map((r) => ROLE_DESC[r]).join(" · ") || "เลือกอย่างน้อย 1 อย่าง"}</p>
           </div>
           <div>
             <label className="label">รหัสผ่าน</label>
@@ -150,11 +160,17 @@ export default function UsersManager({ users, meId }: { users: UserRow[]; meId: 
                   <td className="px-4 py-3 font-medium text-ink">@{u.username}{u.id === meId && <span className="ml-1 text-xs text-faint">(คุณ)</span>}</td>
                   <td className="px-4 py-3">{u.full_name || "—"}</td>
                   <td className="px-4 py-3">
-                    <select value={u.role} onChange={(e) => changeRole(u, e.target.value)} disabled={u.id === meId}
-                      className={`h-8 rounded-md border-0 py-0 pl-2 pr-6 text-xs font-medium disabled:opacity-60 ${roleChip(u.role)}`} title="เปลี่ยนบทบาท">
-                      {!ROLE_OPTS.includes(u.role as any) && <option value={u.role}>{u.role} (เดิม)</option>}
-                      {ROLE_OPTS.map((r) => <option key={r} value={r}>{ROLE_LABELS[r]}</option>)}
-                    </select>
+                    <div className="flex flex-wrap gap-1" title="คลิกเพื่อเปิด/ปิดสิทธิ์ (มีได้หลายอย่าง)">
+                      {ROLE_OPTS.map((r) => {
+                        const on = roleList(u.role).includes(r);
+                        return (
+                          <button key={r} type="button" disabled={u.id === meId} onClick={() => toggleRole(u, r)}
+                            className={`rounded-md px-2 py-0.5 text-[11px] font-medium disabled:opacity-50 ${on ? ROLE_META[r].chip : "bg-soft text-faint hover:bg-brand-50 hover:text-brand-600"}`}>
+                            {ROLE_LABELS[r]}
+                          </button>
+                        );
+                      })}
+                    </div>
                   </td>
                   <td className="px-4 py-3">
                     <span className={`chip ${u.is_active ? "bg-green-50 text-green-700" : "bg-red-50 text-red-600"}`}>{u.is_active ? "ใช้งาน" : "ปิด"}</span>
