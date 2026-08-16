@@ -1,10 +1,10 @@
 "use client";
 import { Fragment, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { createProduct, renameProduct, setProductActive, setProductType, bulkSetProductTypes, addScentBarcode, deleteScentBarcode } from "@/lib/actions/products";
+import { createProduct, renameProduct, setProductActive, setProductType, bulkSetProductTypes, addScentBarcode, deleteScentBarcode, setDiscontinued } from "@/lib/actions/products";
 import type { ProductAdminRow, ScentBarcode } from "@/lib/queries";
 import { PERFUME_TYPES } from "@/lib/types";
-import { Plus, Check, X, Pencil, Search, CheckCircle2 } from "lucide-react";
+import { Plus, Check, X, Pencil, Search, CheckCircle2, Ban } from "lucide-react";
 
 type Filter = "all" | "untyped" | "typed" | "discontinued";
 const normKey = (s: string) => (s || "").toLowerCase().replace(/[^a-z0-9ก-๙]/g, "");
@@ -13,10 +13,12 @@ export default function ProductsManager({
   products,
   sizesByScent = {},
   discontinued = {},
+  sizes = [],
 }: {
   products: ProductAdminRow[];
   sizesByScent?: Record<string, ScentBarcode[]>;
   discontinued?: Record<string, string[]>;
+  sizes?: string[];
 }) {
   const router = useRouter();
   const [name, setName] = useState("");
@@ -85,6 +87,9 @@ export default function ProductsManager({
   async function delBarcode(id: number) {
     if (!confirm("ลบบาร์โค้ดนี้?")) return;
     const res = await deleteScentBarcode(id); if (!res.ok) { alert(res.error); return; } router.refresh();
+  }
+  async function toggleDisc(name: string, size: string, disc: boolean) {
+    const res = await setDiscontinued(name, size, disc); if (!res.ok) { alert(res.error); return; } router.refresh();
   }
   async function applyBulk() {
     const rows = filtered;
@@ -165,7 +170,7 @@ export default function ProductsManager({
           <tbody>
             {filtered.length === 0 && <tr><td colSpan={6} className="px-4 py-10 text-center text-muted">ไม่พบกลิ่น</td></tr>}
             {filtered.map((p) => {
-              const sizes = sizesFor(p.name);
+              const barcodes = sizesFor(p.name);
               return (
                 <Fragment key={p.id}>
                   <tr className={`border-t border-line ${!p.active ? "bg-soft/40" : ""}`}>
@@ -190,26 +195,35 @@ export default function ProductsManager({
                     </td>
                     <td className="px-3 py-2.5">
                       <div className="flex flex-wrap items-center gap-1.5">
-                        {sizes.length === 0 && addId !== p.id && (
+                        {barcodes.length === 0 && addId !== p.id && discSizes(p.name).length === 0 && (
                           <span className="text-xs text-faint">— ยังไม่มีบาร์โค้ด</span>
                         )}
-                        {sizes.map((s) => {
+                        {barcodes.map((s) => {
                           const disc = isDisc(p.name, s.size);
                           return (
                             <div key={s.id} className={`flex items-center gap-2 rounded-lg border px-2.5 py-1 ${disc ? "border-red-200 bg-red-50/60" : "border-line bg-white"}`}>
                               <span className={`text-xs font-semibold ${disc ? "text-red-600 line-through" : "text-ink"}`}>{s.size.replace(/\.$/, "")}</span>
                               <span className="font-mono text-xs text-muted">{s.barcode}</span>
                               {s.sku && <span className="text-[11px] text-faint">{s.sku}</span>}
-                              {disc && <span className="text-[10px] font-medium text-red-600">เลิกผลิต</span>}
+                              <button onClick={() => toggleDisc(p.name, s.size, !disc)} title={disc ? "ยกเลิก 'เลิกผลิต'" : "ทำเครื่องหมายเลิกผลิต"}
+                                className={disc ? "text-red-600" : "text-faint hover:text-red-500"}><Ban size={12} /></button>
                               <button onClick={() => delBarcode(s.id)} className="text-faint hover:text-red-500" title="ลบบาร์โค้ดนี้"><X size={12} /></button>
                             </div>
                           );
                         })}
-                        {discSizes(p.name).filter((dk) => !sizes.some((s) => normKey(s.size) === dk)).map((dk) => (
+                        {discSizes(p.name).filter((dk) => !barcodes.some((s) => normKey(s.size) === dk)).map((dk) => (
                           <span key={"d" + dk} className="inline-flex items-center gap-1 rounded-lg border border-red-200 bg-red-50/60 px-2.5 py-1 text-xs font-medium text-red-600">
                             <span className="line-through">{dk.replace(/ml$/, " ml")}</span> เลิกผลิต
+                            <button onClick={() => toggleDisc(p.name, dk.replace(/ml$/, " ml"), false)} title="ยกเลิก 'เลิกผลิต'" className="hover:text-red-800"><X size={11} /></button>
                           </span>
                         ))}
+                        {sizes.filter((sz) => !isDisc(p.name, sz)).length > 0 && (
+                          <select value="" onChange={(e) => { if (e.target.value) toggleDisc(p.name, e.target.value, true); }}
+                            className="h-7 rounded-md border border-line bg-white px-1.5 text-xs text-muted" title="ทำเครื่องหมายเลิกผลิตขนาด">
+                            <option value="">⊘ เลิกผลิตขนาด…</option>
+                            {sizes.filter((sz) => !isDisc(p.name, sz)).map((sz) => <option key={sz} value={sz}>{sz}</option>)}
+                          </select>
+                        )}
                         {addId === p.id ? (
                           <div className="flex items-center gap-1 rounded-lg border border-brand/40 bg-brand-50/40 px-1.5 py-1">
                             <input autoFocus className="input h-7 w-16 py-0 text-xs" value={aSize} onChange={(e) => setASize(e.target.value)} placeholder="ขนาด" />

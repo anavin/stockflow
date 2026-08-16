@@ -58,6 +58,24 @@ export async function addScentBarcode(scent: string, size: string, barcode: stri
   return { ok: true };
 }
 
+/** เปิด/ปิด "เลิกผลิต" ต่อ (กลิ่น+ขนาด) — เก็บ 1 แถวต่อคู่ (normalize กันซ้ำ/ชื่อสะกดต่าง) */
+export async function setDiscontinued(scent: string, size: string, disc: boolean): Promise<{ ok: boolean; error?: string }> {
+  const g = await gate(); if ("error" in g) return { ok: false, error: g.error };
+  const sc = (scent || "").trim(), sz = (size || "").trim();
+  if (!sc || !sz) return { ok: false, error: "ระบุกลิ่นและขนาด" };
+  const NZ = `regexp_replace(lower(btrim($1)),'[^a-z0-9ก-๙]','','g')`;
+  const SZ = `regexp_replace(lower($2),'[^a-z0-9ก-๙]','','g')`;
+  try {
+    await q(`delete from discontinued_sku
+             where regexp_replace(lower(btrim(scent)),'[^a-z0-9ก-๙]','','g') = ${NZ}
+               and regexp_replace(lower(size),'[^a-z0-9ก-๙]','','g') = ${SZ}`, [sc, sz]);
+    if (disc) await q(`insert into discontinued_sku (scent, size) values ($1, $2) on conflict (scent, size) do nothing`, [sc, sz]);
+  } catch { return { ok: false, error: "ยังไม่มีตาราง discontinued_sku (รัน SQL 0021 บน prod ก่อน)" }; }
+  revalidatePath("/products");
+  revalidatePath("/shopee/new");
+  return { ok: true };
+}
+
 export async function deleteScentBarcode(id: number): Promise<{ ok: boolean; error?: string }> {
   const g = await gate(); if ("error" in g) return { ok: false, error: g.error };
   await q(`delete from product_barcodes where id = $1`, [id]);
