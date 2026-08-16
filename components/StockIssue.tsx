@@ -10,7 +10,8 @@ type Entry = { at: string; res: IssueResult; input: string; reversed?: boolean }
 
 const now = () => new Date().toLocaleTimeString("th-TH");
 
-export default function StockIssue({ isAdmin, initialOrder, specOptions = [] }: { isAdmin: boolean; initialOrder?: string; specOptions?: string[] }) {
+type SpecOpt = { label: string; for_bag: boolean };
+export default function StockIssue({ isAdmin, initialOrder, specOptions = [] }: { isAdmin: boolean; initialOrder?: string; specOptions?: SpecOpt[] }) {
   const [value, setValue] = useState("");
   const [busy, setBusy] = useState(false);
   const [log, setLog] = useState<Entry[]>([]);
@@ -122,11 +123,13 @@ export default function StockIssue({ isAdmin, initialOrder, specOptions = [] }: 
                   </div>
                   {(() => {
                     const cur = form[it.line_no]?.spec || "";
-                    const extra = cur && !specOptions.includes(cur);
+                    // สินค้าถุงกระดาษ → เลือกได้แค่สเป็กถุง (Size S/M); สินค้าปกติ → สเป็กปกติ
+                    const opts = specOptions.filter((o) => (it.is_bag ? o.for_bag : !o.for_bag)).map((o) => o.label);
+                    const extra = cur && !opts.includes(cur);
                     return (
                       <select className="input text-sm" value={cur} onChange={(e) => setField(it.line_no, "spec", e.target.value)} title="สเป็กสินค้า">
-                        <option value="">— เลือกสเป็ก —</option>
-                        {specOptions.map((o) => <option key={o} value={o}>{o}</option>)}
+                        <option value="">{it.is_bag ? "— เลือกขนาดถุง —" : "— เลือกสเป็ก —"}</option>
+                        {opts.map((o) => <option key={o} value={o}>{o}</option>)}
                         {extra && <option value={cur}>{cur}</option>}
                       </select>
                     );

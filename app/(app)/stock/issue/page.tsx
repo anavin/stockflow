@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { requireStock } from "@/lib/auth/require-user";
-import { stockSummary, getSpecOptions } from "@/lib/queries";
+import { stockSummary, getSpecOptionsForIssue } from "@/lib/queries";
 import StockIssue from "@/components/StockIssue";
 import { Boxes, History, ClipboardList, Tags } from "lucide-react";
 
@@ -9,7 +9,7 @@ export const dynamic = "force-dynamic";
 export default async function StockIssuePage({ searchParams }: { searchParams: Promise<{ order?: string }> }) {
   const me = await requireStock();
   const { order } = await searchParams;
-  const [sum, specOptions] = await Promise.all([stockSummary(), getSpecOptions()]);
+  const [sum, specOptions] = await Promise.all([stockSummary(), getSpecOptionsForIssue()]);
   return (
     // หน้าสแกน = ธีมน้ำเงิน (override --brand เฉพาะหน้านี้) ให้ action เด่น;
     // สีผลลัพธ์ เขียว/เหลือง/แดง ไม่เปลี่ยน

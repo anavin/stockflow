@@ -2012,3 +2012,16 @@ insert into public.spec_options (label, sort) values
   ('ฝาสีเงิน', 1), ('สี่เหลี่ยม', 2), ('ซองซิป', 3), ('X-Secret', 4), ('ขวดกลม', 5),
   ('ลูกเต๋า', 6), ('ฝาสีดำ', 7), ('Pack', 8), ('Size S', 9), ('Size M', 10)
 on conflict (label) do nothing;
+
+-- 0017 spec: for_bag (สเป็กเฉพาะถุงกระดาษ) + spec_rules (เลือกสเป็กอัตโนมัติตามขนาด+Grade)
+alter table public.spec_options add column if not exists for_bag boolean not null default false;
+update public.spec_options set for_bag = true where label in ('Size S', 'Size M');
+create table if not exists public.spec_rules (
+  id serial primary key, sizes text not null, grades text not null,
+  spec text not null, sort int not null default 0, active boolean not null default true);
+insert into public.spec_rules (sizes, grades, spec, sort)
+select * from (values
+  ('10 ml','EDP','ฝาสีเงิน',1), ('10 ml','EDP+,PARFUM','ฝาสีดำ',2),
+  ('50 ml','EDP','สี่เหลี่ยม',3), ('30 ml,50 ml','EDP+,PARFUM','ลูกเต๋า',4)
+) as v(sizes, grades, spec, sort)
+where not exists (select 1 from public.spec_rules);

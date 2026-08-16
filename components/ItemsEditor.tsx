@@ -1,8 +1,13 @@
 "use client";
 import Combobox from "./Combobox";
-import { Trash2, Plus, Gift, AlertTriangle } from "lucide-react";
+import { Trash2, Plus, Gift, AlertTriangle, ShoppingBag } from "lucide-react";
 import { buildProductLabel } from "@/lib/types";
 import { FREE_ALLOWED_SIZES, isAllowedFreeSize } from "@/lib/config";
+
+// ถุงกระดาษ = สินค้าแถมพิเศษ (เลือกขนาด Size S/M ตอนแพ็ก) — ไม่ติดกฎขนาดของแถม (1.2/4/10 ml)
+export const BAG_PRODUCT = "ถุงกระดาษ";
+const BAG_SIZES = ["Size S", "Size M"];
+export const isBagProduct = (p: string) => /ถุง/.test(p || "");
 
 // จำนวน dropdown options (1–30). ครอบคลุมการใช้งานปกติ; แก้เพิ่มได้ที่นี่
 const QTY_OPTIONS = Array.from({ length: 30 }, (_, i) => i + 1);
@@ -34,7 +39,7 @@ export type ItemError = { product?: boolean; size?: boolean; qty?: boolean };
 export function itemErrorOf(it: ItemDraft): ItemError {
   const e: ItemError = {};
   if (!it.product.trim()) e.product = true;
-  if (!it.size.trim()) e.size = true;
+  if (!isBagProduct(it.product) && !it.size.trim()) e.size = true;   // ถุงกระดาษ ไม่บังคับขนาด
   if (!(Number(it.qty) > 0)) e.qty = true;
   return e;
 }
@@ -83,6 +88,9 @@ export default function ItemsEditor({
   function addFree() {
     onChange([...items, { ...emptyItem(), is_free: true }]);
   }
+  function addBag() {
+    onChange([...items, { product: BAG_PRODUCT, size: "", is_free: true, qty: 1, unit: "ใบ", sku: "" }]);
+  }
   // ปกติ: ขนาดใหญ่ก่อน (30/50/90/100) แล้วค่อยขนาดเล็ก
   const SIZE_ORDER = ["30 ml", "50 ml", "90 ml", "100 ml", "1.2 ml", "4 ml", "10 ml"];
   const rank = (sz: string) => { const i = SIZE_ORDER.indexOf(sz); return i < 0 ? 99 : i; };
@@ -92,7 +100,7 @@ export default function ItemsEditor({
   function setFree(i: number, checked: boolean) {
     const it = items[i];
     const patch: Partial<ItemDraft> = { is_free: checked };
-    if (checked && !isAllowedFreeSize(it.size)) patch.size = ""; // ล้างไซต์ใหญ่ที่เป็นของแถมไม่ได้
+    if (checked && !isBagProduct(it.product) && !isAllowedFreeSize(it.size)) patch.size = ""; // ล้างไซต์ใหญ่ที่เป็นของแถมไม่ได้ (ยกเว้นถุง)
     update(i, patch);
   }
   // จำนวน > 30 = ของแถมไม่ได้ (ปิดปุ่ม Free + ยกเลิกถ้าติ๊กไว้)
@@ -140,8 +148,9 @@ export default function ItemsEditor({
                 </td>
                 <td className="px-3 py-2">
                   <Combobox value={it.size} onChange={(v) => update(i, { size: v })}
-                    options={it.is_free ? sizesFree : sizesNormal} allowCustom={!it.is_free} placeholder="ขนาด" invalid={errors[i]?.size} />
-                  {it.is_free && it.size && !isAllowedFreeSize(it.size) && (
+                    options={isBagProduct(it.product) ? BAG_SIZES : (it.is_free ? sizesFree : sizesNormal)}
+                    allowCustom={!it.is_free && !isBagProduct(it.product)} placeholder={isBagProduct(it.product) ? "ขนาดถุง (ถ้ามี)" : "ขนาด"} invalid={errors[i]?.size} />
+                  {!isBagProduct(it.product) && it.is_free && it.size && !isAllowedFreeSize(it.size) && (
                     <div className="mt-1 flex items-center gap-1 text-[11px] text-red-600">
                       <AlertTriangle size={12} /> ของแถมได้เฉพาะ 1.2/4/10 ml
                     </div>
@@ -185,13 +194,14 @@ export default function ItemsEditor({
             {productTypes?.[it.product] && <div className="text-[11px] text-muted">ประเภท: <span className="font-medium text-ink">{productTypes[it.product]}</span></div>}
             <div className="grid grid-cols-2 gap-2">
               <Combobox value={it.size} onChange={(v) => update(i, { size: v })}
-                options={it.is_free ? sizesFree : sizesNormal} allowCustom={!it.is_free} placeholder="ขนาด" invalid={errors[i]?.size} />
+                options={isBagProduct(it.product) ? BAG_SIZES : (it.is_free ? sizesFree : sizesNormal)}
+                allowCustom={!it.is_free && !isBagProduct(it.product)} placeholder={isBagProduct(it.product) ? "ขนาดถุง (ถ้ามี)" : "ขนาด"} invalid={errors[i]?.size} />
               <QtySelect value={it.qty} onChange={(v) => setQty(i, v)} invalid={errors[i]?.qty} />
             </div>
             {errMsg(errors[i]) && (
               <div className="flex items-center gap-1 text-xs text-red-600"><AlertTriangle size={12} /> {errMsg(errors[i])}</div>
             )}
-            {it.is_free && it.size && !isAllowedFreeSize(it.size) && (
+            {!isBagProduct(it.product) && it.is_free && it.size && !isAllowedFreeSize(it.size) && (
               <div className="flex items-center gap-1 text-xs text-red-600"><AlertTriangle size={12} /> ของแถมได้เฉพาะ 1.2/4/10 ml</div>
             )}
             <label className={`flex items-center gap-2 text-sm ${freeDisabled(it) ? "text-faint" : "text-muted"}`}>
@@ -207,6 +217,9 @@ export default function ItemsEditor({
         <button type="button" className="btn-ghost" onClick={add}><Plus size={16} /> เพิ่มรายการ</button>
         <button type="button" className="btn-ghost border-brand-200 text-brand-600 hover:bg-brand-50" onClick={addFree}>
           <Gift size={16} /> เพิ่มของแถม (Free)
+        </button>
+        <button type="button" className="btn-ghost border-amber-200 text-amber-700 hover:bg-amber-50" onClick={addBag}>
+          <ShoppingBag size={16} /> แถมถุง
         </button>
       </div>
     </div>

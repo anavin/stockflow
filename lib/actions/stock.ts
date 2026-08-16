@@ -4,6 +4,22 @@ import { q, tx } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth/session";
 import { can } from "@/lib/auth/roles";
 import { isStockTracked } from "@/lib/config";
+import { getActiveSpecRules } from "@/lib/queries";
+
+// ---- auto-select spec ตามขนาด + Grade (จากตาราง spec_rules) --------------------
+const normSize = (s: string) => (s || "").toLowerCase().replace(/[^0-9a-z]/g, "");
+const isBagProduct = (product: string) => /ถุง/.test(product || "");  // ถุงกระดาษ = ใช้สเป็ก Size S/M
+function pickAutoSpec(size: string, grade: string | null, rules: { sizes: string; grades: string; spec: string }[]): string {
+  const sz = normSize(size);
+  const gr = (grade || "").trim().toLowerCase();
+  if (!sz || !gr) return "";
+  for (const r of rules) {
+    const sizes = r.sizes.split(",").map((x) => normSize(x)).filter(Boolean);
+    const grades = r.grades.split(",").map((x) => x.trim().toLowerCase()).filter(Boolean);
+    if (sizes.includes(sz) && grades.includes(gr)) return r.spec;
+  }
+  return "";
+}
 
 /** แก้ไขสต๊อก (รับเข้า/ปรับยอด/นำเข้า/ยกเลิก) = เฉพาะ admin */
 async function requireAdmin() {
@@ -122,6 +138,7 @@ export async function issueStockByOrder(orderNo: string): Promise<IssueResult> {
 export type IssueItemPreview = {
   line_no: number; product: string; size: string; qty: number; unit: string;
   is_free: boolean; sku: string | null; spec: string | null; stock: number; tracked: boolean;
+  grade: string | null; is_bag: boolean;
 };
 export type IssueLookup = {
   ok: boolean; error?: string; alreadyIssued?: boolean;
@@ -142,18 +159,23 @@ export async function lookupOrderForIssue(orderNo: string): Promise<IssueLookup>
   if (order.deleted_at) return { ok: false, error: "ใบเบิกนี้อยู่ในถังขยะ" };
   if (order.stock_issued_at) return { ok: false, alreadyIssued: true, order_no: on, doc_no: order.doc_no, error: "ใบเบิกนี้ตัดสต๊อกไปแล้ว" };
 
-  const items = await q<{ line_no: number; product: string; size: string; qty: number; unit: string; is_free: boolean; sku: string | null; spec: string | null }>(
-    `select line_no, product, size, qty::float8 as qty, unit, is_free, sku, spec
+  const items = await q<{ line_no: number; product: string; size: string; qty: number; unit: string; is_free: boolean; sku: string | null; spec: string | null; grade: string | null }>(
+    `select line_no, product, size, qty::float8 as qty, unit, is_free, sku, spec,
+            (select p.ptype from products p where p.name = order_items.product limit 1) as grade
      from order_items where order_no = $1 and coalesce(product,'') <> '' order by line_no`, [on]);
   if (items.length === 0) return { ok: false, error: "ใบเบิกไม่มีรายการสินค้า" };
 
+  const rules = await getActiveSpecRules();
   const withStock: IssueItemPreview[] = [];
   for (const it of items) {
     // ยอดคงเหลือที่โชว์ต้องมาจาก SKU แถวเดียวกับที่จะตัดจริง (normalize ชื่อ+ขนาดเหมือน matchStockSku)
     const [s] = await q<{ qty: number }>(
       `select qty::float8 as qty from stock where ${SKU_MATCH} ${SKU_TIEBREAK}`,
       [it.product, it.size || ""]);
-    withStock.push({ ...it, stock: s?.qty ?? 0, tracked: isStockTracked(it.size) });
+    const bag = isBagProduct(it.product);
+    // เลือกสเป็กอัตโนมัติ: ใช้ค่าที่เคยกรอกไว้ก่อน ถ้าไม่มีค่อยเดาจากกฎ (เฉพาะสินค้าที่ไม่ใช่ถุง)
+    const spec = it.spec || (bag ? "" : pickAutoSpec(it.size, it.grade, rules));
+    withStock.push({ ...it, spec, stock: s?.qty ?? 0, tracked: isStockTracked(it.size), is_bag: bag });
   }
   return { ok: true, order_no: on, doc_no: order.doc_no, note: order.note, items: withStock };
 }

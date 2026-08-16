@@ -70,17 +70,32 @@ export async function getScentBarcodes(): Promise<Record<string, ScentBarcode[]>
   return map;
 }
 
-/** รายการสเป็ก (dropdown ตอนตัดสต๊อก) — เฉพาะที่เปิดใช้ */
-export async function getSpecOptions(): Promise<string[]> {
+export type SpecOption = { label: string; for_bag: boolean };
+/** รายการสเป็กที่เปิดใช้ (+ ธงถุงกระดาษ) — สำหรับ dropdown ตอนตัดสต๊อก */
+export async function getSpecOptionsForIssue(): Promise<SpecOption[]> {
   try {
-    const rows = await q<{ label: string }>(`select label from spec_options where active order by sort, label`);
-    return rows.map((r) => r.label);
+    return await q<SpecOption>(`select label, for_bag from spec_options where active order by sort, label`);
   } catch { return []; }  // ตารางยังไม่ถูกสร้าง (prod ยังไม่รัน SQL)
 }
-export type SpecOptionRow = { id: number; label: string; sort: number; active: boolean };
+export type SpecOptionRow = { id: number; label: string; sort: number; active: boolean; for_bag: boolean };
 export async function listSpecOptions(): Promise<SpecOptionRow[]> {
   try {
-    return await q<SpecOptionRow>(`select id, label, sort, active from spec_options order by sort, label`);
+    return await q<SpecOptionRow>(`select id, label, sort, active, for_bag from spec_options order by sort, label`);
+  } catch { return []; }
+}
+
+export type SpecRuleRow = { id: number; sizes: string; grades: string; spec: string; sort: number; active: boolean };
+/** กฎเลือกสเป็กอัตโนมัติทั้งหมด (สำหรับหน้าจัดการ) */
+export async function listSpecRules(): Promise<SpecRuleRow[]> {
+  try {
+    return await q<SpecRuleRow>(`select id, sizes, grades, spec, sort, active from spec_rules order by sort, id`);
+  } catch { return []; }
+}
+/** กฎที่เปิดใช้ (สำหรับ auto-select ตอนดึงใบเบิก) */
+export async function getActiveSpecRules(): Promise<{ sizes: string; grades: string; spec: string }[]> {
+  try {
+    return await q<{ sizes: string; grades: string; spec: string }>(
+      `select sizes, grades, spec from spec_rules where active order by sort, id`);
   } catch { return []; }
 }
 
