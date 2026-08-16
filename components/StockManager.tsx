@@ -443,7 +443,14 @@ export default function StockManager({ rows, products, sizes, initialLow, isAdmi
                           </td>
                           <td className="px-3 py-2.5">{r.grade ? <span className="chip bg-brand-50 text-brand-600">{r.grade}</span> : <span className="text-faint">—</span>}</td>
                           <td className={`px-3 py-2.5 ${disc ? "text-red-600 line-through" : "text-muted"}`}>{r.size}</td>
-                          <td className="px-3 py-2.5">{skuOf(r.product, r.size) ? <span className="font-mono text-xs text-ink">{skuOf(r.product, r.size)}</span> : <span className="text-faint">—</span>}</td>
+                          <td className="px-3 py-2.5">{skuOf(r.product, r.size)
+                            ? <span className="font-mono text-xs text-ink">{skuOf(r.product, r.size)}</span>
+                            : (isAdmin
+                              ? <Link href={`/products?scent=${encodeURIComponent(r.product)}&size=${encodeURIComponent(r.size)}`}
+                                  className="inline-flex items-center gap-0.5 text-xs text-brand-600 hover:underline" title="ไปเพิ่มบาร์โค้ดของกลิ่น/ขนาดนี้">
+                                  <Plus size={11} /> เพิ่มบาร์โค้ด
+                                </Link>
+                              : <span className="text-faint">—</span>)}</td>
                           <td className="px-3 py-2.5 text-right">
                             <Link href={`/stock/units?product=${encodeURIComponent(r.product)}&size=${encodeURIComponent(r.size)}`}
                               title="คลิกดูสินค้ารายชิ้น (SKU) ของขนาดนี้"

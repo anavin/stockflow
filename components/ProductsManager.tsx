@@ -1,6 +1,6 @@
 "use client";
-import { Fragment, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
+import { Fragment, useEffect, useMemo, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { createProduct, renameProduct, setProductActive, setProductType, bulkSetProductTypes, addScentBarcode, deleteScentBarcode, setDiscontinued } from "@/lib/actions/products";
 import type { ProductAdminRow, ScentBarcode } from "@/lib/queries";
 import { PERFUME_TYPES } from "@/lib/types";
@@ -60,6 +60,18 @@ export default function ProductsManager({
     return c;
   }, [products]);
   const activeCount = products.filter((p) => p.active).length;
+
+  // มาจากทางลัด "เพิ่มบาร์โค้ด" ในหน้าสต๊อก (/products?scent=..&size=..) → เปิดฟอร์มกลิ่นนั้น + เลื่อนไปหา
+  const sp = useSearchParams();
+  useEffect(() => {
+    const scent = sp.get("scent"); if (!scent) return;
+    const p = products.find((x) => normKey(x.name) === normKey(scent));
+    if (!p) return;
+    setQ(scent);
+    setAddId(p.id); setASize(sp.get("size") || ""); setABarcode(""); setASku("");
+    setTimeout(() => document.getElementById(`prod-${p.id}`)?.scrollIntoView({ behavior: "smooth", block: "center" }), 150);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   async function add(e: React.FormEvent) {
     e.preventDefault();
@@ -173,7 +185,7 @@ export default function ProductsManager({
               const barcodes = sizesFor(p.name);
               return (
                 <Fragment key={p.id}>
-                  <tr className={`border-t border-line ${!p.active ? "bg-soft/40" : ""}`}>
+                  <tr id={`prod-${p.id}`} className={`border-t border-line ${!p.active ? "bg-soft/40" : ""} ${addId === p.id ? "bg-brand-50/40" : ""}`}>
                     <td className="px-4 py-2.5 align-top whitespace-nowrap">
                       {editId === p.id ? (
                         <div className="flex items-center gap-1">
