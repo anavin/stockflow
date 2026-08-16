@@ -125,8 +125,8 @@ export default function StockIssue({ isAdmin, initialOrder, specOptions = [] }: 
                       <button type="button" onClick={() => setSkuScanLine(it.line_no)} className="btn-ghost shrink-0 px-2" title="สแกน SKU ด้วยกล้อง"><Camera size={16} /></button>
                     </div>
                     {it.ctw_barcode && (
-                      <p className="mt-1 font-mono text-[11px] text-faint" title="บาร์โค้ดสินค้า (EAN) — SKU ต้องเป็นเลขรายชิ้น ไม่ใช่บาร์โค้ด">
-                        EAN: {it.ctw_barcode}
+                      <p className="mt-1 font-mono text-[11px] text-faint" title="บาร์โค้ดสินค้า — SKU ต้องเป็นเลขรายชิ้น ไม่ใช่บาร์โค้ด">
+                        Barcode: {it.ctw_barcode}
                       </p>
                     )}
                   </div>

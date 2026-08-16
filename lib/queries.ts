@@ -52,7 +52,7 @@ export async function listProductsAdmin(): Promise<ProductAdminRow[]> {
 }
 
 export type ScentBarcode = { id: number; size: string; barcode: string; sku: string | null; grade: string | null };
-/** ขนาด+บาร์โค้ด (EAN จาก CTW + ที่ user เพิ่มเอง) ต่อกลิ่น — คีย์ = ชื่อกลิ่น lower/trim; เรียงขนาดเล็ก→ใหญ่ */
+/** ขนาด+บาร์โค้ด (Barcode จาก CTW + ที่ user เพิ่มเอง) ต่อกลิ่น — คีย์ = ชื่อกลิ่น lower/trim; เรียงขนาดเล็ก→ใหญ่ */
 export async function getScentBarcodes(): Promise<Record<string, ScentBarcode[]>> {
   let rows: (ScentBarcode & { scent: string })[] = [];
   try {
@@ -173,7 +173,7 @@ export async function stockUnitMismatches(): Promise<UnitMismatch[]> {
   } catch { return []; }
 }
 
-/** SKU (EAN) ต่อ (กลิ่น+ขนาด) — คีย์ = normalize(scent)|normalize(size) → barcode */
+/** SKU (Barcode) ต่อ (กลิ่น+ขนาด) — คีย์ = normalize(scent)|normalize(size) → barcode */
 export async function getSkuLookup(): Promise<Record<string, string>> {
   const nz = (s: string) => (s || "").toLowerCase().replace(/[^a-z0-9ก-๙]/g, "");
   try {

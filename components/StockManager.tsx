@@ -117,7 +117,7 @@ export default function StockManager({ rows, products, sizes, initialLow, isAdmi
     if (!bc) return;
     setErr(""); setMsg("");
     if (code != null) setF((s) => ({ ...s, barcode: code }));
-    const res = await resolveSku(bc);   // resolve จากบาร์โค้ดสินค้า (EAN) → กลิ่น+ขนาด
+    const res = await resolveSku(bc);   // resolve จากบาร์โค้ดสินค้า → กลิ่น+ขนาด
     if (!res.ok) { setErr(res.error || "ไม่พบบาร์โค้ด"); return; }
     setF((s) => ({ ...s, barcode: bc, product: res.product!, size: res.size!, grade: res.grade || "" }));
     setTimeout(() => qtyRef.current?.focus(), 0);   // โฟกัสช่อง "จำนวน" ต่อทันที
@@ -218,11 +218,11 @@ export default function StockManager({ rows, products, sizes, initialLow, isAdmi
                 onChange={(e) => { const file = e.target.files?.[0]; if (file) { importFile(file); e.target.value = ""; } }} />
             </div>
           </div>
-          {/* 1) สแกนบาร์โค้ดสินค้า (EAN) → เดากลิ่น+ขนาด */}
+          {/* 1) สแกนบาร์โค้ดสินค้า → เดากลิ่น+ขนาด */}
           <div className="mb-2 flex flex-wrap gap-2">
             <input value={f.barcode} onChange={(e) => setF((s) => ({ ...s, barcode: e.target.value }))}
               onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); doResolveBarcode(); } }}
-              className="input flex-1 min-w-[200px] font-mono" placeholder="สแกนบาร์โค้ดสินค้า (EAN) → เดากลิ่น/ขนาด" />
+              className="input flex-1 min-w-[200px] font-mono" placeholder="สแกนบาร์โค้ดสินค้า → เดากลิ่น/ขนาด" />
             <button type="button" onClick={() => setScanOpen(true)} className="btn-ghost" title="สแกนด้วยกล้อง"><Camera size={15} /> สแกน</button>
             <button type="button" onClick={() => doResolveBarcode()} className="btn-ghost"><Search size={15} /> ค้นหา</button>
           </div>

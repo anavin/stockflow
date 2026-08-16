@@ -44,7 +44,7 @@ export async function bulkSetProductTypes(
   return { ok: true, count: rows.length };
 }
 
-/** เพิ่มบาร์โค้ด (ขนาด+EAN) ให้กลิ่นเอง — เก็บใน product_barcodes เดียวกับข้อมูล CTW */
+/** เพิ่มบาร์โค้ด (ขนาด+Barcode) ให้กลิ่นเอง — เก็บใน product_barcodes เดียวกับข้อมูล CTW */
 export async function addScentBarcode(scent: string, size: string, barcode: string, sku?: string): Promise<{ ok: boolean; error?: string }> {
   const g = await gate(); if ("error" in g) return { ok: false, error: g.error };
   const sc = (scent || "").trim(), sz = (size || "").trim(), bc = (barcode || "").trim();

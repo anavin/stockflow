@@ -259,7 +259,7 @@ export default function ProductsManager({
           </tbody>
         </table>
       </div>
-      <p className="text-xs text-faint">แก้ชื่อมีผลกับใบใหม่ (ใบเก่ายังเป็นชื่อเดิม) · ขนาด + บาร์โค้ด (EAN) ดึงจาก master ของร้าน CTW (เฉพาะกลิ่นที่ชื่อตรงกัน) · ใช้งาน {activeCount} · ทั้งหมด {products.length}</p>
+      <p className="text-xs text-faint">แก้ชื่อมีผลกับใบใหม่ (ใบเก่ายังเป็นชื่อเดิม) · ขนาด + บาร์โค้ด ดึงจาก master ของร้าน CTW (เฉพาะกลิ่นที่ชื่อตรงกัน) · ใช้งาน {activeCount} · ทั้งหมด {products.length}</p>
     </div>
   );
 }
