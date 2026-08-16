@@ -130,10 +130,18 @@ export default function StockManager({ rows, products, sizes, initialLow, isAdmi
     setErr(""); setMsg(""); setBusy(true);
     const fd = new FormData(); fd.append("file", file);
     try {
-      const res = await fetch("/api/stock/import", { method: "POST", body: fd });
+      const res = await fetch("/api/stock/sku-import", { method: "POST", body: fd });
       const data = await res.json();
-      if (!data.ok) setErr(data.error || "นำเข้าไม่สำเร็จ");
-      else { setMsg(`นำเข้าสต๊อกจากไฟล์ ${data.imported} รายการ (${(data.sheets || []).join(", ")})`); router.refresh(); }
+      if (!data.ok) { setErr(data.error || "นำเข้าไม่สำเร็จ"); }
+      else {
+        const parts = [`นำเข้า ${data.added} ชิ้น (${data.groups} กลิ่น/ขนาด)`];
+        if (data.dbDupes) parts.push(`ข้ามซ้ำในระบบ ${data.dbDupes}`);
+        if (data.dupInFile) parts.push(`ซ้ำในไฟล์ ${data.dupInFile}`);
+        if (data.errors?.length) parts.push(`ข้าม ${data.errors.length} แถวมีปัญหา`);
+        setMsg(parts.join(" · "));
+        if (data.errors?.length) setErr("แถวที่ข้าม: " + data.errors.slice(0, 8).map((e: any) => `#${e.row || "-"} ${e.reason}`).join(" | ") + (data.errors.length > 8 ? " …" : ""));
+        router.refresh();
+      }
     } catch { setErr("อัปโหลดไม่สำเร็จ"); }
     setBusy(false);
   }
@@ -162,12 +170,12 @@ export default function StockManager({ rows, products, sizes, initialLow, isAdmi
           <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
             <h2 className="flex items-center gap-2 text-sm font-semibold text-ink"><PackagePlus size={16} /> รับสินค้าเข้าสต๊อก</h2>
             <div className="flex gap-2">
-              <a href="/api/stock/template" className="btn-ghost text-xs"><FileDown size={14} /> เทมเพลต</a>
+              <a href="/api/stock/sku-template" className="btn-ghost text-xs"><FileDown size={14} /> เทมเพลต SKU</a>
               <button type="button" className="btn-ghost text-xs" disabled={busy} onClick={() => fileRef.current?.click()}>
-                <FileUp size={14} /> {busy ? "กำลังนำเข้า…" : "นำเข้าไฟล์ Excel"}
+                <FileUp size={14} /> {busy ? "กำลังนำเข้า…" : "นำเข้า SKU (Excel)"}
               </button>
               <input ref={fileRef} type="file" accept=".xlsx,.xls" className="hidden"
-                onChange={(e) => { const file = e.target.files?.[0]; if (file) importFile(file); }} />
+                onChange={(e) => { const file = e.target.files?.[0]; if (file) { importFile(file); e.target.value = ""; } }} />
             </div>
           </div>
           {/* 1) สแกนบาร์โค้ดสินค้า (EAN) → เดากลิ่น+ขนาด */}
