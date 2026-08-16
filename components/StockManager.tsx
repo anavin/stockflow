@@ -6,7 +6,7 @@ import Combobox from "./Combobox";
 import { receiveStock, adjustStock } from "@/lib/actions/stock";
 import type { StockRow } from "@/lib/queries";
 import { PERFUME_TYPES } from "@/lib/types";
-import { PackagePlus, CheckCircle2, Search, History, FileUp, FileDown, Lock, Check, RotateCcw, ClipboardCheck } from "lucide-react";
+import { PackagePlus, CheckCircle2, Search, History, FileUp, FileDown, Lock, Check, RotateCcw, ClipboardCheck, ChevronDown, ChevronRight } from "lucide-react";
 
 type Status = "all" | "normal" | "low" | "out" | "neg";
 const keyOf = (r: StockRow) => `${r.product}|${r.size}`;
@@ -18,9 +18,11 @@ function statusOf(qty: number) {
   return { label: "ปกติ", cls: "bg-green-50 text-green-700", dot: "bg-green-500" };
 }
 
-export default function StockManager({ rows, products, sizes, initialLow, isAdmin }:
-  { rows: StockRow[]; products: string[]; sizes: string[]; initialLow?: boolean; isAdmin: boolean }) {
+export default function StockManager({ rows, products, sizes, initialLow, isAdmin, discontinued = {} }:
+  { rows: StockRow[]; products: string[]; sizes: string[]; initialLow?: boolean; isAdmin: boolean; discontinued?: Record<string, string[]> }) {
   const router = useRouter();
+  const normKey = (s: string) => (s || "").toLowerCase().replace(/[^a-z0-9ก-๙]/g, "");
+  const isDisc = (product: string, size: string) => (discontinued[normKey(product)] ?? []).includes(normKey(size));
 
   // ---- filters ----
   const [search, setSearch] = useState("");
@@ -43,15 +45,35 @@ export default function StockManager({ rows, products, sizes, initialLow, isAdmi
     });
   }, [rows, search, grade, size, status]);
   const hasFilter = !!(search || grade || size || status !== "all");
-  // เรียง: Grade (PARFUM→EDP+→EDT→EDP→อื่น→ไม่ระบุ) → ชื่อ A-Z → ขนาดใหญ่→เล็ก
-  const GRADE_ORDER = ["PARFUM", "EDP+", "EDT", "EDP"];
-  const gradeRank = (g: string | null) => { const i = GRADE_ORDER.indexOf(g || ""); return i < 0 ? (g ? 98 : 99) : i; };
+  // เรียง: Grade a-z (ไม่ระบุท้ายสุด) → ชื่อ A-Z → ขนาดใหญ่→เล็ก
   const mlOf = (s: string) => { const m = String(s || "").match(/(\d+(?:\.\d+)?)/); return m ? parseFloat(m[1]) : 0; };
   const sorted = useMemo(() => [...filtered].sort((a, b) =>
-    gradeRank(a.grade) - gradeRank(b.grade)
+    (a.grade || "zzz").localeCompare(b.grade || "zzz", "en")
     || a.product.localeCompare(b.product, "en")
     || mlOf(b.size) - mlOf(a.size)
   ), [filtered]);
+  // จัดกลุ่มตาม Grade (พร้อมสรุป)
+  const groups = useMemo(() => {
+    const m = new Map<string, StockRow[]>();
+    for (const r of sorted) { const g = r.grade || "ไม่ระบุ Grade"; if (!m.has(g)) m.set(g, []); m.get(g)!.push(r); }
+    return [...m.entries()].map(([g, rs]) => ({
+      grade: g, rows: rs,
+      total: rs.reduce((s, r) => s + r.qty, 0),
+      low: rs.filter((r) => r.qty <= 10).length,
+    }));
+  }, [sorted]);
+  const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
+  const toggleGroup = (g: string) => setCollapsed((s) => { const n = new Set(s); n.has(g) ? n.delete(g) : n.add(g); return n; });
+
+  function exportCsv() {
+    const header = ["Grade", "สินค้า", "ขนาด", "คงเหลือ", "สถานะ", "เลิกผลิต"];
+    const lines = sorted.map((r) => [r.grade || "", r.product, r.size, r.qty, statusOf(r.qty).label, isDisc(r.product, r.size) ? "เลิกผลิต" : ""]
+      .map((c) => `"${String(c).replace(/"/g, '""')}"`).join(","));
+    const csv = "﻿" + [header.join(","), ...lines].join("\n");
+    const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
+    const a = document.createElement("a"); a.href = url; a.download = `stock-filtered-${sorted.length}.csv`; a.click();
+    URL.revokeObjectURL(url);
+  }
   function clearFilters() { setSearch(""); setGrade(""); setSize(""); setStatus("all"); }
 
   // ---- stocktake (ปรับยอดนับได้จริง) ----
@@ -162,8 +184,11 @@ export default function StockManager({ rows, products, sizes, initialLow, isAdmi
         <Link href="/stock/moves" className="btn-ghost text-xs"><History size={14} /> ประวัติ</Link>
       </div>
 
-      <div className="flex items-center justify-between px-1 text-xs text-muted">
-        <span>แสดง <b className="text-ink">{filtered.length.toLocaleString()}</b> จาก {rows.length.toLocaleString()} รายการ</span>
+      <div className="flex flex-wrap items-center justify-between gap-2 px-1 text-xs text-muted">
+        <div className="flex items-center gap-3">
+          <span>แสดง <b className="text-ink">{filtered.length.toLocaleString()}</b> จาก {rows.length.toLocaleString()} รายการ</span>
+          <button onClick={exportCsv} className="inline-flex items-center gap-1 rounded-md border border-line bg-white px-2 py-1 hover:bg-soft"><FileDown size={12} /> Export ที่กรอง (CSV)</button>
+        </div>
         {isAdmin && <span className="flex items-center gap-1"><ClipboardCheck size={13} /> พิมพ์ยอดที่นับได้จริงในช่อง “นับได้จริง” แล้ว Enter เพื่อปรับให้ตรง</span>}
       </div>
 
@@ -182,53 +207,64 @@ export default function StockManager({ rows, products, sizes, initialLow, isAdmi
               </tr>
             </thead>
             <tbody>
-              {sorted.length === 0 && <tr><td colSpan={isAdmin ? 6 : 5} className="px-4 py-12 text-center text-muted">ไม่พบสินค้าตามตัวกรอง</td></tr>}
-              {sorted.map((r, idx) => {
-                const st = statusOf(r.qty);
-                const k = keyOf(r);
-                const val = counted[k] ?? String(r.qty);
-                const dirty = counted[k] !== undefined && counted[k] !== "" && Number(counted[k]) !== r.qty;
-                const showHeader = idx === 0 || sorted[idx - 1].grade !== r.grade;
+              {groups.length === 0 && <tr><td colSpan={isAdmin ? 6 : 5} className="px-4 py-12 text-center text-muted">ไม่พบสินค้าตามตัวกรอง</td></tr>}
+              {groups.map((grp) => {
+                const open = !collapsed.has(grp.grade);
                 return (
-                  <Fragment key={k}>
-                  {showHeader && (
+                  <Fragment key={grp.grade}>
+                    {/* หัวข้อกลุ่ม Grade + สรุป (คลิกพับ/ขยาย) */}
                     <tr className="border-t border-line bg-soft/70">
-                      <td colSpan={isAdmin ? 6 : 5} className="px-4 py-2 text-xs font-semibold uppercase tracking-wide text-muted">
-                        {r.grade || "ไม่ระบุ Grade"}
+                      <td colSpan={isAdmin ? 6 : 5} className="px-4 py-2">
+                        <button onClick={() => toggleGroup(grp.grade)} className="flex w-full items-center gap-2 text-left text-xs font-semibold text-ink">
+                          {open ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+                          <span className="uppercase tracking-wide">{grp.grade}</span>
+                          <span className="text-muted">· {grp.rows.length} SKU · รวม {grp.total.toLocaleString()} ชิ้น{grp.low > 0 && <span className="text-amber-600"> · ใกล้หมด {grp.low}</span>}</span>
+                        </button>
                       </td>
                     </tr>
-                  )}
-                  <tr className="border-t border-line hover:bg-soft/40">
-                    <td className="px-4 py-2.5 font-medium text-ink">{r.product}</td>
-                    <td className="px-3 py-2.5">{r.grade ? <span className="chip bg-brand-50 text-brand-600">{r.grade}</span> : <span className="text-faint">—</span>}</td>
-                    <td className="px-3 py-2.5 text-muted">{r.size}</td>
-                    <td className="px-3 py-2.5 text-right">
-                      <span className={`font-semibold tabular-nums ${r.qty < 0 ? "text-red-600" : r.qty <= 10 ? "text-amber-600" : "text-ink"}`}>{r.qty}</span>
-                    </td>
-                    <td className="px-3 py-2.5">
-                      <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ${st.cls}`}>
-                        <span className={`h-1.5 w-1.5 rounded-full ${st.dot}`} /> {st.label}
-                      </span>
-                    </td>
-                    {isAdmin && (
-                      <td className="px-3 py-2.5">
-                        <div className="flex items-center justify-end gap-1.5">
-                          <input type="number" value={val}
-                            onChange={(e) => setCounted((c) => ({ ...c, [k]: e.target.value }))}
-                            onKeyDown={(e) => { if (e.key === "Enter") saveCount(r); }}
-                            className={`input h-8 w-20 py-0 text-right tabular-nums ${dirty ? "border-amber-400 ring-2 ring-amber-100" : ""}`} title="ยอดที่นับได้จริง" />
-                          {dirty ? (
-                            <button onClick={() => saveCount(r)} disabled={savingKey === k}
-                              className="inline-flex items-center gap-1 rounded-md bg-amber-500 px-2 py-1.5 text-xs font-medium text-white hover:bg-amber-600 disabled:opacity-50">
-                              <Check size={14} /> {savingKey === k ? "…" : "ปรับ"}
-                            </button>
-                          ) : (
-                            <button onClick={() => quickReceive(r)} className="rounded-md px-2 py-1 text-xs text-green-700 hover:bg-green-50">+ รับเข้า</button>
+                    {open && grp.rows.map((r) => {
+                      const st = statusOf(r.qty);
+                      const k = keyOf(r);
+                      const val = counted[k] ?? String(r.qty);
+                      const dirty = counted[k] !== undefined && counted[k] !== "" && Number(counted[k]) !== r.qty;
+                      const disc = isDisc(r.product, r.size);
+                      return (
+                        <tr key={k} className="border-t border-line hover:bg-soft/40">
+                          <td className="px-4 py-2.5 font-medium text-ink">
+                            {r.product}
+                            {disc && <span className="ml-1.5 rounded bg-red-50 px-1 py-0.5 text-[10px] font-medium text-red-600">เลิกผลิต</span>}
+                          </td>
+                          <td className="px-3 py-2.5">{r.grade ? <span className="chip bg-brand-50 text-brand-600">{r.grade}</span> : <span className="text-faint">—</span>}</td>
+                          <td className={`px-3 py-2.5 ${disc ? "text-red-600 line-through" : "text-muted"}`}>{r.size}</td>
+                          <td className="px-3 py-2.5 text-right">
+                            <span className={`font-semibold tabular-nums ${r.qty < 0 ? "text-red-600" : r.qty <= 10 ? "text-amber-600" : "text-ink"}`}>{r.qty}</span>
+                          </td>
+                          <td className="px-3 py-2.5">
+                            <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ${st.cls}`}>
+                              <span className={`h-1.5 w-1.5 rounded-full ${st.dot}`} /> {st.label}
+                            </span>
+                          </td>
+                          {isAdmin && (
+                            <td className="px-3 py-2.5">
+                              <div className="flex items-center justify-end gap-1.5">
+                                <input type="number" value={val}
+                                  onChange={(e) => setCounted((c) => ({ ...c, [k]: e.target.value }))}
+                                  onKeyDown={(e) => { if (e.key === "Enter") saveCount(r); }}
+                                  className={`input h-8 w-20 py-0 text-right tabular-nums ${dirty ? "border-amber-400 ring-2 ring-amber-100" : ""}`} title="ยอดที่นับได้จริง" />
+                                {dirty ? (
+                                  <button onClick={() => saveCount(r)} disabled={savingKey === k}
+                                    className="inline-flex items-center gap-1 rounded-md bg-amber-500 px-2 py-1.5 text-xs font-medium text-white hover:bg-amber-600 disabled:opacity-50">
+                                    <Check size={14} /> {savingKey === k ? "…" : "ปรับ"}
+                                  </button>
+                                ) : (
+                                  <button onClick={() => quickReceive(r)} className="rounded-md px-2 py-1 text-xs text-green-700 hover:bg-green-50">+ รับเข้า</button>
+                                )}
+                              </div>
+                            </td>
                           )}
-                        </div>
-                      </td>
-                    )}
-                  </tr>
+                        </tr>
+                      );
+                    })}
                   </Fragment>
                 );
               })}

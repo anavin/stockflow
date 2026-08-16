@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { requireStock } from "@/lib/auth/require-user";
 import { can } from "@/lib/auth/roles";
-import { listStock, getProducts, getSizes, stockSummary } from "@/lib/queries";
+import { listStock, getProducts, getSizes, stockSummary, getDiscontinued } from "@/lib/queries";
 import StockManager from "@/components/StockManager";
 import { ScanLine, FileDown } from "lucide-react";
 
@@ -11,9 +11,9 @@ export default async function StockPage({ searchParams }: { searchParams: Promis
   const me = await requireStock();
   const isAdmin = can.manageStock(me.role);   // admin + ฝ่ายคลัง = แก้สต๊อกได้
   const { low } = await searchParams;
-  const [rows, products, sizes, sum] = await Promise.all([
+  const [rows, products, sizes, sum, discontinued] = await Promise.all([
     listStock({ limit: 5000 }),
-    getProducts(), getSizes(), stockSummary(),
+    getProducts(), getSizes(), stockSummary(), getDiscontinued(),
   ]);
 
   return (
@@ -28,7 +28,7 @@ export default async function StockPage({ searchParams }: { searchParams: Promis
           <Link href="/stock/issue" className="btn-primary"><ScanLine size={16} /> ตัดสต๊อก (สแกน)</Link>
         </div>
       </div>
-      <StockManager rows={rows} products={products} sizes={sizes} initialLow={low === "1"} isAdmin={isAdmin} />
+      <StockManager rows={rows} products={products} sizes={sizes} initialLow={low === "1"} isAdmin={isAdmin} discontinued={discontinued} />
     </div>
   );
 }

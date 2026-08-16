@@ -41,6 +41,24 @@ export default async function Dashboard() {
         </div>
       </div>
 
+      {/* ── alert: สต๊อกติดลบ / ใกล้หมด ── */}
+      {(s.negative > 0 || s.low > 0) && (
+        <div className="mb-5 flex flex-wrap gap-3">
+          {s.negative > 0 && (
+            <Link href="/stock" className="flex flex-1 min-w-[240px] items-center gap-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3 hover:bg-red-100">
+              <AlertTriangle size={20} className="shrink-0 text-red-600" />
+              <div className="text-sm"><b className="text-red-700">สต๊อกติดลบ {s.negative.toLocaleString()} รายการ</b><div className="text-xs text-red-600/80">สต๊อกไม่พอ — ควรรับเข้า/ตรวจสอบด่วน</div></div>
+            </Link>
+          )}
+          {s.low > 0 && (
+            <Link href="/stock?low=1" className="flex flex-1 min-w-[240px] items-center gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 hover:bg-amber-100">
+              <AlertTriangle size={20} className="shrink-0 text-amber-600" />
+              <div className="text-sm"><b className="text-amber-700">ใกล้หมด {s.low.toLocaleString()} รายการ</b><div className="text-xs text-amber-600/80">คงเหลือ ≤ 10 — เตรียมเติมสต๊อก</div></div>
+            </Link>
+          )}
+        </div>
+      )}
+
       {/* ── KPI tiles ── */}
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
         <Kpi
