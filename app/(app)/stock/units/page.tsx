@@ -52,23 +52,26 @@ export default async function UnitsPage({ searchParams }: { searchParams: Promis
           <table className="w-full text-sm">
             <thead className="bg-soft text-left text-xs text-muted">
               <tr>
-                <th className="px-4 py-3">SKU</th>
-                <th className="px-3 py-3">กลิ่น</th>
-                <th className="px-3 py-3">ขนาด</th>
+                <th className="px-4 py-3">Barcode</th>
+                <th className="px-3 py-3">SKU</th>
+                <th className="px-3 py-3">รายชื่อ</th>
+                <th className="px-3 py-3">Type</th>
+                <th className="px-3 py-3">วันที่รับเข้า</th>
                 <th className="px-3 py-3">สถานะ</th>
                 <th className="px-3 py-3">ออเดอร์ / ผู้ซื้อ</th>
-                <th className="px-3 py-3">วันที่ตัดออก</th>
               </tr>
             </thead>
             <tbody>
-              {units.length === 0 && <tr><td colSpan={6} className="px-4 py-12 text-center text-muted">ไม่พบ SKU — ลองรับเข้าสต๊อกเพื่อสร้าง SKU หรือรัน SQL ตาราง stock_unit</td></tr>}
+              {units.length === 0 && <tr><td colSpan={7} className="px-4 py-12 text-center text-muted">ไม่พบ SKU — ลองรับเข้าสต๊อกเพื่อบันทึก SKU หรือรัน SQL ตาราง stock_unit</td></tr>}
               {units.map((u) => {
                 const st = statusChip(u.status);
                 return (
                   <tr key={u.sku} className="border-t border-line hover:bg-soft/40">
-                    <td className="px-4 py-2.5 font-mono text-xs text-ink">{u.sku}</td>
-                    <td className="px-3 py-2.5 font-medium text-ink">{u.product}</td>
-                    <td className="px-3 py-2.5 text-muted">{u.size}</td>
+                    <td className="px-4 py-2.5 font-mono text-xs text-muted">{u.barcode || "—"}</td>
+                    <td className="px-3 py-2.5 font-mono text-xs text-ink">{u.sku}</td>
+                    <td className="px-3 py-2.5"><span className="font-medium text-ink">{u.product}</span> <span className="text-muted">{u.size}</span></td>
+                    <td className="px-3 py-2.5">{u.grade ? <span className="chip bg-brand-50 text-brand-600">{u.grade}</span> : <span className="text-faint">—</span>}</td>
+                    <td className="px-3 py-2.5 text-xs text-muted">{u.received_at ? String(u.received_at).slice(0, 10) : "—"}</td>
                     <td className="px-3 py-2.5"><span className={`chip ${st.cls}`}>{st.label}</span></td>
                     <td className="px-3 py-2.5">
                       {u.order_no ? (
@@ -78,7 +81,6 @@ export default async function UnitsPage({ searchParams }: { searchParams: Promis
                         </Link>
                       ) : <span className="text-faint">—</span>}
                     </td>
-                    <td className="px-3 py-2.5 text-xs text-muted">{u.issued_at ? String(u.issued_at).slice(0, 10) : "—"}</td>
                   </tr>
                 );
               })}
