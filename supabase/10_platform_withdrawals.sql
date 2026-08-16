@@ -2145,6 +2145,6 @@ create table if not exists public.stock_unit (
   issued_at   timestamptz,
   issued_by   int
 );
-create index if not exists idx_public.stock_unit_ps    on public.stock_unit (lower(btrim(product)), status);
-create index if not exists idx_public.stock_unit_order on public.stock_unit (order_no);
-create index if not exists idx_public.stock_unit_status on public.stock_unit (status);
+create index if not exists idx_stock_unit_ps     on public.stock_unit (lower(btrim(product)), status);
+create index if not exists idx_stock_unit_order  on public.stock_unit (order_no);
+create index if not exists idx_stock_unit_status on public.stock_unit (status);
