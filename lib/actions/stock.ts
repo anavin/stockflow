@@ -258,7 +258,12 @@ export async function reverseIssue(orderNo: string): Promise<{ ok: boolean; erro
       }
       await run(`update orders set stock_issued_at = null, stock_issued_by = null where order_no = $1`, [on]);
     });
-    revalidatePath("/stock"); revalidatePath("/stock/moves");
+    // คืนสถานะ SKU รายชิ้นกลับเป็น in_stock (best-effort — stock_unit อาจยังไม่มีบน prod)
+    try {
+      await q(`update stock_unit set status = 'in_stock', order_no = null, issued_at = null, issued_by = null
+               where order_no = $1 and status = 'issued'`, [on]);
+    } catch { /* stock_unit ยังไม่พร้อม — ข้าม */ }
+    revalidatePath("/stock"); revalidatePath("/stock/moves"); revalidatePath("/stock/units");
     return { ok: true };
   } catch (e: any) {
     return { ok: false, error: e?.message || "ยกเลิกไม่สำเร็จ" };
