@@ -49,16 +49,18 @@ export default function StockManager({ rows, products, sizes, initialLow, isAdmi
   // เรียง: เกรดน้ำหอม (A-Z) ก่อน → หมวดอื่น เช่น Car Perfume (A-Z) → ไม่ระบุ ท้ายสุด; ในกลุ่ม: ชื่อ A-Z → ขนาดใหญ่→เล็ก
   const mlOf = (s: string) => { const m = String(s || "").match(/(\d+(?:\.\d+)?)/); return m ? parseFloat(m[1]) : 0; };
   const gradeBucket = (g: string | null) => !g ? 2 : (PERFUME_TYPES as readonly string[]).includes(g) ? 0 : 1;
+  const DISC_GROUP = "เลิกผลิต";
   const sorted = useMemo(() => [...filtered].sort((a, b) =>
-    gradeBucket(a.grade) - gradeBucket(b.grade)
+    (isDisc(a.product, a.size) ? 1 : 0) - (isDisc(b.product, b.size) ? 1 : 0)   // เลิกผลิต → กลุ่มล่างสุด
+    || gradeBucket(a.grade) - gradeBucket(b.grade)
     || (a.grade || "zzz").localeCompare(b.grade || "zzz", "en")
     || a.product.localeCompare(b.product, "en")
     || mlOf(b.size) - mlOf(a.size)
-  ), [filtered]);
-  // จัดกลุ่มตาม Grade (พร้อมสรุป)
+  ), [filtered, discontinued]);
+  // จัดกลุ่มตาม Grade (เลิกผลิตแยกกลุ่มล่างสุด) + สรุป
   const groups = useMemo(() => {
     const m = new Map<string, StockRow[]>();
-    for (const r of sorted) { const g = r.grade || "ไม่ระบุ Grade"; if (!m.has(g)) m.set(g, []); m.get(g)!.push(r); }
+    for (const r of sorted) { const g = isDisc(r.product, r.size) ? DISC_GROUP : (r.grade || "ไม่ระบุ Grade"); if (!m.has(g)) m.set(g, []); m.get(g)!.push(r); }
     return [...m.entries()].map(([g, rs]) => ({
       grade: g, rows: rs,
       total: rs.reduce((s, r) => s + r.qty, 0),
@@ -236,15 +238,16 @@ export default function StockManager({ rows, products, sizes, initialLow, isAdmi
               {groups.length === 0 && <tr><td colSpan={isAdmin ? 7 : 6} className="px-4 py-12 text-center text-muted">ไม่พบสินค้าตามตัวกรอง</td></tr>}
               {groups.map((grp) => {
                 const open = !collapsed.has(grp.grade);
+                const discGrp = grp.grade === DISC_GROUP;
                 return (
                   <Fragment key={grp.grade}>
                     {/* หัวข้อกลุ่ม Grade + สรุป (คลิกพับ/ขยาย) */}
-                    <tr className="border-t border-line bg-soft/70">
+                    <tr className={`border-t border-line ${discGrp ? "bg-red-50" : "bg-soft/70"}`}>
                       <td colSpan={isAdmin ? 7 : 6} className="px-4 py-2">
-                        <button onClick={() => toggleGroup(grp.grade)} className="flex w-full items-center gap-2 text-left text-xs font-semibold text-ink">
+                        <button onClick={() => toggleGroup(grp.grade)} className={`flex w-full items-center gap-2 text-left text-xs font-semibold ${discGrp ? "text-red-700" : "text-ink"}`}>
                           {open ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-                          <span className="uppercase tracking-wide">{grp.grade}</span>
-                          <span className="text-muted">· {grp.rows.length} SKU · รวม {grp.total.toLocaleString()} ชิ้น{grp.low > 0 && <span className="text-amber-600"> · ใกล้หมด {grp.low}</span>}</span>
+                          <span className="uppercase tracking-wide">{discGrp ? "🚫 เลิกผลิต" : grp.grade}</span>
+                          <span className={discGrp ? "text-red-600/80" : "text-muted"}>· {grp.rows.length} SKU · รวม {grp.total.toLocaleString()} ชิ้น{!discGrp && grp.low > 0 && <span className="text-amber-600"> · ใกล้หมด {grp.low}</span>}</span>
                         </button>
                       </td>
                     </tr>
