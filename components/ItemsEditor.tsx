@@ -59,6 +59,7 @@ export default function ItemsEditor({
   errors = [],
   productCodes,
   productTypes,
+  discontinued,
 }: {
   items: ItemDraft[];
   onChange: (items: ItemDraft[]) => void;
@@ -67,7 +68,9 @@ export default function ItemsEditor({
   errors?: ItemError[];
   productCodes?: Record<string, string>;
   productTypes?: Record<string, string>;
+  discontinued?: Record<string, string[]>;
 }) {
+  const normKey = (s: string) => (s || "").toLowerCase().replace(/[^a-z0-9ก-๙]/g, "");
   const errMsg = (e?: ItemError) => {
     if (!e) return "";
     const miss: string[] = [];
@@ -95,6 +98,12 @@ export default function ItemsEditor({
   const SIZE_ORDER = ["30 ml", "50 ml", "90 ml", "100 ml", "1.2 ml", "4 ml", "10 ml"];
   const rank = (sz: string) => { const i = SIZE_ORDER.indexOf(sz); return i < 0 ? 99 : i; };
   const sizesNormal = [...sizes].sort((a, b) => rank(a) - rank(b));
+  // ตัดขนาดที่ "เลิกผลิต" ของกลิ่นนั้นออกจากตัวเลือก
+  const sizeOptionsFor = (it: ItemDraft) => {
+    const base = isBagProduct(it.product) ? BAG_SIZES : (it.is_free ? sizesFree : sizesNormal);
+    const blocked = discontinued?.[normKey(it.product)];
+    return blocked?.length ? base.filter((sz) => !blocked.includes(normKey(sz))) : base;
+  };
   // ของแถมเลือกได้เฉพาะขนาดเล็ก
   const sizesFree = sizes.filter((sz) => FREE_ALLOWED_SIZES.includes(sz));
   function setFree(i: number, checked: boolean) {
@@ -148,7 +157,7 @@ export default function ItemsEditor({
                 </td>
                 <td className="px-3 py-2">
                   <Combobox value={it.size} onChange={(v) => update(i, { size: v })}
-                    options={isBagProduct(it.product) ? BAG_SIZES : (it.is_free ? sizesFree : sizesNormal)}
+                    options={sizeOptionsFor(it)}
                     allowCustom={!it.is_free && !isBagProduct(it.product)} placeholder={isBagProduct(it.product) ? "ขนาดถุง (ถ้ามี)" : "ขนาด"} invalid={errors[i]?.size} />
                   {!isBagProduct(it.product) && it.is_free && it.size && !isAllowedFreeSize(it.size) && (
                     <div className="mt-1 flex items-center gap-1 text-[11px] text-red-600">
@@ -194,7 +203,7 @@ export default function ItemsEditor({
             {productTypes?.[it.product] && <div className="text-[11px] text-muted">Grade: <span className="font-medium text-ink">{productTypes[it.product]}</span></div>}
             <div className="grid grid-cols-2 gap-2">
               <Combobox value={it.size} onChange={(v) => update(i, { size: v })}
-                options={isBagProduct(it.product) ? BAG_SIZES : (it.is_free ? sizesFree : sizesNormal)}
+                options={sizeOptionsFor(it)}
                 allowCustom={!it.is_free && !isBagProduct(it.product)} placeholder={isBagProduct(it.product) ? "ขนาดถุง (ถ้ามี)" : "ขนาด"} invalid={errors[i]?.size} />
               <QtySelect value={it.qty} onChange={(v) => setQty(i, v)} invalid={errors[i]?.qty} />
             </div>

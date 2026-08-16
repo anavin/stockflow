@@ -99,6 +99,17 @@ export async function getActiveSpecRules(): Promise<{ sizes: string; grades: str
   } catch { return []; }
 }
 
+/** เลิกผลิตต่อขนาด — คีย์ = ชื่อกลิ่น (normalize), ค่า = ขนาดที่เลิกผลิต (normalize) */
+export async function getDiscontinued(): Promise<Record<string, string[]>> {
+  const norm = (s: string) => (s || "").toLowerCase().replace(/[^a-z0-9ก-๙]/g, "");
+  try {
+    const rows = await q<{ scent: string; size: string }>(`select scent, size from discontinued_sku`);
+    const map: Record<string, string[]> = {};
+    for (const r of rows) { (map[norm(r.scent)] ??= []).push(norm(r.size)); }
+    return map;
+  } catch { return {}; }  // ตารางยังไม่ถูกสร้าง
+}
+
 export type DailyIssue = { day: string; orders: number; issued: number; pending: number };
 /** รายวัน: ออร์เดอร์ที่เข้ามา (ตามวันที่ใบเบิก) เทียบกับที่ตัดสต๊อกแล้ว */
 export async function dailyIssueStatus(platform = "Shopee", days = 14): Promise<DailyIssue[]> {

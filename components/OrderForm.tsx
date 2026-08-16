@@ -27,6 +27,7 @@ type Props = {
   initial?: OrderWithItems | null;
   productCodes?: Record<string, string>;
   productTypes?: Record<string, string>;
+  discontinued?: Record<string, string[]>;
 };
 
 function todayStr() {
@@ -34,7 +35,7 @@ function todayStr() {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
-export default function OrderForm({ products, sizes, provinces, postcodes, initial, productCodes, productTypes }: Props) {
+export default function OrderForm({ products, sizes, provinces, postcodes, initial, productCodes, productTypes, discontinued }: Props) {
   const router = useRouter();
   const editing = !!initial;
 
@@ -359,7 +360,7 @@ export default function OrderForm({ products, sizes, provinces, postcodes, initi
       {/* items */}
       <section className="card p-5">
         <h2 className="mb-4 text-sm font-semibold text-ink">รายการสินค้า</h2>
-        <ItemsEditor items={items} onChange={onItemsChange} products={products} sizes={sizes} errors={itemErrors} productCodes={productCodes} productTypes={productTypes} />
+        <ItemsEditor items={items} onChange={onItemsChange} products={products} sizes={sizes} errors={itemErrors} productCodes={productCodes} productTypes={productTypes} discontinued={discontinued} />
       </section>
 
       {/* extras */}
