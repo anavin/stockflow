@@ -73,7 +73,7 @@ export default function StockManager({ rows, products, sizes, initialLow, isAdmi
   const toggleGroup = (g: string) => setCollapsed((s) => { const n = new Set(s); n.has(g) ? n.delete(g) : n.add(g); return n; });
 
   function exportCsv() {
-    const header = ["Grade", "สินค้า", "ขนาด", "SKU", "คงเหลือ", "สถานะ", "เลิกผลิต"];
+    const header = ["Grade", "สินค้า", "ขนาด", "Barcode", "คงเหลือ", "สถานะ", "เลิกผลิต"];
     const lines = sorted.map((r) => [r.grade || "", r.product, r.size, skuOf(r.product, r.size), r.qty, statusOf(r.qty).label, isDisc(r.product, r.size) ? "เลิกผลิต" : ""]
       .map((c) => `"${String(c).replace(/"/g, '""')}"`).join(","));
     const csv = "﻿" + [header.join(","), ...lines].join("\n");
@@ -406,7 +406,7 @@ export default function StockManager({ rows, products, sizes, initialLow, isAdmi
                 <th className="px-4 py-3">สินค้า</th>
                 <th className="px-3 py-3">Grade</th>
                 <th className="px-3 py-3">ขนาด</th>
-                <th className="px-3 py-3">SKU</th>
+                <th className="px-3 py-3">Barcode</th>
                 <th className="px-3 py-3 text-right">คงเหลือ (ระบบ)</th>
                 <th className="px-3 py-3">สถานะ</th>
                 {isAdmin && <th className="px-3 py-3 text-right">นับได้จริง / ปรับยอด</th>}
