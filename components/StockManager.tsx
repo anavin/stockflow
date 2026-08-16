@@ -165,7 +165,11 @@ export default function StockManager({ rows, products, sizes, initialLow, isAdmi
     setBatch((b) => [...b, { product: f.product, size: f.size, grade: f.grade, barcode: f.barcode.trim(), skus }]);
     resetEntry();
   }
-  const removeBatchLine = (i: number) => setBatch((b) => b.filter((_, x) => x !== i));
+  const removeBatchLine = (i: number) => { setBatch((b) => b.filter((_, x) => x !== i)); setOpenLines((s) => { const n = new Set(s); n.delete(i); return n; }); };
+  const [openLines, setOpenLines] = useState<Set<number>>(new Set());
+  const toggleLine = (i: number) => setOpenLines((s) => { const n = new Set(s); n.has(i) ? n.delete(i) : n.add(i); return n; });
+  // ลบ SKU รายตัวออกจากบรรทัดในตะกร้า (ถ้าหมด → ลบบรรทัด)
+  const removeBatchSku = (i: number, sku: string) => setBatch((b) => b.map((l, x) => x === i ? { ...l, skus: l.skus.filter((s) => s !== sku) } : l).filter((l) => l.skus.length));
 
   // รับเข้าทั้งตะกร้า (+ กลิ่นที่ค้างในช่อง ถ้ามี) ทีเดียว
   async function submitBatch(e: React.FormEvent) {
@@ -277,23 +281,46 @@ export default function StockManager({ rows, products, sizes, initialLow, isAdmi
                       <th className="px-3 py-2">ขนาด</th>
                       <th className="px-3 py-2">Grade</th>
                       <th className="px-3 py-2">Barcode</th>
-                      <th className="px-3 py-2 text-right">จำนวน</th>
+                      <th className="px-3 py-2 text-right">SKU</th>
                       <th className="w-12 px-3 py-2 text-right">ลบ</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {batch.map((l, i) => (
-                      <tr key={i} className="border-t border-line">
-                        <td className="px-3 py-1.5 font-medium text-ink">{l.product}</td>
-                        <td className="px-3 py-1.5 text-muted">{l.size}</td>
-                        <td className="px-3 py-1.5">{l.grade ? <span className="chip bg-brand-50 text-brand-600">{l.grade}</span> : <span className="text-faint">—</span>}</td>
-                        <td className="px-3 py-1.5 font-mono text-xs text-muted">{l.barcode || "—"}</td>
-                        <td className="px-3 py-1.5 text-right font-semibold tabular-nums text-ink">{l.skus.length}</td>
-                        <td className="px-3 py-1.5 text-right">
-                          <button type="button" onClick={() => removeBatchLine(i)} className="text-faint hover:text-red-500" title="ลบรายการนี้"><X size={14} /></button>
-                        </td>
-                      </tr>
-                    ))}
+                    {batch.map((l, i) => {
+                      const open = openLines.has(i);
+                      return (
+                      <Fragment key={i}>
+                        <tr className="border-t border-line">
+                          <td className="px-3 py-1.5 font-medium text-ink">{l.product}</td>
+                          <td className="px-3 py-1.5 text-muted">{l.size}</td>
+                          <td className="px-3 py-1.5">{l.grade ? <span className="chip bg-brand-50 text-brand-600">{l.grade}</span> : <span className="text-faint">—</span>}</td>
+                          <td className="px-3 py-1.5 font-mono text-xs text-muted">{l.barcode || "—"}</td>
+                          <td className="px-3 py-1.5 text-right">
+                            <button type="button" onClick={() => toggleLine(i)} className="inline-flex items-center gap-1 font-semibold tabular-nums text-ink hover:text-brand-600" title="กดดู SKU ทั้งหมด">
+                              {open ? <ChevronDown size={13} /> : <ChevronRight size={13} />} {l.skus.length} ชิ้น
+                            </button>
+                          </td>
+                          <td className="px-3 py-1.5 text-right">
+                            <button type="button" onClick={() => removeBatchLine(i)} className="text-faint hover:text-red-500" title="ลบรายการนี้"><X size={14} /></button>
+                          </td>
+                        </tr>
+                        {open && (
+                          <tr className="border-t border-line bg-soft/30">
+                            <td colSpan={6} className="px-3 py-2">
+                              <div className="flex flex-wrap gap-1.5">
+                                {l.skus.map((s) => (
+                                  <span key={s} className="inline-flex items-center gap-1 rounded-md border border-line bg-white px-2 py-0.5 font-mono text-xs text-ink">
+                                    {s}
+                                    <button type="button" onClick={() => removeBatchSku(i, s)} className="text-faint hover:text-red-500" title="ลบ SKU นี้"><X size={12} /></button>
+                                  </span>
+                                ))}
+                              </div>
+                            </td>
+                          </tr>
+                        )}
+                      </Fragment>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
