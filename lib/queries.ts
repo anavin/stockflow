@@ -70,6 +70,20 @@ export async function getScentBarcodes(): Promise<Record<string, ScentBarcode[]>
   return map;
 }
 
+/** รายการสเป็ก (dropdown ตอนตัดสต๊อก) — เฉพาะที่เปิดใช้ */
+export async function getSpecOptions(): Promise<string[]> {
+  try {
+    const rows = await q<{ label: string }>(`select label from spec_options where active order by sort, label`);
+    return rows.map((r) => r.label);
+  } catch { return []; }  // ตารางยังไม่ถูกสร้าง (prod ยังไม่รัน SQL)
+}
+export type SpecOptionRow = { id: number; label: string; sort: number; active: boolean };
+export async function listSpecOptions(): Promise<SpecOptionRow[]> {
+  try {
+    return await q<SpecOptionRow>(`select id, label, sort, active from spec_options order by sort, label`);
+  } catch { return []; }
+}
+
 export type DailyIssue = { day: string; orders: number; issued: number; pending: number };
 /** รายวัน: ออร์เดอร์ที่เข้ามา (ตามวันที่ใบเบิก) เทียบกับที่ตัดสต๊อกแล้ว */
 export async function dailyIssueStatus(platform = "Shopee", days = 14): Promise<DailyIssue[]> {

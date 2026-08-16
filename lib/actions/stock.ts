@@ -125,7 +125,7 @@ export type IssueItemPreview = {
 };
 export type IssueLookup = {
   ok: boolean; error?: string; alreadyIssued?: boolean;
-  order_no?: string; doc_no?: string | null; items?: IssueItemPreview[];
+  order_no?: string; doc_no?: string | null; note?: string | null; items?: IssueItemPreview[];
 };
 
 /** สแกน/กรอก Order No. → ดึงรายการทั้งหมดของใบเบิกมาให้ตรวจ (ยังไม่ตัดสต๊อก). */
@@ -136,8 +136,8 @@ export async function lookupOrderForIssue(orderNo: string): Promise<IssueLookup>
   const on = (orderNo || "").trim();
   if (!on) return { ok: false, error: "กรอก/สแกน Order No." };
 
-  const [order] = await q<{ order_no: string; doc_no: string | null; deleted_at: string | null; stock_issued_at: string | null }>(
-    `select order_no, doc_no, deleted_at, stock_issued_at from orders where order_no = $1`, [on]);
+  const [order] = await q<{ order_no: string; doc_no: string | null; note: string | null; deleted_at: string | null; stock_issued_at: string | null }>(
+    `select order_no, doc_no, note, deleted_at, stock_issued_at from orders where order_no = $1`, [on]);
   if (!order) return { ok: false, error: `ไม่พบใบเบิก Order No. ${on}` };
   if (order.deleted_at) return { ok: false, error: "ใบเบิกนี้อยู่ในถังขยะ" };
   if (order.stock_issued_at) return { ok: false, alreadyIssued: true, order_no: on, doc_no: order.doc_no, error: "ใบเบิกนี้ตัดสต๊อกไปแล้ว" };
@@ -155,7 +155,7 @@ export async function lookupOrderForIssue(orderNo: string): Promise<IssueLookup>
       [it.product, it.size || ""]);
     withStock.push({ ...it, stock: s?.qty ?? 0, tracked: isStockTracked(it.size) });
   }
-  return { ok: true, order_no: on, doc_no: order.doc_no, items: withStock };
+  return { ok: true, order_no: on, doc_no: order.doc_no, note: order.note, items: withStock };
 }
 
 /** บันทึก SKU + Spec ที่พนักงานสแกน/กรอก แล้วตัดสต๊อก (ยืนยัน). */

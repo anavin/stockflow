@@ -2,7 +2,7 @@
 import { useEffect, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import { lookupOrderForIssue, confirmIssueByOrder, reverseIssue, type IssueResult, type IssueLookup } from "@/lib/actions/stock";
-import { ScanLine, CheckCircle2, AlertTriangle, XCircle, Undo2, Camera, PackageCheck, X, Printer } from "lucide-react";
+import { ScanLine, CheckCircle2, AlertTriangle, XCircle, Undo2, Camera, PackageCheck, X, Printer, StickyNote } from "lucide-react";
 
 const CameraScan = dynamic(() => import("./CameraScan"), { ssr: false });
 
@@ -10,7 +10,7 @@ type Entry = { at: string; res: IssueResult; input: string; reversed?: boolean }
 
 const now = () => new Date().toLocaleTimeString("th-TH");
 
-export default function StockIssue({ isAdmin, initialOrder }: { isAdmin: boolean; initialOrder?: string }) {
+export default function StockIssue({ isAdmin, initialOrder, specOptions = [] }: { isAdmin: boolean; initialOrder?: string; specOptions?: string[] }) {
   const [value, setValue] = useState("");
   const [busy, setBusy] = useState(false);
   const [log, setLog] = useState<Entry[]>([]);
@@ -100,6 +100,13 @@ export default function StockIssue({ isAdmin, initialOrder }: { isAdmin: boolean
             <button onClick={() => { setPreview(null); setForm({}); inputRef.current?.focus(); }} className="btn-ghost shrink-0"><X size={14} /> ยกเลิก</button>
           </div>
 
+          {preview.note && (
+            <div className="mb-3 flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+              <StickyNote size={15} className="mt-0.5 shrink-0" />
+              <div><span className="font-medium">หมายเหตุ:</span> {preview.note}</div>
+            </div>
+          )}
+
           <div className="space-y-2">
             {preview.items!.map((it) => (
               <div key={it.line_no} className="rounded-lg border border-line p-3">
@@ -113,8 +120,17 @@ export default function StockIssue({ isAdmin, initialOrder }: { isAdmin: boolean
                       value={form[it.line_no]?.sku || ""} onChange={(e) => setField(it.line_no, "sku", e.target.value)} />
                     <button type="button" onClick={() => setSkuScanLine(it.line_no)} className="btn-ghost shrink-0 px-2" title="สแกน SKU ด้วยกล้อง"><Camera size={16} /></button>
                   </div>
-                  <input className="input text-sm" placeholder="Spec สินค้า (เช่น รุ่น/ล็อต)"
-                    value={form[it.line_no]?.spec || ""} onChange={(e) => setField(it.line_no, "spec", e.target.value)} />
+                  {(() => {
+                    const cur = form[it.line_no]?.spec || "";
+                    const extra = cur && !specOptions.includes(cur);
+                    return (
+                      <select className="input text-sm" value={cur} onChange={(e) => setField(it.line_no, "spec", e.target.value)} title="สเป็กสินค้า">
+                        <option value="">— เลือกสเป็ก —</option>
+                        {specOptions.map((o) => <option key={o} value={o}>{o}</option>)}
+                        {extra && <option value={cur}>{cur}</option>}
+                      </select>
+                    );
+                  })()}
                 </div>
               </div>
             ))}

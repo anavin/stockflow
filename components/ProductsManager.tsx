@@ -99,7 +99,7 @@ export default function ProductsManager({
         <div className="flex flex-wrap gap-2">
           <input className="input flex-1 min-w-[220px]" value={name} onChange={(e) => setName(e.target.value)} placeholder="ชื่อกลิ่น เช่น Volt - Twilight (EDT)" />
           <select className="input w-36" value={ptype} onChange={(e) => setPtype(e.target.value)}>
-            <option value="">ประเภท…</option>
+            <option value="">Grade…</option>
             {PERFUME_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
           </select>
           <button className="btn-primary" disabled={busy}>{busy ? "กำลังเพิ่ม…" : "เพิ่มกลิ่น"}</button>
@@ -112,7 +112,7 @@ export default function ProductsManager({
       <div className="flex flex-wrap items-center gap-2">
         <span className="chip bg-soft text-ink">ทั้งหมด {products.length}</span>
         {PERFUME_TYPES.map((t) => <span key={t} className="chip bg-brand-50 text-brand-600">{t} {counts[t] ?? 0}</span>)}
-        <span className={`chip ${(counts[""] ?? 0) > 0 ? "bg-amber-50 text-amber-700" : "bg-soft text-muted"}`}>ยังไม่จัดประเภท {counts[""] ?? 0}</span>
+        <span className={`chip ${(counts[""] ?? 0) > 0 ? "bg-amber-50 text-amber-700" : "bg-soft text-muted"}`}>ยังไม่ระบุ Grade {counts[""] ?? 0}</span>
       </div>
 
       {/* toolbar: ค้นหา + ฟิลเตอร์ + ตั้งประเภทหลายแถว */}
@@ -126,13 +126,13 @@ export default function ProductsManager({
             {(["all", "untyped", "typed"] as Filter[]).map((f) => (
               <button key={f} type="button" onClick={() => setFilter(f)}
                 className={`px-3 py-2 ${filter === f ? "bg-brand text-white" : "bg-white text-muted hover:bg-soft"}`}>
-                {f === "all" ? "ทั้งหมด" : f === "untyped" ? "ยังไม่จัดประเภท" : "จัดแล้ว"}
+                {f === "all" ? "ทั้งหมด" : f === "untyped" ? "ยังไม่ระบุ Grade" : "ระบุแล้ว"}
               </button>
             ))}
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <span className="text-xs text-muted">ตั้งประเภท {filtered.length} แถวที่กรอง →</span>
+          <span className="text-xs text-muted">ตั้ง Grade {filtered.length} แถวที่กรอง →</span>
           <select className="input w-28" value={bulkType} onChange={(e) => setBulkType(e.target.value)}>
             <option value="">— (ล้าง)</option>
             {PERFUME_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
@@ -147,7 +147,7 @@ export default function ProductsManager({
           <thead className="bg-soft text-left text-xs text-muted">
             <tr>
               <th className="px-4 py-3 whitespace-nowrap">ชื่อกลิ่น</th>
-              <th className="px-3 py-3">ประเภท</th>
+              <th className="px-3 py-3">Grade</th>
               <th className="px-3 py-3">ขนาด + บาร์โค้ด (CTW)</th>
               <th className="px-3 py-3 text-center">ใช้</th>
               <th className="px-3 py-3 text-center">สถานะ</th>
@@ -174,7 +174,7 @@ export default function ProductsManager({
                       )}
                     </td>
                     <td className="px-3 py-2.5 align-top">
-                      <select value={p.ptype ?? ""} onChange={(e) => changeType(p.id, e.target.value)} className="input h-8 w-24 py-0 text-xs" title="ประเภทน้ำหอม">
+                      <select value={p.ptype ?? ""} onChange={(e) => changeType(p.id, e.target.value)} className="input h-8 w-24 py-0 text-xs" title="Grade น้ำหอม">
                         <option value="">—</option>
                         {PERFUME_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
                       </select>

@@ -1,15 +1,15 @@
 import Link from "next/link";
 import { requireStock } from "@/lib/auth/require-user";
-import { stockSummary } from "@/lib/queries";
+import { stockSummary, getSpecOptions } from "@/lib/queries";
 import StockIssue from "@/components/StockIssue";
-import { Boxes, History, ClipboardList } from "lucide-react";
+import { Boxes, History, ClipboardList, Tags } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
 export default async function StockIssuePage({ searchParams }: { searchParams: Promise<{ order?: string }> }) {
   const me = await requireStock();
   const { order } = await searchParams;
-  const sum = await stockSummary();
+  const [sum, specOptions] = await Promise.all([stockSummary(), getSpecOptions()]);
   return (
     // หน้าสแกน = ธีมน้ำเงิน (override --brand เฉพาะหน้านี้) ให้ action เด่น;
     // สีผลลัพธ์ เขียว/เหลือง/แดง ไม่เปลี่ยน
@@ -23,12 +23,13 @@ export default async function StockIssuePage({ searchParams }: { searchParams: P
           <p className="text-sm text-muted">สแกน Order No. → ตัดสต๊อกตามรายการอัตโนมัติ · ตัดไปแล้ว {sum.issuedOrders.toLocaleString()} ใบ</p>
         </div>
         <div className="flex gap-2">
+          <Link href="/stock/specs" className="btn-ghost"><Tags size={16} /> จัดการสเป็ก</Link>
           <Link href="/stock/issued" className="btn-ghost"><ClipboardList size={16} /> ใบที่ตัดแล้ว</Link>
           <Link href="/stock" className="btn-ghost"><Boxes size={16} /> สต๊อกคงเหลือ</Link>
           <Link href="/stock/moves" className="btn-ghost"><History size={16} /> ประวัติ</Link>
         </div>
       </div>
-      <StockIssue isAdmin={me.role === "admin"} initialOrder={order} />
+      <StockIssue isAdmin={me.role === "admin"} initialOrder={order} specOptions={specOptions} />
     </div>
   );
 }
