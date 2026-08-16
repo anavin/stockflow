@@ -345,6 +345,47 @@ export async function receiveUnits(product: string, size: string, skus: string[]
   } catch (e: any) { return { ok: false, error: e?.message || "รับเข้าไม่สำเร็จ" }; }
 }
 
+/** แก้ SKU รายชิ้น (แก้เลขที่พิมพ์ผิด) */
+export async function updateUnitSku(oldSku: string, newSku: string): Promise<{ ok: boolean; error?: string }> {
+  const gate = await requireStockEdit();
+  if ("error" in gate) return { ok: false, error: gate.error };
+  const o = (oldSku || "").trim(), n = (newSku || "").trim();
+  if (!n) return { ok: false, error: "กรอก SKU" };
+  if (o === n) return { ok: true };
+  try {
+    const [dup] = await q(`select 1 from stock_unit where btrim(sku) = $1`, [n]);
+    if (dup) return { ok: false, error: "SKU นี้มีอยู่แล้ว" };
+    await q(`update stock_unit set sku = $2 where btrim(sku) = $1`, [o, n]);
+    revalidatePath("/stock/units");
+    return { ok: true };
+  } catch (e: any) { return { ok: false, error: e?.message || "แก้ไขไม่สำเร็จ" }; }
+}
+
+/** ลบ SKU รายชิ้น — ถ้าอยู่คลังจะหักยอดรวม -1 ด้วย */
+export async function deleteUnit(sku: string): Promise<{ ok: boolean; error?: string }> {
+  const gate = await requireStockEdit();
+  if ("error" in gate) return { ok: false, error: gate.error };
+  const user = gate.user;
+  const s = (sku || "").trim();
+  if (!s) return { ok: false, error: "ไม่พบ SKU" };
+  try {
+    await tx(async (run) => {
+      const [u] = await run<{ product: string; size: string; status: string }>(`select product, size, status from stock_unit where btrim(sku) = $1`, [s]);
+      if (!u) throw new Error("ไม่พบ SKU นี้");
+      await run(`delete from stock_unit where btrim(sku) = $1`, [s]);
+      if (u.status === "in_stock") {
+        const m = await matchStockSku(run, u.product, u.size);
+        const [row] = await run<{ qty: number }>(
+          `update stock set qty = qty - 1, updated_at = now() where product = $1 and size = $2 returning qty::float8 as qty`, [m.product, m.size]);
+        if (row) await run(`insert into stock_moves (product, size, qty_change, balance, reason, note, sku, created_by) values ($1,$2,-1,$3,'adjust',$4,$5,$6)`,
+          [m.product, m.size, row.qty, `ลบ SKU`, s, user.id]);
+      }
+    });
+    revalidatePath("/stock/units"); revalidatePath("/stock");
+    return { ok: true };
+  } catch (e: any) { return { ok: false, error: e?.message || "ลบไม่สำเร็จ" }; }
+}
+
 /** ปรับยอดสต๊อกเป็นค่าที่นับได้ (set) — บันทึกส่วนต่างเป็น movement */
 export async function adjustStock(product: string, size: string, newQty: number, note?: string): Promise<{ ok: boolean; error?: string }> {
   const gate = await requireStockEdit();
