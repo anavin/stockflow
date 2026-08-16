@@ -126,6 +126,17 @@ export default function StockManager({ rows, products, sizes, initialLow, isAdmi
   const [slotN, setSlotN] = useState("");
   const setSkuAt = (i: number, v: string) => setSkuList((l) => l.map((x, k) => (k === i ? v : x)));
   const removeSkuAt = (i: number) => setSkuList((l) => l.filter((_, k) => k !== i));
+  const [skuScanOpen, setSkuScanOpen] = useState(false);   // กล้องสแกน SKU ต่อเนื่อง
+  // เติม SKU ที่สแกนได้ลงช่องว่างช่องแรก (ไม่มีช่องว่าง → ต่อท้าย) · กันซ้ำ
+  const fillNextSku = (code: string) => {
+    const s = code.trim(); if (!s) return;
+    setSkuList((l) => {
+      if (l.some((x) => x.trim() === s)) return l;
+      const idx = l.findIndex((x) => !x.trim());
+      if (idx >= 0) { const c = [...l]; c[idx] = s; return c; }
+      return [...l, s];
+    });
+  };
   function addSlots() {
     setErr("");
     const n = parseInt(slotN, 10);
@@ -263,9 +274,11 @@ export default function StockManager({ rows, products, sizes, initialLow, isAdmi
             <div className="mt-3 rounded-lg border border-line p-3">
               <div className="mb-2 flex flex-wrap items-center justify-between gap-2 text-xs">
                 <span className="flex items-center gap-1 font-medium text-ink"><ScanBarcode size={13} /> กรอก SKU รายชิ้น ({skuList.length} ช่อง)</span>
-                <span className="text-muted">กรอกแล้ว <b className="text-green-700">{curCount}</b>/{skuList.length}
-                  <button type="button" onClick={() => setSkuList((l) => [...l, ""])} className="ml-3 text-brand-600 hover:underline">+ เพิ่มช่อง</button>
-                  <button type="button" onClick={() => setSkuList([])} className="ml-2 hover:text-ink">ล้างทั้งหมด</button>
+                <span className="flex items-center gap-1 text-muted">
+                  <button type="button" onClick={() => setSkuScanOpen(true)} className="mr-1 inline-flex items-center gap-1 rounded-md border border-brand-200 bg-brand-50 px-2 py-0.5 text-brand-700 hover:bg-brand-100"><Camera size={12} /> สแกน SKU</button>
+                  กรอกแล้ว <b className="text-green-700">{curCount}</b>/{skuList.length}
+                  <button type="button" onClick={() => setSkuList((l) => [...l, ""])} className="ml-2 text-brand-600 hover:underline">+ เพิ่มช่อง</button>
+                  <button type="button" onClick={() => setSkuList([])} className="ml-1 hover:text-ink">ล้างทั้งหมด</button>
                 </span>
               </div>
               <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-3 md:grid-cols-4">
@@ -346,6 +359,7 @@ export default function StockManager({ rows, products, sizes, initialLow, isAdmi
           {err && <p className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{err}</p>}
           {msg && <p className="mt-3 flex items-center gap-1 rounded-lg bg-green-50 px-3 py-2 text-sm text-green-700"><CheckCircle2 size={14} /> {msg}</p>}
           {scanOpen && <CameraScan onClose={() => setScanOpen(false)} onScan={(code) => { setScanOpen(false); doResolveBarcode(code); }} />}
+          {skuScanOpen && <CameraScan continuous title="สแกน SKU รายชิ้น (ต่อเนื่อง)" hint="เล็ง SKU/บาร์โค้ดของแต่ละชิ้น — สแกนต่อเนื่องได้ กดเสร็จสิ้นเมื่อครบ" onClose={() => setSkuScanOpen(false)} onScan={fillNextSku} />}
         </form>
       )}
 
