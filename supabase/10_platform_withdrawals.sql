@@ -2088,3 +2088,11 @@ on conflict (label) do update set sort = excluded.sort, active = true, for_bag =
 -- ปรับกฎเลือกอัตโนมัติให้ชี้ชื่อสเป็กใหม่ (ฝาสีเงิน→ฝาสีเงิน10ml, ฝาสีดำ→ฝาสีดำ10ml)
 update public.spec_rules set spec = 'ฝาสีเงิน10ml' where spec = 'ฝาสีเงิน';
 update public.spec_rules set spec = 'ฝาสีดำ10ml'   where spec = 'ฝาสีดำ';
+
+-- 0020 ยกเลิกการผลิตขนาด 90ml (Volt 4 กลิ่น)
+-- ยกเลิกการผลิต "ขนาด 90 ml" ของ Volt 4 กลิ่น — ลบเฉพาะขนาด 90ml ออกจากรายการบาร์โค้ด
+-- (กลิ่นยังใช้งานได้ปกติในขนาดอื่น)
+delete from public.product_barcodes
+ where lower(btrim(scent)) in (
+   'volt - elite (edt)', 'volt - nifty (edt)', 'volt - savoury (edt)', 'volt - you (edt)')
+   and regexp_replace(lower(size), '[^0-9a-z]', '', 'g') = '90ml';
