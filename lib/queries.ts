@@ -153,6 +153,20 @@ export async function unitCounts(): Promise<{ in_stock: number; issued: number }
   } catch { return { in_stock: 0, issued: 0 }; }
 }
 
+/** ช่องว่างของสินค้าหนึ่ง (กลิ่น+ขนาด): ยอดรวม vs จำนวน SKU ที่อยู่คลัง → gap = จำนวนที่ยังไม่ผูก SKU */
+export async function stockGapFor(product: string, size: string): Promise<{ qty: number; units: number; gap: number }> {
+  const M = `regexp_replace(lower(btrim(product)),'[^a-z0-9ก-๙]','','g') = regexp_replace(lower(btrim($1)),'[^a-z0-9ก-๙]','','g')
+             and btrim(lower(size),' .') = btrim(lower($2),' .')`;
+  try {
+    const [r] = await q<{ qty: number; units: number }>(
+      `select coalesce((select sum(qty) from stock where ${M}),0)::float8 as qty,
+              (select count(*) from stock_unit where ${M} and status='in_stock')::int as units`,
+      [product, size]);
+    const qty = Number(r?.qty ?? 0), units = Number(r?.units ?? 0);
+    return { qty, units, gap: qty - units };
+  } catch { return { qty: 0, units: 0, gap: 0 }; }
+}
+
 export type UnitMismatch = { product: string; size: string; units: number; qty: number };
 /** ตรวจความตรง: (กลิ่น,ขนาด) ที่มี SKU รายชิ้น (in_stock) แต่จำนวนไม่ตรงยอดรวม
  *  — normalize ชื่อ+ขนาดแบบเดียวกับ matchStockSku; เฉพาะที่มี unit เท่านั้น (ไม่เตือนสินค้าที่ไม่ได้ใช้ SKU) */

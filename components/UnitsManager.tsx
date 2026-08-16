@@ -1,17 +1,21 @@
 "use client";
 import { useState } from "react";
+import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { updateUnitSku, deleteUnit } from "@/lib/actions/stock";
+import { updateUnitSku, deleteUnit, assignUnitSkus } from "@/lib/actions/stock";
 import type { UnitRow } from "@/lib/queries";
-import { Pencil, Trash2, Check, X } from "lucide-react";
+import { Pencil, Trash2, Check, X, Wrench, Camera, Plus } from "lucide-react";
+const CameraScan = dynamic(() => import("./CameraScan"), { ssr: false });
 
 const statusChip = (s: string) => s === "issued"
   ? { label: "ตัดออกแล้ว", cls: "bg-soft text-muted" }
   : s === "void" ? { label: "ยกเลิก", cls: "bg-red-50 text-red-600" }
   : { label: "อยู่คลัง", cls: "bg-green-50 text-green-700" };
 
-export default function UnitsManager({ units, canEdit }: { units: UnitRow[]; canEdit: boolean }) {
+type Reconcile = { product: string; size: string; qty: number; units: number; gap: number };
+
+export default function UnitsManager({ units, canEdit, reconcile }: { units: UnitRow[]; canEdit: boolean; reconcile?: Reconcile | null }) {
   const router = useRouter();
   const [editSku, setEditSku] = useState<string | null>(null);
   const [editVal, setEditVal] = useState("");
@@ -44,7 +48,11 @@ export default function UnitsManager({ units, canEdit }: { units: UnitRow[]; can
 
   const cols = canEdit ? 8 : 7;
   return (
-    <div className="overflow-hidden rounded-xl border border-line bg-white">
+    <div className="space-y-3">
+      {reconcile && reconcile.gap > 0 && (
+        <ReconcilePanel key={reconcile.gap} {...reconcile} />
+      )}
+      <div className="overflow-hidden rounded-xl border border-line bg-white">
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead className="bg-soft text-left text-xs text-muted">
@@ -117,6 +125,68 @@ export default function UnitsManager({ units, canEdit }: { units: UnitRow[]; can
           </tbody>
         </table>
       </div>
+      </div>
+    </div>
+  );
+}
+
+/** ผูก SKU ให้ตรงยอด — โชว์ช่องว่างเท่ากับจำนวนที่ยังไม่มี SKU ให้ user กรอก/สแกน */
+function ReconcilePanel({ product, size, qty, units, gap }: Reconcile) {
+  const router = useRouter();
+  const [slots, setSlots] = useState<string[]>(() => Array(Math.min(gap, 200)).fill(""));
+  const [busy, setBusy] = useState(false);
+  const [scanOpen, setScanOpen] = useState(false);
+  const filled = [...new Set(slots.map((s) => s.trim()).filter(Boolean))];
+
+  const setAt = (i: number, v: string) => setSlots((l) => l.map((x, k) => (k === i ? v : x)));
+  const fillNext = (code: string) => {
+    const s = code.trim(); if (!s) return;
+    setSlots((l) => {
+      if (l.some((x) => x.trim() === s)) return l;
+      const idx = l.findIndex((x) => !x.trim());
+      if (idx >= 0) { const c = [...l]; c[idx] = s; return c; }
+      return [...l, s];
+    });
+  };
+  async function save() {
+    if (!filled.length) return;
+    setBusy(true);
+    const res = await assignUnitSkus(product, size, filled);
+    setBusy(false);
+    if (!res.ok) { alert(res.error || "ผูก SKU ไม่สำเร็จ"); return; }
+    router.refresh();
+  }
+
+  return (
+    <div className="rounded-xl border border-amber-200 bg-amber-50/60 p-4">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div>
+          <p className="flex items-center gap-1.5 text-sm font-semibold text-amber-800"><Wrench size={15} /> ผูก SKU ให้ตรงยอด — {product} {size}</p>
+          <p className="mt-0.5 text-xs text-amber-700">สต๊อก <b>{qty}</b> · มี SKU แล้ว <b>{units}</b> · <b>ยังไม่ผูก SKU {gap} ชิ้น</b> — กรอก/สแกน SKU ลงช่องว่างด้านล่างเพื่อให้ตรง (ไม่เพิ่มยอด)</p>
+        </div>
+        <div className="flex items-center gap-2">
+          <button type="button" onClick={() => setScanOpen(true)} className="inline-flex items-center gap-1 rounded-md border border-amber-300 bg-white px-2.5 py-1.5 text-xs font-medium text-amber-800 hover:bg-amber-100"><Camera size={13} /> สแกน SKU</button>
+          <button type="button" onClick={() => setSlots((l) => [...l, ""])} className="inline-flex items-center gap-1 rounded-md border border-amber-300 bg-white px-2.5 py-1.5 text-xs text-amber-800 hover:bg-amber-100"><Plus size={13} /> เพิ่มช่อง</button>
+        </div>
+      </div>
+      <div className="mt-3 grid grid-cols-2 gap-1.5 sm:grid-cols-3 md:grid-cols-4">
+        {slots.map((s, i) => (
+          <div key={i} className="flex items-center gap-1">
+            <span className="w-5 shrink-0 text-right text-[11px] text-amber-700/70">{i + 1}</span>
+            <input id={`rec-slot-${i}`} value={s} onChange={(e) => setAt(i, e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); const nx = document.getElementById(`rec-slot-${i + 1}`) as HTMLInputElement | null; nx?.focus(); } }}
+              className="input h-8 flex-1 bg-white font-mono text-xs" placeholder={`SKU #${i + 1}`} />
+          </div>
+        ))}
+      </div>
+      <div className="mt-3 flex items-center justify-between">
+        <span className="text-xs text-amber-700">กรอกแล้ว <b>{filled.length}</b>/{gap} ชิ้น</span>
+        <button type="button" onClick={save} disabled={busy || !filled.length}
+          className="rounded-lg bg-amber-600 px-3 py-2 text-xs font-medium text-white hover:bg-amber-700 disabled:opacity-50">
+          {busy ? "กำลังผูก…" : `ผูก SKU (${filled.length})`}
+        </button>
+      </div>
+      {scanOpen && <CameraScan continuous title="สแกน SKU ให้ตรงยอด (ต่อเนื่อง)" hint="เล็ง SKU ของแต่ละชิ้น — เติมลงช่องว่างอัตโนมัติ" onClose={() => setScanOpen(false)} onScan={fillNext} />}
     </div>
   );
 }

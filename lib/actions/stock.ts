@@ -407,6 +407,44 @@ export async function receiveUnitsBatch(
   } catch (e: any) { return { ok: false, error: e?.message || "รับเข้าไม่สำเร็จ" }; }
 }
 
+/** ผูก SKU กับสต๊อกที่มีอยู่แล้ว (reconcile) — สร้าง stock_unit โดย "ไม่เพิ่มยอดรวม"
+ *  ใช้กับของที่รับเข้าแบบยอดรวม/ปรับมือ ที่ยังไม่มีเลขรายชิ้น เพื่อให้จำนวน SKU ตรงยอด */
+export async function assignUnitSkus(product: string, size: string, skus: string[]): Promise<{ ok: boolean; error?: string; added?: number; dupes?: string[] }> {
+  const gate = await requireStockEdit();
+  if ("error" in gate) return { ok: false, error: gate.error };
+  const user = gate.user;
+  const p = (product || "").trim(), sz = (size || "").trim();
+  const list = [...new Set((skus || []).map((s) => s.trim()).filter(Boolean))];
+  if (!p || !sz) return { ok: false, error: "ไม่พบสินค้า/ขนาด" };
+  if (!list.length) return { ok: false, error: "กรอก SKU อย่างน้อย 1 ชิ้น" };
+  // เกรด + บาร์โค้ด (นอก tx กันพังถ้า product_barcodes ยังไม่มีบน prod)
+  let grade: string | null = null, barcode: string | null = null;
+  try { const [pr] = await q<{ ptype: string | null }>(`select ptype from products where lower(btrim(name)) = lower(btrim($1)) limit 1`, [p]); grade = pr?.ptype ?? null; } catch { /* ไม่มี */ }
+  try {
+    const [b] = await q<{ barcode: string }>(
+      `select barcode from product_barcodes
+        where regexp_replace(lower(btrim(scent)),'[^a-z0-9ก-๙]','','g') = regexp_replace(lower(btrim($1)),'[^a-z0-9ก-๙]','','g')
+          and btrim(lower(size),' .') = btrim(lower($2),' .') limit 1`, [p, sz]);
+    barcode = b?.barcode ?? null;
+  } catch { /* ไม่มี */ }
+  try {
+    const out = await tx<{ added: number; dupes: string[] }>(async (run) => {
+      const dupes: string[] = []; let added = 0;
+      for (const sku of list) {
+        const [ex] = await run<{ x: number }>(`select 1 as x from stock_unit where btrim(sku) = $1 limit 1`, [sku]);
+        if (ex) { dupes.push(sku); continue; }
+        await run(`insert into stock_unit (sku, product, size, grade, barcode, received_by, status) values ($1,$2,$3,$4,$5,$6,'in_stock')`,
+          [sku, p, sz, grade, barcode, user.id]);   // ไม่แตะ stock (ยอดรวมนับไว้แล้ว)
+        added++;
+      }
+      if (added === 0) throw new Error("SKU ที่ใส่มีอยู่ในระบบแล้วทั้งหมด");
+      return { added, dupes };
+    });
+    revalidatePath("/stock/units"); revalidatePath("/stock");
+    return { ok: true, ...out };
+  } catch (e: any) { return { ok: false, error: e?.message || "ผูก SKU ไม่สำเร็จ" }; }
+}
+
 /** แก้ SKU รายชิ้น (แก้เลขที่พิมพ์ผิด) */
 export async function updateUnitSku(oldSku: string, newSku: string): Promise<{ ok: boolean; error?: string }> {
   const gate = await requireStockEdit();

@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { requireStock } from "@/lib/auth/require-user";
 import { can } from "@/lib/auth/roles";
-import { listUnits, unitCounts } from "@/lib/queries";
+import { listUnits, unitCounts, stockGapFor } from "@/lib/queries";
 import UnitsManager from "@/components/UnitsManager";
 import { ChevronLeft, ScanBarcode, Search, FileDown } from "lucide-react";
 
@@ -13,6 +13,8 @@ export default async function UnitsPage({ searchParams }: { searchParams: Promis
   const { q, status, product, size } = await searchParams;
   const [units, counts] = await Promise.all([listUnits({ search: q, status, product, size, limit: 1000 }), unitCounts()]);
   const exportQs = new URLSearchParams(Object.entries({ q, status, product, size }).filter(([, v]) => v) as [string, string][]).toString();
+  // ผูก SKU ให้ตรงยอด — เฉพาะเมื่อกรองสินค้าเดียว (กลิ่น+ขนาด) และแก้ไขได้
+  const reconcile = canEdit && product && size ? { product, size, ...(await stockGapFor(product, size)) } : null;
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-6 md:px-8">
@@ -47,7 +49,7 @@ export default async function UnitsPage({ searchParams }: { searchParams: Promis
         <button className="btn-primary">ค้นหา</button>
       </form>
 
-      <UnitsManager units={units} canEdit={canEdit} />
+      <UnitsManager units={units} canEdit={canEdit} reconcile={reconcile} />
     </div>
   );
 }
