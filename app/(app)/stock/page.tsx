@@ -6,13 +6,12 @@ import { ScanLine, FileDown } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
-export default async function StockPage({ searchParams }: { searchParams: Promise<{ q?: string; low?: string }> }) {
+export default async function StockPage({ searchParams }: { searchParams: Promise<{ low?: string }> }) {
   const me = await requireStock();
   const isAdmin = me.role === "admin";
-  const { q, low } = await searchParams;
-  const lowOnly = low === "1";
+  const { low } = await searchParams;
   const [rows, products, sizes, sum] = await Promise.all([
-    listStock({ search: q, lowOnly }),
+    listStock({ limit: 5000 }),
     getProducts(), getSizes(), stockSummary(),
   ]);
 
@@ -24,11 +23,11 @@ export default async function StockPage({ searchParams }: { searchParams: Promis
           <p className="text-sm text-muted">{sum.skus.toLocaleString()} รายการ (SKU) · ใกล้หมด {sum.low.toLocaleString()} · ตัดสต๊อกแล้ว {sum.issuedOrders.toLocaleString()} ใบ</p>
         </div>
         <div className="flex gap-2">
-          <a href={`/api/export/stock${q ? `?q=${encodeURIComponent(q)}` : ""}`} className="btn-ghost"><FileDown size={16} /> Export</a>
+          <a href="/api/export/stock" className="btn-ghost"><FileDown size={16} /> Export</a>
           <Link href="/stock/issue" className="btn-primary"><ScanLine size={16} /> ตัดสต๊อก (สแกน)</Link>
         </div>
       </div>
-      <StockManager rows={rows} products={products} sizes={sizes} q={q} low={lowOnly} isAdmin={isAdmin} />
+      <StockManager rows={rows} products={products} sizes={sizes} initialLow={low === "1"} isAdmin={isAdmin} />
     </div>
   );
 }

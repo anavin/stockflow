@@ -215,7 +215,7 @@ export async function getOrder(orderNo: string, opts: { includeDeleted?: boolean
 }
 
 // ---- stock -----------------------------------------------------------------
-export type StockRow = { product: string; size: string; qty: number; updated_at: string | null };
+export type StockRow = { product: string; size: string; qty: number; updated_at: string | null; grade: string | null };
 export async function listStock(opts: { search?: string; lowOnly?: boolean; threshold?: number; limit?: number } = {}): Promise<StockRow[]> {
   const params: any[] = [];
   const where: string[] = [];
@@ -225,7 +225,8 @@ export async function listStock(opts: { search?: string; lowOnly?: boolean; thre
   const limit = Math.min(opts.limit ?? 1000, 5000);
   // ทุก SKU ที่เคยมี (จาก stock ∪ รายการในใบเบิก) + ยอดปัจจุบัน
   const sql = `
-    select ps.product, ps.size, coalesce(s.qty,0)::float8 as qty, s.updated_at
+    select ps.product, ps.size, coalesce(s.qty,0)::float8 as qty, s.updated_at,
+           (select p.ptype from products p where lower(btrim(p.name)) = lower(btrim(ps.product)) limit 1) as grade
     from (
       select distinct oi.product, oi.size from order_items oi
         join orders o on o.order_no = oi.order_no
