@@ -105,10 +105,12 @@ export type UnitRow = {
   received_at: string; issued_at: string | null;
 };
 /** ติดตาม SKU รายชิ้น — ค้นด้วย SKU/กลิ่น/order + สถานะ; join orders เพื่อรู้ผู้ซื้อ */
-export async function listUnits(opts: { search?: string; status?: string; limit?: number } = {}): Promise<UnitRow[]> {
+export async function listUnits(opts: { search?: string; status?: string; product?: string; size?: string; limit?: number } = {}): Promise<UnitRow[]> {
   const params: any[] = [];
   const where: string[] = [];
   if (opts.search) { params.push(`%${opts.search}%`); const i = params.length; where.push(`(su.sku ilike $${i} or su.product ilike $${i} or coalesce(su.order_no,'') ilike $${i})`); }
+  if (opts.product) { params.push(opts.product); where.push(`lower(btrim(su.product)) = lower(btrim($${params.length}))`); }
+  if (opts.size) { params.push(opts.size); where.push(`regexp_replace(lower(su.size),'[^0-9a-z]','','g') = regexp_replace(lower($${params.length}),'[^0-9a-z]','','g')`); }
   if (opts.status) { params.push(opts.status); where.push(`su.status = $${params.length}`); }
   const limit = Math.min(opts.limit ?? 500, 2000);
   try {

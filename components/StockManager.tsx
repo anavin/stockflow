@@ -312,15 +312,14 @@ export default function StockManager({ rows, products, sizes, initialLow, isAdmi
                           <td className="px-4 py-2.5 font-medium text-ink">
                             {r.product}
                             {disc && <span className="ml-1.5 rounded bg-red-50 px-1 py-0.5 text-[10px] font-medium text-red-600">เลิกผลิต</span>}
-                            <Link href={`/stock/units?q=${encodeURIComponent(r.product)}`} className="ml-2 inline-flex items-center gap-0.5 align-middle text-[11px] font-normal text-brand-600 hover:underline" title="ดูสินค้ารายชิ้น (SKU) ที่รับเข้า">
-                              <ScanBarcode size={11} /> รายชิ้น
-                            </Link>
                           </td>
                           <td className="px-3 py-2.5">{r.grade ? <span className="chip bg-brand-50 text-brand-600">{r.grade}</span> : <span className="text-faint">—</span>}</td>
                           <td className={`px-3 py-2.5 ${disc ? "text-red-600 line-through" : "text-muted"}`}>{r.size}</td>
                           <td className="px-3 py-2.5">{skuOf(r.product, r.size) ? <span className="font-mono text-xs text-ink">{skuOf(r.product, r.size)}</span> : <span className="text-faint">—</span>}</td>
                           <td className="px-3 py-2.5 text-right">
-                            <span className={`font-semibold tabular-nums ${r.qty < 0 ? "text-red-600" : r.qty <= 10 ? "text-amber-600" : "text-ink"}`}>{r.qty}</span>
+                            <Link href={`/stock/units?product=${encodeURIComponent(r.product)}&size=${encodeURIComponent(r.size)}`}
+                              title="คลิกดูสินค้ารายชิ้น (SKU) ของขนาดนี้"
+                              className={`font-semibold tabular-nums underline decoration-dotted underline-offset-2 hover:decoration-solid ${r.qty < 0 ? "text-red-600" : r.qty <= 10 ? "text-amber-600" : "text-ink"}`}>{r.qty}</Link>
                           </td>
                           <td className="px-3 py-2.5">
                             <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ${st.cls}`}>

@@ -5,10 +5,10 @@ import { ChevronLeft, ScanBarcode, Search } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
-export default async function UnitsPage({ searchParams }: { searchParams: Promise<{ q?: string; status?: string }> }) {
+export default async function UnitsPage({ searchParams }: { searchParams: Promise<{ q?: string; status?: string; product?: string; size?: string }> }) {
   await requireStock();
-  const { q, status } = await searchParams;
-  const [units, counts] = await Promise.all([listUnits({ search: q, status, limit: 1000 }), unitCounts()]);
+  const { q, status, product, size } = await searchParams;
+  const [units, counts] = await Promise.all([listUnits({ search: q, status, product, size, limit: 1000 }), unitCounts()]);
 
   const statusChip = (s: string) => s === "issued"
     ? { label: "ตัดออกแล้ว", cls: "bg-soft text-muted" }
@@ -27,6 +27,13 @@ export default async function UnitsPage({ searchParams }: { searchParams: Promis
         </div>
       </div>
 
+      {(product || size) && (
+        <div className="mb-3 flex items-center gap-2 text-sm">
+          <span className="text-muted">กรองเฉพาะ:</span>
+          <span className="chip bg-brand-50 text-brand-600">{product}{size ? ` · ${size}` : ""}</span>
+          <Link href="/stock/units" className="text-xs text-muted hover:text-ink">ล้าง</Link>
+        </div>
+      )}
       <form action="/stock/units" className="mb-4 flex flex-wrap gap-2">
         <div className="relative min-w-[240px] flex-1">
           <Search size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-faint" />
