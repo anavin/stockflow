@@ -91,7 +91,9 @@ export default function UnitsManager({ units, canEdit }: { units: UnitRow[]; can
                   {canEdit && (
                     <td className="px-3 py-2.5">
                       <div className="flex items-center justify-end gap-1">
-                        {editing ? (
+                        {u.source === "order" ? (
+                          <span className="text-[11px] text-faint" title="SKU นี้บันทึกตอนตัดยอด (ยังไม่ได้รับเข้าแบบรายชิ้น) — แก้/ลบที่ใบเบิก">จากใบเบิก</span>
+                        ) : editing ? (
                           <>
                             <button onClick={() => saveEdit(u.sku)} disabled={busy} title="บันทึก"
                               className="rounded-md p-1.5 text-green-700 hover:bg-green-50 disabled:opacity-40"><Check size={15} /></button>

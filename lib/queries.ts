@@ -102,31 +102,53 @@ export async function getActiveSpecRules(): Promise<{ sizes: string; grades: str
 export type UnitRow = {
   sku: string; product: string; size: string; grade: string | null; barcode: string | null;
   status: string; order_no: string | null; buyer: string | null; receiver: string | null; phone: string | null;
-  received_at: string; issued_at: string | null;
+  received_at: string | null; issued_at: string | null;
+  source: "unit" | "order";   // unit = รับเข้าผ่าน stock_unit · order = SKU ที่สแกนตอนตัดยอด (order_items)
 };
+
+/** SELECT รวม 2 แหล่ง: stock_unit (รับเข้า) + order_items.sku (สแกนตอนตัดยอด, ที่ไม่มีใน stock_unit)
+ *  → ค้น SKU ของใบเบิกที่ตัดยอดไปแล้วเจอ แม้จะไม่เคยรับเข้าแบบ SKU */
+const UNITS_UNION = `
+  select su.sku, su.product, su.size, su.grade, su.barcode, su.status, su.order_no,
+         su.received_at, su.issued_at, su.id as ord, 'unit' as source
+    from stock_unit su
+  union all
+  select oi.sku, oi.product, oi.size, p.ptype as grade, null::text as barcode,
+         'issued' as status, oi.order_no,
+         null::timestamptz as received_at, o.stock_issued_at as issued_at,
+         -oi.id as ord, 'order' as source
+    from order_items oi
+    join orders o on o.order_no = oi.order_no
+    left join products p on lower(btrim(p.name)) = lower(btrim(oi.product))
+   where coalesce(btrim(oi.sku),'') <> ''
+     and o.stock_issued_at is not null
+     and o.deleted_at is null
+     and not exists (select 1 from stock_unit s where btrim(s.sku) = btrim(oi.sku))`;
+
 /** ติดตาม SKU รายชิ้น — ค้นด้วย SKU/กลิ่น/order + สถานะ; join orders เพื่อรู้ผู้ซื้อ */
 export async function listUnits(opts: { search?: string; status?: string; product?: string; size?: string; limit?: number } = {}): Promise<UnitRow[]> {
   const params: any[] = [];
   const where: string[] = [];
-  if (opts.search) { params.push(`%${opts.search}%`); const i = params.length; where.push(`(su.sku ilike $${i} or su.product ilike $${i} or coalesce(su.order_no,'') ilike $${i})`); }
-  if (opts.product) { params.push(opts.product); where.push(`lower(btrim(su.product)) = lower(btrim($${params.length}))`); }
-  if (opts.size) { params.push(opts.size); where.push(`regexp_replace(lower(su.size),'[^0-9a-z]','','g') = regexp_replace(lower($${params.length}),'[^0-9a-z]','','g')`); }
-  if (opts.status) { params.push(opts.status); where.push(`su.status = $${params.length}`); }
+  if (opts.search) { params.push(`%${opts.search}%`); const i = params.length; where.push(`(u.sku ilike $${i} or u.product ilike $${i} or coalesce(u.order_no,'') ilike $${i})`); }
+  if (opts.product) { params.push(opts.product); where.push(`lower(btrim(u.product)) = lower(btrim($${params.length}))`); }
+  if (opts.size) { params.push(opts.size); where.push(`regexp_replace(lower(u.size),'[^0-9a-z]','','g') = regexp_replace(lower($${params.length}),'[^0-9a-z]','','g')`); }
+  if (opts.status) { params.push(opts.status); where.push(`u.status = $${params.length}`); }
   const limit = Math.min(opts.limit ?? 500, 2000);
   try {
     return await q<UnitRow>(
-      `select su.sku, su.product, su.size, su.grade, su.barcode, su.status, su.order_no,
-              o.shop_name as buyer, o.receiver, o.phone, su.received_at, su.issued_at
-       from stock_unit su left join orders o on o.order_no = su.order_no
+      `select u.sku, u.product, u.size, u.grade, u.barcode, u.status, u.order_no,
+              o.shop_name as buyer, o.receiver, o.phone, u.received_at, u.issued_at, u.source
+       from (${UNITS_UNION}) u left join orders o on o.order_no = u.order_no
        ${where.length ? "where " + where.join(" and ") : ""}
-       order by su.id desc limit ${limit}`, params);
+       order by u.ord desc limit ${limit}`, params);
   } catch { return []; }
 }
 export async function unitCounts(): Promise<{ in_stock: number; issued: number }> {
   try {
     const [r] = await q<{ in_stock: number; issued: number }>(
       `select count(*) filter (where status='in_stock')::int as in_stock,
-              count(*) filter (where status='issued')::int as issued from stock_unit`);
+              count(*) filter (where status='issued')::int as issued
+       from (${UNITS_UNION}) u`);
     return { in_stock: r?.in_stock ?? 0, issued: r?.issued ?? 0 };
   } catch { return { in_stock: 0, issued: 0 }; }
 }
