@@ -249,6 +249,25 @@ export async function getDiscontinued(): Promise<Record<string, string[]>> {
   } catch { return {}; }  // ตารางยังไม่ถูกสร้าง
 }
 
+/** กลิ่นที่เปิดขาย (active) แต่ยังไม่มีสต๊อก/ไม่เคยอยู่ในใบเบิก — ให้โผล่ในหน้าสต๊อกเป็น "ยังไม่มีสต๊อก" */
+export async function getScentsWithoutStock(): Promise<{ name: string; grade: string | null }[]> {
+  try {
+    return await q<{ name: string; grade: string | null }>(`
+      with used as (
+        select regexp_replace(lower(btrim(product)),'[^a-z0-9ก-๙]','','g') as k from stock
+        union
+        select regexp_replace(lower(btrim(oi.product)),'[^a-z0-9ก-๙]','','g')
+          from order_items oi join orders o on o.order_no = oi.order_no
+          where o.deleted_at is null and coalesce(oi.product,'') <> ''
+      )
+      select name, ptype as grade from products p
+      where p.active
+        and regexp_replace(lower(btrim(p.name)),'[^a-z0-9ก-๙]','','g') <> ''
+        and regexp_replace(lower(btrim(p.name)),'[^a-z0-9ก-๙]','','g') not in (select k from used)
+      order by name`);
+  } catch { return []; }
+}
+
 /** กลิ่น+ขนาด ที่ปิดการขาย → Record<normScent, normSize[]> (แพทเทิร์นเดียวกับ getDiscontinued) */
 export async function getClosedSkus(): Promise<Record<string, string[]>> {
   const norm = (s: string) => (s || "").toLowerCase().replace(/[^a-z0-9ก-๙]/g, "");

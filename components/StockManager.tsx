@@ -20,8 +20,8 @@ function statusOf(qty: number) {
   return { label: "ปกติ", cls: "bg-green-50 text-green-700", dot: "bg-green-500" };
 }
 
-export default function StockManager({ rows, products, sizes, initialLow, isAdmin, discontinued = {}, skuMap = {}, closedSkus = {} }:
-  { rows: StockRow[]; products: string[]; sizes: string[]; initialLow?: boolean; isAdmin: boolean; discontinued?: Record<string, string[]>; skuMap?: Record<string, string>; closedSkus?: Record<string, string[]> }) {
+export default function StockManager({ rows, products, sizes, initialLow, isAdmin, discontinued = {}, skuMap = {}, closedSkus = {}, emptyScents = [] }:
+  { rows: StockRow[]; products: string[]; sizes: string[]; initialLow?: boolean; isAdmin: boolean; discontinued?: Record<string, string[]>; skuMap?: Record<string, string>; closedSkus?: Record<string, string[]>; emptyScents?: { name: string; grade: string | null }[] }) {
   const router = useRouter();
   const normKey = (s: string) => (s || "").toLowerCase().replace(/[^a-z0-9ก-๙]/g, "");
   const isDisc = (product: string, size: string) => (discontinued[normKey(product)] ?? []).includes(normKey(size));
@@ -64,16 +64,31 @@ export default function StockManager({ rows, products, sizes, initialLow, isAdmi
     || mlOf(b.size) - mlOf(a.size)
   ), [filtered, discontinued]);
   // จัดกลุ่มตาม "กลิ่น" (ชื่อขึ้นครั้งเดียวเป็นหัวข้อ → ขนาดไล่ข้างใต้) + สรุป
+  // + รวมกลิ่นที่ "ยังไม่มีสต๊อก" (active แต่ยังไม่เคยรับเข้า) เป็นหัวข้อว่าง ให้เห็นทั้งแคตตาล็อก
   const groups = useMemo(() => {
     const m = new Map<string, StockRow[]>();
     for (const r of sorted) { if (!m.has(r.product)) m.set(r.product, []); m.get(r.product)!.push(r); }
-    return [...m.entries()].map(([product, rs]) => ({
-      product, grade: rs[0].grade, rows: rs,
+    const real = [...m.entries()].map(([product, rs]) => ({
+      product, grade: rs[0].grade, rows: rs, empty: false,
       total: rs.reduce((s, r) => s + r.qty, 0),
       low: rs.filter((r) => r.qty >= 0 && r.qty <= 10).length,
       neg: rs.some((r) => r.qty < 0),
     }));
-  }, [sorted]);
+    const t = search.trim().toLowerCase();
+    const empties = emptyScents
+      .filter((s) => {
+        if (t && !s.name.toLowerCase().includes(t)) return false;
+        if (grade === "__none__" ? !!s.grade : grade && s.grade !== grade) return false;
+        if (size || status !== "all") return false;   // มีตัวกรองขนาด/สถานะ → กลิ่นที่ยังไม่มีสต๊อกไม่เข้าเกณฑ์
+        return true;
+      })
+      .map((s) => ({ product: s.name, grade: s.grade, rows: [] as StockRow[], empty: true, total: 0, low: 0, neg: false }));
+    return [...real, ...empties].sort((a, b) =>
+      gradeBucket(a.grade) - gradeBucket(b.grade)
+      || (a.grade || "zzz").localeCompare(b.grade || "zzz", "en")
+      || a.product.localeCompare(b.product, "en"));
+  }, [sorted, emptyScents, search, grade, size, status]);
+  const emptyCount = useMemo(() => groups.filter((g) => g.empty).length, [groups]);
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
   const toggleGroup = (g: string) => setCollapsed((s) => { const n = new Set(s); n.has(g) ? n.delete(g) : n.add(g); return n; });
   const collapseAll = () => setCollapsed(new Set(groups.map((g) => g.product)));
@@ -398,7 +413,7 @@ export default function StockManager({ rows, products, sizes, initialLow, isAdmi
 
       <div className="flex flex-wrap items-center justify-between gap-2 px-1 text-xs text-muted">
         <div className="flex flex-wrap items-center gap-3">
-          <span><b className="text-ink">{groups.length.toLocaleString()}</b> กลิ่น · {filtered.length.toLocaleString()} ขนาด</span>
+          <span><b className="text-ink">{groups.length.toLocaleString()}</b> กลิ่น · {filtered.length.toLocaleString()} ขนาด{emptyCount > 0 && <span className="text-faint"> · {emptyCount} ยังไม่มีสต๊อก</span>}</span>
           <button onClick={collapseAll} className="inline-flex items-center gap-1 rounded-md border border-line bg-white px-2 py-1 hover:bg-soft"><ChevronRight size={12} /> ย่อทั้งหมด</button>
           <button onClick={expandAll} className="inline-flex items-center gap-1 rounded-md border border-line bg-white px-2 py-1 hover:bg-soft"><ChevronDown size={12} /> ขยายทั้งหมด</button>
           <button onClick={exportCsv} className="inline-flex items-center gap-1 rounded-md border border-line bg-white px-2 py-1 hover:bg-soft"><FileDown size={12} /> Export ที่กรอง (CSV)</button>
@@ -423,6 +438,27 @@ export default function StockManager({ rows, products, sizes, initialLow, isAdmi
               {groups.length === 0 && <tr><td colSpan={isAdmin ? 5 : 4} className="px-4 py-12 text-center text-muted">ไม่พบสินค้าตามตัวกรอง</td></tr>}
               {groups.map((grp) => {
                 const open = !collapsed.has(grp.product);
+                // กลิ่นที่ยังไม่มีสต๊อก (active แต่ไม่เคยรับเข้า) — หัวข้อว่าง + ปุ่มรับเข้า
+                if (grp.empty) {
+                  return (
+                    <tr key={grp.product} className="border-t border-line bg-white">
+                      <td colSpan={isAdmin ? 5 : 4} className="px-4 py-2">
+                        <div className="flex w-full flex-wrap items-center gap-2">
+                          <span className="ml-[23px] font-medium text-slate-500">{grp.product}</span>
+                          {grp.grade && <span className="chip bg-brand-50/60 text-brand-500">{grp.grade}</span>}
+                          <span className="rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-medium text-slate-500">ยังไม่มีสต๊อก</span>
+                          {isAdmin && (
+                            <button type="button"
+                              onClick={() => { setF((s) => ({ ...s, product: grp.product, grade: grp.grade || "" })); window.scrollTo({ top: 0, behavior: "smooth" }); }}
+                              className="ml-auto inline-flex items-center gap-0.5 rounded-md border border-brand-200 bg-brand-50 px-2 py-0.5 text-xs font-medium text-brand-700 hover:bg-brand-100">
+                              <PackagePlus size={12} /> รับเข้า
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                }
                 return (
                   <Fragment key={grp.product}>
                     {/* หัวข้อกลิ่น (ชื่อขึ้นครั้งเดียว) + Grade + สรุป — คลิกพับ/ขยาย */}
