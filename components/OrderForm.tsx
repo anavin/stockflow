@@ -242,7 +242,7 @@ export default function OrderForm({ products, sizes, provinces, postcodes, initi
     setDirty(false);   // บันทึกแล้ว → ไม่ต้องเตือนตอนออก
     setSavedMsg(`บันทึกแล้ว ✓ (${res.doc_no || res.order_no})`);
     if (thenPrint && res.order_no) {
-      const url = `/print/pdf/${encodeURIComponent(res.order_no)}`;
+      const url = `/api/print/${encodeURIComponent(res.order_no)}`;
       if (printWin) printWin.location.href = url;     // ชี้แท็บที่เปิดไว้ไปที่ PDF
       else window.open(url, "_blank");                // เผื่อ open แรกถูกบล็อก
     }

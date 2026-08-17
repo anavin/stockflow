@@ -203,7 +203,7 @@ function ResultCard({ entry, idx, isAdmin, onReverse }: { entry: Entry; idx: num
         <div className="flex items-center gap-2">
           <span className="text-xs text-muted">{res.doc_no} · {at}</span>
           {!reversed && (
-            <a href={`/print/pdf/${encodeURIComponent(res.order_no!)}`} target="_blank" rel="noreferrer"
+            <a href={`/api/print/${encodeURIComponent(res.order_no!)}`} target="_blank" rel="noreferrer"
               className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs text-muted hover:bg-soft hover:text-ink">
               <Printer size={13} /> พิมพ์
             </a>

@@ -154,7 +154,7 @@ export default function ImportWizard() {
                                 <td className="px-4 py-2 font-mono text-xs">{m.doc_no || "—"}</td>
                                 <td className="px-4 py-2">{m.receiver || "—"}</td>
                                 <td className="px-4 py-2 text-right">
-                                  <a href={`/print/pdf/${encodeURIComponent(m.order_no)}`} target="_blank" rel="noreferrer"
+                                  <a href={`/api/print/${encodeURIComponent(m.order_no)}`} target="_blank" rel="noreferrer"
                                     className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs text-brand-600 hover:bg-brand-50">
                                     <Printer size={14} /> พิมพ์
                                   </a>

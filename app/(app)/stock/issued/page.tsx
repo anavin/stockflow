@@ -53,7 +53,7 @@ export default async function IssuedOrdersPage({ searchParams }: { searchParams:
                     <div className="flex items-center justify-end gap-1">
                       <Link href={`/shopee/${encodeURIComponent(o.order_no)}`} className="rounded-md p-1.5 text-muted hover:bg-soft hover:text-ink" title="ดูรายละเอียดใบเบิก"><Eye size={16} /></Link>
                       <Link href={`/stock/moves?order=${encodeURIComponent(o.order_no)}`} className="rounded-md p-1.5 text-muted hover:bg-soft hover:text-ink" title="ดูการตัดสต๊อก"><ListChecks size={16} /></Link>
-                      <a href={`/print/pdf/${encodeURIComponent(o.order_no)}`} target="_blank" rel="noreferrer" className="rounded-md p-1.5 text-muted hover:bg-brand-50 hover:text-brand-600" title="พิมพ์"><Printer size={16} /></a>
+                      <a href={`/api/print/${encodeURIComponent(o.order_no)}`} target="_blank" rel="noreferrer" className="rounded-md p-1.5 text-muted hover:bg-brand-50 hover:text-brand-600" title="พิมพ์"><Printer size={16} /></a>
                       {(me.role === "admin" || o.issued_by === me.username) && <ReverseIssueButton orderNo={o.order_no} />}
                     </div>
                   </td>
