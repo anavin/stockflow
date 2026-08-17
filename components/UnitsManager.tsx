@@ -57,7 +57,7 @@ export default function UnitsManager({ units, canEdit, reconcile }: { units: Uni
         <table className="w-full text-sm">
           <thead className="bg-soft text-left text-xs text-muted">
             <tr>
-              <th className="px-4 py-3">Barcode</th>
+              <th className="px-4 py-3">วันที่ตัดสต๊อก</th>
               <th className="px-3 py-3">SKU</th>
               <th className="px-3 py-3">กลิ่น</th>
               <th className="px-3 py-3">Grade</th>
@@ -74,7 +74,7 @@ export default function UnitsManager({ units, canEdit, reconcile }: { units: Uni
               const editing = editSku === u.sku;
               return (
                 <tr key={u.sku} className="border-t border-line hover:bg-soft/40">
-                  <td className="px-4 py-2.5 font-mono text-xs text-muted">{u.barcode || "—"}</td>
+                  <td className="px-4 py-2.5 text-xs text-muted">{u.issued_at ? String(u.issued_at).slice(0, 10) : "—"}</td>
                   <td className="px-3 py-2.5">
                     {editing ? (
                       <input autoFocus value={editVal} onChange={(e) => setEditVal(e.target.value)}
