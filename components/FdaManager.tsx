@@ -46,6 +46,7 @@ export default function FdaManager({ rows, summary, canEdit }: { rows: FdaRow[];
     setBusy(false);
   }
 
+  const isDisc = (r: FdaRow) => /เลิก/.test(r.prod_status || "");   // เลิกผลิต
   const filtered = useMemo(() => {
     const t = search.trim().toLowerCase();
     return rows.filter((r) => {
@@ -53,7 +54,7 @@ export default function FdaManager({ rows, summary, canEdit }: { rows: FdaRow[];
       if (statusF && (r.fda_status || "") !== statusF) return false;
       if (t && !(`${r.product} ${r.name_th ?? ""} ${r.name_en ?? ""} ${r.reg_no ?? ""}`.toLowerCase().includes(t))) return false;
       return true;
-    });
+    }).sort((a, b) => (isDisc(a) ? 1 : 0) - (isDisc(b) ? 1 : 0));   // เลิกผลิต → ล่างสุด (คง order เดิม = เรียงตามวันหมดอายุ)
   }, [rows, search, tierF, statusF]);
 
   const statuses = useMemo(() => [...new Set(rows.map((r) => r.fda_status).filter(Boolean))] as string[], [rows]);
