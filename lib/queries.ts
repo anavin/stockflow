@@ -387,26 +387,34 @@ export async function getOrder(orderNo: string, opts: { includeDeleted?: boolean
 export type StockRow = { product: string; size: string; qty: number; updated_at: string | null; grade: string | null };
 export async function listStock(opts: { search?: string; lowOnly?: boolean; threshold?: number; limit?: number } = {}): Promise<StockRow[]> {
   const params: any[] = [];
-  const where: string[] = [];
-  if (opts.search) { params.push(`%${opts.search}%`); where.push(`ps.product ilike $${params.length}`); }
   const th = opts.threshold ?? 10;
-  const having = opts.lowOnly ? `where coalesce(s.qty,0) <= ${th}` : "";
   const limit = Math.min(opts.limit ?? 1000, 5000);
+  const searchCond = opts.search ? (params.push(`%${opts.search}%`), `where n.product ilike $${params.length}`) : "";
+  const lowHaving = opts.lowOnly ? `having sum(n.qty) <= ${th}` : "";
   // ทุก SKU ที่เคยมี (จาก stock ∪ รายการในใบเบิก) + ยอดปัจจุบัน
+  // จัดกลุ่มด้วยชื่อ+ขนาดที่ normalize แล้ว → ยุบแถวที่สะกดต่างกันแค่ตัวพิมพ์/ช่องว่าง เป็นแถวเดียว (รวม qty)
+  const NP = `regexp_replace(lower(btrim(product)),'[^a-z0-9ก-๙]','','g')`;
+  const NS = `regexp_replace(lower(btrim(size)),'[^a-z0-9ก-๙]','','g')`;
   const sql = `
-    select ps.product, ps.size, coalesce(s.qty,0)::float8 as qty, s.updated_at,
-           (select p.ptype from products p where lower(btrim(p.name)) = lower(btrim(ps.product)) limit 1) as grade
-    from (
-      select distinct oi.product, oi.size from order_items oi
-        join orders o on o.order_no = oi.order_no
+    with raw as (
+      select product, size, qty::float8 as qty, updated_at from stock
+      union all
+      select distinct oi.product, oi.size, 0::float8, null::timestamptz
+        from order_items oi join orders o on o.order_no = oi.order_no
         where o.deleted_at is null and coalesce(oi.product,'') <> '' and coalesce(oi.size,'') <> ''
-      union
-      select product, size from stock
-    ) ps
-    left join stock s on s.product = ps.product and s.size = ps.size
-    ${where.length ? "where " + where.join(" and ") : ""}
-    ${opts.lowOnly ? (where.length ? `and s.qty is not null and s.qty <= ${th}` : `where s.qty is not null and s.qty <= ${th}`) : ""}
-    order by coalesce(s.qty,0) asc, ps.product, ps.size
+    ),
+    n as (select product, size, qty, updated_at, ${NP} as pkey, ${NS} as skey from raw)
+    select
+      coalesce((select p.name from products p where regexp_replace(lower(btrim(p.name)),'[^a-z0-9ก-๙]','','g') = n.pkey limit 1), max(n.product)) as product,
+      max(n.size) as size,
+      sum(n.qty)::float8 as qty,
+      max(n.updated_at) as updated_at,
+      (select p.ptype from products p where regexp_replace(lower(btrim(p.name)),'[^a-z0-9ก-๙]','','g') = n.pkey limit 1) as grade
+    from n
+    ${searchCond}
+    group by n.pkey, n.skey
+    ${lowHaving}
+    order by sum(n.qty) asc, product, max(n.size)
     limit ${limit}`;
   return q<StockRow>(sql, params);
 }
