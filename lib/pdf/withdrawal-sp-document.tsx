@@ -125,7 +125,7 @@ function fmtDate(d?: any) {
 
 // ถุงกระดาษ = ของแถม (Free) เสมอ
 const isBag = (p?: string | null) => /ถุง/.test(String(p || ""));
-const isFreeItem = (it: OrderItem) => !!it.is_free || isBag(it.product);
+const isFreeItem = (it: { is_free?: boolean | null; product?: string | null }) => !!it.is_free || isBag(it.product);
 // เรียงรายการในใบพิมพ์: ของขายก่อน → ของแถม(Free)ต่อท้าย → ประเภทน้ำหอม → ชื่อกลิ่น (ก-๙/A-Z) → ขนาดใหญ่ก่อน
 const TYPE_ORDER = ["PARFUM", "EDP+", "EDT", "EDP"];
 const typeRank = (t?: string | null) => { const i = TYPE_ORDER.indexOf(String(t || "").trim()); return i < 0 ? 9 : i; };
