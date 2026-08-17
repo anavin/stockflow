@@ -385,19 +385,25 @@ export default function OrderForm({ products, sizes, provinces, postcodes, initi
             <DatePicker value={f.order_date} onChange={(v) => set({ order_date: v })} />
           </div>
           <div className="md:col-span-3">
-            <div className="mb-1 flex flex-wrap items-center gap-2">
+            <div className="mb-2 flex flex-wrap items-center gap-2">
               <label className="label mb-0">หมายเหตุ (Note)</label>
-              {["ส่งทันที", "ส่งด่วน"].map((tag) => (
-                <button key={tag} type="button" onClick={() => {
-                  set({ note: f.note.includes(tag)
-                    ? f.note.replace(tag, "").replace(/\s{2,}/g, " ").trim()          // เอาออก
-                    : (f.note.trim() ? `${f.note.trim()} ${tag}` : tag) });           // เติมต่อท้าย ไม่ทับของเดิม
-                }}
-                  className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-xs font-medium transition-colors ${
-                    f.note.includes(tag) ? "border-brand-200 bg-brand-50 text-brand-600" : "border-line bg-white text-muted hover:bg-soft"}`}>
-                  <Zap size={12} /> {tag}
-                </button>
-              ))}
+              <span className="text-xs text-muted">ประเภทการส่ง — กดเพื่อเปิด/ปิด:</span>
+              {[
+                { tag: "ส่งด่วน", on: "border-red-600 bg-red-600 text-white shadow-sm", off: "border-red-300 bg-white text-red-600 hover:bg-red-50" },
+                { tag: "ส่งทันที", on: "border-orange-500 bg-orange-500 text-white shadow-sm", off: "border-orange-300 bg-white text-orange-600 hover:bg-orange-50" },
+              ].map(({ tag, on, off }) => {
+                const active = f.note.includes(tag);
+                return (
+                  <button key={tag} type="button"
+                    onClick={() => set({ note: active
+                      ? f.note.replace(tag, "").replace(/\s{2,}/g, " ").trim()          // เอาออก
+                      : (f.note.trim() ? `${f.note.trim()} ${tag}` : tag) })}          // เติมต่อท้าย ไม่ทับของเดิม
+                    className={`inline-flex items-center gap-1.5 rounded-lg border-2 px-3 py-1.5 text-sm font-semibold transition-all ${active ? on : off}`}>
+                    <Zap size={15} /> {tag}
+                    {active && <CheckCircle2 size={15} />}
+                  </button>
+                );
+              })}
             </div>
             <textarea className="input min-h-[56px]" value={f.note} onChange={(e) => set({ note: e.target.value })} />
           </div>

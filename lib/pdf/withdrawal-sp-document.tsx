@@ -54,6 +54,13 @@ const s = StyleSheet.create({
   docTitle: { fontSize: 13, fontWeight: "bold" },
   docSub: { fontSize: 7, color: C.faint },
   badge: { marginTop: 3, alignSelf: "flex-end", borderWidth: 0.8, borderColor: C.brand, color: C.brand, fontSize: 6.5, paddingHorizontal: 4, paddingVertical: 1.5, borderRadius: 3, fontWeight: "bold" },
+  // แถบป้ายประเภทการส่ง (ส่งด่วน/ส่งทันที) — เด่น ดึงจากแท็กในหมายเหตุ (ชัดแม้พิมพ์ขาวดำ: กรอบหนา+ตัวหนา)
+  priBar: { marginTop: 1, marginBottom: 5, borderWidth: 1.4, borderRadius: 3, paddingVertical: 3, paddingHorizontal: 6, alignItems: "center" },
+  priBarExpress: { borderColor: "#b91c1c", backgroundColor: "#fde4e4" },
+  priBarNow: { borderColor: "#c2410c", backgroundColor: "#ffe9d3" },
+  priText: { fontWeight: "bold", fontSize: 11, letterSpacing: 1.5 },
+  priTextExpress: { color: "#b91c1c" },
+  priTextNow: { color: "#c2410c" },
 
   band: { flexDirection: "row", backgroundColor: C.soft, borderWidth: 0.5, borderColor: C.border, marginBottom: 5 },
   bandCell: { flex: 1, paddingVertical: 3, paddingHorizontal: 5, borderRightWidth: 0.5, borderRightColor: C.border },
@@ -154,6 +161,11 @@ function Panel({ order, copyLabel }: { order: OrderWithItems; copyLabel: string 
   const bcH = n > 31 ? 22 : n > 14 ? 26 : 34;   // barcode เล็กลงเมื่อออร์เดอร์ใหญ่ กันล้น
   const rowStyle = { minHeight: rowH };
   const cStyle = { fontSize: cfs, paddingVertical: pv };
+  // ประเภทการส่ง (ดึงจากแท็กในหมายเหตุ) — โชว์เป็นแถบเด่นใต้หัวเอกสาร
+  const noteText = order.note || "";
+  const isExpress = noteText.includes("ส่งด่วน");
+  const isNow = noteText.includes("ส่งทันที");
+  const priLabel = isExpress && isNow ? "ส่งด่วน  ·  ส่งทันที" : isExpress ? "ส่งด่วน" : "ส่งทันที";
 
   return (
     <View style={s.panel}>
@@ -169,6 +181,13 @@ function Panel({ order, copyLabel }: { order: OrderWithItems; copyLabel: string 
           <Text style={s.badge}>{T(copyLabel)}</Text>
         </View>
       </View>
+
+      {/* แถบประเภทการส่ง — เด่นชัดสำหรับคนแพ็ค (ส่งด่วน=แดง / ส่งทันที=ส้ม) */}
+      {(isExpress || isNow) && (
+        <View style={[s.priBar, isExpress ? s.priBarExpress : s.priBarNow]}>
+          <Text style={[s.priText, isExpress ? s.priTextExpress : s.priTextNow]}>{T(priLabel)}</Text>
+        </View>
+      )}
 
       {/* band: shop / doc no / date */}
       <View style={s.band}>
