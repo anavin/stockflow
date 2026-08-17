@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { deleteOrder, bulkDeleteOrders } from "@/lib/actions/orders";
 import type { OrderRow } from "@/lib/types";
-import { Printer, Pencil, Trash2, PackageOpen, X } from "lucide-react";
+import { Printer, Pencil, Trash2, PackageOpen, X, Zap, Clock } from "lucide-react";
 
 export default function OrdersTable({ orders }: { orders: OrderRow[] }) {
   const router = useRouter();
@@ -113,16 +113,26 @@ export default function OrdersTable({ orders }: { orders: OrderRow[] }) {
             <tbody>
               {orders.map((o) => {
                 const checked = sel.has(o.order_no);
+                // ประเภทการส่ง (จากแท็กในหมายเหตุ) → แถบสีซ้าย + ป้าย + พื้นแต้มสีจาง
+                const note = o.note || "";
+                const isExpress = note.includes("ส่งด่วน");
+                const isNow = note.includes("ส่งทันที");
+                const rowTint = checked ? "bg-brand-50/40" : isExpress ? "bg-red-50/40" : isNow ? "bg-orange-50/40" : "";
+                const stripe = isExpress ? "border-red-500" : isNow ? "border-orange-500" : "border-transparent";
                 return (
-                  <tr key={o.order_no} className={`border-t border-line hover:bg-soft/50 ${checked ? "bg-brand-50/40" : ""}`}>
-                    <td className="px-4 py-3">
+                  <tr key={o.order_no} className={`border-t border-line hover:bg-soft/50 ${rowTint}`}>
+                    <td className={`border-l-[3px] px-4 py-3 ${stripe}`}>
                       <input type="checkbox" className="h-4 w-4 cursor-pointer accent-brand"
                         checked={checked} onChange={() => toggle(o.order_no)} aria-label={`เลือก ${o.order_no}`} />
                     </td>
                     <td className="px-4 py-3 font-mono text-xs font-medium text-ink">{o.doc_no || "—"}</td>
                     <td className="px-4 py-3 font-mono text-xs">{o.order_no}</td>
                     <td className="px-4 py-3 text-muted">{o.doc_date || "—"}</td>
-                    <td className="px-4 py-3">{o.receiver || o.username || "—"}</td>
+                    <td className="px-4 py-3">
+                      <span className="align-middle">{o.receiver || o.username || "—"}</span>
+                      {isExpress && <span className="ml-1.5 inline-flex items-center gap-0.5 rounded-full border border-red-200 bg-red-50 px-2 py-0.5 align-middle text-[10px] font-semibold text-red-700"><Zap size={10} /> ส่งด่วน</span>}
+                      {isNow && <span className="ml-1.5 inline-flex items-center gap-0.5 rounded-full border border-orange-200 bg-orange-50 px-2 py-0.5 align-middle text-[10px] font-semibold text-orange-700"><Clock size={10} /> ส่งทันที</span>}
+                    </td>
                     <td className="px-4 py-3 text-muted">{o.province || "—"}</td>
                     <td className="px-4 py-3">
                       {o.stock_issued_at
