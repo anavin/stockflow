@@ -28,7 +28,7 @@ export default async function StockIssuePage({ searchParams }: { searchParams: P
         <div className="flex gap-2">
           <Link href="/stock/specs" className="btn-ghost"><Tags size={16} /> จัดการสเป็ก</Link>
           <Link href="/stock/issued" className="btn-ghost"><ClipboardList size={16} /> ใบที่ตัดแล้ว</Link>
-          <Link href="/stock" className="btn-ghost"><Boxes size={16} /> สต๊อกคงเหลือ</Link>
+          <Link href="/stock" className="btn-ghost"><Boxes size={16} /> สต๊อกสินค้าสำเร็จรูป</Link>
           <Link href="/stock/moves" className="btn-ghost"><History size={16} /> ประวัติ</Link>
         </div>
       </div>

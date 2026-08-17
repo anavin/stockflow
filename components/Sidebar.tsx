@@ -35,7 +35,7 @@ export default function Sidebar({ user }: { user: { full_name: string; username:
     : [];
   const stockNav = [
     ...(can.issueStock(role) ? [{ href: "/stock/issue", label: "ตัดสต๊อก (สแกน)", icon: ScanLine }] : []),
-    ...(can.viewStock(role) ? [{ href: "/stock", label: "สต๊อกคงเหลือ", icon: Boxes, exact: true }] : []),
+    ...(can.viewStock(role) ? [{ href: "/stock", label: "สต๊อกสินค้าสำเร็จรูป", icon: Boxes, exact: true }] : []),
     ...(can.viewStock(role) ? [{ href: "/stock/units", label: "ติดตาม SKU", icon: ScanBarcode }] : []),
   ];
 
