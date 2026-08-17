@@ -83,8 +83,10 @@ function Panel({ order, copyLabel }: { order: OrderWithItems; copyLabel: string 
         <Field label="ชื่อผู้ใช้" value={order.username} />
         <Field label="ผู้รับ" value={order.receiver} />
         <Field label="เบอร์โทร" value={order.phone} />
-        <Field label="ลูกค้า" value={order.customer_type} />
-        <Field label="ซื้อครั้งที่" value={order.purchase_count} />
+        <div style={{ display: "flex", width: "100%" }}>
+          <Field label="ลูกค้า" value={order.customer_type} />
+          <Field label="ซื้อครั้งที่" value={order.purchase_count} />
+        </div>
         <Field label="ที่อยู่" value={addr} full />
         <Field label="แคมเปญ" value={order.campaign} />
         <Field label="ฉีดกลิ่นกล่อง" value={order.box_scent} />
