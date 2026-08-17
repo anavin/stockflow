@@ -35,7 +35,7 @@ export default async function EditOrderPage({ params }: { params: Promise<{ orde
               <ScanLine size={16} /> ตัดสต๊อก
             </Link>
           ) : null}
-          <a href={`/api/print/${encodeURIComponent(decoded)}`} target="_blank" rel="noreferrer" className="btn-ghost">
+          <a href={`/print/pdf/${encodeURIComponent(decoded)}`} target="_blank" rel="noreferrer" className="btn-ghost">
             <Printer size={16} /> พิมพ์ใบเบิก (PDF)
           </a>
         </div>
