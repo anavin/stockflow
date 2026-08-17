@@ -80,7 +80,6 @@ function Panel({ order, copyLabel }: { order: OrderWithItems; copyLabel: string 
 
       {/* info fields */}
       <div style={{ display: "flex", flexWrap: "wrap", marginBottom: 4 }}>
-        <Field label="ชื่อลูกค้า" value={order.shop_name} />
         <Field label="ชื่อผู้ใช้" value={order.username} />
         <Field label="ผู้รับ" value={order.receiver} />
         <Field label="เบอร์โทร" value={order.phone} />

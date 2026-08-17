@@ -121,13 +121,13 @@ export default function OrderForm({ products, sizes, provinces, postcodes, initi
     const returning = h.orders.length > 0;
     setHist(returning ? h : null);
     setHistOpen(true);
-    // เจอว่าเป็นลูกค้าเก่า → เติม "ลูกค้าเก่า" + จำนวนครั้งให้อัตโนมัติ
-    // (เฉพาะตอนช่องยังว่าง เพื่อไม่ทับค่าที่ตั้งเอง เช่นตั้งเป็น "ลูกค้าใหม่" ไว้)
-    if (returning) {
-      setF((prev) => (prev.customer_type
-        ? prev
-        : { ...prev, customer_type: "ลูกค้าเก่า", purchase_count: String((h.total_orders || 0) + 1) }));
-    }
+    // เติม customer_type + จำนวนครั้งอัตโนมัติ (เฉพาะตอนช่องยังว่าง เพื่อไม่ทับค่าที่ตั้งเอง)
+    // เจอประวัติ → ลูกค้าเก่า + ครั้งถัดไป · ไม่เจอ → ลูกค้าใหม่ + ซื้อครั้งที่ 1
+    setF((prev) => (prev.customer_type
+      ? prev
+      : returning
+        ? { ...prev, customer_type: "ลูกค้าเก่า", purchase_count: String((h.total_orders || 0) + 1) }
+        : { ...prev, customer_type: "ลูกค้าใหม่", purchase_count: "1" }));
   }
 
   // กดปุ่ม "ตั้งเป็นลูกค้าเก่า" → เติม customer_type + จำนวนครั้งจากประวัติ
@@ -264,10 +264,6 @@ export default function OrderForm({ products, sizes, provinces, postcodes, initi
               onChange={(e) => { set({ order_no: cleanOrderNo(e.target.value) }); setDupWarn(""); }}
               onBlur={(e) => checkDup(e.target.value)} placeholder="เช่น 250430MMF62DBV" />
             {dupWarn && <div className="mt-1 text-[11px] text-amber-600">{dupWarn}</div>}
-          </div>
-          <div>
-            <label className="label">ชื่อลูกค้า / ร้าน</label>
-            <input className="input" value={f.shop_name} onChange={(e) => set({ shop_name: e.target.value })} />
           </div>
           <div>
             <label className="label">วันที่</label>

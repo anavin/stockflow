@@ -29,14 +29,10 @@ function registerFontOnce() {
   fontRegistered = true;
 }
 
-// react-pdf/fontkit บางครั้งตัด "อักษรไทยตัวแรก" ของสตริง (ขึ้นกับพยัญชนะ+สระตัวแรก)
-// แก้ด้วยการแทรก zero-width space (U+200B) นำหน้า — มองไม่เห็น แต่กันตัวแรกหาย
-const THAI_RE = /[฀-๿]/;
 const T = (s: any) => {
   if (s == null || s === "") return "-";
   const v = String(s).trim();
-  if (!v) return "-";
-  return THAI_RE.test(v[0]) ? "​" + v : v;
+  return v || "-";
 };
 const C = { ink: "#1a1614", muted: "#6b645d", faint: "#9a938c", border: "#cfc9c1", soft: "#f5f3ef", brand: "#ee4d2d", line: "#e6e1da" };
 
@@ -195,7 +191,6 @@ function Panel({ order, copyLabel }: { order: OrderWithItems; copyLabel: string 
 
       {/* info fields */}
       <View style={s.grid}>
-        <Field label="ชื่อลูกค้า" value={order.shop_name} />
         <Field label="ชื่อผู้ใช้" value={order.username} />
         <Field label="ผู้รับ" value={order.receiver} />
         <Field label="เบอร์โทร" value={order.phone} />
