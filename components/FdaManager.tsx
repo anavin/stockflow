@@ -2,9 +2,9 @@
 import { useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { FdaRow, FdaExpirySummary } from "@/lib/queries";
-import { Search, FileUp, CheckCircle2, AlertTriangle, ShieldAlert, ShieldCheck, CalendarClock } from "lucide-react";
+import { updateFda, addFda, deleteFda, type FdaPatch } from "@/lib/actions/fda";
+import { Search, FileUp, CheckCircle2, AlertTriangle, ShieldAlert, ShieldCheck, CalendarClock, Plus, Pencil, Trash2, Check, X } from "lucide-react";
 
-// tier ความเร่งด่วนตามจำนวนวันที่เหลือ
 type Tier = "expired" | "d10" | "d15" | "d30" | "ok";
 function tierOf(days: number | null): Tier {
   if (days == null) return "ok";
@@ -23,6 +23,7 @@ const TIER_META: Record<Tier, { chip: string; row: string; label: string }> = {
 };
 const daysText = (d: number | null) => d == null ? "—" : d < 0 ? `เกิน ${Math.abs(d)} วัน` : `เหลือ ${d} วัน`;
 const dstr = (s: string | null) => (s ? String(s).slice(0, 10) : "—");
+const emptyForm: FdaPatch = { product: "", grade: "", reg_no: "", issue_date: "", expiry_date: "", fda_status: "คงอยู่", prod_status: "จำหน่าย", name_th: "" };
 
 export default function FdaManager({ rows, summary, canEdit }: { rows: FdaRow[]; summary: FdaExpirySummary; canEdit: boolean }) {
   const router = useRouter();
@@ -33,6 +34,11 @@ export default function FdaManager({ rows, summary, canEdit }: { rows: FdaRow[];
   const [msg, setMsg] = useState("");
   const [err, setErr] = useState("");
   const fileRef = useRef<HTMLInputElement>(null);
+  const [editId, setEditId] = useState<number | null>(null);
+  const [form, setForm] = useState<FdaPatch>(emptyForm);
+  const [adding, setAdding] = useState(false);
+
+  const setF = (p: Partial<FdaPatch>) => setForm((f) => ({ ...f, ...p }));
 
   async function importFile(file: File) {
     setErr(""); setMsg(""); setBusy(true);
@@ -45,8 +51,29 @@ export default function FdaManager({ rows, summary, canEdit }: { rows: FdaRow[];
     } catch { setErr("อัปโหลดไม่สำเร็จ"); }
     setBusy(false);
   }
+  function startEdit(r: FdaRow) {
+    setAdding(false); setEditId(r.id);
+    setForm({ product: r.product, grade: r.grade ?? "", reg_no: r.reg_no ?? "", issue_date: dstr(r.issue_date) === "—" ? "" : dstr(r.issue_date), expiry_date: dstr(r.expiry_date) === "—" ? "" : dstr(r.expiry_date), fda_status: r.fda_status ?? "", prod_status: r.prod_status ?? "", name_th: r.name_th ?? "" });
+  }
+  function startAdd() { setEditId(null); setForm(emptyForm); setAdding(true); setErr(""); setMsg(""); }
+  function cancel() { setEditId(null); setAdding(false); }
+  async function save() {
+    setErr(""); setMsg(""); setBusy(true);
+    const res = adding ? await addFda(form) : await updateFda(editId!, form);
+    setBusy(false);
+    if (!res.ok) { setErr(res.error || "บันทึกไม่สำเร็จ"); return; }
+    setMsg(adding ? "เพิ่มรายการแล้ว" : "บันทึกแล้ว"); cancel(); router.refresh();
+  }
+  async function del(r: FdaRow) {
+    if (!confirm(`ลบข้อมูล อย. ของ "${r.product}"?`)) return;
+    setBusy(true);
+    const res = await deleteFda(r.id);
+    setBusy(false);
+    if (!res.ok) { setErr(res.error || "ลบไม่สำเร็จ"); return; }
+    router.refresh();
+  }
 
-  const isDisc = (r: FdaRow) => /เลิก/.test(r.prod_status || "");   // เลิกผลิต
+  const isDisc = (r: FdaRow) => /เลิก/.test(r.prod_status || "");
   const filtered = useMemo(() => {
     const t = search.trim().toLowerCase();
     return rows.filter((r) => {
@@ -54,17 +81,36 @@ export default function FdaManager({ rows, summary, canEdit }: { rows: FdaRow[];
       if (statusF && (r.fda_status || "") !== statusF) return false;
       if (t && !(`${r.product} ${r.name_th ?? ""} ${r.name_en ?? ""} ${r.reg_no ?? ""}`.toLowerCase().includes(t))) return false;
       return true;
-    }).sort((a, b) => (isDisc(a) ? 1 : 0) - (isDisc(b) ? 1 : 0));   // เลิกผลิต → ล่างสุด (คง order เดิม = เรียงตามวันหมดอายุ)
+    }).sort((a, b) => (isDisc(a) ? 1 : 0) - (isDisc(b) ? 1 : 0));
   }, [rows, search, tierF, statusF]);
 
   const statuses = useMemo(() => [...new Set(rows.map((r) => r.fda_status).filter(Boolean))] as string[], [rows]);
-
   const cards: { tier: Tier; n: number; icon: any }[] = [
     { tier: "expired", n: summary.expired, icon: ShieldAlert },
     { tier: "d10", n: summary.d10, icon: AlertTriangle },
     { tier: "d15", n: summary.d15, icon: CalendarClock },
     { tier: "d30", n: summary.d30, icon: CalendarClock },
   ];
+  const cols = canEdit ? 10 : 9;
+
+  const Fields = () => (
+    <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
+      <div><label className="label">กลิ่น <span className="text-brand">*</span></label><input className="input h-9" value={form.product ?? ""} onChange={(e) => setF({ product: e.target.value })} /></div>
+      <div><label className="label">Grade</label><input className="input h-9" value={form.grade ?? ""} onChange={(e) => setF({ grade: e.target.value })} placeholder="EDP / EDP+ / PARFUM" /></div>
+      <div className="col-span-2"><label className="label">เลขที่จดแจ้ง อย.</label><input className="input h-9 font-mono" value={form.reg_no ?? ""} onChange={(e) => setF({ reg_no: e.target.value })} /></div>
+      <div><label className="label">ออกให้ ณ วันที่</label><input type="date" className="input h-9" value={form.issue_date ?? ""} onChange={(e) => setF({ issue_date: e.target.value })} /></div>
+      <div><label className="label">วันที่สิ้นสุด</label><input type="date" className="input h-9" value={form.expiry_date ?? ""} onChange={(e) => setF({ expiry_date: e.target.value })} /></div>
+      <div><label className="label">สถานะ อย.</label>
+        <select className="input h-9" value={form.fda_status ?? ""} onChange={(e) => setF({ fda_status: e.target.value })}>
+          <option value="คงอยู่">คงอยู่</option><option value="สิ้นอายุ">สิ้นอายุ</option><option value="">—</option>
+        </select></div>
+      <div><label className="label">สถานะผลิต</label>
+        <select className="input h-9" value={form.prod_status ?? ""} onChange={(e) => setF({ prod_status: e.target.value })}>
+          <option value="จำหน่าย">จำหน่าย</option><option value="เลิกผลิต">เลิกผลิต</option><option value="">—</option>
+        </select></div>
+      <div className="col-span-2 md:col-span-4"><label className="label">ชื่อภาษาไทย</label><input className="input h-9" value={form.name_th ?? ""} onChange={(e) => setF({ name_th: e.target.value })} /></div>
+    </div>
+  );
 
   return (
     <div className="space-y-4">
@@ -80,7 +126,7 @@ export default function FdaManager({ rows, summary, canEdit }: { rows: FdaRow[];
                 <span className={`inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium ${m.chip}`}><Icon size={13} /> {tier === "expired" ? "หมดอายุแล้ว" : m.label}</span>
                 <span className={`text-2xl font-bold ${n > 0 && (tier === "expired" || tier === "d10") ? "text-red-600" : "text-ink"}`}>{n}</span>
               </div>
-              <p className="mt-1.5 text-[11px] text-muted">{tier === "expired" ? "เกินวันสิ้นสุดแล้ว — ต้องต่ออายุด่วน" : "ใกล้หมดอายุ — เตรียมต่ออายุ อย."}</p>
+              <p className="mt-1.5 text-[11px] text-muted">{tier === "expired" ? "เกินวันสิ้นสุดแล้ว — ต่ออายุด่วน" : "ใกล้หมดอายุ — เตรียมต่ออายุ อย."}</p>
             </button>
           );
         })}
@@ -99,6 +145,7 @@ export default function FdaManager({ rows, summary, canEdit }: { rows: FdaRow[];
         {tierF && <button onClick={() => setTierF("")} className="btn-ghost text-xs">ล้างตัวกรอง ({TIER_META[tierF].label})</button>}
         {canEdit && (
           <>
+            <button type="button" className="btn-primary" onClick={startAdd}><Plus size={15} /> เพิ่มรายการ</button>
             <button type="button" className="btn-ghost" disabled={busy} onClick={() => fileRef.current?.click()}>
               <FileUp size={15} /> {busy ? "กำลังนำเข้า…" : "นำเข้า Excel"}
             </button>
@@ -109,6 +156,18 @@ export default function FdaManager({ rows, summary, canEdit }: { rows: FdaRow[];
       </div>
       {err && <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{err}</p>}
       {msg && <p className="flex items-center gap-1 rounded-lg bg-green-50 px-3 py-2 text-sm text-green-700"><CheckCircle2 size={14} /> {msg}</p>}
+
+      {/* ฟอร์มเพิ่มรายการ */}
+      {adding && (
+        <div className="card border border-brand-200 p-4">
+          <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold text-ink"><Plus size={16} /> เพิ่มรายการ อย.</h3>
+          <Fields />
+          <div className="mt-3 flex justify-end gap-2">
+            <button type="button" onClick={cancel} className="btn-ghost">ยกเลิก</button>
+            <button type="button" onClick={save} disabled={busy} className="btn-primary">{busy ? "กำลังบันทึก…" : "บันทึก"}</button>
+          </div>
+        </div>
+      )}
 
       {/* ตาราง */}
       <div className="overflow-hidden rounded-xl border border-line bg-white">
@@ -125,29 +184,51 @@ export default function FdaManager({ rows, summary, canEdit }: { rows: FdaRow[];
                 <th className="px-3 py-3">เหลืออีก</th>
                 <th className="px-3 py-3">สถานะ อย</th>
                 <th className="px-3 py-3">สถานะผลิต</th>
+                {canEdit && <th className="px-3 py-3 text-right">จัดการ</th>}
               </tr>
             </thead>
             <tbody>
-              {filtered.length === 0 && <tr><td colSpan={9} className="px-4 py-12 text-center text-muted">ไม่พบข้อมูล — {canEdit ? "กด 'นำเข้า Excel' เพื่อโหลดข้อมูล อย. หรือรัน SQL ตาราง fda_registrations" : "ยังไม่มีข้อมูล อย."}</td></tr>}
+              {filtered.length === 0 && <tr><td colSpan={cols} className="px-4 py-12 text-center text-muted">ไม่พบข้อมูล — {canEdit ? "กด 'เพิ่มรายการ' หรือ 'นำเข้า Excel'" : "ยังไม่มีข้อมูล อย."}</td></tr>}
               {filtered.map((r) => {
                 const tier = tierOf(r.days_left);
                 const m = TIER_META[tier];
+                const editing = editId === r.id;
                 return (
-                  <tr key={r.id} className={`border-t border-line ${m.row}`}>
-                    <td className="px-3 py-2.5 text-muted">{r.seq ?? ""}</td>
-                    <td className="px-3 py-2.5">
-                      <div className="font-medium text-ink">{r.product}</div>
-                      {r.name_th && <div className="text-[11px] text-faint">{r.name_th}</div>}
-                    </td>
-                    <td className="px-3 py-2.5">{r.grade ? <span className="chip bg-brand-50 text-brand-600">{r.grade}</span> : <span className="text-faint">—</span>}</td>
-                    <td className="px-3 py-2.5 font-mono text-xs text-muted">{r.reg_no || "—"}</td>
-                    <td className="px-3 py-2.5 text-xs text-muted">{dstr(r.issue_date)}</td>
-                    <td className="px-3 py-2.5 text-xs font-medium text-ink">{dstr(r.expiry_date)}</td>
-                    <td className="px-3 py-2.5"><span className={`chip ${m.chip}`}>{daysText(r.days_left)}</span></td>
-                    <td className="px-3 py-2.5 text-xs">{r.fda_status === "คงอยู่"
-                      ? <span className="inline-flex items-center gap-1 text-green-700"><ShieldCheck size={12} /> {r.fda_status}</span>
-                      : <span className="text-muted">{r.fda_status || "—"}</span>}</td>
-                    <td className="px-3 py-2.5 text-xs text-muted">{r.prod_status || "—"}</td>
+                  <tr key={r.id} className={`border-t border-line align-top ${editing ? "bg-brand-50/40" : m.row}`}>
+                    {editing ? (
+                      <td colSpan={cols} className="px-3 py-3">
+                        <Fields />
+                        <div className="mt-3 flex justify-end gap-2">
+                          <button type="button" onClick={cancel} className="btn-ghost"><X size={14} /> ยกเลิก</button>
+                          <button type="button" onClick={save} disabled={busy} className="btn-primary"><Check size={14} /> {busy ? "…" : "บันทึก"}</button>
+                        </div>
+                      </td>
+                    ) : (
+                      <>
+                        <td className="px-3 py-2.5 text-muted">{r.seq ?? ""}</td>
+                        <td className="px-3 py-2.5">
+                          <div className="font-medium text-ink">{r.product}</div>
+                          {r.name_th && <div className="text-[11px] text-faint">{r.name_th}</div>}
+                        </td>
+                        <td className="px-3 py-2.5">{r.grade ? <span className="chip bg-brand-50 text-brand-600">{r.grade}</span> : <span className="text-faint">—</span>}</td>
+                        <td className="px-3 py-2.5 font-mono text-xs text-muted">{r.reg_no || "—"}</td>
+                        <td className="px-3 py-2.5 text-xs text-muted">{dstr(r.issue_date)}</td>
+                        <td className="px-3 py-2.5 text-xs font-medium text-ink">{dstr(r.expiry_date)}</td>
+                        <td className="px-3 py-2.5"><span className={`chip ${m.chip}`}>{daysText(r.days_left)}</span></td>
+                        <td className="px-3 py-2.5 text-xs">{r.fda_status === "คงอยู่"
+                          ? <span className="inline-flex items-center gap-1 text-green-700"><ShieldCheck size={12} /> {r.fda_status}</span>
+                          : <span className="text-muted">{r.fda_status || "—"}</span>}</td>
+                        <td className="px-3 py-2.5 text-xs text-muted">{r.prod_status || "—"}</td>
+                        {canEdit && (
+                          <td className="px-3 py-2.5">
+                            <div className="flex items-center justify-end gap-1">
+                              <button type="button" onClick={() => startEdit(r)} className="rounded-md p-1.5 text-muted hover:bg-soft hover:text-ink" title="แก้ไข"><Pencil size={15} /></button>
+                              <button type="button" onClick={() => del(r)} className="rounded-md p-1.5 text-red-400 hover:bg-red-50 hover:text-red-600" title="ลบ"><Trash2 size={15} /></button>
+                            </div>
+                          </td>
+                        )}
+                      </>
+                    )}
                   </tr>
                 );
               })}
