@@ -110,7 +110,7 @@ function Barcode({ value, width = 250, height = 50 }: { value: string; width?: n
 function Field({ label, value, full }: { label: string; value?: any; full?: boolean }) {
   return (
     <View style={full ? s.fieldFull : s.field}>
-      <Text style={s.fLabel}>{label}</Text>
+      <Text style={s.fLabel}>{T(label)}</Text>
       <Text style={s.fVal}>{T(value)}</Text>
     </View>
   );
@@ -120,7 +120,7 @@ function Sign({ label }: { label: string }) {
   return (
     <View style={s.sign}>
       <View style={s.signLine} />
-      <Text style={s.signLabel}>{`( ${label} )`}</Text>
+      <Text style={s.signLabel}>{`( ${T(label)} )`}</Text>
     </View>
   );
 }
@@ -164,21 +164,21 @@ function Panel({ order, copyLabel }: { order: OrderWithItems; copyLabel: string 
       {/* header */}
       <View style={s.head}>
         <View>
-          <Text style={s.company}>{COMPANY_NAME}</Text>
+          <Text style={s.company}>{T(COMPANY_NAME)}</Text>
           <Text style={s.companyEn}>{COMPANY_NAME_EN}</Text>
         </View>
         <View style={s.titleWrap}>
-          <Text style={s.docTitle}>ใบเบิกสินค้า</Text>
+          <Text style={s.docTitle}>{T("ใบเบิกสินค้า")}</Text>
           <Text style={s.docSub}>Goods Issue Form</Text>
-          <Text style={s.badge}>{copyLabel}</Text>
+          <Text style={s.badge}>{T(copyLabel)}</Text>
         </View>
       </View>
 
       {/* band: shop / doc no / date */}
       <View style={s.band}>
         <View style={s.bandCell}><Text style={s.bandLabel}>Shop</Text><Text style={s.bandVal}>{T(order.platform)}</Text></View>
-        <View style={s.bandCell}><Text style={s.bandLabel}>เลขที่ใบเบิก</Text><Text style={s.bandVal}>{T(order.doc_no)}</Text></View>
-        <View style={[s.bandCell, { borderRightWidth: 0 }]}><Text style={s.bandLabel}>วันที่</Text><Text style={s.bandVal}>{fmtDate(order.doc_date)}</Text></View>
+        <View style={s.bandCell}><Text style={s.bandLabel}>{T("เลขที่ใบเบิก")}</Text><Text style={s.bandVal}>{T(order.doc_no)}</Text></View>
+        <View style={[s.bandCell, { borderRightWidth: 0 }]}><Text style={s.bandLabel}>{T("วันที่")}</Text><Text style={s.bandVal}>{fmtDate(order.doc_date)}</Text></View>
       </View>
 
       {/* Order No. + barcode (แนวนอน: เลขซ้าย บาร์โค้ดขวา) */}
@@ -211,7 +211,7 @@ function Panel({ order, copyLabel }: { order: OrderWithItems; copyLabel: string 
       <View>
         <View style={s.th}>
           {["#", "Grade", "สินค้า (EDP)", "ขนาด", "จำนวน", "Free", "หน่วย", "SKU"].map((h, i) => (
-            <Text key={i} style={[s.cell, s.hCell, { width: COL[i], textAlign: i === 4 ? "right" : "left" }]}>{h}</Text>
+            <Text key={i} style={[s.cell, s.hCell, { width: COL[i], textAlign: i === 4 ? "right" : "left" }]}>{T(h)}</Text>
           ))}
         </View>
         {items.map((it, i) => (
@@ -227,7 +227,7 @@ function Panel({ order, copyLabel }: { order: OrderWithItems; copyLabel: string 
           </View>
         ))}
         <View style={s.foot}>
-          <Text style={[s.cell, cStyle, { width: COL[0] + COL[1] + COL[2] + COL[3], textAlign: "right", fontWeight: "bold" }]}>รวมทั้งสิ้น</Text>
+          <Text style={[s.cell, cStyle, { width: COL[0] + COL[1] + COL[2] + COL[3], textAlign: "right", fontWeight: "bold" }]}>{T("รวมทั้งสิ้น")}</Text>
           <Text style={[s.cell, cStyle, { width: COL[4], textAlign: "right", fontWeight: "bold" }]}>{total}</Text>
           <Text style={[s.cell, cStyle, { width: COL[5] + COL[6] + COL[7] }]}> </Text>
         </View>
@@ -253,7 +253,7 @@ function OrderPage({ order }: { order: OrderWithItems }) {
         <Panel order={order} copyLabel="ต้นฉบับ · ORIGINAL" />
         <View style={s.divider}>
           <View style={s.dividerLine} />
-          <Text style={s.cutLabel}>ตัด</Text>
+          <Text style={s.cutLabel}>{T("ตัด")}</Text>
           <View style={s.dividerLine} />
         </View>
         <Panel order={order} copyLabel="สำเนา · COPY" />
