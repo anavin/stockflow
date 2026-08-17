@@ -2,8 +2,8 @@
 import { useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { FdaRow, FdaExpirySummary } from "@/lib/queries";
-import { updateFda, addFda, deleteFda, type FdaPatch } from "@/lib/actions/fda";
-import { Search, FileUp, CheckCircle2, AlertTriangle, ShieldAlert, ShieldCheck, CalendarClock, Plus, Pencil, Trash2, Check, X } from "lucide-react";
+import { updateFda, addFda, deleteFda, renewFda, type FdaPatch } from "@/lib/actions/fda";
+import { Search, FileUp, CheckCircle2, AlertTriangle, ShieldAlert, ShieldCheck, CalendarClock, Plus, Pencil, Trash2, Check, X, RefreshCw } from "lucide-react";
 
 type Tier = "expired" | "d10" | "d15" | "d30" | "ok";
 function tierOf(days: number | null): Tier {
@@ -71,6 +71,14 @@ export default function FdaManager({ rows, summary, canEdit }: { rows: FdaRow[];
     setBusy(false);
     if (!res.ok) { setErr(res.error || "ลบไม่สำเร็จ"); return; }
     router.refresh();
+  }
+  async function renew(r: FdaRow) {
+    if (!confirm(`ต่ออายุ อย. ของ "${r.product}" อีก 3 ปี?\n(เลื่อนวันสิ้นสุดจาก ${dstr(r.expiry_date)} ไปอีก 3 ปี + บันทึกประวัติ)`)) return;
+    setErr(""); setMsg(""); setBusy(true);
+    const res = await renewFda(r.id, 3);
+    setBusy(false);
+    if (!res.ok) { setErr(res.error || "ต่ออายุไม่สำเร็จ"); return; }
+    setMsg(`ต่ออายุ "${r.product}" แล้ว → วันสิ้นสุดใหม่ ${res.new_expiry}`); router.refresh();
   }
 
   const isDisc = (r: FdaRow) => /เลิก/.test(r.prod_status || "");
@@ -207,7 +215,10 @@ export default function FdaManager({ rows, summary, canEdit }: { rows: FdaRow[];
                       <>
                         <td className="px-3 py-2.5 text-muted">{r.seq ?? ""}</td>
                         <td className="px-3 py-2.5">
-                          <div className="font-medium text-ink">{r.product}</div>
+                          <div className="flex items-center gap-1.5">
+                            <span className="font-medium text-ink">{r.product}</span>
+                            {(r.renewal_count ?? 0) > 0 && <span className="chip bg-green-50 text-green-700" title={r.last_renewed ? `ต่ออายุล่าสุด ${String(r.last_renewed).slice(0, 10)}` : ""}>ต่อ {r.renewal_count} ครั้ง</span>}
+                          </div>
                           {r.name_th && <div className="text-[11px] text-faint">{r.name_th}</div>}
                         </td>
                         <td className="px-3 py-2.5">{r.grade ? <span className="chip bg-brand-50 text-brand-600">{r.grade}</span> : <span className="text-faint">—</span>}</td>
@@ -222,6 +233,7 @@ export default function FdaManager({ rows, summary, canEdit }: { rows: FdaRow[];
                         {canEdit && (
                           <td className="px-3 py-2.5">
                             <div className="flex items-center justify-end gap-1">
+                              <button type="button" onClick={() => renew(r)} disabled={busy} className="rounded-md p-1.5 text-green-600 hover:bg-green-50 disabled:opacity-40" title="ต่ออายุ อย. +3 ปี"><RefreshCw size={15} /></button>
                               <button type="button" onClick={() => startEdit(r)} className="rounded-md p-1.5 text-muted hover:bg-soft hover:text-ink" title="แก้ไข"><Pencil size={15} /></button>
                               <button type="button" onClick={() => del(r)} className="rounded-md p-1.5 text-red-400 hover:bg-red-50 hover:text-red-600" title="ลบ"><Trash2 size={15} /></button>
                             </div>

@@ -1,6 +1,6 @@
 "use server";
 import { revalidatePath } from "next/cache";
-import { q } from "@/lib/db";
+import { q, tx } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth/session";
 import { can } from "@/lib/auth/roles";
 
@@ -53,6 +53,33 @@ export async function addFda(p: FdaPatch): Promise<{ ok: boolean; error?: string
     revalidatePath("/fda");
     return { ok: true };
   } catch (e: any) { return { ok: false, error: e?.message || "เพิ่มไม่สำเร็จ" }; }
+}
+
+/** ต่ออายุ อย. — เลื่อนวันสิ้นสุด +N ปี (จากวันสิ้นสุดเดิม) + บันทึกประวัติ */
+export async function renewFda(id: number, years = 3): Promise<{ ok: boolean; error?: string; new_expiry?: string }> {
+  const g = await gate(); if ("error" in g) return { ok: false, error: g.error };
+  const y = Math.max(1, Math.min(10, Math.round(years)));
+  try {
+    let newExpiry = "";
+    await tx(async (run) => {
+      const [f] = await run<{ reg_no: string | null; old_expiry: string | null; new_expiry: string }>(
+        `with cur as (
+           select id, reg_no, expiry_date as old_expiry, coalesce(expiry_date, current_date) as base
+           from fda_registrations where id = $1)
+         update fda_registrations f
+            set issue_date = cur.base,
+                expiry_date = (cur.base + ($2 || ' years')::interval)::date,
+                fda_status = 'คงอยู่', updated_at = now()
+           from cur where f.id = cur.id
+         returning cur.reg_no, cur.old_expiry, f.expiry_date as new_expiry`, [id, String(y)]);
+      if (!f) throw new Error("ไม่พบรายการ");
+      newExpiry = String(f.new_expiry).slice(0, 10);
+      await run(`insert into fda_renewals (fda_id, reg_no, old_expiry, new_expiry, renewed_by) values ($1,$2,$3,$4,$5)`,
+        [id, f.reg_no, f.old_expiry, f.new_expiry, g.user.id]);
+    });
+    revalidatePath("/fda");
+    return { ok: true, new_expiry: newExpiry };
+  } catch (e: any) { return { ok: false, error: e?.message || "ต่ออายุไม่สำเร็จ" }; }
 }
 
 export async function deleteFda(id: number): Promise<{ ok: boolean; error?: string }> {

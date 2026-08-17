@@ -173,3 +173,12 @@ create table if not exists public.fda_registrations (
 );
 create unique index if not exists uq_fda_product on public.fda_registrations (regexp_replace(lower(btrim(product)),'[^a-z0-9ก-๙]','','g'));
 create index if not exists idx_fda_expiry on public.fda_registrations (expiry_date);
+
+-- 0025 ประวัติการต่ออายุ อย.
+create table if not exists public.fda_renewals (
+  id serial primary key,
+  fda_id int not null references public.fda_registrations(id) on delete cascade,
+  reg_no text, old_expiry date, new_expiry date,
+  renewed_at timestamptz not null default now(), renewed_by int
+);
+create index if not exists idx_fda_renewals_fda on public.fda_renewals (fda_id);

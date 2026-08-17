@@ -172,16 +172,24 @@ export type FdaRow = {
   id: number; seq: number | null; product: string; grade: string | null; reg_no: string | null;
   issue_date: string | null; expiry_date: string | null; fda_status: string | null; prod_status: string | null;
   name_en: string | null; name_th: string | null; brand: string | null; days_left: number | null;
+  renewal_count?: number; last_renewed?: string | null;
 };
 export async function listFda(): Promise<FdaRow[]> {
-  try {
-    return await q<FdaRow>(
-      `select id, seq, product, grade, reg_no, issue_date, expiry_date, fda_status, prod_status,
+  const sel = `select id, seq, product, grade, reg_no, issue_date, expiry_date, fda_status, prod_status,
               name_en, name_th, brand,
-              case when expiry_date is null then null else (expiry_date - current_date)::int end as days_left
-       from fda_registrations
-       order by expiry_date asc nulls last, seq nulls last, product`);
-  } catch { return []; }
+              case when expiry_date is null then null else (expiry_date - current_date)::int end as days_left`;
+  const ord = `order by expiry_date asc nulls last, seq nulls last, product`;
+  try {
+    // รวมจำนวนครั้งที่ต่ออายุ (ถ้ามีตาราง fda_renewals)
+    return await q<FdaRow>(
+      `${sel},
+        (select count(*)::int from fda_renewals rn where rn.fda_id = f.id) as renewal_count,
+        (select max(renewed_at) from fda_renewals rn where rn.fda_id = f.id) as last_renewed
+       from fda_registrations f ${ord}`);
+  } catch {
+    try { return await q<FdaRow>(`${sel}, 0 as renewal_count, null as last_renewed from fda_registrations ${ord}`); }
+    catch { return []; }
+  }
 }
 export type FdaExpirySummary = { expired: number; d10: number; d15: number; d30: number; total: number };
 /** สรุปแจ้งเตือนหมดอายุ อย. — แบ่ง tier: หมดอายุแล้ว / ≤10 / 11–15 / 16–30 วัน (ไม่ซ้ำกัน) */
