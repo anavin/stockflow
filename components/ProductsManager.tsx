@@ -93,7 +93,16 @@ export default function ProductsManager({
   function openAdd(id: number) { setAddId(id); setASize(""); setABarcode(""); setASku(""); }
   async function saveBarcode(scent: string) {
     const res = await addScentBarcode(scent, aSize, aBarcode, aSku);
-    if (!res.ok) { alert(res.error); return; }
+    if (!res.ok) {
+      // บาร์โค้ดถูกใช้กับกลิ่นอื่น → ถามว่าจะย้ายมาที่นี่ไหม
+      if (res.conflict && window.confirm(`${res.error}\n\nต้องการย้ายบาร์โค้ดนี้จาก "${res.conflict.scent}" ${res.conflict.size} มาที่ "${scent}" ${aSize} แทนไหม?`)) {
+        const move = await addScentBarcode(scent, aSize, aBarcode, aSku, true);
+        if (!move.ok) { alert(move.error); return; }
+        setAddId(null); router.refresh();
+        return;
+      }
+      alert(res.error); return;
+    }
     setAddId(null); router.refresh();
   }
   async function delBarcode(id: number) {

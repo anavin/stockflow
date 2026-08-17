@@ -154,3 +154,22 @@ create table if not exists public.stock_unit (
 create index if not exists idx_stock_unit_ps     on public.stock_unit (lower(btrim(product)), status);
 create index if not exists idx_stock_unit_order  on public.stock_unit (order_no);
 create index if not exists idx_stock_unit_status on public.stock_unit (status);
+
+-- 0024 ข้อมูล อย. (FDA registration) + แจ้งเตือนใกล้หมดอายุ 30/15/10 วัน
+create table if not exists public.fda_registrations (
+  id          serial primary key,
+  seq         int,
+  product     text not null,
+  grade       text,
+  reg_no      text,
+  issue_date  date,
+  expiry_date date,
+  fda_status  text,
+  prod_status text,
+  name_en     text,
+  name_th     text,
+  brand       text,
+  updated_at  timestamptz not null default now()
+);
+create unique index if not exists uq_fda_product on public.fda_registrations (regexp_replace(lower(btrim(product)),'[^a-z0-9ก-๙]','','g'));
+create index if not exists idx_fda_expiry on public.fda_registrations (expiry_date);

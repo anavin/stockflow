@@ -1,9 +1,9 @@
 import Link from "next/link";
 import { requireDashboard } from "@/lib/auth/require-user";
-import { dashboardStats, listStock, listOrders, topProducts, ordersTrend, dailyIssueStatus } from "@/lib/queries";
+import { dashboardStats, listStock, listOrders, topProducts, ordersTrend, dailyIssueStatus, fdaExpirySummary } from "@/lib/queries";
 import {
   PlusCircle, ScanLine, Boxes, AlertTriangle, PackageCheck, ClipboardList,
-  ArrowRight, ShoppingBag, TrendingUp, Sparkles, Clock, CalendarCheck,
+  ArrowRight, ShoppingBag, TrendingUp, Sparkles, Clock, CalendarCheck, ShieldAlert,
 } from "lucide-react";
 
 export const dynamic = "force-dynamic";
@@ -11,14 +11,16 @@ export const dynamic = "force-dynamic";
 export default async function Dashboard() {
   const user = await requireDashboard();
   // ยิงขนานผ่าน pool (เร็ว) — บน Vercel/Node connection pool รองรับ concurrent query ปกติ
-  const [s, lowStock, recent, top, trend, daily] = await Promise.all([
+  const [s, lowStock, recent, top, trend, daily, fda] = await Promise.all([
     dashboardStats(),
     listStock({ lowOnly: true, limit: 6 }),
     listOrders({ platform: "Shopee", limit: 20 }),
     topProducts(10),
     ordersTrend(6),
     dailyIssueStatus("Shopee", 5),
+    fdaExpirySummary(),
   ]);
+  const fdaAlert = fda.expired + fda.d10 + fda.d15 + fda.d30;
 
   const fulfill = s.ordersTotal > 0 ? s.issuedTotal / s.ordersTotal : 0;
   const normal = Math.max(0, s.skus - s.low - s.negative);
@@ -41,9 +43,21 @@ export default async function Dashboard() {
         </div>
       </div>
 
-      {/* ── alert: สต๊อกติดลบ / ใกล้หมด ── */}
-      {(s.negative > 0 || s.low > 0) && (
+      {/* ── alert: สต๊อกติดลบ / ใกล้หมด / อย.ใกล้หมดอายุ ── */}
+      {(s.negative > 0 || s.low > 0 || fdaAlert > 0) && (
         <div className="mb-5 flex flex-wrap gap-3">
+          {(fda.expired > 0 || fda.d10 > 0) && (
+            <Link href="/fda" className="flex flex-1 min-w-[240px] items-center gap-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3 hover:bg-red-100">
+              <ShieldAlert size={20} className="shrink-0 text-red-600" />
+              <div className="text-sm"><b className="text-red-700">อย. {fda.expired > 0 ? `หมดอายุ ${fda.expired}` : `ใกล้หมด ${fda.d10}`} รายการ</b><div className="text-xs text-red-600/80">{fda.expired > 0 ? "เกินวันสิ้นสุด — ต่ออายุด่วน" : "เหลือ ≤ 10 วัน — เตรียมต่ออายุ"}</div></div>
+            </Link>
+          )}
+          {fda.expired === 0 && fda.d10 === 0 && (fda.d15 > 0 || fda.d30 > 0) && (
+            <Link href="/fda" className="flex flex-1 min-w-[240px] items-center gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 hover:bg-amber-100">
+              <ShieldAlert size={20} className="shrink-0 text-amber-600" />
+              <div className="text-sm"><b className="text-amber-700">อย. ใกล้หมดอายุ {fda.d15 + fda.d30} รายการ</b><div className="text-xs text-amber-600/80">เหลือ ≤ 30 วัน — เตรียมต่ออายุ</div></div>
+            </Link>
+          )}
           {s.negative > 0 && (
             <Link href="/stock" className="flex flex-1 min-w-[240px] items-center gap-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3 hover:bg-red-100">
               <AlertTriangle size={20} className="shrink-0 text-red-600" />

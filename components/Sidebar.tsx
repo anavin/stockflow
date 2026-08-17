@@ -4,7 +4,7 @@ import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { PLATFORMS } from "@/lib/config";
 import { can, ROLE_LABELS, roleList } from "@/lib/auth/roles";
-import { Package, PlusCircle, Upload, List, LogOut, Menu, X, Trash2, Users, ScanLine, Boxes, LayoutDashboard, FlaskConical, ScanBarcode } from "lucide-react";
+import { Package, PlusCircle, Upload, List, LogOut, Menu, X, Trash2, Users, ScanLine, Boxes, LayoutDashboard, FlaskConical, ScanBarcode, ShieldCheck } from "lucide-react";
 
 // สีเอกลักษณ์ของแต่ละแพลตฟอร์ม (ใช้เป็นจุดสีในเมนู)
 const PLATFORM_COLORS: Record<string, string> = {
@@ -102,6 +102,14 @@ export default function Sidebar({ user }: { user: { full_name: string; username:
               isActive("/products", true) ? "bg-soft font-medium text-ink" : "text-muted hover:bg-soft hover:text-ink"
             }`}>
             <FlaskConical size={16} /> จัดการกลิ่น
+          </Link>
+        )}
+        {can.viewStock(role) && (
+          <Link href="/fda" onClick={() => setOpen(false)}
+            className={`mt-1 flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors ${
+              isActive("/fda", true) ? "bg-soft font-medium text-ink" : "text-muted hover:bg-soft hover:text-ink"
+            }`}>
+            <ShieldCheck size={16} /> ข้อมูล อย.
           </Link>
         )}
         {can.manageUsers(role) && (

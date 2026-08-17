@@ -44,14 +44,21 @@ export async function bulkSetProductTypes(
   return { ok: true, count: rows.length };
 }
 
-/** เพิ่มบาร์โค้ด (ขนาด+Barcode) ให้กลิ่นเอง — เก็บใน product_barcodes เดียวกับข้อมูล CTW */
-export async function addScentBarcode(scent: string, size: string, barcode: string, sku?: string): Promise<{ ok: boolean; error?: string }> {
+/** เพิ่มบาร์โค้ด (ขนาด+Barcode) ให้กลิ่นเอง — เก็บใน product_barcodes เดียวกับข้อมูล CTW
+ *  reassign=true → ถ้าบาร์โค้ดซ้ำ ให้ "ย้าย" แถวเดิมมาที่กลิ่น/ขนาดนี้ (แทนที่จะเพิ่มซ้ำ) */
+export async function addScentBarcode(scent: string, size: string, barcode: string, sku?: string, reassign?: boolean): Promise<{ ok: boolean; error?: string; conflict?: { scent: string; size: string } }> {
   const g = await gate(); if ("error" in g) return { ok: false, error: g.error };
   const sc = (scent || "").trim(), sz = (size || "").trim(), bc = (barcode || "").trim();
   if (!sc) return { ok: false, error: "ไม่พบชื่อกลิ่น" };
   if (!sz || !bc) return { ok: false, error: "กรอกขนาดและบาร์โค้ด" };
-  const [dup] = await q(`select 1 from product_barcodes where barcode = $1`, [bc]);
-  if (dup) return { ok: false, error: "บาร์โค้ดนี้มีอยู่แล้ว" };
+  const [dup] = await q<{ id: number; scent: string; size: string }>(`select id, scent, size from product_barcodes where barcode = $1`, [bc]);
+  if (dup) {
+    if (!reassign) return { ok: false, error: `บาร์โค้ดนี้ถูกใช้กับ "${dup.scent}" ${dup.size.replace(/\.$/, "")} อยู่แล้ว`, conflict: { scent: dup.scent, size: dup.size } };
+    await q(`update product_barcodes set scent = $1, size = $2, sku = coalesce($4, sku) where id = $3`,
+      [sc, sz, dup.id, (sku || "").trim() || null]);   // ย้ายบาร์โค้ดมาที่กลิ่น/ขนาดใหม่
+    revalidatePath("/products");
+    return { ok: true };
+  }
   await q(`insert into product_barcodes (scent, size, barcode, sku) values ($1, $2, $3, $4)`,
     [sc, sz, bc, (sku || "").trim() || null]);
   revalidatePath("/products");
