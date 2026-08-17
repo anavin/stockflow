@@ -41,6 +41,8 @@ export type Order = {
   updated_at?: string;
   stock_issued_at?: string | null;
   issued_by?: string | null;
+  shipped_at?: string | null;
+  shipped_by?: number | null;
 };
 
 export type OrderWithItems = Order & { items: OrderItem[] };

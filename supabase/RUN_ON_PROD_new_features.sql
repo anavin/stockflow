@@ -190,3 +190,8 @@ create table if not exists public.closed_sku (
   size  text not null,
   unique (scent, size)
 );
+
+-- จัดส่งสินค้า: สแกน Order No. จากใบปะหน้า → บันทึกว่าส่งแล้ว
+alter table public.orders add column if not exists shipped_at timestamptz;
+alter table public.orders add column if not exists shipped_by int;
+create index if not exists idx_orders_shipped_at on public.orders (shipped_at);

@@ -135,9 +135,11 @@ export default function OrdersTable({ orders }: { orders: OrderRow[] }) {
                     </td>
                     <td className="px-4 py-3 text-muted">{o.province || "—"}</td>
                     <td className="px-4 py-3">
-                      {o.stock_issued_at
-                        ? <span className="chip bg-green-50 text-green-700">ตัดแล้ว</span>
-                        : <span className="chip bg-amber-50 text-amber-700">รอตัด</span>}
+                      {o.shipped_at
+                        ? <span className="chip bg-green-600 text-white">ส่งแล้ว</span>
+                        : o.stock_issued_at
+                          ? <span className="chip bg-green-50 text-green-700">ตัดแล้ว</span>
+                          : <span className="chip bg-amber-50 text-amber-700">รอตัด</span>}
                     </td>
                     <td className="px-4 py-3 text-center">
                       <span className="chip bg-brand-50 text-brand-600">{o.item_count}</span>

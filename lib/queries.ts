@@ -287,6 +287,35 @@ export async function getBlockedSizesForOrder(): Promise<Record<string, string[]
   return out;
 }
 
+/** สรุปการจัดส่ง: ส่งแล้ววันนี้ (เวลาไทย) + ค้างส่ง (ตัดสต๊อกแล้วแต่ยังไม่ส่ง) */
+export async function shipSummary(): Promise<{ shippedToday: number; pending: number }> {
+  try {
+    const [r] = await q<{ shipped_today: number; pending: number }>(
+      `select
+         count(*) filter (where (shipped_at at time zone 'Asia/Bangkok')::date = (now() at time zone 'Asia/Bangkok')::date)::int as shipped_today,
+         count(*) filter (where stock_issued_at is not null and shipped_at is null)::int as pending
+       from orders where deleted_at is null`);
+    return { shippedToday: r?.shipped_today ?? 0, pending: r?.pending ?? 0 };
+  } catch { return { shippedToday: 0, pending: 0 }; }
+}
+
+export type ShipRow = { order_no: string; doc_no: string | null; receiver: string | null; province: string | null; item_count: number; shipped_at: string; shipped_by_name: string | null };
+/** รายการที่ส่งในวันหนึ่ง (default = วันนี้ เวลาไทย) เรียงล่าสุดก่อน */
+export async function listShippedByDay(dateStr?: string): Promise<ShipRow[]> {
+  try {
+    const params: any[] = [];
+    let cond = `(o.shipped_at at time zone 'Asia/Bangkok')::date = (now() at time zone 'Asia/Bangkok')::date`;
+    if (dateStr) { params.push(dateStr); cond = `(o.shipped_at at time zone 'Asia/Bangkok')::date = $1::date`; }
+    return await q<ShipRow>(
+      `select o.order_no, o.doc_no, coalesce(o.receiver, o.username) as receiver, o.province,
+              (select count(*)::int from order_items i where i.order_no = o.order_no) as item_count,
+              o.shipped_at, coalesce(nullif(btrim(u.full_name), ''), u.username) as shipped_by_name
+       from orders o left join users u on u.id = o.shipped_by
+       where o.deleted_at is null and o.shipped_at is not null and ${cond}
+       order by o.shipped_at desc`, params);
+  } catch { return []; }
+}
+
 export type DailyIssue = { day: string; orders: number; issued: number; pending: number };
 /** รายวัน: ออร์เดอร์ที่เข้ามา (ตามวันที่ใบเบิก) เทียบกับที่ตัดสต๊อกแล้ว */
 export async function dailyIssueStatus(platform = "Shopee", days = 14): Promise<DailyIssue[]> {
