@@ -67,3 +67,6 @@ insert into material_item (category, ref_key, comp_key, label, category2, unit, 
   ('packaging','p32','p32','ถุงกระดาษขาว ไซส์ M','ถุง/ซอง','ชิ้น',32),
   ('packaging','p33','p33','ซองซิปเทสเตอร์','ถุง/ซอง','ชิ้น',33)
 on conflict (category, ref_key) do nothing;
+
+-- จุดสั่งซื้อ (reorder point) ต่อรายการ — แจ้งเตือน "ควรสั่งซื้อ" เมื่อคงเหลือ ≤ จุดนี้ (0030)
+alter table material_item add column if not exists reorder_point numeric;

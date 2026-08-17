@@ -635,53 +635,53 @@ export async function getMonths(platform?: string): Promise<string[]> {
 }
 
 // ---- คลังวัตถุดิบ & บรรจุภัณฑ์ (material_item + material_move) ---------------
-export type BulkRow = { scent: string; brand: string; grade: string | null; qty: number };
+export type BulkRow = { scent: string; brand: string; grade: string | null; qty: number; reorder: number | null };
 /** ปริมาตรน้ำหอม (ml) — กลิ่นที่ขาย (Lab Parfumo) + OEM ที่เพิ่มเอง */
 export async function listBulkStock(): Promise<BulkRow[]> {
   try {
     const [prods, items] = await Promise.all([
       q<{ name: string; ptype: string | null }>(`select name, ptype from products where active`),
-      q<{ ref_key: string; scent: string | null; brand: string | null; grade: string | null; label: string; qty: number }>(
-        `select ref_key, scent, brand, grade, label, qty::float8 as qty from material_item where category='bulk'`),
+      q<{ ref_key: string; scent: string | null; brand: string | null; grade: string | null; label: string; qty: number; reorder: number | null }>(
+        `select ref_key, scent, brand, grade, label, qty::float8 as qty, reorder_point::float8 as reorder from material_item where category='bulk'`),
     ]);
     const byRef = new Map(items.map((i) => [i.ref_key, i]));
     const rows: BulkRow[] = prods.map((p) => {
       const it = byRef.get(bulkRef(p.name, "Lab Parfumo"));
       if (it) byRef.delete(bulkRef(p.name, "Lab Parfumo"));
-      return { scent: p.name, brand: "Lab Parfumo", grade: p.ptype, qty: it ? Number(it.qty) : 0 };
+      return { scent: p.name, brand: "Lab Parfumo", grade: p.ptype, qty: it ? Number(it.qty) : 0, reorder: it?.reorder ?? null };
     });
     for (const it of byRef.values()) {   // OEM / รายการที่ไม่มีในสินค้าปัจจุบัน
-      rows.push({ scent: it.scent || it.label, brand: it.brand || "OEM", grade: it.grade, qty: Number(it.qty) });
+      rows.push({ scent: it.scent || it.label, brand: it.brand || "OEM", grade: it.grade, qty: Number(it.qty), reorder: it.reorder ?? null });
     }
     return rows.sort((a, b) => a.brand.localeCompare(b.brand, "en") || a.scent.localeCompare(b.scent, "en"));
   } catch { return []; }
 }
 
-export type LabelScent = { scent: string; grade: string; components: { key: string; label: string; qty: number }[] };
+export type LabelScent = { scent: string; grade: string; components: { key: string; label: string; qty: number; reorder: number | null }[] };
 /** สติ๊กเกอร์และการ์ด — ต่อกลิ่น แสดง component ตาม Grade */
 export async function listLabelStock(): Promise<LabelScent[]> {
   try {
     const [prods, items] = await Promise.all([
       q<{ name: string; ptype: string | null }>(`select name, ptype from products where active`),
-      q<{ ref_key: string; qty: number }>(`select ref_key, qty::float8 as qty from material_item where category='label'`),
+      q<{ ref_key: string; qty: number; reorder: number | null }>(`select ref_key, qty::float8 as qty, reorder_point::float8 as reorder from material_item where category='label'`),
     ]);
-    const qmap = new Map(items.map((i) => [i.ref_key, Number(i.qty)]));
+    const map = new Map(items.map((i) => [i.ref_key, i]));
     return prods
       .map((p) => {
         const gk = gradeToLabelKey(p.ptype);
         if (!gk) return null;
-        return { scent: p.name, grade: gk, components: LABEL_COMPONENTS[gk].map((c) => ({ key: c.key, label: c.label, qty: qmap.get(labelRef(p.name, c.key)) ?? 0 })) };
+        return { scent: p.name, grade: gk, components: LABEL_COMPONENTS[gk].map((c) => { const it = map.get(labelRef(p.name, c.key)); return { key: c.key, label: c.label, qty: it ? Number(it.qty) : 0, reorder: it?.reorder ?? null }; }) };
       })
       .filter(Boolean)
       .sort((a, b) => a!.grade.localeCompare(b!.grade, "en") || a!.scent.localeCompare(b!.scent, "en")) as LabelScent[];
   } catch { return []; }
 }
 
-export type PackagingRow = { ref_key: string; label: string; category: string; qty: number };
+export type PackagingRow = { ref_key: string; label: string; category: string; qty: number; reorder: number | null };
 /** ขวดและแพ็คเกจ — รายการคงที่ */
 export async function listPackagingStock(): Promise<PackagingRow[]> {
   try {
-    return await q<PackagingRow>(`select ref_key, label, coalesce(category2,'อื่นๆ') as category, qty::float8 as qty from material_item where category='packaging' order by sort`);
+    return await q<PackagingRow>(`select ref_key, label, coalesce(category2,'อื่นๆ') as category, qty::float8 as qty, reorder_point::float8 as reorder from material_item where category='packaging' order by sort`);
   } catch { return []; }
 }
 

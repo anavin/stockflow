@@ -65,6 +65,26 @@ export async function adjustMaterial(desc: ItemDesc, target: number): Promise<{ 
   catch (e: any) { return { ok: false, error: e?.message || "ปรับยอดไม่สำเร็จ" }; }
 }
 
+/** ตั้งจุดสั่งซื้อ (แจ้งเตือน "ใกล้หมด" เมื่อคงเหลือ ≤ จุดนี้) — ต้องมี material_item ก่อน (สร้าง lazy) */
+export async function setReorderPoint(desc: ItemDesc, point: number | null): Promise<{ ok: boolean; error?: string }> {
+  const g = await gate(); if ("error" in g) return { ok: false, error: g.error };
+  const p = point == null || Number.isNaN(Number(point)) || Number(point) < 0 ? null : Math.round(Number(point));
+  try {
+    await tx(async (run) => {
+      let [it] = await run<{ id: number }>(`select id from material_item where category=$1 and ref_key=$2`, [desc.category, desc.refKey]);
+      if (!it) {
+        [it] = await run<{ id: number }>(
+          `insert into material_item (category, ref_key, scent, comp_key, brand, grade, label, category2, unit, sort)
+           values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) returning id`,
+          [desc.category, desc.refKey, desc.scent ?? null, desc.comp_key ?? null, desc.brand ?? null, desc.grade ?? null, desc.label, desc.category2 ?? null, desc.unit ?? "ชิ้น", desc.sort ?? 0]);
+      }
+      await run(`update material_item set reorder_point=$2, updated_at=now() where id=$1`, [it.id, p]);
+    });
+  } catch (e: any) { return { ok: false, error: e?.message || "ตั้งจุดสั่งซื้อไม่สำเร็จ (รัน SQL 0030 บน prod?)" }; }
+  revalidate(desc.category);
+  return { ok: true };
+}
+
 /** เพิ่มกลิ่น OEM เข้าลิสต์ปริมาตร (PUNN / Atepole ฯลฯ) */
 export async function addBulkScent(scent: string, brand: string, grade: string | null): Promise<{ ok: boolean; error?: string }> {
   const g = await gate(); if ("error" in g) return { ok: false, error: g.error };
