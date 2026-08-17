@@ -312,7 +312,10 @@ export default function OrderForm({ products, sizes, provinces, postcodes, initi
           <div>
             <label className="label">ลูกค้า</label>
             <Combobox value={f.customer_type} allowCustom={false} placeholder="เลือก" options={[...CUSTOMER_TYPES]}
-              onChange={(v) => set({ customer_type: v, ...(v === "ลูกค้าใหม่" ? { purchase_count: "1" } : {}) })} />
+              onChange={(v) => set({ customer_type: v,
+                ...(v === "ลูกค้าใหม่" ? { purchase_count: "1" }
+                  : v === "ลูกค้าเก่า" && hist ? { purchase_count: String((hist.total_orders || 0) + 1) }
+                  : {}) })} />
           </div>
           <div>
             <label className="label">ซื้อครั้งที่</label>
