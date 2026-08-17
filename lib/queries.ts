@@ -102,7 +102,7 @@ export async function getActiveSpecRules(): Promise<{ sizes: string; grades: str
 export type UnitRow = {
   sku: string; product: string; size: string; grade: string | null; barcode: string | null;
   status: string; order_no: string | null; buyer: string | null; receiver: string | null; phone: string | null;
-  received_at: string | null; issued_at: string | null;
+  received_at: string | null; issued_at: string | null; shipped_at: string | null;
   source: "unit" | "order";   // unit = รับเข้าผ่าน stock_unit · order = SKU ที่สแกนตอนตัดยอด (order_items)
 };
 
@@ -137,7 +137,7 @@ export async function listUnits(opts: { search?: string; status?: string; produc
   try {
     return await q<UnitRow>(
       `select u.sku, u.product, u.size, u.grade, u.barcode, u.status, u.order_no,
-              o.shop_name as buyer, o.receiver, o.phone, u.received_at, u.issued_at, u.source
+              o.shop_name as buyer, o.receiver, o.phone, u.received_at, u.issued_at, o.shipped_at, u.source
        from (${UNITS_UNION}) u left join orders o on o.order_no = u.order_no
        ${where.length ? "where " + where.join(" and ") : ""}
        order by u.ord desc limit ${limit}`, params);
