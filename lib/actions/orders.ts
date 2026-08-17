@@ -431,6 +431,37 @@ export async function bulkSaveOrders(orders: OrderWithItems[]): Promise<{ ok: bo
   if (!can.createOrders(user.role)) return { ok: false, saved: 0, error: "ไม่มีสิทธิ์นำเข้าใบเบิก (เฉพาะฝ่ายสร้างใบเบิก)" };
   let saved = 0;
   const errors: string[] = [];
+
+  // คำนวณ "ซื้อครั้งที่" ใหม่เสมอ — จับคู่ลูกค้าด้วย username:
+  //   ซื้อครั้งที่ = จำนวนที่เคยซื้อใน DB (ประวัติเดิม) + ลำดับในไฟล์นี้ (เรียงวันที่→Order No.)
+  //   → ลูกค้าซื้อหลายออเดอร์วันเดียวกัน จะนับต่อเนื่อง (เช่น เก่า 4 ครั้ง → ใบนี้ 5, ใบถัดไป 6)
+  const nk = (s?: string | null) => (s || "").trim().toLowerCase();
+  const groups = new Map<string, OrderWithItems[]>();
+  for (const o of orders) {
+    const k = nk(o.username);
+    if (!k) continue;                         // ไม่มี username → ใช้ค่าเดิมจากไฟล์
+    const arr = groups.get(k); if (arr) arr.push(o); else groups.set(k, [o]);
+  }
+  for (const [k, list] of groups) {
+    const ons = list.map((o) => o.order_no);
+    let existing = 0;
+    try {
+      const [r] = await q<{ c: number }>(
+        `select count(*)::int as c from orders
+          where lower(btrim(username)) = $1 and deleted_at is null and order_no <> all($2::text[])`,
+        [k, ons]);
+      existing = r?.c ?? 0;
+    } catch { existing = 0; }
+    list.sort((a, b) =>
+      String(a.order_date || a.doc_date || "").localeCompare(String(b.order_date || b.doc_date || ""))
+      || String(a.order_no).localeCompare(String(b.order_no)));
+    list.forEach((o, i) => {
+      const n = existing + i + 1;
+      o.purchase_count = n as any;
+      o.customer_type = (n > 1 ? "ลูกค้าเก่า" : "ลูกค้าใหม่") as any;
+    });
+  }
+
   // พยายามบันทึกทุกออร์เดอร์ (แต่ละอันเป็น tx ของตัวเอง) — ไม่หยุดกลางคันเมื่อเจอแถวเสีย
   // เพื่อไม่ให้เหลือสถานะค้างครึ่งๆ และรายงานจำนวนสำเร็จ/ล้มเหลวให้ครบ
   for (const ord of orders) {
