@@ -11,7 +11,7 @@ import Barcode from "./Barcode";
 
 const C = { ink: "#1a1614", muted: "#6b645d", faint: "#9a938c", border: "#cfc9c1", soft: "#f5f3ef", brand: "#ee4d2d", line: "#e6e1da" };
 
-// เรียงเหมือนใบ PDF: ของขายก่อน → ของแถม(Free)ต่อท้าย → ประเภท → ชื่อกลิ่น → ขนาดใหญ่ก่อน
+// เรียงเหมือนใบ PDF: ของขายก่อน → ของแถม(Free)ต่อท้าย → Grade → ขนาดใหญ่ก่อน → ชื่อกลิ่น
 const isBag = (p?: string | null) => /ถุง/.test(String(p || ""));
 const isFreeItem = (it: OrderItem) => !!it.is_free || isBag(it.product);
 const TYPE_ORDER = ["PARFUM", "EDP+", "EDT", "EDP"];
@@ -33,8 +33,8 @@ function Panel({ order, copyLabel }: { order: OrderWithItems; copyLabel: string 
   const items: OrderItem[] = [...(order.items ?? [])].sort((a, b) =>
     (isFreeItem(a) ? 1 : 0) - (isFreeItem(b) ? 1 : 0)
     || typeRank(a.ptype) - typeRank(b.ptype)
-    || String(a.product || "").localeCompare(String(b.product || ""), "th")
-    || mlOf(b.size) - mlOf(a.size));
+    || mlOf(b.size) - mlOf(a.size)
+    || String(a.product || "").localeCompare(String(b.product || ""), "th"));
   const total = items.reduce((sum, it) => sum + (Number(it.qty) || 0), 0);
   const addr = [order.address, order.subdistrict, order.district, order.province, order.postcode].filter(Boolean).join(" ");
 

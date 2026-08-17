@@ -126,7 +126,7 @@ function fmtDate(d?: any) {
 // ถุงกระดาษ = ของแถม (Free) เสมอ
 const isBag = (p?: string | null) => /ถุง/.test(String(p || ""));
 const isFreeItem = (it: { is_free?: boolean | null; product?: string | null }) => !!it.is_free || isBag(it.product);
-// เรียงรายการในใบพิมพ์: ของขายก่อน → ของแถม(Free)ต่อท้าย → ประเภทน้ำหอม → ชื่อกลิ่น (ก-๙/A-Z) → ขนาดใหญ่ก่อน
+// เรียงรายการในใบพิมพ์: ของขายก่อน → ของแถม(Free)ต่อท้าย → Grade → ขนาดใหญ่ก่อน → ชื่อกลิ่น (ก-๙/A-Z)
 const TYPE_ORDER = ["PARFUM", "EDP+", "EDT", "EDP"];
 const typeRank = (t?: string | null) => { const i = TYPE_ORDER.indexOf(String(t || "").trim()); return i < 0 ? 9 : i; };
 const mlOf = (sz?: string | null) => { const m = String(sz || "").match(/(\d+(?:\.\d+)?)/); return m ? parseFloat(m[1]) : 0; };
@@ -134,9 +134,9 @@ const mlOf = (sz?: string | null) => { const m = String(sz || "").match(/(\d+(?:
 function Panel({ order, copyLabel }: { order: OrderWithItems; copyLabel: string }) {
   const items = [...(order.items ?? [])].sort((a, b) =>
     (isFreeItem(a) ? 1 : 0) - (isFreeItem(b) ? 1 : 0)   // ของขายขึ้นก่อน ของแถมไว้ล่าง
-    || typeRank(a.ptype) - typeRank(b.ptype)
-    || String(a.product || "").localeCompare(String(b.product || ""), "th")
-    || mlOf(b.size) - mlOf(a.size));
+    || typeRank(a.ptype) - typeRank(b.ptype)             // Grade
+    || mlOf(b.size) - mlOf(a.size)                       // ขนาดใหญ่ก่อน
+    || String(a.product || "").localeCompare(String(b.product || ""), "th"));  // ชื่อกลิ่น
   const total = items.reduce((sum, it) => sum + (Number(it.qty) || 0), 0);
   const addr = [order.address, order.subdistrict, order.district, order.province, order.postcode].filter(Boolean).join(" ");
 
