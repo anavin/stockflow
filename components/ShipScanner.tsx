@@ -1,9 +1,10 @@
 "use client";
 import { useMemo, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
 import { markShipped, unshipOrder } from "@/lib/actions/orders";
 import type { ShipRow } from "@/lib/queries";
-import { ScanLine, Camera, CheckCircle2, AlertTriangle, XCircle, PackageCheck, Truck, X, Undo2, Search } from "lucide-react";
+import { ScanLine, Camera, CheckCircle2, AlertTriangle, XCircle, PackageCheck, Truck, Undo2, Calendar } from "lucide-react";
 
 const CameraScan = dynamic(() => import("./CameraScan"), { ssr: false });
 
@@ -24,8 +25,9 @@ function feedback(kind: "ok" | "already" | "error") {
   try { navigator.vibrate?.(kind === "error" ? [80, 60, 80] : 40); } catch { /* ไม่มี vibrate */ }
 }
 
-export default function ShipScanner({ initialRows, shippedToday, pending, canUndo }:
-  { initialRows: ShipRow[]; shippedToday: number; pending: number; canUndo: boolean }) {
+export default function ShipScanner({ date, isToday, rows: initialRows, pending, canUndo }:
+  { date: string; isToday: boolean; rows: ShipRow[]; pending: number; canUndo: boolean }) {
+  const router = useRouter();
   const [value, setValue] = useState("");
   const [busy, setBusy] = useState(false);
   const [scanOpen, setScanOpen] = useState(false);
@@ -33,7 +35,7 @@ export default function ShipScanner({ initialRows, shippedToday, pending, canUnd
   const [rows, setRows] = useState<Row[]>(initialRows);
   const [added, setAdded] = useState(0);    // นับที่สแกนเพิ่มในรอบนี้
   const inputRef = useRef<HTMLInputElement>(null);
-  const total = shippedToday + added;
+  const total = initialRows.length + added;
   const left = Math.max(0, pending - added);
   const seen = useMemo(() => new Set(rows.map((r) => r.order_no.toUpperCase())), [rows]);
 
@@ -41,7 +43,7 @@ export default function ShipScanner({ initialRows, shippedToday, pending, canUnd
     const code = (codeArg ?? value).trim();
     if (!code || busy) return;
     setBusy(true); setValue("");
-    const res = await markShipped(code);
+    const res = await markShipped(code, isToday ? undefined : date);   // วันนี้ = now, ย้อนหลัง = วันที่เลือก
     setBusy(false);
     setTimeout(() => inputRef.current?.focus(), 0);
     if (!res.ok) { feedback("error"); setBanner({ kind: "error", text: res.error || "ไม่สำเร็จ" }); return; }
@@ -70,13 +72,28 @@ export default function ShipScanner({ initialRows, shippedToday, pending, canUnd
     : "border-red-200 bg-red-50 text-red-700";
   const BannerIcon = banner?.kind === "ok" ? CheckCircle2 : banner?.kind === "already" ? AlertTriangle : XCircle;
 
+  const todayStr = new Date(Date.now() + 7 * 3600 * 1000).toISOString().slice(0, 10);
   return (
     <div className="space-y-4">
+      {/* เมนูวันที่ — สแกนย้อนหลังได้ */}
+      <div className="flex items-center gap-2 rounded-2xl border border-line bg-white p-3">
+        <Calendar size={16} className="shrink-0 text-brand" />
+        <label className="shrink-0 text-sm font-medium text-ink">วันที่ส่ง</label>
+        <input type="date" value={date} max={todayStr}
+          onChange={(e) => router.push(`/ship?date=${e.target.value}`)} className="input h-9 flex-1" />
+        {!isToday && <button type="button" onClick={() => router.push("/ship")} className="btn-ghost shrink-0 whitespace-nowrap text-xs">วันนี้</button>}
+      </div>
+      {!isToday && (
+        <div className="flex items-center gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+          <AlertTriangle size={14} className="shrink-0" /> โหมดย้อนหลัง — ที่สแกนจะบันทึกเป็นวันที่ <b>{date}</b> (ไม่ใช่วันนี้)
+        </div>
+      )}
+
       {/* สรุป */}
       <div className="grid grid-cols-2 gap-3">
         <div className="rounded-2xl border border-green-200 bg-green-50 p-4 text-center">
           <div className="text-3xl font-bold text-green-700">{total.toLocaleString()}</div>
-          <div className="mt-0.5 text-xs font-medium text-green-700/80">ส่งแล้ววันนี้</div>
+          <div className="mt-0.5 text-xs font-medium text-green-700/80">{isToday ? "ส่งแล้ววันนี้" : "ส่งวันที่เลือก"}</div>
         </div>
         <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-center">
           <div className="text-3xl font-bold text-amber-700">{left.toLocaleString()}</div>
@@ -109,7 +126,7 @@ export default function ShipScanner({ initialRows, shippedToday, pending, canUnd
       {/* รายการที่ส่งวันนี้ */}
       <div className="overflow-hidden rounded-2xl border border-line bg-white">
         <div className="flex items-center gap-2 border-b border-line px-4 py-3 text-sm font-semibold text-ink">
-          <Truck size={16} /> รายการที่ส่งวันนี้ <span className="text-muted">({rows.length})</span>
+          <Truck size={16} /> {isToday ? "รายการที่ส่งวันนี้" : `รายการที่ส่ง ${date}`} <span className="text-muted">({rows.length})</span>
         </div>
         {rows.length === 0 ? (
           <p className="px-4 py-10 text-center text-sm text-muted">ยังไม่มีรายการ — สแกนใบปะหน้าเพื่อเริ่มบันทึก</p>

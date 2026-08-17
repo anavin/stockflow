@@ -495,12 +495,14 @@ export type ShipResult = {
   order?: { order_no: string; receiver: string | null; province: string | null; item_count: number };
 };
 
-/** บันทึกว่าออเดอร์ถูกส่งแล้ว (สแกน Order No.) — กันสแกนซ้ำ, ไม่ทับเวลาเดิม */
-export async function markShipped(orderNo: string): Promise<ShipResult> {
+/** บันทึกว่าออเดอร์ถูกส่งแล้ว (สแกน Order No.) — กันสแกนซ้ำ, ไม่ทับเวลาเดิม
+ *  dateStr (YYYY-MM-DD) = ย้อนหลัง: บันทึกเป็นเที่ยงวันไทยของวันนั้น · ไม่ใส่ = วันนี้ (now) */
+export async function markShipped(orderNo: string, dateStr?: string): Promise<ShipResult> {
   const user = await getCurrentUser();
   if (!user || !can.viewStock(user.role)) return { ok: false, error: "ไม่มีสิทธิ์บันทึกการส่ง" };
   const code = (orderNo || "").trim();
   if (!code) return { ok: false, error: "ไม่มี Order No." };
+  const backdate = /^\d{4}-\d{2}-\d{2}$/.test(dateStr || "");
   const [o] = await q<{ order_no: string; receiver: string | null; username: string | null; province: string | null; shipped_at: string | null; stock_issued_at: string | null; item_count: number }>(
     `select o.order_no, o.receiver, o.username, o.province, o.shipped_at, o.stock_issued_at,
             (select count(*)::int from order_items i where i.order_no = o.order_no) as item_count
@@ -510,9 +512,13 @@ export async function markShipped(orderNo: string): Promise<ShipResult> {
   if (!o) return { ok: false, error: `ไม่พบออเดอร์ ${code}` };
   const info = { order_no: o.order_no, receiver: o.receiver || o.username, province: o.province, item_count: o.item_count };
   if (o.shipped_at) return { ok: true, already: true, at: o.shipped_at, issued: !!o.stock_issued_at, order: info };
-  const [u] = await q<{ shipped_at: string }>(
-    `update orders set shipped_at = now(), shipped_by = $2 where order_no = $1 returning shipped_at`,
-    [o.order_no, user.id]);
+  const [u] = backdate
+    ? await q<{ shipped_at: string }>(
+        `update orders set shipped_at = (($2 || ' 12:00:00')::timestamp at time zone 'Asia/Bangkok'), shipped_by = $3 where order_no = $1 returning shipped_at`,
+        [o.order_no, dateStr, user.id])
+    : await q<{ shipped_at: string }>(
+        `update orders set shipped_at = now(), shipped_by = $2 where order_no = $1 returning shipped_at`,
+        [o.order_no, user.id]);
   revalidatePath("/ship"); revalidatePath("/shopee");
   return { ok: true, already: false, at: u?.shipped_at ?? null, issued: !!o.stock_issued_at, order: info };
 }
