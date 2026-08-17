@@ -246,7 +246,12 @@ export default function OrderForm({ products, sizes, provinces, postcodes, initi
       if (printWin) printWin.location.href = url;     // ชี้แท็บที่เปิดไว้ไปที่ PDF
       else window.open(url, "_blank");                // เผื่อ open แรกถูกบล็อก
     }
-    setTimeout(() => { router.push("/shopee"); router.refresh(); }, 700);
+    if (editing) {
+      router.refresh();   // แก้ไข → อยู่หน้าเดิม (รีเฟรชข้อมูลอย่างเดียว ไม่เด้งกลับ)
+      setBusy(false);
+    } else {
+      setTimeout(() => { router.push("/shopee"); router.refresh(); }, 700);   // สร้างใหม่ → กลับหน้ารายการ
+    }
   }
 
   return (
