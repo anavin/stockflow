@@ -154,6 +154,22 @@ export async function unitCounts(): Promise<{ in_stock: number; issued: number }
   } catch { return { in_stock: 0, issued: 0 }; }
 }
 
+export type OrderBrief = { order_no: string; doc_no: string | null; receiver: string | null; province: string | null; stock_issued_at: boolean; shipped_at: string | null; item_count: number };
+/** สรุปออเดอร์ (สำหรับหน้าติดตาม SKU: ค้น Order No. ที่ยังไม่มี SKU รายชิ้น → โชว์สถานะตัด/ส่ง) */
+export async function getOrderBrief(orderNo: string): Promise<OrderBrief | null> {
+  const code = (orderNo || "").trim();
+  if (!code) return null;
+  try {
+    const [o] = await q<OrderBrief>(
+      `select o.order_no, o.doc_no, coalesce(o.receiver, o.username) as receiver, o.province,
+              (o.stock_issued_at is not null) as stock_issued_at,
+              to_char(o.shipped_at at time zone 'Asia/Bangkok', 'YYYY-MM-DD') as shipped_at,
+              (select count(*)::int from order_items i where i.order_no = o.order_no) as item_count
+       from orders o where o.deleted_at is null and upper(btrim(o.order_no)) = upper(btrim($1)) limit 1`, [code]);
+    return o ?? null;
+  } catch { return null; }
+}
+
 /** ช่องว่างของสินค้าหนึ่ง (กลิ่น+ขนาด): ยอดรวม vs จำนวน SKU ที่อยู่คลัง → gap = จำนวนที่ยังไม่ผูก SKU */
 export async function stockGapFor(product: string, size: string): Promise<{ qty: number; units: number; gap: number }> {
   const M = `regexp_replace(lower(btrim(product)),'[^a-z0-9ก-๙]','','g') = regexp_replace(lower(btrim($1)),'[^a-z0-9ก-๙]','','g')

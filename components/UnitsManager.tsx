@@ -68,7 +68,7 @@ export default function UnitsManager({ units, canEdit, reconcile }: { units: Uni
             </tr>
           </thead>
           <tbody>
-            {units.length === 0 && <tr><td colSpan={cols} className="px-4 py-12 text-center text-muted">ไม่พบ SKU — ลองรับเข้าสต๊อกเพื่อบันทึก SKU หรือรัน SQL ตาราง stock_unit</td></tr>}
+            {units.length === 0 && <tr><td colSpan={cols} className="px-4 py-12 text-center text-muted">ไม่พบ SKU รายชิ้น — ออเดอร์/สินค้านี้อาจตัดสต๊อกแบบไม่สแกน SKU หรือยังไม่มีการรับเข้าแบบ SKU</td></tr>}
             {units.map((u) => {
               const st = statusChip(u.status);
               const editing = editSku === u.sku;
