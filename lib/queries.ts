@@ -349,7 +349,7 @@ export async function getProvinces(): Promise<string[]> {
 }
 
 // ---- orders ----------------------------------------------------------------
-export async function listOrders(opts: { platform?: string; search?: string; month?: string; from?: string; to?: string; issued?: "yes" | "no"; limit?: number; offset?: number } = {}): Promise<OrderRow[]> {
+export async function listOrders(opts: { platform?: string; search?: string; month?: string; from?: string; to?: string; issued?: "yes" | "no"; shipped?: "yes" | "no"; limit?: number; offset?: number } = {}): Promise<OrderRow[]> {
   const where: string[] = ["o.deleted_at is null"];
   const params: any[] = [];
   if (opts.platform) { params.push(opts.platform); where.push(`o.platform = $${params.length}`); }
@@ -358,6 +358,8 @@ export async function listOrders(opts: { platform?: string; search?: string; mon
   if (opts.to) { params.push(opts.to); where.push(`coalesce(o.order_date, o.doc_date) <= $${params.length}`); }
   if (opts.issued === "yes") where.push(`o.stock_issued_at is not null`);
   else if (opts.issued === "no") where.push(`o.stock_issued_at is null`);
+  if (opts.shipped === "yes") where.push(`o.shipped_at is not null`);
+  else if (opts.shipped === "no") where.push(`o.shipped_at is null`);
   if (opts.search) {
     params.push(`%${opts.search}%`);
     const p = `$${params.length}`;
@@ -379,7 +381,7 @@ export async function listOrders(opts: { platform?: string; search?: string; mon
   return rows.map(normOrder);
 }
 
-export async function countOrders(opts: { platform?: string; search?: string; month?: string; from?: string; to?: string; issued?: "yes" | "no" } = {}): Promise<number> {
+export async function countOrders(opts: { platform?: string; search?: string; month?: string; from?: string; to?: string; issued?: "yes" | "no"; shipped?: "yes" | "no" } = {}): Promise<number> {
   const where: string[] = ["deleted_at is null"];
   const params: any[] = [];
   if (opts.platform) { params.push(opts.platform); where.push(`platform = $${params.length}`); }
@@ -388,6 +390,8 @@ export async function countOrders(opts: { platform?: string; search?: string; mo
   if (opts.to) { params.push(opts.to); where.push(`coalesce(order_date, doc_date) <= $${params.length}`); }
   if (opts.issued === "yes") where.push(`stock_issued_at is not null`);
   else if (opts.issued === "no") where.push(`stock_issued_at is null`);
+  if (opts.shipped === "yes") where.push(`shipped_at is not null`);
+  else if (opts.shipped === "no") where.push(`shipped_at is null`);
   if (opts.search) {
     params.push(`%${opts.search}%`);
     const p = `$${params.length}`;

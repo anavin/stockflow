@@ -9,17 +9,18 @@ export const dynamic = "force-dynamic";
 
 const PAGE_SIZE = 50;
 
-export default async function ShopeePage({ searchParams }: { searchParams: Promise<{ q?: string; month?: string; from?: string; to?: string; issued?: string; page?: string }> }) {
+export default async function ShopeePage({ searchParams }: { searchParams: Promise<{ q?: string; month?: string; from?: string; to?: string; issued?: string; shipped?: string; page?: string }> }) {
   await requireCreator();
-  const { q, month, from, to, issued, page } = await searchParams;
+  const { q, month, from, to, issued, shipped, page } = await searchParams;
   const iss = issued === "yes" || issued === "no" ? issued : undefined;
+  const shp = shipped === "yes" || shipped === "no" ? shipped : undefined;
   const pageNum = Math.max(1, Number(page) || 1);
   const offset = (pageNum - 1) * PAGE_SIZE;
 
   const [orders, months, total] = await Promise.all([
-    listOrders({ platform: "Shopee", search: q, month, from, to, issued: iss, limit: PAGE_SIZE, offset }),
+    listOrders({ platform: "Shopee", search: q, month, from, to, issued: iss, shipped: shp, limit: PAGE_SIZE, offset }),
     getMonths("Shopee"),
-    countOrders({ platform: "Shopee", search: q, month, from, to, issued: iss }),
+    countOrders({ platform: "Shopee", search: q, month, from, to, issued: iss, shipped: shp }),
   ]);
 
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
@@ -32,6 +33,7 @@ export default async function ShopeePage({ searchParams }: { searchParams: Promi
     if (from) sp.set("from", from);
     if (to) sp.set("to", to);
     if (iss) sp.set("issued", iss);
+    if (shp) sp.set("shipped", shp);
     for (const [k, v] of Object.entries(extra ?? {})) if (v) sp.set(k, v);
     return sp.toString();
   };
@@ -55,7 +57,7 @@ export default async function ShopeePage({ searchParams }: { searchParams: Promi
         </div>
       </div>
 
-      <ShopeeFilters q={q} month={month} from={from} to={to} issued={iss} months={months} />
+      <ShopeeFilters q={q} month={month} from={from} to={to} issued={iss} shipped={shp} months={months} />
 
       <OrdersTable orders={orders} />
 

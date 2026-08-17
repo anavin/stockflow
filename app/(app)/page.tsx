@@ -1,9 +1,9 @@
 import Link from "next/link";
 import { requireDashboard } from "@/lib/auth/require-user";
-import { dashboardStats, listStock, listOrders, topProducts, ordersTrend, dailyIssueStatus, fdaExpirySummary } from "@/lib/queries";
+import { dashboardStats, listStock, listOrders, topProducts, ordersTrend, dailyIssueStatus, fdaExpirySummary, shipSummary } from "@/lib/queries";
 import {
   PlusCircle, ScanLine, Boxes, AlertTriangle, PackageCheck, ClipboardList,
-  ArrowRight, ShoppingBag, TrendingUp, Sparkles, Clock, CalendarCheck, ShieldAlert,
+  ArrowRight, ShoppingBag, TrendingUp, Sparkles, Clock, CalendarCheck, ShieldAlert, Truck,
 } from "lucide-react";
 
 export const dynamic = "force-dynamic";
@@ -11,7 +11,7 @@ export const dynamic = "force-dynamic";
 export default async function Dashboard() {
   const user = await requireDashboard();
   // ยิงขนานผ่าน pool (เร็ว) — บน Vercel/Node connection pool รองรับ concurrent query ปกติ
-  const [s, lowStock, recent, top, trend, daily, fda] = await Promise.all([
+  const [s, lowStock, recent, top, trend, daily, fda, ship] = await Promise.all([
     dashboardStats(),
     listStock({ lowOnly: true, limit: 6 }),
     listOrders({ platform: "Shopee", limit: 20 }),
@@ -19,6 +19,7 @@ export default async function Dashboard() {
     ordersTrend(6),
     dailyIssueStatus("Shopee", 5),
     fdaExpirySummary(),
+    shipSummary(),
   ]);
   const fdaAlert = fda.expired + fda.d10 + fda.d15 + fda.d30;
 
@@ -74,7 +75,7 @@ export default async function Dashboard() {
       )}
 
       {/* ── KPI tiles ── */}
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-5">
         <Kpi
           label="ออร์เดอร์ทั้งหมด" value={s.ordersTotal} href="/shopee"
           icon={<ShoppingBag size={18} />} tone="brand"
@@ -94,6 +95,11 @@ export default async function Dashboard() {
           label="ต้องเติม / ติดลบ" value={s.low + s.negative} href="/stock?low=1"
           icon={<AlertTriangle size={18} />} tone={s.negative > 0 ? "red" : "amber"}
           sub={s.negative > 0 ? <span className="font-medium text-red-600">ติดลบ {s.negative} รายการ</span> : `ใกล้หมด ${s.low} รายการ`}
+        />
+        <Kpi
+          label="ส่งวันนี้" value={ship.shippedToday} href="/ship"
+          icon={<Truck size={18} />} tone="green"
+          sub={<>ค้างส่ง <b className="text-ink">{ship.pending.toLocaleString()}</b></>}
         />
       </div>
 

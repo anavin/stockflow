@@ -519,7 +519,7 @@ export async function markShipped(orderNo: string, dateStr?: string): Promise<Sh
     : await q<{ shipped_at: string }>(
         `update orders set shipped_at = now(), shipped_by = $2 where order_no = $1 returning shipped_at`,
         [o.order_no, user.id]);
-  revalidatePath("/ship"); revalidatePath("/shopee");
+  revalidatePath("/shopee");
   return { ok: true, already: false, at: u?.shipped_at ?? null, issued: !!o.stock_issued_at, order: info };
 }
 
@@ -528,6 +528,6 @@ export async function unshipOrder(orderNo: string): Promise<{ ok: boolean; error
   const user = await getCurrentUser();
   if (!user || !can.manageStock(user.role)) return { ok: false, error: "เฉพาะผู้ดูแล / ฝ่ายคลัง" };
   await q(`update orders set shipped_at = null, shipped_by = null where order_no = $1`, [(orderNo || "").trim()]);
-  revalidatePath("/ship"); revalidatePath("/shopee");
+  revalidatePath("/ship/daily"); revalidatePath("/shopee");
   return { ok: true };
 }

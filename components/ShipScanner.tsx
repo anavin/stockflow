@@ -33,17 +33,21 @@ export default function ShipScanner({ date, isToday, rows: initialRows, pending,
   const [scanOpen, setScanOpen] = useState(false);
   const [banner, setBanner] = useState<Banner>(null);
   const [rows, setRows] = useState<Row[]>(initialRows);
-  const [added, setAdded] = useState(0);    // นับที่สแกนเพิ่มในรอบนี้
+  const [addedIssued, setAddedIssued] = useState(0);   // นับที่เพิ่งสแกน (เฉพาะที่ตัดสต๊อกแล้ว) → ลด "ค้างส่ง"
   const inputRef = useRef<HTMLInputElement>(null);
-  const total = initialRows.length + added;
-  const left = Math.max(0, pending - added);
+  const total = rows.length;                            // = รายการของวันที่เลือก (initial + ที่เพิ่งสแกน) ไม่นับซ้ำ
+  const left = Math.max(0, pending - addedIssued);
   const seen = useMemo(() => new Set(rows.map((r) => r.order_no.toUpperCase())), [rows]);
 
   async function scan(codeArg?: string) {
     const code = (codeArg ?? value).trim();
     if (!code || busy) return;
+    // กันสแกนซ้ำฝั่ง client (สแกนรัวๆ อาจอ่านกล่องเดิม) — ไม่ยิง action ซ้ำ
+    if (seen.has(code.toUpperCase())) { feedback("already"); setBanner({ kind: "already", text: `สแกนไปแล้ว · ${code}` }); setValue(""); return; }
     setBusy(true); setValue("");
-    const res = await markShipped(code, isToday ? undefined : date);   // วันนี้ = now, ย้อนหลัง = วันที่เลือก
+    let res: Awaited<ReturnType<typeof markShipped>>;
+    try { res = await markShipped(code, isToday ? undefined : date); }   // วันนี้ = now, ย้อนหลัง = วันที่เลือก
+    catch { res = { ok: false, error: "บันทึกไม่สำเร็จ (ระบบขัดข้อง)" }; }
     setBusy(false);
     setTimeout(() => inputRef.current?.focus(), 0);
     if (!res.ok) { feedback("error"); setBanner({ kind: "error", text: res.error || "ไม่สำเร็จ" }); return; }
@@ -56,7 +60,7 @@ export default function ShipScanner({ date, isToday, rows: initialRows, pending,
     feedback("ok");
     setBanner({ kind: "ok", text: `บันทึกส่งแล้ว · ${o.order_no}`, sub: `${o.receiver || "-"} · ${o.province || "-"} · ${o.item_count} รายการ${res.issued ? "" : " · ⚠️ ยังไม่ได้ตัดสต๊อก"}` });
     setRows((r) => [{ order_no: o.order_no, doc_no: null, receiver: o.receiver, province: o.province, item_count: o.item_count, shipped_at: res.at || new Date().toISOString(), shipped_by_name: "เพิ่งสแกน", _new: true }, ...r]);
-    setAdded((n) => n + 1);
+    if (res.issued) setAddedIssued((n) => n + 1);
   }
 
   async function undo(orderNo: string) {
@@ -64,7 +68,6 @@ export default function ShipScanner({ date, isToday, rows: initialRows, pending,
     const res = await unshipOrder(orderNo);
     if (!res.ok) { alert(res.error); return; }
     setRows((r) => r.filter((x) => x.order_no !== orderNo));
-    setAdded((n) => Math.max(0, n - 1));
   }
 
   const bannerCls = banner?.kind === "ok" ? "border-green-200 bg-green-50 text-green-800"

@@ -3,30 +3,32 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Search, X, CalendarDays } from "lucide-react";
 
-export default function ShopeeFilters({ q, month, from, to, issued, months }: { q?: string; month?: string; from?: string; to?: string; issued?: string; months: string[] }) {
+export default function ShopeeFilters({ q, month, from, to, issued, shipped, months }: { q?: string; month?: string; from?: string; to?: string; issued?: string; shipped?: string; months: string[] }) {
   const router = useRouter();
   const [search, setSearch] = useState(q ?? "");
   const [df, setDf] = useState(from ?? "");   // จากวันที่
   const [dt, setDt] = useState(to ?? "");     // ถึงวันที่
 
   // รวมค่าปัจจุบัน + ค่าที่เพิ่งเปลี่ยน แล้ว push URL (กรองทันที)
-  function go(next: { q?: string; month?: string; from?: string; to?: string; issued?: string } = {}) {
+  function go(next: { q?: string; month?: string; from?: string; to?: string; issued?: string; shipped?: string } = {}) {
     const sp = new URLSearchParams();
     const vq = next.q ?? search;
     const vm = next.month ?? month ?? "";
     const vf = next.from ?? df;
     const vt = next.to ?? dt;
     const vi = next.issued ?? issued ?? "";
+    const vs = next.shipped ?? shipped ?? "";
     if (vq) sp.set("q", vq);
     if (vm) sp.set("month", vm);
     if (vf) sp.set("from", vf);
     if (vt) sp.set("to", vt);
     if (vi) sp.set("issued", vi);
+    if (vs) sp.set("shipped", vs);
     const s = sp.toString();
     router.push(`/shopee${s ? "?" + s : ""}`);
   }
 
-  const hasFilter = !!(search || month || df || dt || issued);
+  const hasFilter = !!(search || month || df || dt || issued || shipped);
 
   return (
     <form className="mb-4 flex flex-wrap items-center gap-2" onSubmit={(e) => { e.preventDefault(); go(); }}>
@@ -43,9 +45,16 @@ export default function ShopeeFilters({ q, month, from, to, issued, months }: { 
 
       {/* สถานะตัดสต๊อก */}
       <select className="input w-auto" value={issued ?? ""} onChange={(e) => go({ issued: e.target.value })}>
-        <option value="">ทุกสถานะ</option>
+        <option value="">ตัดสต๊อก: ทั้งหมด</option>
         <option value="no">🟡 รอตัดสต๊อก</option>
         <option value="yes">🟢 ตัดสต๊อกแล้ว</option>
+      </select>
+
+      {/* สถานะจัดส่ง */}
+      <select className="input w-auto" value={shipped ?? ""} onChange={(e) => go({ shipped: e.target.value })}>
+        <option value="">จัดส่ง: ทั้งหมด</option>
+        <option value="no">📦 ยังไม่ส่ง</option>
+        <option value="yes">🚚 ส่งแล้ว</option>
       </select>
 
       {/* ช่วงวันที่ (ตามวันที่ใบเบิก) — เลือกแล้วกรองทันที */}
