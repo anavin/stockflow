@@ -55,26 +55,29 @@ export default function StockManager({ rows, products, sizes, initialLow, isAdmi
   // เรียง: เกรดน้ำหอม (A-Z) ก่อน → หมวดอื่น เช่น Car Perfume (A-Z) → ไม่ระบุ ท้ายสุด; ในกลุ่ม: ชื่อ A-Z → ขนาดใหญ่→เล็ก
   const mlOf = (s: string) => { const m = String(s || "").match(/(\d+(?:\.\d+)?)/); return m ? parseFloat(m[1]) : 0; };
   const gradeBucket = (g: string | null) => !g ? 2 : (PERFUME_TYPES as readonly string[]).includes(g) ? 0 : 1;
-  const DISC_GROUP = "เลิกผลิต";
+  // เรียงแถว: Grade → ชื่อกลิ่น → (เลิกผลิตท้ายกลิ่น) → ขนาดใหญ่ก่อน
   const sorted = useMemo(() => [...filtered].sort((a, b) =>
-    (isDisc(a.product, a.size) ? 1 : 0) - (isDisc(b.product, b.size) ? 1 : 0)   // เลิกผลิต → กลุ่มล่างสุด
-    || gradeBucket(a.grade) - gradeBucket(b.grade)
+    gradeBucket(a.grade) - gradeBucket(b.grade)
     || (a.grade || "zzz").localeCompare(b.grade || "zzz", "en")
     || a.product.localeCompare(b.product, "en")
+    || (isDisc(a.product, a.size) ? 1 : 0) - (isDisc(b.product, b.size) ? 1 : 0)
     || mlOf(b.size) - mlOf(a.size)
   ), [filtered, discontinued]);
-  // จัดกลุ่มตาม Grade (เลิกผลิตแยกกลุ่มล่างสุด) + สรุป
+  // จัดกลุ่มตาม "กลิ่น" (ชื่อขึ้นครั้งเดียวเป็นหัวข้อ → ขนาดไล่ข้างใต้) + สรุป
   const groups = useMemo(() => {
     const m = new Map<string, StockRow[]>();
-    for (const r of sorted) { const g = isDisc(r.product, r.size) ? DISC_GROUP : (r.grade || "ไม่ระบุ Grade"); if (!m.has(g)) m.set(g, []); m.get(g)!.push(r); }
-    return [...m.entries()].map(([g, rs]) => ({
-      grade: g, rows: rs,
+    for (const r of sorted) { if (!m.has(r.product)) m.set(r.product, []); m.get(r.product)!.push(r); }
+    return [...m.entries()].map(([product, rs]) => ({
+      product, grade: rs[0].grade, rows: rs,
       total: rs.reduce((s, r) => s + r.qty, 0),
-      low: rs.filter((r) => r.qty <= 10).length,
+      low: rs.filter((r) => r.qty >= 0 && r.qty <= 10).length,
+      neg: rs.some((r) => r.qty < 0),
     }));
   }, [sorted]);
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
   const toggleGroup = (g: string) => setCollapsed((s) => { const n = new Set(s); n.has(g) ? n.delete(g) : n.add(g); return n; });
+  const collapseAll = () => setCollapsed(new Set(groups.map((g) => g.product)));
+  const expandAll = () => setCollapsed(new Set());
 
   function exportCsv() {
     const header = ["Grade", "สินค้า", "ขนาด", "Barcode", "คงเหลือ", "สถานะ", "เลิกผลิต"];
@@ -394,8 +397,10 @@ export default function StockManager({ rows, products, sizes, initialLow, isAdmi
       </div>
 
       <div className="flex flex-wrap items-center justify-between gap-2 px-1 text-xs text-muted">
-        <div className="flex items-center gap-3">
-          <span>แสดง <b className="text-ink">{filtered.length.toLocaleString()}</b> จาก {rows.length.toLocaleString()} รายการ</span>
+        <div className="flex flex-wrap items-center gap-3">
+          <span><b className="text-ink">{groups.length.toLocaleString()}</b> กลิ่น · {filtered.length.toLocaleString()} ขนาด</span>
+          <button onClick={collapseAll} className="inline-flex items-center gap-1 rounded-md border border-line bg-white px-2 py-1 hover:bg-soft"><ChevronRight size={12} /> ย่อทั้งหมด</button>
+          <button onClick={expandAll} className="inline-flex items-center gap-1 rounded-md border border-line bg-white px-2 py-1 hover:bg-soft"><ChevronDown size={12} /> ขยายทั้งหมด</button>
           <button onClick={exportCsv} className="inline-flex items-center gap-1 rounded-md border border-line bg-white px-2 py-1 hover:bg-soft"><FileDown size={12} /> Export ที่กรอง (CSV)</button>
         </div>
         {isAdmin && <span className="flex items-center gap-1"><ClipboardCheck size={13} /> พิมพ์ยอดที่นับได้จริงในช่อง “นับได้จริง” แล้ว Enter เพื่อปรับให้ตรง</span>}
@@ -407,9 +412,7 @@ export default function StockManager({ rows, products, sizes, initialLow, isAdmi
           <table className="w-full text-sm">
             <thead className="bg-soft text-left text-xs text-muted">
               <tr>
-                <th className="px-4 py-3">กลิ่น</th>
-                <th className="px-3 py-3">Grade</th>
-                <th className="px-3 py-3">ขนาด</th>
+                <th className="px-4 py-3">ขนาด</th>
                 <th className="px-3 py-3">Barcode</th>
                 <th className="px-3 py-3 text-right">คงเหลือ (ระบบ)</th>
                 <th className="px-3 py-3">สถานะ</th>
@@ -417,19 +420,21 @@ export default function StockManager({ rows, products, sizes, initialLow, isAdmi
               </tr>
             </thead>
             <tbody>
-              {groups.length === 0 && <tr><td colSpan={isAdmin ? 7 : 6} className="px-4 py-12 text-center text-muted">ไม่พบสินค้าตามตัวกรอง</td></tr>}
+              {groups.length === 0 && <tr><td colSpan={isAdmin ? 5 : 4} className="px-4 py-12 text-center text-muted">ไม่พบสินค้าตามตัวกรอง</td></tr>}
               {groups.map((grp) => {
-                const open = !collapsed.has(grp.grade);
-                const discGrp = grp.grade === DISC_GROUP;
+                const open = !collapsed.has(grp.product);
                 return (
-                  <Fragment key={grp.grade}>
-                    {/* หัวข้อกลุ่ม Grade + สรุป (คลิกพับ/ขยาย) */}
-                    <tr className={`border-t border-line ${discGrp ? "bg-red-50" : "bg-soft/70"}`}>
-                      <td colSpan={isAdmin ? 7 : 6} className="px-4 py-2">
-                        <button onClick={() => toggleGroup(grp.grade)} className={`flex w-full items-center gap-2 text-left text-xs font-semibold ${discGrp ? "text-red-700" : "text-ink"}`}>
-                          {open ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-                          <span className="uppercase tracking-wide">{discGrp ? "🚫 เลิกผลิต" : grp.grade}</span>
-                          <span className={discGrp ? "text-red-600/80" : "text-muted"}>· {grp.rows.length} SKU · รวม {grp.total.toLocaleString()} ชิ้น{!discGrp && grp.low > 0 && <span className="text-amber-600"> · ใกล้หมด {grp.low}</span>}</span>
+                  <Fragment key={grp.product}>
+                    {/* หัวข้อกลิ่น (ชื่อขึ้นครั้งเดียว) + Grade + สรุป — คลิกพับ/ขยาย */}
+                    <tr className="border-t border-line bg-soft/70">
+                      <td colSpan={isAdmin ? 5 : 4} className="px-4 py-2">
+                        <button onClick={() => toggleGroup(grp.product)} className="flex w-full items-center gap-2 text-left">
+                          {open ? <ChevronDown size={15} className="shrink-0 text-faint" /> : <ChevronRight size={15} className="shrink-0 text-faint" />}
+                          <span className="font-semibold text-ink">{grp.product}</span>
+                          {grp.grade && <span className="chip bg-brand-50 text-brand-600">{grp.grade}</span>}
+                          <span className="text-xs text-muted">· {grp.rows.length} ขนาด · รวม {grp.total.toLocaleString()} ชิ้น</span>
+                          {grp.neg && <span className="rounded bg-red-50 px-1.5 py-0.5 text-[10px] font-medium text-red-600">ติดลบ</span>}
+                          {!grp.neg && grp.low > 0 && <span className="rounded bg-amber-50 px-1.5 py-0.5 text-[10px] font-medium text-amber-600">ใกล้หมด {grp.low}</span>}
                         </button>
                       </td>
                     </tr>
@@ -441,12 +446,10 @@ export default function StockManager({ rows, products, sizes, initialLow, isAdmi
                       const disc = isDisc(r.product, r.size);
                       return (
                         <tr key={k} className="border-t border-line hover:bg-soft/40">
-                          <td className="px-4 py-2.5 font-medium text-ink">
-                            {r.product}
+                          <td className="py-2.5 pl-11 pr-3">
+                            <span className={disc ? "text-red-600 line-through" : "font-medium text-ink"}>{r.size}</span>
                             {disc && <span className="ml-1.5 rounded bg-red-50 px-1 py-0.5 text-[10px] font-medium text-red-600">เลิกผลิต</span>}
                           </td>
-                          <td className="px-3 py-2.5">{r.grade ? <span className="chip bg-brand-50 text-brand-600">{r.grade}</span> : <span className="text-faint">—</span>}</td>
-                          <td className={`px-3 py-2.5 ${disc ? "text-red-600 line-through" : "text-muted"}`}>{r.size}</td>
                           <td className="px-3 py-2.5">{skuOf(r.product, r.size)
                             ? <span className="font-mono text-xs text-ink">{skuOf(r.product, r.size)}</span>
                             : (isAdmin
