@@ -64,7 +64,7 @@ export async function getScentBarcodes(): Promise<Record<string, ScentBarcode[]>
   } catch { return {}; }  // ตารางยังไม่ถูกสร้าง (prod ยังไม่รัน SQL)
   const map: Record<string, ScentBarcode[]> = {};
   for (const r of rows) {
-    const k = r.scent.trim().toLowerCase();
+    const k = (r.scent || "").toLowerCase().replace(/[^a-z0-9ก-๙]/g, "");   // normalize เต็ม (ตัดเว้นวรรค/อักขระ) กัน "Virgin X" ≠ "VirginX"
     (map[k] ??= []).push({ id: r.id, size: r.size, barcode: r.barcode, sku: r.sku, grade: r.grade });
   }
   return map;

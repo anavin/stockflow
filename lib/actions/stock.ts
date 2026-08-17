@@ -178,7 +178,7 @@ export async function lookupOrderForIssue(orderNo: string): Promise<IssueLookup>
     const spec = it.spec || (bag ? "" : pickAutoSpec(it.size, it.grade, rules));
     // บาร์โค้ด CTW ที่ตรงกับ (กลิ่น + ขนาด) — match ใน JS
     const szKey = normSize(it.size);
-    const ctw_barcode = (bcMap[it.product.trim().toLowerCase()] || []).find((b) => normSize(b.size) === szKey)?.barcode ?? null;
+    const ctw_barcode = (bcMap[it.product.toLowerCase().replace(/[^a-z0-9ก-๙]/g, "")] || []).find((b) => normSize(b.size) === szKey)?.barcode ?? null;
     withStock.push({ ...it, spec, stock: s?.qty ?? 0, tracked: isStockTracked(it.size), is_bag: bag, ctw_barcode });
   }
   return { ok: true, order_no: on, doc_no: order.doc_no, note: order.note, items: withStock };

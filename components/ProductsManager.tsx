@@ -37,7 +37,7 @@ export default function ProductsManager({
   const [aBarcode, setABarcode] = useState("");
   const [aSku, setASku] = useState("");
 
-  const sizesFor = (n: string) => sizesByScent[n.trim().toLowerCase()] ?? [];
+  const sizesFor = (n: string) => sizesByScent[normKey(n)] ?? [];
   const discSizes = (n: string) => discontinued[normKey(n)] ?? [];     // ขนาดที่เลิกผลิตของกลิ่นนี้ (normalized)
   const isDisc = (n: string, size: string) => discSizes(n).includes(normKey(size));
 
