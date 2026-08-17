@@ -228,7 +228,7 @@ function Panel({ order, copyLabel }: { order: OrderWithItems; copyLabel: string 
       <View style={[s.signRow, { marginTop: signGap }]}>
         <Sign label="ผู้เบิก" />
         <Sign label="ผู้ตรวจ" />
-        <Sign label="ผู้รับสินค้า" />
+        <Sign label="ผู้จ่ายสินค้า" />
       </View>
     </View>
   );

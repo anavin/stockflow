@@ -127,7 +127,7 @@ function Panel({ order, copyLabel }: { order: OrderWithItems; copyLabel: string 
       {/* signatures — ดันลงล่างสุด */}
       <div style={{ flexGrow: 1 }} />
       <div style={{ display: "flex", justifyContent: "space-between", marginTop: 16, padding: "0 4px" }}>
-        {["ผู้เบิก", "ผู้ตรวจ", "ผู้รับสินค้า"].map((l) => (
+        {["ผู้เบิก", "ผู้ตรวจ", "ผู้จ่ายสินค้า"].map((l) => (
           <div key={l} style={{ width: "30%", textAlign: "center" }}>
             <div style={{ borderTop: `0.6px solid ${C.muted}`, marginBottom: 3 }} />
             <div style={{ fontSize: 7.5, color: C.muted }}>{`( ${l} )`}</div>
