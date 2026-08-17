@@ -18,7 +18,7 @@ export default async function StockPage({ searchParams }: { searchParams: Promis
   ]);
 
   return (
-    <div className="mx-auto max-w-5xl px-4 py-6 md:px-8">
+    <div className="mx-auto max-w-6xl px-4 py-6 md:px-8">
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-xl font-bold text-ink">สต๊อกสินค้า</h1>

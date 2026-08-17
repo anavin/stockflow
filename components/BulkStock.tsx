@@ -74,18 +74,25 @@ export default function BulkStock({ rows, canEdit }: { rows: BulkRow[]; canEdit:
           <thead className="bg-soft text-left text-xs text-muted">
             <tr>
               <th className="px-4 py-3">กลิ่น</th>
-              <th className="px-3 py-3">Brand</th>
-              <th className="px-3 py-3">Grade</th>
-              <th className="px-3 py-3 text-right">ปริมาตรคงเหลือ (ml)</th>
+              <th className="hidden px-3 py-3 sm:table-cell">Brand</th>
+              <th className="hidden px-3 py-3 sm:table-cell">Grade</th>
+              <th className="px-3 py-3 text-right">คงเหลือ (ml)</th>
             </tr>
           </thead>
           <tbody>
             {filtered.length === 0 && <tr><td colSpan={4} className="px-4 py-12 text-center text-muted">ไม่พบกลิ่น</td></tr>}
             {filtered.map((r) => (
               <tr key={r.brand + "|" + r.scent} className="border-t border-line hover:bg-soft/40">
-                <td className="px-4 py-2.5 font-medium text-ink">{r.scent}</td>
-                <td className="px-3 py-2.5"><span className={`chip ${r.brand === "Lab Parfumo" ? "bg-brand-50 text-brand-600" : "bg-purple-50 text-purple-700"}`}>{r.brand}</span></td>
-                <td className="px-3 py-2.5 text-muted">{r.grade || "—"}</td>
+                <td className="px-4 py-2.5">
+                  <div className="font-medium text-ink">{r.scent}</div>
+                  {/* บนมือถือ: โชว์ brand+grade เป็นบรรทัดย่อย (คอลัมน์จริงถูกซ่อน) */}
+                  <div className="mt-0.5 flex items-center gap-1.5 text-xs text-muted sm:hidden">
+                    <span className={`chip ${r.brand === "Lab Parfumo" ? "bg-brand-50 text-brand-600" : "bg-purple-50 text-purple-700"}`}>{r.brand}</span>
+                    {r.grade && <span>{r.grade}</span>}
+                  </div>
+                </td>
+                <td className="hidden px-3 py-2.5 sm:table-cell"><span className={`chip ${r.brand === "Lab Parfumo" ? "bg-brand-50 text-brand-600" : "bg-purple-50 text-purple-700"}`}>{r.brand}</span></td>
+                <td className="hidden px-3 py-2.5 text-muted sm:table-cell">{r.grade || "—"}</td>
                 <td className="px-3 py-2.5">
                   <MaterialControls canEdit={canEdit} qty={r.qty} unit="ml" reorder={r.reorder}
                     desc={{ category: "bulk", refKey: bulkRef(r.scent, r.brand), scent: r.scent, brand: r.brand, grade: r.grade, label: r.scent, unit: "ml" }} />

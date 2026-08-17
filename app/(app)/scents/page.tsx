@@ -12,7 +12,7 @@ export default async function ScentsPage() {
   const total = all.reduce((s, p) => s + Number(p.qty), 0);
 
   return (
-    <div className="mx-auto max-w-4xl px-4 py-6 md:px-8">
+    <div className="mx-auto max-w-6xl px-4 py-6 md:px-8">
       <Link href="/" className="mb-4 inline-flex items-center gap-1 text-sm text-muted hover:text-ink">
         <ChevronLeft size={16} /> กลับหน้าหลัก
       </Link>

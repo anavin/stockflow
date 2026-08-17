@@ -13,7 +13,7 @@ export default async function SpecOptionsPage() {
   if (!can.issueStock(me.role) && !can.createOrders(me.role)) redirect(homeFor(me.role));  // admin/picker/creator
   const [specs, rules] = await Promise.all([listSpecOptions(), listSpecRules()]);
   return (
-    <div className="mx-auto max-w-3xl px-4 py-6 md:px-8">
+    <div className="mx-auto max-w-6xl px-4 py-6 md:px-8">
       <Link href="/" className="mb-4 inline-flex items-center gap-1 text-sm text-muted hover:text-ink">
         <ChevronLeft size={16} /> กลับหน้าหลัก
       </Link>

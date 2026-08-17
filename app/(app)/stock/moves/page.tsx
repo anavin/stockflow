@@ -17,7 +17,7 @@ export default async function StockMovesPage({ searchParams }: { searchParams: P
   const moves = await getStockMoves({ orderNo: order, limit: 300 });
 
   return (
-    <div className="mx-auto max-w-5xl px-4 py-6 md:px-8">
+    <div className="mx-auto max-w-6xl px-4 py-6 md:px-8">
       <Link href="/stock" className="mb-4 inline-flex items-center gap-1 text-sm text-muted hover:text-ink"><ChevronLeft size={16} /> กลับ</Link>
       <h1 className="mb-1 text-xl font-bold text-ink">ประวัติการเคลื่อนไหวสต๊อก</h1>
       <p className="mb-6 text-sm text-muted">{order ? `กรองเฉพาะ Order No. ${order} · ` : ""}{moves.length} รายการล่าสุด</p>

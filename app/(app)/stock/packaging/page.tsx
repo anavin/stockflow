@@ -11,7 +11,7 @@ export default async function PackagingPage() {
   const me = await requireStock();
   const rows = await listPackagingStock();
   return (
-    <div className="mx-auto max-w-4xl px-4 py-6 md:px-8">
+    <div className="mx-auto max-w-6xl px-4 py-6 md:px-8">
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-xl font-bold text-ink">สต๊อกขวดและแพ็คเกจ</h1>

@@ -61,8 +61,8 @@ export default function LabelStock({ scents, canEdit }: { scents: LabelScent[]; 
               {open && (
                 <div className="divide-y divide-line">
                   {s.components.map((c) => (
-                    <div key={c.key} className="flex items-center justify-between gap-3 px-4 py-2 pl-10">
-                      <span className="text-sm text-ink">{c.label}</span>
+                    <div key={c.key} className="flex items-center justify-between gap-2 py-2 pl-6 pr-3 sm:pl-10 sm:pr-4">
+                      <span className="min-w-0 flex-1 truncate text-sm text-ink">{c.label}</span>
                       <MaterialControls canEdit={canEdit} qty={c.qty} unit="ชิ้น" reorder={c.reorder}
                         desc={{ category: "label", refKey: labelRef(s.scent, c.key), scent: s.scent, comp_key: c.key, grade: s.grade, label: `${s.scent} · ${c.label}`, unit: "ชิ้น" }} />
                     </div>

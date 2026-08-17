@@ -17,7 +17,7 @@ export default async function ShipDailyPage({ searchParams }: { searchParams: Pr
   const day = /^\d{4}-\d{2}-\d{2}$/.test(date || "") ? date! : todayBangkok();
   const rows = await listShippedByDay(day);
   return (
-    <div className="mx-auto max-w-5xl px-4 py-6 md:px-8">
+    <div className="mx-auto max-w-6xl px-4 py-6 md:px-8">
       <Link href="/ship" className="mb-4 inline-flex items-center gap-1 text-sm text-muted hover:text-ink"><ChevronLeft size={16} /> กลับหน้าสแกน</Link>
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <div>
