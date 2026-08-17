@@ -249,6 +249,14 @@ export async function getDiscontinued(): Promise<Record<string, string[]>> {
   } catch { return {}; }  // ตารางยังไม่ถูกสร้าง
 }
 
+/** ชื่อกลิ่นที่ปิดการขาย (active = false) — คืนเป็น key ที่ normalize แล้ว */
+export async function getInactiveScents(): Promise<string[]> {
+  try {
+    const rows = await q<{ name: string }>(`select name from products where active = false`);
+    return rows.map((r) => (r.name || "").toLowerCase().replace(/[^a-z0-9ก-๙]/g, ""));
+  } catch { return []; }
+}
+
 export type DailyIssue = { day: string; orders: number; issued: number; pending: number };
 /** รายวัน: ออร์เดอร์ที่เข้ามา (ตามวันที่ใบเบิก) เทียบกับที่ตัดสต๊อกแล้ว */
 export async function dailyIssueStatus(platform = "Shopee", days = 14): Promise<DailyIssue[]> {

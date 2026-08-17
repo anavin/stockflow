@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { requireStock } from "@/lib/auth/require-user";
 import { can } from "@/lib/auth/roles";
-import { listStock, getProducts, getSizes, stockSummary, getDiscontinued, getSkuLookup, stockUnitMismatches } from "@/lib/queries";
+import { listStock, getProducts, getSizes, stockSummary, getDiscontinued, getSkuLookup, stockUnitMismatches, getInactiveScents } from "@/lib/queries";
 import StockManager from "@/components/StockManager";
 import { ScanLine, FileDown, ScanBarcode, AlertTriangle } from "lucide-react";
 
@@ -11,9 +11,9 @@ export default async function StockPage({ searchParams }: { searchParams: Promis
   const me = await requireStock();
   const isAdmin = can.manageStock(me.role);   // admin + ฝ่ายคลัง = แก้สต๊อกได้
   const { low } = await searchParams;
-  const [rows, products, sizes, sum, discontinued, skuMap, mismatches] = await Promise.all([
+  const [rows, products, sizes, sum, discontinued, skuMap, mismatches, inactiveScents] = await Promise.all([
     listStock({ limit: 5000 }),
-    getProducts(), getSizes(), stockSummary(), getDiscontinued(), getSkuLookup(), stockUnitMismatches(),
+    getProducts(), getSizes(), stockSummary(), getDiscontinued(), getSkuLookup(), stockUnitMismatches(), getInactiveScents(),
   ]);
 
   return (
@@ -49,7 +49,7 @@ export default async function StockPage({ searchParams }: { searchParams: Promis
           </div>
         </div>
       )}
-      <StockManager rows={rows} products={products} sizes={sizes} initialLow={low === "1"} isAdmin={isAdmin} discontinued={discontinued} skuMap={skuMap} />
+      <StockManager rows={rows} products={products} sizes={sizes} initialLow={low === "1"} isAdmin={isAdmin} discontinued={discontinued} skuMap={skuMap} inactiveScents={inactiveScents} />
     </div>
   );
 }

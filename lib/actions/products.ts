@@ -128,3 +128,18 @@ export async function setProductActive(id: number, active: boolean): Promise<{ o
   revalidatePath("/products");
   return { ok: true };
 }
+
+/** ปิด/เปิดการขายทั้งกลิ่น (ตามชื่อ) — ปิดแล้วกลิ่นจะหายจากฟอร์มสั่งซื้อ + ถูกซ่อนในหน้าสต๊อก */
+export async function setScentSold(name: string, sold: boolean): Promise<{ ok: boolean; error?: string }> {
+  const g = await gate(); if ("error" in g) return { ok: false, error: g.error };
+  const n = (name || "").trim();
+  if (!n) return { ok: false, error: "ไม่พบกลิ่น" };
+  await q(
+    `update products set active = $2
+       where regexp_replace(lower(btrim(name)),'[^a-z0-9ก-๙]','','g') = regexp_replace(lower(btrim($1)),'[^a-z0-9ก-๙]','','g')`,
+    [n, sold]);
+  revalidatePath("/stock");
+  revalidatePath("/products");
+  revalidatePath("/shopee/new");
+  return { ok: true };
+}
