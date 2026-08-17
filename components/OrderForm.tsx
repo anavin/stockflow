@@ -309,21 +309,19 @@ export default function OrderForm({ products, sizes, provinces, postcodes, initi
             <label className="label">เบอร์โทร</label>
             <CustomerSuggest value={f.phone} onChange={(v) => set({ phone: cleanPhone(v) })} onPick={fillFromCustomer} placeholder="พิมพ์เบอร์เพื่อค้นหา" type="tel" />
           </div>
-          <div className="grid grid-cols-2 gap-2">
-            <div>
-              <label className="label">ลูกค้า</label>
-              <Combobox value={f.customer_type} allowCustom={false} placeholder="เลือก" options={[...CUSTOMER_TYPES]}
-                onChange={(v) => set({ customer_type: v, ...(v === "ลูกค้าใหม่" ? { purchase_count: "1" } : {}) })} />
-            </div>
-            <div>
-              <label className="label">ซื้อครั้งที่</label>
-              <input type="number" min={0} inputMode="numeric"
-                className="input disabled:bg-soft disabled:text-faint disabled:cursor-not-allowed"
-                value={f.customer_type === "ลูกค้าใหม่" ? "1" : f.purchase_count}
-                disabled={f.customer_type === "ลูกค้าใหม่"}
-                onChange={(e) => set({ purchase_count: e.target.value })}
-                placeholder="เช่น 1, 25, 100" />
-            </div>
+          <div>
+            <label className="label">ลูกค้า</label>
+            <Combobox value={f.customer_type} allowCustom={false} placeholder="เลือก" options={[...CUSTOMER_TYPES]}
+              onChange={(v) => set({ customer_type: v, ...(v === "ลูกค้าใหม่" ? { purchase_count: "1" } : {}) })} />
+          </div>
+          <div>
+            <label className="label">ซื้อครั้งที่</label>
+            <input type="number" min={0} inputMode="numeric"
+              className="input disabled:bg-soft disabled:text-faint disabled:cursor-not-allowed"
+              value={f.customer_type === "ลูกค้าใหม่" ? "1" : f.purchase_count}
+              disabled={f.customer_type === "ลูกค้าใหม่"}
+              onChange={(e) => set({ purchase_count: e.target.value })}
+              placeholder="เช่น 1, 25, 100" />
           </div>
           <div>
             <label className="label">จังหวัด <span className="text-brand">*</span></label>
