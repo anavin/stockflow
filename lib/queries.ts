@@ -257,6 +257,16 @@ export async function getInactiveScents(): Promise<string[]> {
   } catch { return []; }
 }
 
+export type SaleScent = { name: string; grade: string | null; active: boolean };
+/** รายชื่อกลิ่นทั้งหมด + สถานะขาย/ปิด — ใช้ในหน้าต่าง "จัดการการขาย" */
+export async function listSaleScents(): Promise<SaleScent[]> {
+  try {
+    const rows = await q<{ name: string; grade: string | null; active: boolean }>(
+      `select name, ptype as grade, active from products order by name`);
+    return rows.map((r) => ({ name: r.name, grade: r.grade, active: !!r.active }));
+  } catch { return []; }
+}
+
 export type DailyIssue = { day: string; orders: number; issued: number; pending: number };
 /** รายวัน: ออร์เดอร์ที่เข้ามา (ตามวันที่ใบเบิก) เทียบกับที่ตัดสต๊อกแล้ว */
 export async function dailyIssueStatus(platform = "Shopee", days = 14): Promise<DailyIssue[]> {

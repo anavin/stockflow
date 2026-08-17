@@ -6,10 +6,9 @@ import Link from "next/link";
 import Combobox from "./Combobox";
 const CameraScan = dynamic(() => import("./CameraScan"), { ssr: false });
 import { receiveStock, receiveUnitsBatch, adjustStock, resolveSku } from "@/lib/actions/stock";
-import { setScentSold } from "@/lib/actions/products";
 import type { StockRow } from "@/lib/queries";
 import { PERFUME_TYPES } from "@/lib/types";
-import { PackagePlus, CheckCircle2, Search, History, FileUp, FileDown, Lock, Check, RotateCcw, ClipboardCheck, ChevronDown, ChevronRight, ScanBarcode, X, Plus, Camera, EyeOff, Eye } from "lucide-react";
+import { PackagePlus, CheckCircle2, Search, History, FileUp, FileDown, Lock, Check, RotateCcw, ClipboardCheck, ChevronDown, ChevronRight, ScanBarcode, X, Plus, Camera } from "lucide-react";
 
 type Status = "all" | "normal" | "low" | "out" | "neg";
 const keyOf = (r: StockRow) => `${r.product}|${r.size}`;
@@ -28,20 +27,9 @@ export default function StockManager({ rows, products, sizes, initialLow, isAdmi
   const isDisc = (product: string, size: string) => (discontinued[normKey(product)] ?? []).includes(normKey(size));
   const skuOf = (product: string, size: string) => skuMap[`${normKey(product)}|${normKey(size)}`] ?? "";
 
-  // ---- ปิดการขายทั้งกลิ่น (ไม่ได้ขาย) ----
+  // ---- ซ่อนกลิ่นที่ปิดการขาย (จัดการเปิด/ปิดในหน้าต่าง "จัดการการขาย") ----
   const inactiveSet = useMemo(() => new Set(inactiveScents), [inactiveScents]);
   const isClosed = (product: string) => inactiveSet.has(normKey(product));
-  const [showClosed, setShowClosed] = useState(false);      // ค่าเริ่มต้น: ซ่อนกลิ่นที่ปิดการขาย
-  const [togglingScent, setTogglingScent] = useState<string | null>(null);
-  async function toggleScentSold(product: string, close: boolean) {
-    if (close && !confirm(`ปิดการขาย "${product}"?\nกลิ่นนี้จะหายจากฟอร์มสั่งซื้อ และถูกซ่อนในหน้าสต๊อก (ยอดคงเหลือยังอยู่)`)) return;
-    setTogglingScent(product);
-    const res = await setScentSold(product, !close);
-    setTogglingScent(null);
-    if (!res.ok) { alert(res.error); return; }
-    router.refresh();
-  }
-  const closedCount = useMemo(() => new Set(rows.filter((r) => isClosed(r.product)).map((r) => normKey(r.product))).size, [rows, inactiveSet]);
 
   // ---- filters ----
   const [search, setSearch] = useState("");
@@ -53,7 +41,7 @@ export default function StockManager({ rows, products, sizes, initialLow, isAdmi
   const filtered = useMemo(() => {
     const t = search.trim().toLowerCase();
     return rows.filter((r) => {
-      if (!showClosed && isClosed(r.product)) return false;   // ซ่อนกลิ่นที่ปิดการขาย (เว้นแต่กดแสดง)
+      if (isClosed(r.product)) return false;   // กลิ่นที่ปิดการขาย → ซ่อนจากสต๊อก (จัดการในหน้าต่างจัดการการขาย)
       if (t && !r.product.toLowerCase().includes(t)) return false;
       if (grade === "__none__" ? !!r.grade : grade && r.grade !== grade) return false;
       if (size && r.size !== size) return false;
@@ -63,26 +51,23 @@ export default function StockManager({ rows, products, sizes, initialLow, isAdmi
       if (status === "neg" && !(r.qty < 0)) return false;
       return true;
     });
-  }, [rows, search, grade, size, status, showClosed, inactiveSet]);
+  }, [rows, search, grade, size, status, inactiveSet]);
   const hasFilter = !!(search || grade || size || status !== "all");
   // เรียง: เกรดน้ำหอม (A-Z) ก่อน → หมวดอื่น เช่น Car Perfume (A-Z) → ไม่ระบุ ท้ายสุด; ในกลุ่ม: ชื่อ A-Z → ขนาดใหญ่→เล็ก
   const mlOf = (s: string) => { const m = String(s || "").match(/(\d+(?:\.\d+)?)/); return m ? parseFloat(m[1]) : 0; };
   const gradeBucket = (g: string | null) => !g ? 2 : (PERFUME_TYPES as readonly string[]).includes(g) ? 0 : 1;
   const DISC_GROUP = "เลิกผลิต";
-  const CLOSED_GROUP = "ปิดการขาย";
-  // อันดับกลุ่มพิเศษ: ขายปกติ(0) → เลิกผลิต(1) → ปิดการขาย(2) ล่างสุด
-  const saleRank = (product: string, size: string) => isClosed(product) ? 2 : isDisc(product, size) ? 1 : 0;
   const sorted = useMemo(() => [...filtered].sort((a, b) =>
-    saleRank(a.product, a.size) - saleRank(b.product, b.size)   // ปิดการขาย/เลิกผลิต → กลุ่มล่างสุด
+    (isDisc(a.product, a.size) ? 1 : 0) - (isDisc(b.product, b.size) ? 1 : 0)   // เลิกผลิต → กลุ่มล่างสุด
     || gradeBucket(a.grade) - gradeBucket(b.grade)
     || (a.grade || "zzz").localeCompare(b.grade || "zzz", "en")
     || a.product.localeCompare(b.product, "en")
     || mlOf(b.size) - mlOf(a.size)
-  ), [filtered, discontinued, inactiveSet]);
-  // จัดกลุ่มตาม Grade (เลิกผลิต / ปิดการขาย แยกกลุ่มล่างสุด) + สรุป
+  ), [filtered, discontinued]);
+  // จัดกลุ่มตาม Grade (เลิกผลิตแยกกลุ่มล่างสุด) + สรุป
   const groups = useMemo(() => {
     const m = new Map<string, StockRow[]>();
-    for (const r of sorted) { const g = isClosed(r.product) ? CLOSED_GROUP : isDisc(r.product, r.size) ? DISC_GROUP : (r.grade || "ไม่ระบุ Grade"); if (!m.has(g)) m.set(g, []); m.get(g)!.push(r); }
+    for (const r of sorted) { const g = isDisc(r.product, r.size) ? DISC_GROUP : (r.grade || "ไม่ระบุ Grade"); if (!m.has(g)) m.set(g, []); m.get(g)!.push(r); }
     return [...m.entries()].map(([g, rs]) => ({
       grade: g, rows: rs,
       total: rs.reduce((s, r) => s + r.qty, 0),
@@ -410,17 +395,9 @@ export default function StockManager({ rows, products, sizes, initialLow, isAdmi
       </div>
 
       <div className="flex flex-wrap items-center justify-between gap-2 px-1 text-xs text-muted">
-        <div className="flex flex-wrap items-center gap-3">
+        <div className="flex items-center gap-3">
           <span>แสดง <b className="text-ink">{filtered.length.toLocaleString()}</b> จาก {rows.length.toLocaleString()} รายการ</span>
           <button onClick={exportCsv} className="inline-flex items-center gap-1 rounded-md border border-line bg-white px-2 py-1 hover:bg-soft"><FileDown size={12} /> Export ที่กรอง (CSV)</button>
-          {closedCount > 0 && (
-            <button onClick={() => setShowClosed((v) => !v)}
-              className={`inline-flex items-center gap-1 rounded-md border px-2 py-1 ${showClosed ? "border-slate-300 bg-slate-100 text-slate-700" : "border-line bg-white text-muted hover:bg-soft"}`}
-              title="กลิ่นที่ปิดการขาย = ไม่แสดงในฟอร์มสั่งซื้อ">
-              {showClosed ? <Eye size={12} /> : <EyeOff size={12} />}
-              {showClosed ? "ซ่อนกลิ่นที่ปิดการขาย" : `แสดงกลิ่นที่ปิดการขาย (${closedCount})`}
-            </button>
-          )}
         </div>
         {isAdmin && <span className="flex items-center gap-1"><ClipboardCheck size={13} /> พิมพ์ยอดที่นับได้จริงในช่อง “นับได้จริง” แล้ว Enter เพื่อปรับให้ตรง</span>}
       </div>
@@ -445,45 +422,29 @@ export default function StockManager({ rows, products, sizes, initialLow, isAdmi
               {groups.map((grp) => {
                 const open = !collapsed.has(grp.grade);
                 const discGrp = grp.grade === DISC_GROUP;
-                const closedGrp = grp.grade === CLOSED_GROUP;
-                const special = discGrp || closedGrp;
                 return (
                   <Fragment key={grp.grade}>
                     {/* หัวข้อกลุ่ม Grade + สรุป (คลิกพับ/ขยาย) */}
-                    <tr className={`border-t border-line ${closedGrp ? "bg-slate-100" : discGrp ? "bg-red-50" : "bg-soft/70"}`}>
+                    <tr className={`border-t border-line ${discGrp ? "bg-red-50" : "bg-soft/70"}`}>
                       <td colSpan={isAdmin ? 7 : 6} className="px-4 py-2">
-                        <button onClick={() => toggleGroup(grp.grade)} className={`flex w-full items-center gap-2 text-left text-xs font-semibold ${closedGrp ? "text-slate-600" : discGrp ? "text-red-700" : "text-ink"}`}>
+                        <button onClick={() => toggleGroup(grp.grade)} className={`flex w-full items-center gap-2 text-left text-xs font-semibold ${discGrp ? "text-red-700" : "text-ink"}`}>
                           {open ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-                          <span className="uppercase tracking-wide">{closedGrp ? "🔕 ปิดการขาย (ไม่ได้ขาย)" : discGrp ? "🚫 เลิกผลิต" : grp.grade}</span>
-                          <span className={closedGrp ? "text-slate-500" : discGrp ? "text-red-600/80" : "text-muted"}>· {grp.rows.length} SKU · รวม {grp.total.toLocaleString()} ชิ้น{!special && grp.low > 0 && <span className="text-amber-600"> · ใกล้หมด {grp.low}</span>}</span>
+                          <span className="uppercase tracking-wide">{discGrp ? "🚫 เลิกผลิต" : grp.grade}</span>
+                          <span className={discGrp ? "text-red-600/80" : "text-muted"}>· {grp.rows.length} SKU · รวม {grp.total.toLocaleString()} ชิ้น{!discGrp && grp.low > 0 && <span className="text-amber-600"> · ใกล้หมด {grp.low}</span>}</span>
                         </button>
                       </td>
                     </tr>
-                    {open && grp.rows.map((r, ri) => {
+                    {open && grp.rows.map((r) => {
                       const st = statusOf(r.qty);
                       const k = keyOf(r);
                       const val = counted[k] ?? String(r.qty);
                       const dirty = counted[k] !== undefined && counted[k] !== "" && Number(counted[k]) !== r.qty;
                       const disc = isDisc(r.product, r.size);
-                      const closed = isClosed(r.product);
-                      const firstOfScent = ri === 0 || grp.rows[ri - 1].product !== r.product;   // ปุ่มปิด/เปิดขาย แสดงครั้งเดียวต่อกลิ่น
                       return (
-                        <tr key={k} className={`border-t border-line hover:bg-soft/40 ${closed ? "bg-slate-50/60" : ""}`}>
+                        <tr key={k} className="border-t border-line hover:bg-soft/40">
                           <td className="px-4 py-2.5 font-medium text-ink">
-                            <span className={closed ? "text-slate-500" : ""}>{r.product}</span>
+                            {r.product}
                             {disc && <span className="ml-1.5 rounded bg-red-50 px-1 py-0.5 text-[10px] font-medium text-red-600">เลิกผลิต</span>}
-                            {closed && <span className="ml-1.5 rounded bg-slate-200 px-1 py-0.5 text-[10px] font-medium text-slate-600">ปิดการขาย</span>}
-                            {isAdmin && firstOfScent && (
-                              closed
-                                ? <button onClick={() => toggleScentSold(r.product, false)} disabled={togglingScent === r.product}
-                                    className="ml-2 inline-flex items-center gap-0.5 rounded-md border border-green-200 bg-green-50 px-1.5 py-0.5 text-[11px] font-medium text-green-700 hover:bg-green-100 disabled:opacity-50" title="เปิดขายกลิ่นนี้อีกครั้ง">
-                                    <Eye size={11} /> เปิดขาย
-                                  </button>
-                                : <button onClick={() => toggleScentSold(r.product, true)} disabled={togglingScent === r.product}
-                                    className="ml-2 inline-flex items-center gap-0.5 rounded-md px-1.5 py-0.5 text-[11px] text-faint hover:bg-slate-100 hover:text-slate-600 disabled:opacity-50" title="ปิดการขายกลิ่นนี้ (ซ่อนจากฟอร์มสั่งซื้อ)">
-                                    <EyeOff size={11} /> ปิดการขาย
-                                  </button>
-                            )}
                           </td>
                           <td className="px-3 py-2.5">{r.grade ? <span className="chip bg-brand-50 text-brand-600">{r.grade}</span> : <span className="text-faint">—</span>}</td>
                           <td className={`px-3 py-2.5 ${disc ? "text-red-600 line-through" : "text-muted"}`}>{r.size}</td>
