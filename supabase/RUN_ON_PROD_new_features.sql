@@ -182,3 +182,11 @@ create table if not exists public.fda_renewals (
   renewed_at timestamptz not null default now(), renewed_by int
 );
 create index if not exists idx_fda_renewals_fda on public.fda_renewals (fda_id);
+
+-- ปิดการขายราย กลิ่น+ขนาด (closed_sku) — ซ่อนจากสต๊อก + เลือกในใบเบิกไม่ได้ (ยอดสต๊อกยังอยู่)
+create table if not exists public.closed_sku (
+  id serial primary key,
+  scent text not null,
+  size  text not null,
+  unique (scent, size)
+);

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { getProducts, getSizes, getProvinces, getPostcodes, getProductCodes, getProductTypes, getDiscontinued } from "@/lib/queries";
+import { getProducts, getSizes, getProvinces, getPostcodes, getProductCodes, getProductTypes, getBlockedSizesForOrder } from "@/lib/queries";
 import OrderForm from "@/components/OrderForm";
 import { ChevronLeft } from "lucide-react";
 import { requireCreator } from "@/lib/auth/require-user";
@@ -9,7 +9,7 @@ export const dynamic = "force-dynamic";
 export default async function NewOrderPage() {
   await requireCreator();
   const [products, sizes, provinces, postcodes, productCodes, productTypes, discontinued] = await Promise.all([
-    getProducts(), getSizes(), getProvinces(), getPostcodes(), getProductCodes(), getProductTypes(), getDiscontinued(),
+    getProducts(), getSizes(), getProvinces(), getPostcodes(), getProductCodes(), getProductTypes(), getBlockedSizesForOrder(),
   ]);
 
   return (

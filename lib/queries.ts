@@ -249,22 +249,23 @@ export async function getDiscontinued(): Promise<Record<string, string[]>> {
   } catch { return {}; }  // ตารางยังไม่ถูกสร้าง
 }
 
-/** ชื่อกลิ่นที่ปิดการขาย (active = false) — คืนเป็น key ที่ normalize แล้ว */
-export async function getInactiveScents(): Promise<string[]> {
+/** กลิ่น+ขนาด ที่ปิดการขาย → Record<normScent, normSize[]> (แพทเทิร์นเดียวกับ getDiscontinued) */
+export async function getClosedSkus(): Promise<Record<string, string[]>> {
+  const norm = (s: string) => (s || "").toLowerCase().replace(/[^a-z0-9ก-๙]/g, "");
   try {
-    const rows = await q<{ name: string }>(`select name from products where active = false`);
-    return rows.map((r) => (r.name || "").toLowerCase().replace(/[^a-z0-9ก-๙]/g, ""));
-  } catch { return []; }
+    const rows = await q<{ scent: string; size: string }>(`select scent, size from closed_sku`);
+    const map: Record<string, string[]> = {};
+    for (const r of rows) { (map[norm(r.scent)] ??= []).push(norm(r.size)); }
+    return map;
+  } catch { return {}; }  // ตารางยังไม่ถูกสร้าง
 }
 
-export type SaleScent = { name: string; grade: string | null; active: boolean };
-/** รายชื่อกลิ่นทั้งหมด + สถานะขาย/ปิด — ใช้ในหน้าต่าง "จัดการการขาย" */
-export async function listSaleScents(): Promise<SaleScent[]> {
-  try {
-    const rows = await q<{ name: string; grade: string | null; active: boolean }>(
-      `select name, ptype as grade, active from products order by name`);
-    return rows.map((r) => ({ name: r.name, grade: r.grade, active: !!r.active }));
-  } catch { return []; }
+/** ขนาดที่เลือกในใบเบิกไม่ได้ = เลิกผลิต ∪ ปิดการขาย (รวมเป็น map เดียว ส่งให้ฟอร์มสั่งซื้อ) */
+export async function getBlockedSizesForOrder(): Promise<Record<string, string[]>> {
+  const [disc, closed] = await Promise.all([getDiscontinued(), getClosedSkus()]);
+  const out: Record<string, string[]> = {};
+  for (const src of [disc, closed]) for (const [k, v] of Object.entries(src)) out[k] = [...new Set([...(out[k] ?? []), ...v])];
+  return out;
 }
 
 export type DailyIssue = { day: string; orders: number; issued: number; pending: number };

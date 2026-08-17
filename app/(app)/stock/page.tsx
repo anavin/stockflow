@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { requireStock } from "@/lib/auth/require-user";
 import { can } from "@/lib/auth/roles";
-import { listStock, getProducts, getSizes, stockSummary, getDiscontinued, getSkuLookup, stockUnitMismatches, getInactiveScents, listSaleScents } from "@/lib/queries";
+import { listStock, getProducts, getSizes, stockSummary, getDiscontinued, getSkuLookup, stockUnitMismatches, getClosedSkus } from "@/lib/queries";
 import StockManager from "@/components/StockManager";
 import SalesManager from "@/components/SalesManager";
 import { ScanLine, FileDown, ScanBarcode, AlertTriangle } from "lucide-react";
@@ -12,9 +12,9 @@ export default async function StockPage({ searchParams }: { searchParams: Promis
   const me = await requireStock();
   const isAdmin = can.manageStock(me.role);   // admin + ฝ่ายคลัง = แก้สต๊อกได้
   const { low } = await searchParams;
-  const [rows, products, sizes, sum, discontinued, skuMap, mismatches, inactiveScents, saleScents] = await Promise.all([
+  const [rows, products, sizes, sum, discontinued, skuMap, mismatches, closedSkus] = await Promise.all([
     listStock({ limit: 5000 }),
-    getProducts(), getSizes(), stockSummary(), getDiscontinued(), getSkuLookup(), stockUnitMismatches(), getInactiveScents(), listSaleScents(),
+    getProducts(), getSizes(), stockSummary(), getDiscontinued(), getSkuLookup(), stockUnitMismatches(), getClosedSkus(),
   ]);
 
   return (
@@ -25,7 +25,7 @@ export default async function StockPage({ searchParams }: { searchParams: Promis
           <p className="text-sm text-muted">{sum.skus.toLocaleString()} รายการ (SKU) · ใกล้หมด {sum.low.toLocaleString()} · ตัดสต๊อกแล้ว {sum.issuedOrders.toLocaleString()} ใบ</p>
         </div>
         <div className="flex gap-2">
-          {isAdmin && <SalesManager scents={saleScents} />}
+          {isAdmin && <SalesManager rows={rows} closed={closedSkus} />}
           <Link href="/stock/units" className="btn-ghost"><ScanBarcode size={16} /> ติดตาม SKU</Link>
           <a href="/api/export/stock" className="btn-ghost"><FileDown size={16} /> Export</a>
           <Link href="/stock/issue" className="btn-primary"><ScanLine size={16} /> ตัดสต๊อก (สแกน)</Link>
@@ -51,7 +51,7 @@ export default async function StockPage({ searchParams }: { searchParams: Promis
           </div>
         </div>
       )}
-      <StockManager rows={rows} products={products} sizes={sizes} initialLow={low === "1"} isAdmin={isAdmin} discontinued={discontinued} skuMap={skuMap} inactiveScents={inactiveScents} />
+      <StockManager rows={rows} products={products} sizes={sizes} initialLow={low === "1"} isAdmin={isAdmin} discontinued={discontinued} skuMap={skuMap} closedSkus={closedSkus} />
     </div>
   );
 }

@@ -129,17 +129,20 @@ export async function setProductActive(id: number, active: boolean): Promise<{ o
   return { ok: true };
 }
 
-/** ปิด/เปิดการขายทั้งกลิ่น (ตามชื่อ) — ปิดแล้วกลิ่นจะหายจากฟอร์มสั่งซื้อ + ถูกซ่อนในหน้าสต๊อก */
-export async function setScentSold(name: string, sold: boolean): Promise<{ ok: boolean; error?: string }> {
+/** ปิด/เปิดการขายราย กลิ่น+ขนาด — ปิดแล้วขนาดนั้นจะถูกซ่อนในสต๊อก + เลือกในใบเบิกไม่ได้ (ยอดสต๊อกยังอยู่) */
+export async function setSkuSold(scent: string, size: string, sold: boolean): Promise<{ ok: boolean; error?: string }> {
   const g = await gate(); if ("error" in g) return { ok: false, error: g.error };
-  const n = (name || "").trim();
-  if (!n) return { ok: false, error: "ไม่พบกลิ่น" };
-  await q(
-    `update products set active = $2
-       where regexp_replace(lower(btrim(name)),'[^a-z0-9ก-๙]','','g') = regexp_replace(lower(btrim($1)),'[^a-z0-9ก-๙]','','g')`,
-    [n, sold]);
+  const sc = (scent || "").trim(), sz = (size || "").trim();
+  if (!sc || !sz) return { ok: false, error: "ระบุกลิ่นและขนาด" };
+  const NZ = `regexp_replace(lower(btrim($1)),'[^a-z0-9ก-๙]','','g')`;
+  const SZ = `regexp_replace(lower($2),'[^a-z0-9ก-๙]','','g')`;
+  try {
+    await q(`delete from closed_sku
+             where regexp_replace(lower(btrim(scent)),'[^a-z0-9ก-๙]','','g') = ${NZ}
+               and regexp_replace(lower(size),'[^a-z0-9ก-๙]','','g') = ${SZ}`, [sc, sz]);
+    if (!sold) await q(`insert into closed_sku (scent, size) values ($1, $2) on conflict (scent, size) do nothing`, [sc, sz]);
+  } catch { return { ok: false, error: "ยังไม่มีตาราง closed_sku (รัน SQL 0026 บน prod ก่อน)" }; }
   revalidatePath("/stock");
-  revalidatePath("/products");
   revalidatePath("/shopee/new");
   return { ok: true };
 }

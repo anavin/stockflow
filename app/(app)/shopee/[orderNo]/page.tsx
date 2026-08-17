@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getOrder, getProducts, getSizes, getProvinces, getPostcodes, getProductCodes, getProductTypes, getDiscontinued } from "@/lib/queries";
+import { getOrder, getProducts, getSizes, getProvinces, getPostcodes, getProductCodes, getProductTypes, getBlockedSizesForOrder } from "@/lib/queries";
 import OrderForm from "@/components/OrderForm";
 import { ChevronLeft, Printer, ScanLine, PackageCheck } from "lucide-react";
 import { requireCreator } from "@/lib/auth/require-user";
@@ -13,7 +13,7 @@ export default async function EditOrderPage({ params }: { params: Promise<{ orde
   const { orderNo } = await params;
   const decoded = decodeURIComponent(orderNo);
   const [order, products, sizes, provinces, postcodes, productCodes, productTypes, discontinued] = await Promise.all([
-    getOrder(decoded), getProducts(), getSizes(), getProvinces(), getPostcodes(), getProductCodes(), getProductTypes(), getDiscontinued(),
+    getOrder(decoded), getProducts(), getSizes(), getProvinces(), getPostcodes(), getProductCodes(), getProductTypes(), getBlockedSizesForOrder(),
   ]);
   if (!order) notFound();
 

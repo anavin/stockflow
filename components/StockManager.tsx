@@ -20,16 +20,15 @@ function statusOf(qty: number) {
   return { label: "ปกติ", cls: "bg-green-50 text-green-700", dot: "bg-green-500" };
 }
 
-export default function StockManager({ rows, products, sizes, initialLow, isAdmin, discontinued = {}, skuMap = {}, inactiveScents = [] }:
-  { rows: StockRow[]; products: string[]; sizes: string[]; initialLow?: boolean; isAdmin: boolean; discontinued?: Record<string, string[]>; skuMap?: Record<string, string>; inactiveScents?: string[] }) {
+export default function StockManager({ rows, products, sizes, initialLow, isAdmin, discontinued = {}, skuMap = {}, closedSkus = {} }:
+  { rows: StockRow[]; products: string[]; sizes: string[]; initialLow?: boolean; isAdmin: boolean; discontinued?: Record<string, string[]>; skuMap?: Record<string, string>; closedSkus?: Record<string, string[]> }) {
   const router = useRouter();
   const normKey = (s: string) => (s || "").toLowerCase().replace(/[^a-z0-9ก-๙]/g, "");
   const isDisc = (product: string, size: string) => (discontinued[normKey(product)] ?? []).includes(normKey(size));
   const skuOf = (product: string, size: string) => skuMap[`${normKey(product)}|${normKey(size)}`] ?? "";
 
-  // ---- ซ่อนกลิ่นที่ปิดการขาย (จัดการเปิด/ปิดในหน้าต่าง "จัดการการขาย") ----
-  const inactiveSet = useMemo(() => new Set(inactiveScents), [inactiveScents]);
-  const isClosed = (product: string) => inactiveSet.has(normKey(product));
+  // ---- ซ่อน กลิ่น+ขนาด ที่ปิดการขาย (จัดการเปิด/ปิดในหน้าต่าง "จัดการการขาย") ----
+  const isClosedSku = (product: string, size: string) => (closedSkus[normKey(product)] ?? []).includes(normKey(size));
 
   // ---- filters ----
   const [search, setSearch] = useState("");
@@ -41,7 +40,7 @@ export default function StockManager({ rows, products, sizes, initialLow, isAdmi
   const filtered = useMemo(() => {
     const t = search.trim().toLowerCase();
     return rows.filter((r) => {
-      if (isClosed(r.product)) return false;   // กลิ่นที่ปิดการขาย → ซ่อนจากสต๊อก (จัดการในหน้าต่างจัดการการขาย)
+      if (isClosedSku(r.product, r.size)) return false;   // กลิ่น+ขนาดที่ปิดการขาย → ซ่อนจากสต๊อก (จัดการในหน้าต่างจัดการการขาย)
       if (t && !r.product.toLowerCase().includes(t)) return false;
       if (grade === "__none__" ? !!r.grade : grade && r.grade !== grade) return false;
       if (size && r.size !== size) return false;
@@ -51,7 +50,7 @@ export default function StockManager({ rows, products, sizes, initialLow, isAdmi
       if (status === "neg" && !(r.qty < 0)) return false;
       return true;
     });
-  }, [rows, search, grade, size, status, inactiveSet]);
+  }, [rows, search, grade, size, status, closedSkus]);
   const hasFilter = !!(search || grade || size || status !== "all");
   // เรียง: เกรดน้ำหอม (A-Z) ก่อน → หมวดอื่น เช่น Car Perfume (A-Z) → ไม่ระบุ ท้ายสุด; ในกลุ่ม: ชื่อ A-Z → ขนาดใหญ่→เล็ก
   const mlOf = (s: string) => { const m = String(s || "").match(/(\d+(?:\.\d+)?)/); return m ? parseFloat(m[1]) : 0; };
