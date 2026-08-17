@@ -4,7 +4,7 @@ import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { PLATFORMS } from "@/lib/config";
 import { can, ROLE_LABELS, roleList } from "@/lib/auth/roles";
-import { Package, PlusCircle, Upload, List, LogOut, Menu, X, Trash2, Users, ScanLine, Boxes, LayoutDashboard, FlaskConical, ScanBarcode, ShieldCheck, Truck } from "lucide-react";
+import { Package, PlusCircle, Upload, List, LogOut, Menu, X, Trash2, Users, ScanLine, Boxes, LayoutDashboard, FlaskConical, ScanBarcode, ShieldCheck, Truck, Droplets, Sticker } from "lucide-react";
 
 // สีเอกลักษณ์ของแต่ละแพลตฟอร์ม (ใช้เป็นจุดสีในเมนู)
 const PLATFORM_COLORS: Record<string, string> = {
@@ -38,6 +38,9 @@ export default function Sidebar({ user }: { user: { full_name: string; username:
     ...(can.viewStock(role) ? [{ href: "/ship", label: "จัดส่งสินค้า (สแกน)", icon: Truck, exact: true }] : []),
     ...(can.viewStock(role) ? [{ href: "/stock", label: "สต๊อกสินค้าสำเร็จรูป", icon: Boxes, exact: true }] : []),
     ...(can.viewStock(role) ? [{ href: "/stock/units", label: "ติดตาม SKU", icon: ScanBarcode }] : []),
+    ...(can.viewStock(role) ? [{ href: "/stock/bulk", label: "ปริมาตรน้ำหอม", icon: Droplets, exact: true }] : []),
+    ...(can.viewStock(role) ? [{ href: "/stock/labels", label: "สติ๊กเกอร์ & การ์ด", icon: Sticker, exact: true }] : []),
+    ...(can.viewStock(role) ? [{ href: "/stock/packaging", label: "ขวด & แพ็คเกจ", icon: Package, exact: true }] : []),
   ];
 
   const isActive = (href: string, exact?: boolean) =>

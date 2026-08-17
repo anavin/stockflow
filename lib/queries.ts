@@ -1,6 +1,7 @@
 import "server-only";
 import { q } from "./db";
 import type { Order, OrderItem, OrderRow, OrderWithItems } from "./types";
+import { LABEL_COMPONENTS, gradeToLabelKey, bulkRef, labelRef } from "./materials";
 
 /** PGlite returns `date`/`timestamptz` columns as JS Date objects while pg (with
  * our type parsers) returns strings. Normalize date-only fields to "YYYY-MM-DD"
@@ -615,4 +616,72 @@ export async function getMonths(platform?: string): Promise<string[]> {
     platform ? [platform] : [],
   );
   return rows.map((r) => r.month_label);
+}
+
+// ---- คลังวัตถุดิบ & บรรจุภัณฑ์ (material_item + material_move) ---------------
+export type BulkRow = { scent: string; brand: string; grade: string | null; qty: number };
+/** ปริมาตรน้ำหอม (ml) — กลิ่นที่ขาย (Lab Parfumo) + OEM ที่เพิ่มเอง */
+export async function listBulkStock(): Promise<BulkRow[]> {
+  try {
+    const [prods, items] = await Promise.all([
+      q<{ name: string; ptype: string | null }>(`select name, ptype from products where active`),
+      q<{ ref_key: string; scent: string | null; brand: string | null; grade: string | null; label: string; qty: number }>(
+        `select ref_key, scent, brand, grade, label, qty::float8 as qty from material_item where category='bulk'`),
+    ]);
+    const byRef = new Map(items.map((i) => [i.ref_key, i]));
+    const rows: BulkRow[] = prods.map((p) => {
+      const it = byRef.get(bulkRef(p.name, "Lab Parfumo"));
+      if (it) byRef.delete(bulkRef(p.name, "Lab Parfumo"));
+      return { scent: p.name, brand: "Lab Parfumo", grade: p.ptype, qty: it ? Number(it.qty) : 0 };
+    });
+    for (const it of byRef.values()) {   // OEM / รายการที่ไม่มีในสินค้าปัจจุบัน
+      rows.push({ scent: it.scent || it.label, brand: it.brand || "OEM", grade: it.grade, qty: Number(it.qty) });
+    }
+    return rows.sort((a, b) => a.brand.localeCompare(b.brand, "en") || a.scent.localeCompare(b.scent, "en"));
+  } catch { return []; }
+}
+
+export type LabelScent = { scent: string; grade: string; components: { key: string; label: string; qty: number }[] };
+/** สติ๊กเกอร์และการ์ด — ต่อกลิ่น แสดง component ตาม Grade */
+export async function listLabelStock(): Promise<LabelScent[]> {
+  try {
+    const [prods, items] = await Promise.all([
+      q<{ name: string; ptype: string | null }>(`select name, ptype from products where active`),
+      q<{ ref_key: string; qty: number }>(`select ref_key, qty::float8 as qty from material_item where category='label'`),
+    ]);
+    const qmap = new Map(items.map((i) => [i.ref_key, Number(i.qty)]));
+    return prods
+      .map((p) => {
+        const gk = gradeToLabelKey(p.ptype);
+        if (!gk) return null;
+        return { scent: p.name, grade: gk, components: LABEL_COMPONENTS[gk].map((c) => ({ key: c.key, label: c.label, qty: qmap.get(labelRef(p.name, c.key)) ?? 0 })) };
+      })
+      .filter(Boolean)
+      .sort((a, b) => a!.grade.localeCompare(b!.grade, "en") || a!.scent.localeCompare(b!.scent, "en")) as LabelScent[];
+  } catch { return []; }
+}
+
+export type PackagingRow = { ref_key: string; label: string; category: string; qty: number };
+/** ขวดและแพ็คเกจ — รายการคงที่ */
+export async function listPackagingStock(): Promise<PackagingRow[]> {
+  try {
+    return await q<PackagingRow>(`select ref_key, label, coalesce(category2,'อื่นๆ') as category, qty::float8 as qty from material_item where category='packaging' order by sort`);
+  } catch { return []; }
+}
+
+export type MaterialMoveRow = { id: number; category: string; label: string; scent: string | null; qty_change: number; balance: number | null; reason: string; note: string | null; created_at: string; by_name: string | null };
+/** ประวัติเคลื่อนไหววัตถุดิบ (รับเข้า/จ่ายออก/ปรับ) — กรองหมวด/วันได้ */
+export async function listMaterialMoves(opts: { category?: string; date?: string; limit?: number } = {}): Promise<MaterialMoveRow[]> {
+  try {
+    const params: any[] = []; const where: string[] = [];
+    if (opts.category) { params.push(opts.category); where.push(`i.category = $${params.length}`); }
+    if (opts.date) { params.push(opts.date); where.push(`(m.created_at at time zone 'Asia/Bangkok')::date = $${params.length}::date`); }
+    const limit = Math.min(opts.limit ?? 300, 1000);
+    return await q<MaterialMoveRow>(
+      `select m.id, i.category, i.label, i.scent, m.qty_change::float8 as qty_change, m.balance::float8 as balance,
+              m.reason, m.note, m.created_at, coalesce(nullif(btrim(u.full_name),''), u.username) as by_name
+       from material_move m join material_item i on i.id = m.item_id left join users u on u.id = m.created_by
+       ${where.length ? "where " + where.join(" and ") : ""}
+       order by m.created_at desc limit ${limit}`, params);
+  } catch { return []; }
 }
