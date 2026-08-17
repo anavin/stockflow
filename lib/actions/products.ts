@@ -1,6 +1,6 @@
 "use server";
 import { revalidatePath } from "next/cache";
-import { q } from "@/lib/db";
+import { q, tx } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth/session";
 import { can } from "@/lib/auth/roles";
 
@@ -115,10 +115,38 @@ export async function renameProduct(id: number, name: string): Promise<{ ok: boo
   const g = await gate(); if ("error" in g) return { ok: false, error: g.error };
   const n = (name || "").trim();
   if (!n) return { ok: false, error: "กรอกชื่อกลิ่น" };
-  const [dup] = await q(`select 1 from products where lower(name) = lower($1) and id <> $2`, [n, id]);
+  const [dup] = await q(`select 1 from products where lower(btrim(name)) = lower(btrim($1)) and id <> $2`, [n, id]);
   if (dup) return { ok: false, error: "มีกลิ่นนี้อยู่แล้ว" };
-  await q(`update products set name = $2 where id = $1`, [id, n]);
+  const [cur] = await q<{ name: string }>(`select name from products where id = $1`, [id]);
+  if (!cur) return { ok: false, error: "ไม่พบกลิ่น" };
+  const oldName = cur.name;
+  // เปลี่ยนชื่อ + sync ทุกตารางที่อ้างชื่อกลิ่น (จับด้วยชื่อเก่าแบบ normalize → กวาดสะกดผิดเก่าไปด้วย)
+  // $1 = ชื่อเก่า (ใช้หา), $2 = ชื่อใหม่
+  const NK = `regexp_replace(lower(btrim($1)),'[^a-z0-9ก-๙]','','g')`;
+  const COL = (c: string) => `regexp_replace(lower(btrim(${c})),'[^a-z0-9ก-๙]','','g')`;
+  try {
+    await tx(async (run) => {
+      await run(`update products set name = $2 where id = $1`, [id, n]);
+      await run(`update order_items set product = $2 where ${COL("product")} = ${NK}`, [oldName, n]);
+      await run(`update stock_moves  set product = $2 where ${COL("product")} = ${NK}`, [oldName, n]);
+      await run(`update stock_unit   set product = $2 where ${COL("product")} = ${NK}`, [oldName, n]);
+      // stock: PK (product,size) → รวม qty เข้าชื่อใหม่ แล้วลบชื่อเก่าทิ้ง (กันชนคีย์ซ้ำ)
+      await run(`insert into stock (product, size, qty)
+                 select $2, size, sum(qty) from stock where ${COL("product")} = ${NK} and product <> $2
+                 group by size
+                 on conflict (product, size) do update set qty = stock.qty + excluded.qty, updated_at = now()`, [oldName, n]);
+      await run(`delete from stock where ${COL("product")} = ${NK} and product <> $2`, [oldName, n]);
+    });
+  } catch (e: any) {
+    return { ok: false, error: e?.message || "เปลี่ยนชื่อไม่สำเร็จ" };
+  }
+  // ตารางเสริม (อาจยังไม่มีบน prod) — best effort แยกจาก transaction หลัก
+  for (const [tbl, col] of [["product_barcodes", "scent"], ["discontinued_sku", "scent"], ["closed_sku", "scent"]] as const) {
+    try { await q(`update ${tbl} set ${col} = $2 where ${COL(col)} = ${NK}`, [oldName, n]); } catch { /* ไม่มีตาราง = ข้าม */ }
+  }
   revalidatePath("/products");
+  revalidatePath("/stock");
+  revalidatePath("/shopee/new");
   return { ok: true };
 }
 
