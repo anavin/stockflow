@@ -54,7 +54,7 @@ export default function OrdersTable({ orders }: { orders: OrderRow[] }) {
     if (list.length > 200) { alert("เลือกได้สูงสุด 200 ใบต่อการพิมพ์ 1 ครั้ง — กรุณาแบ่งพิมพ์เป็นชุด"); return; }
     if (list.length > 50 && !confirm(`เลือก ${list.length} ใบ — สร้างไฟล์ PDF จำนวนมากอาจใช้เวลาสักครู่ ดำเนินการต่อ?`)) return;
     const qs = list.map((n) => encodeURIComponent(n)).join(",");
-    window.open(`/api/print-bulk?orders=${qs}`, "_blank", "noopener");
+    window.open(`/print/pdf-bulk?orders=${qs}`, "_blank", "noopener");
   }
 
   if (orders.length === 0) {
@@ -134,7 +134,7 @@ export default function OrdersTable({ orders }: { orders: OrderRow[] }) {
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center justify-end gap-1">
-                        <a href={`/api/print/${encodeURIComponent(o.order_no)}`} target="_blank" rel="noreferrer"
+                        <a href={`/print/pdf/${encodeURIComponent(o.order_no)}`} target="_blank" rel="noreferrer"
                           className="rounded-md p-1.5 text-muted hover:bg-brand-50 hover:text-brand-600" title="พิมพ์">
                           <Printer size={16} />
                         </a>
