@@ -11,7 +11,9 @@ import Barcode from "./Barcode";
 
 const C = { ink: "#1a1614", muted: "#6b645d", faint: "#9a938c", border: "#cfc9c1", soft: "#f5f3ef", brand: "#ee4d2d", line: "#e6e1da" };
 
-// เรียงเหมือนใบ PDF: ประเภท → ชื่อกลิ่น (ก-๙/A-Z) → ขนาดใหญ่ก่อน
+// เรียงเหมือนใบ PDF: ของขายก่อน → ของแถม(Free)ต่อท้าย → ประเภท → ชื่อกลิ่น → ขนาดใหญ่ก่อน
+const isBag = (p?: string | null) => /ถุง/.test(String(p || ""));
+const isFreeItem = (it: OrderItem) => !!it.is_free || isBag(it.product);
 const TYPE_ORDER = ["PARFUM", "EDP+", "EDT", "EDP"];
 const typeRank = (t?: string | null) => { const i = TYPE_ORDER.indexOf(String(t || "").trim()); return i < 0 ? 9 : i; };
 const mlOf = (sz?: string | null) => { const m = String(sz || "").match(/(\d+(?:\.\d+)?)/); return m ? parseFloat(m[1]) : 0; };
@@ -29,7 +31,8 @@ function Field({ label, value, full }: { label: string; value?: any; full?: bool
 
 function Panel({ order, copyLabel }: { order: OrderWithItems; copyLabel: string }) {
   const items: OrderItem[] = [...(order.items ?? [])].sort((a, b) =>
-    typeRank(a.ptype) - typeRank(b.ptype)
+    (isFreeItem(a) ? 1 : 0) - (isFreeItem(b) ? 1 : 0)
+    || typeRank(a.ptype) - typeRank(b.ptype)
     || String(a.product || "").localeCompare(String(b.product || ""), "th")
     || mlOf(b.size) - mlOf(a.size));
   const total = items.reduce((sum, it) => sum + (Number(it.qty) || 0), 0);
@@ -111,7 +114,7 @@ function Panel({ order, copyLabel }: { order: OrderWithItems; copyLabel: string 
               <td style={{ ...td, fontWeight: 700 }}>{T(it.product)}</td>
               <td style={td}>{T(it.size)}</td>
               <td style={{ ...td, textAlign: "right", fontWeight: 700 }}>{Number(it.qty) || 0}</td>
-              <td style={{ ...td, color: it.is_free ? C.brand : C.faint }}>{it.is_free ? "Free" : "-"}</td>
+              <td style={{ ...td, color: isFreeItem(it) ? C.brand : C.faint }}>{isFreeItem(it) ? "Free" : "-"}</td>
               <td style={td}>{T(it.unit)}</td>
               <td style={{ ...td, fontSize: 7 }}>{it.sku || ""}</td>
             </tr>

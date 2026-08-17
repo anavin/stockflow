@@ -123,14 +123,18 @@ function fmtDate(d?: any) {
   return String(d).slice(0, 10);
 }
 
-// เรียงรายการในใบพิมพ์: ประเภทน้ำหอม → ชื่อกลิ่น (ก-๙/A-Z) → ขนาดใหญ่ก่อน
+// ถุงกระดาษ = ของแถม (Free) เสมอ
+const isBag = (p?: string | null) => /ถุง/.test(String(p || ""));
+const isFreeItem = (it: OrderItem) => !!it.is_free || isBag(it.product);
+// เรียงรายการในใบพิมพ์: ของขายก่อน → ของแถม(Free)ต่อท้าย → ประเภทน้ำหอม → ชื่อกลิ่น (ก-๙/A-Z) → ขนาดใหญ่ก่อน
 const TYPE_ORDER = ["PARFUM", "EDP+", "EDT", "EDP"];
 const typeRank = (t?: string | null) => { const i = TYPE_ORDER.indexOf(String(t || "").trim()); return i < 0 ? 9 : i; };
 const mlOf = (sz?: string | null) => { const m = String(sz || "").match(/(\d+(?:\.\d+)?)/); return m ? parseFloat(m[1]) : 0; };
 
 function Panel({ order, copyLabel }: { order: OrderWithItems; copyLabel: string }) {
   const items = [...(order.items ?? [])].sort((a, b) =>
-    typeRank(a.ptype) - typeRank(b.ptype)
+    (isFreeItem(a) ? 1 : 0) - (isFreeItem(b) ? 1 : 0)   // ของขายขึ้นก่อน ของแถมไว้ล่าง
+    || typeRank(a.ptype) - typeRank(b.ptype)
     || String(a.product || "").localeCompare(String(b.product || ""), "th")
     || mlOf(b.size) - mlOf(a.size));
   const total = items.reduce((sum, it) => sum + (Number(it.qty) || 0), 0);
@@ -209,7 +213,7 @@ function Panel({ order, copyLabel }: { order: OrderWithItems; copyLabel: string 
             <Text style={[s.cell, cStyle, { width: COL[2], fontWeight: "bold" }]}>{T(it.product)}</Text>
             <Text style={[s.cell, cStyle, { width: COL[3] }]}>{T(it.size)}</Text>
             <Text style={[s.cell, cStyle, { width: COL[4], textAlign: "right", fontWeight: "bold" }]}>{Number(it.qty) || 0}</Text>
-            <Text style={[s.cell, cStyle, { width: COL[5], color: it.is_free ? C.brand : C.faint }]}>{it.is_free ? "Free" : "-"}</Text>
+            <Text style={[s.cell, cStyle, { width: COL[5], color: isFreeItem(it) ? C.brand : C.faint }]}>{isFreeItem(it) ? "Free" : "-"}</Text>
             <Text style={[s.cell, cStyle, { width: COL[6] }]}>{T(it.unit)}</Text>
             <Text style={[s.cell, cStyle, { width: COL[7], fontSize: cfs - 0.8 }]}>{it.sku || ""}</Text>
           </View>
