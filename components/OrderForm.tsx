@@ -13,7 +13,7 @@ import { saveOrder, orderExists, customerHistory, type OrderInput } from "@/lib/
 import { CUSTOMER_TYPES } from "@/lib/config";
 import type { OrderWithItems } from "@/lib/types";
 import type { PostcodeRow } from "@/lib/queries";
-import { Save, Printer, CheckCircle2, AlertTriangle, History, Zap } from "lucide-react";
+import { Save, Printer, CheckCircle2, AlertTriangle, History, Check } from "lucide-react";
 
 // เบอร์โทร: เก็บเฉพาะตัวเลข + - เว้นวรรค (กันพิมพ์ตัวอักษร)
 const cleanPhone = (v: string) => v.replace(/[^0-9\-+ ]/g, "");
@@ -387,20 +387,21 @@ export default function OrderForm({ products, sizes, provinces, postcodes, initi
           <div className="md:col-span-3">
             <div className="mb-2 flex flex-wrap items-center gap-2">
               <label className="label mb-0">หมายเหตุ (Note)</label>
-              <span className="text-xs text-muted">ประเภทการส่ง — กดเพื่อเปิด/ปิด:</span>
+              <span className="text-xs text-faint">ประเภทการส่ง:</span>
               {[
-                { tag: "ส่งด่วน", on: "border-red-600 bg-red-600 text-white shadow-sm", off: "border-red-300 bg-white text-red-600 hover:bg-red-50" },
-                { tag: "ส่งทันที", on: "border-orange-500 bg-orange-500 text-white shadow-sm", off: "border-orange-300 bg-white text-orange-600 hover:bg-orange-50" },
-              ].map(({ tag, on, off }) => {
+                { tag: "ส่งด่วน", dot: "bg-red-500", on: "border-red-300 bg-red-50 text-red-700", off: "border-line bg-white text-muted hover:border-red-200 hover:text-red-600" },
+                { tag: "ส่งทันที", dot: "bg-orange-500", on: "border-orange-300 bg-orange-50 text-orange-700", off: "border-line bg-white text-muted hover:border-orange-200 hover:text-orange-600" },
+              ].map(({ tag, dot, on, off }) => {
                 const active = f.note.includes(tag);
                 return (
                   <button key={tag} type="button"
                     onClick={() => set({ note: active
                       ? f.note.replace(tag, "").replace(/\s{2,}/g, " ").trim()          // เอาออก
                       : (f.note.trim() ? `${f.note.trim()} ${tag}` : tag) })}          // เติมต่อท้าย ไม่ทับของเดิม
-                    className={`inline-flex items-center gap-1.5 rounded-lg border-2 px-3 py-1.5 text-sm font-semibold transition-all ${active ? on : off}`}>
-                    <Zap size={15} /> {tag}
-                    {active && <CheckCircle2 size={15} />}
+                    className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium transition-all ${active ? on : off}`}>
+                    <span className={`h-1.5 w-1.5 rounded-full ${active ? dot : "bg-slate-300"}`} />
+                    {tag}
+                    {active && <Check size={13} />}
                   </button>
                 );
               })}
