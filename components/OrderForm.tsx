@@ -310,10 +310,11 @@ export default function OrderForm({ products, sizes, provinces, postcodes, initi
             <label className="label">ชื่อผู้รับ <span className="text-brand">*</span></label>
             <CustomerSuggest value={f.receiver} onChange={(v) => set({ receiver: v })} onPick={fillFromCustomer} placeholder="พิมพ์เพื่อค้นหาลูกค้าเดิม" invalid={fieldErrors.receiver} />
           </div>
+          {/* ซ่อนเบอร์โทรไว้ก่อน (ยังเก็บใน DB + ใช้จับคู่ลูกค้าเดิม) — เอากลับมาโชว์ได้โดยเปิดบล็อกนี้
           <div>
             <label className="label">เบอร์โทร</label>
             <CustomerSuggest value={f.phone} onChange={(v) => set({ phone: cleanPhone(v) })} onPick={fillFromCustomer} placeholder="พิมพ์เบอร์เพื่อค้นหา" type="tel" />
-          </div>
+          </div> */}
           <div className="grid grid-cols-2 gap-2">
             <div>
               <label className="label">ลูกค้า</label>

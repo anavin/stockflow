@@ -193,7 +193,7 @@ function Panel({ order, copyLabel }: { order: OrderWithItems; copyLabel: string 
       <View style={s.grid}>
         <Field label="ชื่อผู้ใช้" value={order.username} />
         <Field label="ผู้รับ" value={order.receiver} />
-        <Field label="เบอร์โทร" value={order.phone} />
+        {/* ซ่อนเบอร์โทรไว้ก่อน: <Field label="เบอร์โทร" value={order.phone} /> */}
         <View style={{ width: "100%", flexDirection: "row" }}>
           <Field label="ลูกค้า" value={order.customer_type} />
           <Field label="ซื้อครั้งที่" value={order.purchase_count} />
