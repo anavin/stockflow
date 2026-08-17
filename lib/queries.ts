@@ -1,7 +1,7 @@
 import "server-only";
 import { q } from "./db";
 import type { Order, OrderItem, OrderRow, OrderWithItems } from "./types";
-import { LABEL_COMPONENTS, gradeToLabelKey, bulkRef, labelRef } from "./materials";
+import { LABEL_COMPONENTS, gradeToLabelKey, bulkRef, labelRef, mnorm } from "./materials";
 
 /** PGlite returns `date`/`timestamptz` columns as JS Date objects while pg (with
  * our type parsers) returns strings. Normalize date-only fields to "YYYY-MM-DD"
@@ -658,22 +658,44 @@ export async function listBulkStock(): Promise<BulkRow[]> {
 }
 
 export type LabelScent = { scent: string; grade: string; components: { key: string; label: string; qty: number; reorder: number | null }[] };
-/** สติ๊กเกอร์และการ์ด — ต่อกลิ่น แสดง component ตาม Grade */
+/** สติ๊กเกอร์และการ์ด — ต่อกลิ่น แสดง component ตาม Grade + ชิ้นส่วนที่ import มานอกแคตตาล็อก (data-driven ไม่ตกหล่น) */
 export async function listLabelStock(): Promise<LabelScent[]> {
   try {
     const [prods, items] = await Promise.all([
       q<{ name: string; ptype: string | null }>(`select name, ptype from products where active`),
-      q<{ ref_key: string; qty: number; reorder: number | null }>(`select ref_key, qty::float8 as qty, reorder_point::float8 as reorder from material_item where category='label'`),
+      q<{ scent: string | null; comp_key: string | null; label: string; grade: string | null; qty: number; reorder: number | null }>(
+        `select scent, comp_key, label, grade, qty::float8 as qty, reorder_point::float8 as reorder from material_item where category='label'`),
     ]);
-    const map = new Map(items.map((i) => [i.ref_key, i]));
-    return prods
-      .map((p) => {
-        const gk = gradeToLabelKey(p.ptype);
-        if (!gk) return null;
-        return { scent: p.name, grade: gk, components: LABEL_COMPONENTS[gk].map((c) => { const it = map.get(labelRef(p.name, c.key)); return { key: c.key, label: c.label, qty: it ? Number(it.qty) : 0, reorder: it?.reorder ?? null }; }) };
-      })
-      .filter(Boolean)
-      .sort((a, b) => a!.grade.localeCompare(b!.grade, "en") || a!.scent.localeCompare(b!.scent, "en")) as LabelScent[];
+    // จัดกลุ่มชิ้นส่วนที่มีในคลังตามกลิ่น (normalize) → comp_key → รายการ
+    const compLabel = (s: string) => (s || "").split(" · ").pop() || s;
+    const byScent = new Map<string, Map<string, typeof items[number]>>();
+    for (const it of items) {
+      const key = mnorm(it.scent || "");
+      if (!key) continue;
+      if (!byScent.has(key)) byScent.set(key, new Map());
+      if (it.comp_key) byScent.get(key)!.set(it.comp_key, it);
+    }
+    const used = new Set<string>();
+    const out: LabelScent[] = [];
+    for (const p of prods) {
+      const gk = gradeToLabelKey(p.ptype);
+      if (!gk) continue;
+      const nk = mnorm(p.name);
+      used.add(nk);
+      const owned = byScent.get(nk);
+      const catalogKeys = new Set(LABEL_COMPONENTS[gk].map((c) => c.key));
+      const comps = LABEL_COMPONENTS[gk].map((c) => { const it = owned?.get(c.key); return { key: c.key, label: c.label, qty: it ? Number(it.qty) : 0, reorder: it?.reorder ?? null }; });
+      // ชิ้นส่วนที่ import มาแต่ไม่อยู่ในแคตตาล็อกของ Grade นี้ → เพิ่มต่อท้าย ไม่ให้ตกหล่น
+      if (owned) for (const [ck, it] of owned) if (!catalogKeys.has(ck)) comps.push({ key: ck, label: compLabel(it.label), qty: Number(it.qty), reorder: it.reorder ?? null });
+      out.push({ scent: p.name, grade: gk, components: comps });
+    }
+    // กลิ่นที่มีข้อมูลในคลังแต่ไม่มีในรายการสินค้า (เช่น กลิ่นที่เลิกขาย/OEM) → แสดงเป็นกลุ่ม "อื่นๆ"
+    for (const [nk, owned] of byScent) {
+      if (used.has(nk)) continue;
+      const first = [...owned.values()][0];
+      out.push({ scent: first.scent || nk, grade: first.grade || "อื่นๆ", components: [...owned.values()].map((it) => ({ key: it.comp_key!, label: compLabel(it.label), qty: Number(it.qty), reorder: it.reorder ?? null })) });
+    }
+    return out.sort((a, b) => a.grade.localeCompare(b.grade, "en") || a.scent.localeCompare(b.scent, "en"));
   } catch { return []; }
 }
 
