@@ -41,6 +41,7 @@ export async function bulkSetProductTypes(
       where p.id = v.id`,
     [ids, types],
   );
+  await logActivity("scent.manage", `ตั้งเกรด ${rows.length} กลิ่น`);
   revalidatePath("/products");
   revalidatePath("/products/mapping");
   return { ok: true, count: rows.length };
@@ -58,11 +59,13 @@ export async function addScentBarcode(scent: string, size: string, barcode: stri
     if (!reassign) return { ok: false, error: `บาร์โค้ดนี้ถูกใช้กับ "${dup.scent}" ${dup.size.replace(/\.$/, "")} อยู่แล้ว`, conflict: { scent: dup.scent, size: dup.size } };
     await q(`update product_barcodes set scent = $1, size = $2, sku = coalesce($4, sku) where id = $3`,
       [sc, sz, dup.id, (sku || "").trim() || null]);   // ย้ายบาร์โค้ดมาที่กลิ่น/ขนาดใหม่
+    await logActivity("scent.manage", `ย้ายบาร์โค้ด → ${sc} ${sz}`);
     revalidatePath("/products");
     return { ok: true };
   }
   await q(`insert into product_barcodes (scent, size, barcode, sku) values ($1, $2, $3, $4)`,
     [sc, sz, bc, (sku || "").trim() || null]);
+  await logActivity("scent.manage", `เพิ่มบาร์โค้ด ${sc} ${sz}`);
   revalidatePath("/products");
   return { ok: true };
 }
@@ -80,6 +83,7 @@ export async function setDiscontinued(scent: string, size: string, disc: boolean
                and regexp_replace(lower(size),'[^a-z0-9ก-๙]','','g') = ${SZ}`, [sc, sz]);
     if (disc) await q(`insert into discontinued_sku (scent, size) values ($1, $2) on conflict (scent, size) do nothing`, [sc, sz]);
   } catch { return { ok: false, error: "ยังไม่มีตาราง discontinued_sku (รัน SQL 0021 บน prod ก่อน)" }; }
+  await logActivity("scent.manage", `${disc ? "ตั้งเลิกผลิต" : "ยกเลิกเลิกผลิต"} ${sc} ${sz}`);
   revalidatePath("/products");
   revalidatePath("/shopee/new");
   return { ok: true };
@@ -88,6 +92,7 @@ export async function setDiscontinued(scent: string, size: string, disc: boolean
 export async function deleteScentBarcode(id: number): Promise<{ ok: boolean; error?: string }> {
   const g = await gate(); if ("error" in g) return { ok: false, error: g.error };
   await q(`delete from product_barcodes where id = $1`, [id]);
+  await logActivity("scent.manage", `ลบบาร์โค้ด (id ${id})`);
   revalidatePath("/products");
   return { ok: true };
 }
@@ -95,6 +100,7 @@ export async function deleteScentBarcode(id: number): Promise<{ ok: boolean; err
 export async function setProductBarcode(id: number, barcode: string): Promise<{ ok: boolean; error?: string }> {
   const g = await gate(); if ("error" in g) return { ok: false, error: g.error };
   await q(`update products set barcode = $2 where id = $1`, [id, (barcode || "").trim() || null]);
+  await logActivity("scent.manage", `ตั้งบาร์โค้ดกลิ่น (id ${id})`);
   revalidatePath("/products");
   return { ok: true };
 }
@@ -102,6 +108,7 @@ export async function setProductBarcode(id: number, barcode: string): Promise<{ 
 export async function setProductType(id: number, ptype: string): Promise<{ ok: boolean; error?: string }> {
   const g = await gate(); if ("error" in g) return { ok: false, error: g.error };
   await q(`update products set ptype = $2 where id = $1`, [id, (ptype || "").trim() || null]);
+  await logActivity("scent.manage", `ตั้งเกรดกลิ่น (id ${id}) → ${(ptype || "").trim() || "—"}`);
   revalidatePath("/products");
   return { ok: true };
 }
@@ -109,6 +116,7 @@ export async function setProductType(id: number, ptype: string): Promise<{ ok: b
 export async function setProductCode(id: number, code: string): Promise<{ ok: boolean; error?: string }> {
   const g = await gate(); if ("error" in g) return { ok: false, error: g.error };
   await q(`update products set code = $2 where id = $1`, [id, (code || "").trim() || null]);
+  await logActivity("scent.manage", `ตั้งรหัสกลิ่น (id ${id})`);
   revalidatePath("/products");
   return { ok: true };
 }
@@ -174,6 +182,7 @@ export async function setSkuSold(scent: string, size: string, sold: boolean): Pr
                and regexp_replace(lower(size),'[^a-z0-9ก-๙]','','g') = ${SZ}`, [sc, sz]);
     if (!sold) await q(`insert into closed_sku (scent, size) values ($1, $2) on conflict (scent, size) do nothing`, [sc, sz]);
   } catch { return { ok: false, error: "ยังไม่มีตาราง closed_sku (รัน SQL 0026 บน prod ก่อน)" }; }
+  await logActivity("scent.manage", `${sold ? "เปิดขาย" : "ปิดขาย"} ${sc} ${sz}`);
   revalidatePath("/stock");
   revalidatePath("/shopee/new");
   return { ok: true };

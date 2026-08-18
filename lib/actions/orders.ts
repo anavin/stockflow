@@ -173,6 +173,7 @@ export async function bulkDeleteOrders(orderNos: string[]): Promise<{ ok: boolea
       `update orders set deleted_at = now(), deleted_by = $2 where order_no = any($1) and deleted_at is null returning order_no`,
       [list, user.id],
     );
+    await logActivity("order.delete", `${rows.length} ใบ (เลือกหลายรายการ)`);
     revalidatePath("/shopee");
     revalidatePath("/shopee/trash");
     return { ok: true, deleted: rows.length };
@@ -188,6 +189,7 @@ export async function restoreOrder(orderNo: string): Promise<{ ok: boolean; erro
   if (!can.createOrders(user.role)) return { ok: false, error: "ไม่มีสิทธิ์จัดการใบเบิก (เฉพาะฝ่ายสร้างใบเบิก)" };
   try {
     await q(`update orders set deleted_at = null, deleted_by = null where order_no = $1`, [orderNo]);
+    await logActivity("order.restore", orderNo);
     revalidatePath("/shopee");
     revalidatePath("/shopee/trash");
     return { ok: true };
@@ -203,6 +205,7 @@ export async function purgeOrder(orderNo: string): Promise<{ ok: boolean; error?
   if (!can.createOrders(user.role)) return { ok: false, error: "ไม่มีสิทธิ์จัดการใบเบิก (เฉพาะฝ่ายสร้างใบเบิก)" };
   try {
     await q(`delete from orders where order_no = $1 and deleted_at is not null`, [orderNo]);
+    await logActivity("order.purge", `${orderNo} (ลบถาวร)`);
     revalidatePath("/shopee/trash");
     return { ok: true };
   } catch (e: any) {
@@ -220,6 +223,7 @@ export async function bulkRestoreOrders(orderNos: string[]): Promise<{ ok: boole
   try {
     const rows = await q<{ order_no: string }>(
       `update orders set deleted_at = null, deleted_by = null where order_no = any($1) and deleted_at is not null returning order_no`, [list]);
+    await logActivity("order.restore", `${rows.length} ใบ`);
     revalidatePath("/shopee"); revalidatePath("/shopee/trash");
     return { ok: true, done: rows.length };
   } catch (e: any) { return { ok: false, done: 0, error: e?.message || "กู้คืนไม่สำเร็จ" }; }
@@ -235,6 +239,7 @@ export async function bulkPurgeOrders(orderNos: string[]): Promise<{ ok: boolean
   try {
     const rows = await q<{ order_no: string }>(
       `delete from orders where order_no = any($1) and deleted_at is not null returning order_no`, [list]);
+    await logActivity("order.purge", `${rows.length} ใบ (ลบถาวร)`);
     revalidatePath("/shopee/trash");
     return { ok: true, done: rows.length };
   } catch (e: any) { return { ok: false, done: 0, error: e?.message || "ลบถาวรไม่สำเร็จ" }; }
@@ -481,6 +486,7 @@ export async function bulkSaveOrders(orders: OrderWithItems[]): Promise<{ ok: bo
       errors.push(`${ord.order_no}: ${e?.message || "บันทึกไม่สำเร็จ"}`);
     }
   }
+  await logActivity("order.import", `นำเข้า ${saved} ใบ${errors.length ? ` · ล้มเหลว ${errors.length}` : ""}`);
   revalidatePath("/shopee");
   if (errors.length) {
     const preview = errors.slice(0, 5).join("; ");

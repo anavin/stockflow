@@ -671,9 +671,9 @@ export async function listLabelStock(): Promise<LabelScent[]> {
     const byScent = new Map<string, Map<string, typeof items[number]>>();
     for (const it of items) {
       const key = mnorm(it.scent || "");
-      if (!key) continue;
+      if (!key || !it.comp_key) continue;   // ข้ามแถวไม่มี comp_key (กันสร้างกลุ่มว่าง → crash ตอน leftover)
       if (!byScent.has(key)) byScent.set(key, new Map());
-      if (it.comp_key) byScent.get(key)!.set(it.comp_key, it);
+      byScent.get(key)!.set(it.comp_key, it);
     }
     const used = new Set<string>();
     const out: LabelScent[] = [];

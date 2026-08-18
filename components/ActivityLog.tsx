@@ -4,15 +4,20 @@ import { useRouter } from "next/navigation";
 import type { ActivityRow } from "@/lib/queries";
 import { ROLE_LABELS, roleList } from "@/lib/auth/roles";
 import { downloadCsv } from "@/lib/csv";
-import { Search, FileDown, LogIn, LogOut, FileText, Trash2, ScanLine, Undo2, Truck, PackagePlus, PackageMinus, SlidersHorizontal, FlaskConical, Users } from "lucide-react";
+import { Search, FileDown, LogIn, LogOut, FileText, Trash2, ScanLine, Undo2, Truck, PackagePlus, PackageMinus, SlidersHorizontal, FlaskConical, Users, Upload, RotateCcw, Boxes } from "lucide-react";
 
 export const ACTIONS: Record<string, { label: string; icon: any; cls: string }> = {
   login: { label: "เข้าสู่ระบบ", icon: LogIn, cls: "bg-green-50 text-green-700" },
   logout: { label: "ออกจากระบบ", icon: LogOut, cls: "bg-slate-100 text-slate-600" },
   "order.create": { label: "สร้าง/แก้ใบเบิก", icon: FileText, cls: "bg-sky-50 text-sky-700" },
+  "order.import": { label: "นำเข้าใบเบิก", icon: Upload, cls: "bg-sky-50 text-sky-700" },
   "order.delete": { label: "ลบใบเบิก", icon: Trash2, cls: "bg-red-50 text-red-600" },
+  "order.restore": { label: "กู้คืนใบเบิก", icon: RotateCcw, cls: "bg-slate-100 text-slate-600" },
+  "order.purge": { label: "ลบถาวร", icon: Trash2, cls: "bg-red-100 text-red-700" },
   "stock.issue": { label: "ตัดสต๊อก", icon: ScanLine, cls: "bg-amber-50 text-amber-700" },
   "stock.reverse": { label: "ยกเลิกตัดสต๊อก", icon: Undo2, cls: "bg-red-50 text-red-600" },
+  "stock.receive": { label: "รับเข้าสินค้า", icon: Boxes, cls: "bg-green-50 text-green-700" },
+  "stock.adjust": { label: "ปรับยอดสินค้า", icon: SlidersHorizontal, cls: "bg-slate-100 text-slate-600" },
   ship: { label: "บันทึกจัดส่ง", icon: Truck, cls: "bg-emerald-50 text-emerald-700" },
   unship: { label: "ยกเลิกจัดส่ง", icon: Undo2, cls: "bg-red-50 text-red-600" },
   "material.receive": { label: "รับเข้าวัตถุดิบ", icon: PackagePlus, cls: "bg-green-50 text-green-700" },

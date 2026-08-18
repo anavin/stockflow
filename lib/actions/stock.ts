@@ -309,6 +309,7 @@ export async function receiveStock(product: string, size: string, qty: number, n
                  values ($1,$2,$3,$4,'receive',$5,$6,$7)`, [m.product, m.size, amt, row.qty, note || null, (sku || "").trim() || null, user.id]);
       return row.qty;
     });
+    await logActivity("stock.receive", `${product.trim()} ${size.trim()} +${amt}`);
     revalidatePath("/stock"); revalidatePath("/stock/moves");
     return { ok: true, balance };
   } catch (e: any) {
@@ -348,6 +349,7 @@ export async function receiveUnits(product: string, size: string, skus: string[]
                  values ($1,$2,$3,$4,'receive',$5,$6)`, [m.product, m.size, added, row.qty, `รับเข้า ${added} SKU`, user.id]);
       return { added, balance: row.qty, dupes };
     });
+    await logActivity("stock.receive", `${product.trim()} ${size.trim()} +${out.added} SKU`);
     revalidatePath("/stock"); revalidatePath("/stock/moves"); revalidatePath("/stock/units");
     return { ok: true, ...out, skus: list };
   } catch (e: any) { return { ok: false, error: e?.message || "รับเข้าไม่สำเร็จ" }; }
@@ -405,6 +407,7 @@ export async function receiveUnitsBatch(
       if (totalAdded === 0) throw new Error("SKU ที่ใส่มีอยู่ในระบบแล้วทั้งหมด");
       return { added: totalAdded, dupes, perLine };
     });
+    await logActivity("stock.receive", `รวม ${out.added} SKU (${out.perLine.length} รายการ)`);
     revalidatePath("/stock"); revalidatePath("/stock/moves"); revalidatePath("/stock/units");
     return { ok: true, ...out };
   } catch (e: any) { return { ok: false, error: e?.message || "รับเข้าไม่สำเร็จ" }; }
@@ -512,6 +515,7 @@ export async function adjustStock(product: string, size: string, newQty: number,
       await run(`insert into stock_moves (product, size, qty_change, balance, reason, note, created_by)
                  values ($1,$2,$3,$4,'adjust',$5,$6)`, [product.trim(), size.trim(), diff, target, note || `ปรับยอดเป็น ${target}`, user.id]);
     });
+    await logActivity("stock.adjust", `${product.trim()} ${size.trim()} → ${target}`);
     revalidatePath("/stock"); revalidatePath("/stock/moves");
     return { ok: true };
   } catch (e: any) {

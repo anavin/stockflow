@@ -21,24 +21,38 @@ async function gate() {
   return { user: u };
 }
 
+type Run = <T = any>(sql: string, params?: any[]) => Promise<T[]>;
+
+/** upsert รายการ (กัน race ตอนสร้างครั้งแรก) → คืน id + qty ปัจจุบัน */
+async function ensureItem(run: Run, desc: ItemDesc): Promise<{ id: number; qty: number }> {
+  const [it] = await run<{ id: number; qty: number }>(
+    `insert into material_item (category, ref_key, scent, comp_key, brand, grade, label, category2, unit, sort)
+     values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
+     on conflict (category, ref_key) do update set updated_at = now()
+     returning id, qty::float8 as qty`,
+    [desc.category, desc.refKey, desc.scent ?? null, desc.comp_key ?? null, desc.brand ?? null, desc.grade ?? null, desc.label, desc.category2 ?? null, desc.unit ?? "ชิ้น", desc.sort ?? 0]);
+  return { id: it.id, qty: Number(it.qty) };
+}
+
+// core (ทำใน tx ที่ส่งเข้ามา) — receive/issue ใช้ update atomic (qty=qty±change) กัน lost-update · adjust = ตั้งยอดเป้าหมาย
 // receive/issue: amount = จำนวนที่บวก/ลบ · adjust: amount = ยอดเป้าหมาย (นับได้จริง)
+async function applyIn(run: Run, desc: ItemDesc, amount: number, reason: Reason, note: string | null, userId: number): Promise<number> {
+  const it = await ensureItem(run, desc);
+  let newQty: number, change: number;
+  if (reason === "adjust") {
+    const [r] = await run<{ qty: number }>(`update material_item set qty=$2, updated_at=now() where id=$1 returning qty::float8 as qty`, [it.id, amount]);
+    newQty = Number(r.qty); change = newQty - it.qty;
+  } else {
+    const [r] = await run<{ qty: number }>(`update material_item set qty = qty + $2, updated_at=now() where id=$1 returning qty::float8 as qty`, [it.id, amount]);
+    newQty = Number(r.qty); change = amount;
+  }
+  await run(`insert into material_move (item_id, qty_change, balance, reason, note, created_by) values ($1,$2,$3,$4,$5,$6)`,
+    [it.id, change, newQty, reason, note, userId]);
+  return newQty;
+}
+
 async function apply(desc: ItemDesc, amount: number, reason: Reason, note: string | null, userId: number): Promise<number> {
-  return tx(async (run) => {
-    let [it] = await run<{ id: number; qty: number }>(`select id, qty from material_item where category=$1 and ref_key=$2`, [desc.category, desc.refKey]);
-    if (!it) {
-      [it] = await run<{ id: number; qty: number }>(
-        `insert into material_item (category, ref_key, scent, comp_key, brand, grade, label, category2, unit, sort)
-         values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) returning id, qty`,
-        [desc.category, desc.refKey, desc.scent ?? null, desc.comp_key ?? null, desc.brand ?? null, desc.grade ?? null, desc.label, desc.category2 ?? null, desc.unit ?? "ชิ้น", desc.sort ?? 0]);
-    }
-    const cur = Number(it.qty);
-    const newQty = reason === "adjust" ? amount : cur + amount;
-    const change = reason === "adjust" ? newQty - cur : amount;
-    await run(`update material_item set qty=$2, updated_at=now() where id=$1`, [it.id, newQty]);
-    await run(`insert into material_move (item_id, qty_change, balance, reason, note, created_by) values ($1,$2,$3,$4,$5,$6)`,
-      [it.id, change, newQty, reason, note, userId]);
-    return newQty;
-  });
+  return tx((run) => applyIn(run as Run, desc, amount, reason, note, userId));
 }
 
 function revalidate(cat: string) {
@@ -68,7 +82,10 @@ export async function batchMaterial(mode: "receive" | "issue", lines: { desc: It
   const n = note?.trim() || null;
   const sign = mode === "receive" ? 1 : -1;
   try {
-    for (const l of valid) await apply(l.desc, sign * Math.abs(Number(l.amount)), mode, n, g.user.id);
+    // tx เดียวทั้งใบ — ถ้าบรรทัดใดพัง roll back ทั้งหมด (ไม่ทำครึ่งๆ)
+    await tx(async (run) => {
+      for (const l of valid) await applyIn(run as Run, l.desc, sign * Math.abs(Number(l.amount)), mode, n, g.user.id);
+    });
   } catch (e: any) { return { ok: false, error: e?.message || (mode === "receive" ? "รับเข้าไม่สำเร็จ" : "เบิกไม่สำเร็จ") }; }
   await logActivity(mode === "receive" ? "material.receive" : "material.issue", `รวม ${valid.length} รายการ${n ? " · " + n : ""}`);
   revalidatePath("/stock/bulk"); revalidatePath("/stock/labels"); revalidatePath("/stock/packaging"); revalidatePath("/stock/materials/moves");
@@ -91,13 +108,7 @@ export async function setReorderPoint(desc: ItemDesc, point: number | null): Pro
   const p = point == null || Number.isNaN(Number(point)) || Number(point) < 0 ? null : Math.round(Number(point));
   try {
     await tx(async (run) => {
-      let [it] = await run<{ id: number }>(`select id from material_item where category=$1 and ref_key=$2`, [desc.category, desc.refKey]);
-      if (!it) {
-        [it] = await run<{ id: number }>(
-          `insert into material_item (category, ref_key, scent, comp_key, brand, grade, label, category2, unit, sort)
-           values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) returning id`,
-          [desc.category, desc.refKey, desc.scent ?? null, desc.comp_key ?? null, desc.brand ?? null, desc.grade ?? null, desc.label, desc.category2 ?? null, desc.unit ?? "ชิ้น", desc.sort ?? 0]);
-      }
+      const it = await ensureItem(run as Run, desc);
       await run(`update material_item set reorder_point=$2, updated_at=now() where id=$1`, [it.id, p]);
     });
   } catch (e: any) { return { ok: false, error: e?.message || "ตั้งจุดสั่งซื้อไม่สำเร็จ (รัน SQL 0030 บน prod?)" }; }
@@ -111,13 +122,7 @@ export async function setMaterialNote(desc: ItemDesc, note: string): Promise<{ o
   const n = (note || "").trim() || null;
   try {
     await tx(async (run) => {
-      let [it] = await run<{ id: number }>(`select id from material_item where category=$1 and ref_key=$2`, [desc.category, desc.refKey]);
-      if (!it) {
-        [it] = await run<{ id: number }>(
-          `insert into material_item (category, ref_key, scent, comp_key, brand, grade, label, category2, unit, sort)
-           values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) returning id`,
-          [desc.category, desc.refKey, desc.scent ?? null, desc.comp_key ?? null, desc.brand ?? null, desc.grade ?? null, desc.label, desc.category2 ?? null, desc.unit ?? "ชิ้น", desc.sort ?? 0]);
-      }
+      const it = await ensureItem(run as Run, desc);
       await run(`update material_item set note=$2, updated_at=now() where id=$1`, [it.id, n]);
     });
   } catch (e: any) { return { ok: false, error: e?.message || "บันทึกหมายเหตุไม่สำเร็จ (รัน SQL 0032 บน prod?)" }; }
