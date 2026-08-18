@@ -1,0 +1,57 @@
+-- แก้ชิ้นส่วนสติ๊กเกอร์ที่ import มาแบบ key ชั่วคราว (x_) → key จริงใน catalog + rename Volt - You
+-- idempotent · รันครั้งเดียวบน Supabase
+
+-- (A) rename "Volt - You" → "Volt - You (EDT)" (bulk + label)
+update material_item mi set scent='Volt - You (EDT)',
+  ref_key = case when category='bulk' then 'voltyouedt|labparfumo' else 'voltyouedt|'||split_part(ref_key,'|',2) end, updated_at=now()
+where category in ('bulk','label')
+  and regexp_replace(lower(btrim(scent)),'[^a-z0-9ก-๙]','','g')='voltyou'
+  and not exists (select 1 from material_item x where x.category=mi.category
+    and x.ref_key = case when mi.category='bulk' then 'voltyouedt|labparfumo' else 'voltyouedt|'||split_part(mi.ref_key,'|',2) end);
+
+-- (B) remap x_ → catalog key (ตามเกรดของ product) · เฉพาะที่มี key ปลายทาง (เกรดตรง)
+update material_item mi
+set comp_key = m.target,
+    ref_key = regexp_replace(lower(btrim(mi.scent)),'[^a-z0-9ก-๙]','','g') || '|' || m.target,
+    updated_at = now()
+from products p, (values
+  ('EDP','x_cardaccordsnotes','card'),
+  ('EDP+','x_cardaccordsnotes','card'),
+  ('PARFUM','x_cardaccordsnotes','card'),
+  ('EDP','x_sticker12ml','s_12'),
+  ('EDP+','x_sticker12ml','s_12'),
+  ('PARFUM','x_sticker12ml','s_12'),
+  ('EDP','x_stickerติดกล่อง10ml','box_edp_10'),
+  ('EDP+','x_stickerติดกล่อง10ml','box_10'),
+  ('PARFUM','x_stickerติดกล่อง10ml','box_10'),
+  ('EDP+','x_stickerติดกล่อง30ml','box_30'),
+  ('PARFUM','x_stickerติดกล่อง30ml','box_30'),
+  ('EDP+','x_stickerติดกล่อง50ml','box_50'),
+  ('PARFUM','x_stickerติดกล่อง50ml','box_50'),
+  ('EDP','x_stickerติดกล่องedp','box_edp'),
+  ('EDT','x_stickerติดกล่องedt','box_edt'),
+  ('EDT','x_stickerติดขวด90ml','bottle_90'),
+  ('EDP','x_stickerสคบ4ml','scb_4'),
+  ('EDP+','x_stickerสคบ4ml','scb_4'),
+  ('PARFUM','x_stickerสคบ4ml','scb_4'),
+  ('EDP','x_stickerสคบ10ml','scb_10'),
+  ('EDP+','x_stickerสคบ10ml','scb_10'),
+  ('PARFUM','x_stickerสคบ10ml','scb_10'),
+  ('EDT','x_stickerสคบ10ml','scb_10'),
+  ('EDP','x_stickerสคบ30ml','scb_30'),
+  ('EDP+','x_stickerสคบ30ml','scb_30'),
+  ('PARFUM','x_stickerสคบ30ml','scb_30'),
+  ('EDT','x_stickerสคบ30ml','scb_30'),
+  ('EDP','x_stickerสคบ50ml','scb_50'),
+  ('EDP+','x_stickerสคบ50ml','scb_50'),
+  ('PARFUM','x_stickerสคบ50ml','scb_50'),
+  ('EDT','x_stickerสคบ90ml','scb_90')
+) as m(grade, xkey, target)
+where mi.category='label' and mi.comp_key = m.xkey
+  and regexp_replace(lower(btrim(p.name)),'[^a-z0-9ก-๙]','','g') = regexp_replace(lower(btrim(mi.scent)),'[^a-z0-9ก-๙]','','g')
+  and (case when upper(coalesce(p.ptype,''))='EDP' then 'EDP'
+            when upper(coalesce(p.ptype,''))='EDP+' then 'EDP+'
+            when upper(coalesce(p.ptype,'')) like '%PARFUM%' then 'PARFUM'
+            when upper(coalesce(p.ptype,''))='EDT' then 'EDT' end) = m.grade
+  and not exists (select 1 from material_item x where x.category='label'
+    and x.ref_key = regexp_replace(lower(btrim(mi.scent)),'[^a-z0-9ก-๙]','','g') || '|' || m.target);
