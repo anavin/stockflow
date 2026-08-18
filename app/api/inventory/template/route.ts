@@ -52,6 +52,13 @@ export async function GET() {
 
   // helper: ชีตวัตถุดิบ มีคอลัมน์ "รหัส (ห้ามแก้)" ท้ายสุด = category|ref_key
   const [bulk, labels, packaging] = await Promise.all([listBulkStock(), listLabelStock(), listPackagingStock()]);
+  // จัดเรียงตามเกรดให้ตรงกับหน้าใหม่: EDP → EDP+ → PARFUM → EDT → อื่นๆ (น้ำปรุง ฯลฯ) → OEM ล่างสุด
+  const GRADE_ORDER = ["EDP", "EDP+", "PARFUM", "EDT"];
+  const grank = (g: string | null) => { const i = GRADE_ORDER.indexOf((g || "").toUpperCase()); return i < 0 ? GRADE_ORDER.length : i; };
+  const bulkSorted = [...bulk].sort((a, b) =>
+    (a.brand === "Lab Parfumo" ? 0 : 1) - (b.brand === "Lab Parfumo" ? 0 : 1) ||   // OEM ล่างสุด
+    grank(a.grade) - grank(b.grade) || (a.grade || "").localeCompare(b.grade || "") || a.scent.localeCompare(b.scent, "en"));
+  const labelsSorted = [...labels].sort((a, b) => grank(a.grade) - grank(b.grade) || a.grade.localeCompare(b.grade) || a.scent.localeCompare(b.scent, "en"));
 
   // ── (2) น้ำหอม (ml) ──
   const bw = wb.addWorksheet("น้ำหอม");
@@ -60,7 +67,7 @@ export async function GET() {
     { header: "Grade", key: "grade", width: 10 }, { header: "คงเหลือ (ml)", key: "cur", width: 14 },
     { header: "นับได้จริง (กรอก)", key: "count", width: 18 }, { header: "รหัส (ห้ามแก้)", key: "key", width: 26 },
   ];
-  for (const r of bulk) bw.addRow({ scent: r.scent, brand: r.brand, grade: r.grade ?? "", cur: r.qty, count: "", key: `bulk|${bulkRef(r.scent, r.brand)}` });
+  for (const r of bulkSorted) bw.addRow({ scent: r.scent, brand: r.brand, grade: r.grade ?? "", cur: r.qty, count: "", key: `bulk|${bulkRef(r.scent, r.brand)}` });
   styleHead(bw, "E");
 
   // ── (3) สติ๊กเกอร์ & การ์ด ──
@@ -70,7 +77,7 @@ export async function GET() {
     { header: "ชิ้นส่วน", key: "comp", width: 26 }, { header: "คงเหลือ", key: "cur", width: 12 },
     { header: "นับได้จริง (กรอก)", key: "count", width: 18 }, { header: "รหัส (ห้ามแก้)", key: "key", width: 30 },
   ];
-  for (const s of labels) for (const c of s.components) lw.addRow({ scent: s.scent, grade: s.grade, comp: c.label, cur: c.qty, count: "", key: `label|${labelRef(s.scent, c.key)}` });
+  for (const s of labelsSorted) for (const c of s.components) lw.addRow({ scent: s.scent, grade: s.grade, comp: c.label, cur: c.qty, count: "", key: `label|${labelRef(s.scent, c.key)}` });
   styleHead(lw, "E");
 
   // ── (4) ขวด & แพ็คเกจ ──
