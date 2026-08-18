@@ -7,6 +7,7 @@ import type { ShipRow } from "@/lib/queries";
 import { ScanLine, Camera, CheckCircle2, AlertTriangle, XCircle, PackageCheck, Truck, Undo2, Calendar } from "lucide-react";
 
 const CameraScan = dynamic(() => import("./CameraScan"), { ssr: false });
+import type { ScanFeedback } from "./CameraScan";
 
 type Row = ShipRow & { _new?: boolean };
 type Banner = { kind: "ok" | "already" | "error"; text: string; sub?: string } | null;
@@ -39,28 +40,36 @@ export default function ShipScanner({ date, isToday, rows: initialRows, pending,
   const left = Math.max(0, pending - addedIssued);
   const seen = useMemo(() => new Set(rows.map((r) => r.order_no.toUpperCase())), [rows]);
 
-  async function scan(codeArg?: string) {
+  // คืน ScanFeedback ให้กล้องแจ้งผลรายชิ้น (ถ้าสแกนจากกล้อง) — พร้อมตั้ง banner ให้ฝั่งพิมพ์/เครื่องสแกนด้วย
+  async function scan(codeArg?: string): Promise<ScanFeedback | void> {
     const code = (codeArg ?? value).trim();
     if (!code || busy) return;
     // กันสแกนซ้ำฝั่ง client (สแกนรัวๆ อาจอ่านกล่องเดิม) — ไม่ยิง action ซ้ำ
-    if (seen.has(code.toUpperCase())) { feedback("already"); setBanner({ kind: "already", text: `สแกนไปแล้ว · ${code}` }); setValue(""); return; }
+    if (seen.has(code.toUpperCase())) {
+      feedback("already"); setBanner({ kind: "already", text: `สแกนไปแล้ว · ${code}` }); setValue("");
+      return { status: "dup", title: "สแกนซ้ำ", detail: "กล่องนี้บันทึกส่งไปแล้ว" };
+    }
     setBusy(true); setValue("");
     let res: Awaited<ReturnType<typeof markShipped>>;
     try { res = await markShipped(code, isToday ? undefined : date); }   // วันนี้ = now, ย้อนหลัง = วันที่เลือก
     catch { res = { ok: false, error: "บันทึกไม่สำเร็จ (ระบบขัดข้อง)" }; }
     setBusy(false);
     setTimeout(() => inputRef.current?.focus(), 0);
-    if (!res.ok) { feedback("error"); setBanner({ kind: "error", text: res.error || "ไม่สำเร็จ" }); return; }
+    if (!res.ok) {
+      feedback("error"); setBanner({ kind: "error", text: res.error || "ไม่สำเร็จ" });
+      return { status: "error", title: "ไม่สำเร็จ", detail: res.error || "ไม่พบออเดอร์ / ยังไม่ตัดสต๊อก — แยกกล่องไว้" };
+    }
     const o = res.order!;
     if (res.already) {
       feedback("already");
       setBanner({ kind: "already", text: `สแกนไปแล้ว · ${o.order_no}`, sub: `ส่งเมื่อ ${timeOf(res.at)} · ${o.receiver || "-"}` });
-      return;
+      return { status: "dup", title: "สแกนซ้ำ", detail: `บันทึกส่งไปแล้วเมื่อ ${timeOf(res.at)}` };
     }
     feedback("ok");
     setBanner({ kind: "ok", text: `บันทึกส่งแล้ว · ${o.order_no}`, sub: `${o.receiver || "-"} · ${o.province || "-"} · ${o.item_count} รายการ${res.issued ? "" : " · ⚠️ ยังไม่ได้ตัดสต๊อก"}` });
     setRows((r) => [{ order_no: o.order_no, doc_no: null, receiver: o.receiver, province: o.province, item_count: o.item_count, shipped_at: res.at || new Date().toISOString(), shipped_by_name: "เพิ่งสแกน", _new: true }, ...r]);
     if (res.issued) setAddedIssued((n) => n + 1);
+    return { status: "ok", title: "บันทึกส่งแล้ว", detail: `${o.receiver || "-"} · ${o.item_count} รายการ${res.issued ? "" : " · ⚠️ ยังไม่ตัดสต๊อก"}` };
   }
 
   async function undo(orderNo: string) {

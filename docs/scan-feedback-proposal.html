@@ -1,0 +1,242 @@
+<title>ผลการสแกนกล้อง</title>
+<style>
+  :root{
+    --bg:#eef1f5; --surface:#fff; --ink:#0f1720; --muted:#5a6675; --faint:#8a95a3; --line:#e2e7ee;
+    --blue:#2563eb; --blue-ink:#1d4ed8;
+    --green:#16a34a; --green-ink:#15803d; --amber:#d97706; --amber-ink:#b45309; --red:#dc2626; --red-ink:#b91c1c;
+    --shadow:0 1px 2px rgba(15,23,32,.05),0 12px 30px -14px rgba(15,23,32,.22);
+    --font:"IBM Plex Sans Thai","Noto Sans Thai","Sarabun",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+    --mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+  }
+  @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+    --bg:#0b0f14; --surface:#141b23; --ink:#e8eef4; --muted:#9aa6b2; --faint:#66727e; --line:#232e39;
+    --blue:#60a5fa; --blue-ink:#93c5fd; --green:#4ade80; --green-ink:#86efac; --amber:#fbbf24; --amber-ink:#fcd34d; --red:#f87171; --red-ink:#fca5a5;
+    --shadow:0 1px 2px rgba(0,0,0,.4),0 14px 34px -16px rgba(0,0,0,.7);
+  }}
+  :root[data-theme="dark"]{
+    --bg:#0b0f14; --surface:#141b23; --ink:#e8eef4; --muted:#9aa6b2; --faint:#66727e; --line:#232e39;
+    --blue:#60a5fa; --blue-ink:#93c5fd; --green:#4ade80; --green-ink:#86efac; --amber:#fbbf24; --amber-ink:#fcd34d; --red:#f87171; --red-ink:#fca5a5;
+    --shadow:0 1px 2px rgba(0,0,0,.4),0 14px 34px -16px rgba(0,0,0,.7);
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg)}
+  .page{background:var(--bg);color:var(--ink);font-family:var(--font);line-height:1.6;-webkit-font-smoothing:antialiased;padding:0 20px 72px}
+  .wrap{max-width:960px;margin:0 auto}
+  h1,h2,h3{margin:0;font-weight:700;text-wrap:balance;line-height:1.25}
+  p{margin:0}
+  .mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
+
+  header{padding:46px 0 26px;border-bottom:1px solid var(--line)}
+  .eyebrow{font-size:12px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--blue-ink);margin-bottom:12px;display:flex;align-items:center;gap:7px}
+  h1{font-size:clamp(1.7rem,3.6vw,2.3rem);letter-spacing:-.01em}
+  .lead{color:var(--muted);font-size:1.02rem;margin-top:12px;max-width:64ch}
+  .now{margin-top:18px;display:flex;gap:10px;align-items:flex-start;background:var(--surface);border:1px solid var(--line);border-left:3px solid var(--amber);border-radius:12px;padding:13px 15px;box-shadow:var(--shadow)}
+  .now b{color:var(--ink)}
+  .now p{font-size:.9rem;color:var(--muted)}
+
+  section{padding-top:44px}
+  .sec-h{display:flex;align-items:baseline;gap:12px;margin-bottom:6px}
+  .sec-n{font-family:var(--mono);font-size:.8rem;font-weight:600;color:var(--faint)}
+  .sec-h h2{font-size:1.35rem;letter-spacing:-.01em}
+  .sec-sub{color:var(--muted);margin:3px 0 24px;max-width:66ch;font-size:.95rem}
+
+  /* phones */
+  .phones{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:20px}
+  .pcol{display:flex;flex-direction:column;align-items:center;gap:12px}
+  .phone{width:232px;border-radius:30px;background:#05070a;border:7px solid #05070a;padding:0;box-shadow:var(--shadow);overflow:hidden}
+  .scr{position:relative;height:430px;border-radius:23px;overflow:hidden;background:linear-gradient(160deg,#243244,#0e1620)}
+  .cam-top{position:absolute;top:0;inset-inline:0;display:flex;justify-content:space-between;align-items:center;padding:12px 14px;color:#fff;font-size:12px;font-weight:600;z-index:3}
+  .cam-x{width:26px;height:26px;border-radius:50%;background:rgba(255,255,255,.16);display:grid;place-items:center}
+  .reticle{position:absolute;top:44%;left:50%;transform:translate(-50%,-50%);width:74%;height:74px;border:2px solid rgba(255,255,255,.9);border-radius:12px;box-shadow:0 0 0 999px rgba(0,0,0,.32)}
+  .barcode{position:absolute;top:calc(44% - 12px);left:50%;transform:translateX(-50%);display:flex;gap:2px;height:34px;opacity:.85}
+  .barcode i{width:2px;background:#fff}
+  .count{position:absolute;top:52px;left:50%;transform:translateX(-50%);display:flex;gap:6px;z-index:3}
+  .cchip{font-size:11px;font-weight:700;padding:3px 8px;border-radius:999px;color:#fff;font-family:var(--mono)}
+  /* result overlay */
+  .ovl{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:9px;text-align:center;padding:20px;color:#fff;z-index:4;backdrop-filter:blur(1px)}
+  .ovl.ok{background:rgba(22,163,74,.90)}
+  .ovl.dup{background:rgba(217,119,6,.90)}
+  .ovl.err{background:rgba(220,38,38,.92)}
+  .ovl .big{width:66px;height:66px;border-radius:50%;background:rgba(255,255,255,.16);display:grid;place-items:center;font-size:34px;font-weight:800}
+  .ovl .ttl{font-size:1.05rem;font-weight:800}
+  .ovl .ord{font-family:var(--mono);font-size:.95rem;background:rgba(0,0,0,.18);padding:3px 10px;border-radius:8px}
+  .ovl .sub{font-size:.82rem;opacity:.92;max-width:24ch}
+  .ovl .cont{margin-top:4px;font-size:.72rem;opacity:.8;display:flex;align-items:center;gap:5px}
+  .ovl .tap{margin-top:6px;background:#fff;color:#111;font-weight:700;font-size:.82rem;padding:8px 16px;border-radius:10px}
+  .progress{position:absolute;bottom:0;inset-inline:0;height:4px;background:rgba(255,255,255,.35)}
+  .progress i{display:block;height:100%;background:#fff;width:64%}
+  .pcap{text-align:center}
+  .pcap .t{font-weight:700;font-size:.95rem}
+  .pcap .t.ok{color:var(--green-ink)} .pcap .t.dup{color:var(--amber-ink)} .pcap .t.err{color:var(--red-ink)}
+  .pcap .d{font-size:.8rem;color:var(--muted);margin-top:2px;max-width:26ch}
+
+  /* flow */
+  .flow{display:flex;flex-wrap:wrap;align-items:stretch;gap:10px}
+  .fstep{flex:1 1 130px;background:var(--surface);border:1px solid var(--line);border-radius:13px;padding:14px;box-shadow:var(--shadow);min-width:130px}
+  .fstep .n{font-family:var(--mono);font-size:.72rem;color:var(--faint);font-weight:700}
+  .fstep h4{font-size:.92rem;margin:5px 0 4px}
+  .fstep p{font-size:.8rem;color:var(--muted)}
+  .fstep.blue{border-top:3px solid var(--blue)} .fstep.gate{border-top:3px solid var(--amber)}
+  .farrow{align-self:center;color:var(--faint);font-weight:700}
+
+  /* table */
+  .tw{overflow-x:auto;border:1px solid var(--line);border-radius:13px;box-shadow:var(--shadow);background:var(--surface)}
+  table{width:100%;border-collapse:collapse;font-size:.87rem;min-width:560px}
+  th,td{text-align:left;padding:11px 14px;border-bottom:1px solid var(--line)}
+  th{background:color-mix(in srgb,var(--line) 40%,transparent);font-size:.75rem;text-transform:uppercase;letter-spacing:.04em;color:var(--muted)}
+  tr:last-child td{border-bottom:none}
+  td .dot{display:inline-flex;align-items:center;gap:7px;font-weight:700}
+  td .dot::before{content:"";width:9px;height:9px;border-radius:50%}
+  td.ok .dot::before{background:var(--green)} td.dup .dot::before{background:var(--amber)} td.err .dot::before{background:var(--red)}
+
+  .use{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px}
+  .ucard{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px 18px;box-shadow:var(--shadow)}
+  .ucard h4{font-size:.98rem;display:flex;align-items:center;gap:8px}
+  .ucard .k{font-family:var(--mono);font-size:.72rem;color:var(--faint)}
+  .ucard p{font-size:.86rem;color:var(--muted);margin-top:7px}
+  .ucard.blue{border-top:3px solid var(--blue)} .ucard.teal{border-top:3px solid #0d9488}
+
+  .impl{margin-top:22px;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:18px 20px;box-shadow:var(--shadow)}
+  .impl h3{font-size:1rem;margin-bottom:10px}
+  .impl pre{overflow-x:auto;background:color-mix(in srgb,var(--line) 30%,transparent);border-radius:10px;padding:13px 15px;margin:0;font-family:var(--mono);font-size:.8rem;line-height:1.55}
+  .impl .cmt{color:var(--faint)}
+  .impl ul{margin:12px 0 0;padding-left:20px;color:var(--muted);font-size:.87rem;display:flex;flex-direction:column;gap:6px}
+  .impl b{color:var(--ink)}
+
+  footer{margin-top:52px;padding-top:20px;border-top:1px solid var(--line);color:var(--faint);font-size:.8rem;text-align:center}
+  @media(max-width:520px){.phone{width:210px}}
+</style>
+
+<div class="page"><div class="wrap">
+
+  <header>
+    <div class="eyebrow">◇ Lab Parfumo · UX Proposal</div>
+    <h1>ผลการสแกนกล้อง — แจ้งทีละกล่องก่อนสแกนต่อ</h1>
+    <p class="lead">ออกแบบให้กล้องที่สแกนต่อเนื่อง (จัดส่ง/ตัดสต๊อก) <b>แจ้งผลรายชิ้นชัดเจน</b> — สำเร็จ · ซ้ำ · ไม่สำเร็จ — พร้อมสี เสียง การสั่น ก่อนไปกล่องถัดไป</p>
+    <div class="now">
+      <span style="font-size:18px">⚠️</span>
+      <p><b>ปัญหาตอนนี้:</b> กล้องยิงแล้วส่งค่าออกทันที โชว์แค่แถบเขียว "สแกนแล้ว N ชิ้น · ล่าสุด CODE" ซึ่ง<b>นับจำนวนการอ่านดิบ ไม่รู้ว่าบันทึกจริงสำเร็จหรือไม่</b> — สแกนกล่องที่ไม่พบออเดอร์/ซ้ำ ก็ยังนับเพิ่ม พนักงานไม่รู้ว่ากล่องไหนมีปัญหา</p>
+    </div>
+  </header>
+
+  <!-- 3 STATES -->
+  <section>
+    <div class="sec-h"><span class="sec-n">01</span><h2>3 สถานะที่กล้องจะแจ้ง</h2></div>
+    <p class="sec-sub">หลังอ่านบาร์โค้ดได้ กล้องหยุดรับชั่วครู่ แล้วขึ้นผลเต็มจอ 1 ใน 3 แบบ — สแกนกล่องถัดไปไม่ได้จนกว่าจะรับรู้ผล</p>
+    <div class="phones">
+
+      <!-- OK -->
+      <div class="pcol">
+        <div class="phone"><div class="scr">
+          <div class="cam-top"><span>⎯ เล็งใบปะหน้า</span><span class="cam-x">✕</span></div>
+          <div class="ovl ok">
+            <div class="big">✓</div>
+            <div class="ttl">บันทึกส่งแล้ว</div>
+            <div class="ord">TA3AFWWB</div>
+            <div class="sub">กล่องที่ 13 · Dionysus X +2 รายการ</div>
+            <div class="cont">● ต่ออัตโนมัติใน 1 วิ…</div>
+          </div>
+          <div class="progress"><i></i></div>
+        </div></div>
+        <div class="pcap"><div class="t ok">✓ สำเร็จ</div><div class="d">บันทึก/ตัดได้จริง → สั่นสั้น 1 ครั้ง + เสียงติ๊ง → ต่อเองใน ~1 วิ</div></div>
+      </div>
+
+      <!-- DUP -->
+      <div class="pcol">
+        <div class="phone"><div class="scr">
+          <div class="cam-top"><span>⎯ เล็งใบปะหน้า</span><span class="cam-x">✕</span></div>
+          <div class="ovl dup">
+            <div class="big">⚠</div>
+            <div class="ttl">สแกนซ้ำ</div>
+            <div class="ord">TA3AFWWB</div>
+            <div class="sub">กล่องนี้บันทึกส่งไปแล้วเมื่อ 10:24</div>
+            <div class="cont">● ต่ออัตโนมัติใน 1.5 วิ…</div>
+          </div>
+          <div class="progress"><i style="width:48%;background:#fff"></i></div>
+        </div></div>
+        <div class="pcap"><div class="t dup">⚠ ซ้ำ</div><div class="d">เคยสแกนแล้ว → สั่น 2 จังหวะ → ไม่นับเพิ่ม → ต่อเองใน ~1.5 วิ</div></div>
+      </div>
+
+      <!-- ERR -->
+      <div class="pcol">
+        <div class="phone"><div class="scr">
+          <div class="cam-top"><span>⎯ เล็งใบปะหน้า</span><span class="cam-x">✕</span></div>
+          <div class="ovl err">
+            <div class="big">✕</div>
+            <div class="ttl">ไม่สำเร็จ</div>
+            <div class="ord">TA3XXXX9</div>
+            <div class="sub">ไม่พบออเดอร์นี้ / ยังไม่ตัดสต๊อก — แยกกล่องไว้</div>
+            <div class="tap">รับทราบ แล้วสแกนต่อ</div>
+          </div>
+        </div></div>
+        <div class="pcap"><div class="t err">✕ ไม่สำเร็จ</div><div class="d">ไม่พบ/ผิดพลาด → สั่นยาว 3 จังหวะ → <b>ต้องกดรับทราบ</b>ก่อน (บังคับหยุด แยกกล่อง)</div></div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- FLOW -->
+  <section>
+    <div class="sec-h"><span class="sec-n">02</span><h2>ลำดับการทำงาน</h2></div>
+    <p class="sec-sub">เพิ่ม "ด่านตรวจ" ระหว่างอ่านบาร์โค้ดกับการอ่านชิ้นถัดไป — กล้องรอผลจริงจากระบบก่อน</p>
+    <div class="flow">
+      <div class="fstep blue"><div class="n">STEP 1</div><h4>เล็งบาร์โค้ด</h4><p>วางในกรอบ กล้องอ่านต่อเนื่อง (กันอ่านซ้ำรัวๆ)</p></div>
+      <span class="farrow">→</span>
+      <div class="fstep blue"><div class="n">STEP 2</div><h4>กำลังตรวจ</h4><p>หยุดรับชั่วครู่ · ส่งไปเช็ค/บันทึกกับระบบ (spinner)</p></div>
+      <span class="farrow">→</span>
+      <div class="fstep gate"><div class="n">STEP 3</div><h4>แจ้งผล + ด่าน</h4><p>ขึ้นผล ✓/⚠/✗ · สำเร็จ·ซ้ำ = ต่อเอง · ผิดพลาด = ต้องกดรับทราบ</p></div>
+      <span class="farrow">→</span>
+      <div class="fstep blue"><div class="n">STEP 4</div><h4>กล่องถัดไป</h4><p>กลับไปเล็ง · ตัวนับสรุปอัปเดต ✓12 ⚠2 ✗1</p></div>
+    </div>
+  </section>
+
+  <!-- TABLE -->
+  <section>
+    <div class="sec-h"><span class="sec-n">03</span><h2>สรุปพฤติกรรมแต่ละผล</h2></div>
+    <div class="tw"><table>
+      <thead><tr><th>ผล</th><th>เกิดเมื่อ</th><th>สี</th><th>สั่น / เสียง</th><th>ไปต่อ</th></tr></thead>
+      <tbody>
+        <tr><td class="ok"><span class="dot">สำเร็จ</span></td><td>บันทึกส่ง/ตัดสต๊อกได้จริง</td><td>เขียว</td><td>สั่นสั้น 1 · ติ๊งสูง</td><td>อัตโนมัติ ~1 วิ</td></tr>
+        <tr><td class="dup"><span class="dot">ซ้ำ</span></td><td>กล่องนี้เคยสแกนแล้ว</td><td>เหลือง</td><td>สั่น 2 จังหวะ · ตุ๊บ</td><td>อัตโนมัติ ~1.5 วิ (ไม่นับเพิ่ม)</td></tr>
+        <tr><td class="err"><span class="dot">ไม่สำเร็จ</span></td><td>ไม่พบออเดอร์ · ยังไม่ตัดสต๊อก · เน็ตล่ม</td><td>แดง</td><td>สั่นยาว 3 จังหวะ · เสียงเตือนต่ำ</td><td><b>ต้องกด "รับทราบ"</b> (บังคับหยุด)</td></tr>
+      </tbody>
+    </table></div>
+  </section>
+
+  <!-- WHERE -->
+  <section>
+    <div class="sec-h"><span class="sec-n">04</span><h2>ใช้กับหน้าไหน</h2></div>
+    <div class="use">
+      <div class="ucard blue"><h4>🚚 จัดส่งสินค้า <span class="k">/ship</span></h4><p>สแกน<b>ต่อเนื่อง</b>ทีละกล่อง — ได้ประโยชน์เต็มที่ ต้องรู้ทันทีว่ากล่องไหนบันทึกส่งได้ กล่องไหนซ้ำ/ยังไม่ตัดสต๊อก แล้วแยกไว้</p></div>
+      <div class="ucard teal"><h4>📦 ตัดสต๊อก / SKU <span class="k">/stock/issue</span></h4><p>สแกน<b>ทีละครั้ง</b> — ขึ้นผลสั้นๆ (พบใบ/ไม่พบ) แล้วปิดกล้องเข้าหน้าตรวจรายการ · ถ้าไม่พบ ค้างผลให้ลองใหม่ ไม่เด้งปิดเงียบ</p></div>
+    </div>
+  </section>
+
+  <!-- IMPL -->
+  <section>
+    <div class="sec-h"><span class="sec-n">05</span><h2>ทำจริงยังไง (สั้นๆ)</h2></div>
+    <p class="sec-sub">แก้เฉพาะ CameraScan + วิธีที่หน้าเรียกใช้ ไม่แตะฐานข้อมูล</p>
+    <div class="impl">
+      <h3>เปลี่ยน onScan ให้คืน "ผล" กลับมาให้กล้องรู้</h3>
+      <pre><span class="cmt">// เดิม: ยิงแล้วจบ ไม่รู้ผล</span>
+onScan: (code) =&gt; void
+
+<span class="cmt">// ใหม่: หน้าเจ้าของประมวลผลแล้วคืนผลให้กล้องโชว์</span>
+onScan: (code) =&gt; Promise&lt;{
+  status: "ok" | "dup" | "error",
+  title: string,       <span class="cmt">// "บันทึกส่งแล้ว" / "สแกนซ้ำ" / "ไม่พบออเดอร์"</span>
+  detail?: string      <span class="cmt">// "กล่องที่ 13 · Dionysus X"</span>
+}&gt;</pre>
+      <ul>
+        <li><b>กล้อง</b> เข้าสถานะ <span class="mono">checking</span> ทันทีที่อ่านได้ → หยุดรับโค้ดใหม่ → รอ <span class="mono">await onScan()</span></li>
+        <li>ได้ผลมาแล้วโชว์ overlay ✓/⚠/✗ + สั่น/เสียงตามผล · <b>ok/dup</b> ตั้งเวลาปิดเอง · <b>error</b> รอกดปุ่ม</li>
+        <li>ตัวนับเปลี่ยนจาก "จำนวนอ่านดิบ" → <b>แยกตามผลจริง</b> (✓ / ⚠ / ✗)</li>
+        <li>เพิ่มเสียง (Web Audio beep) — ทำงานได้แม้ปิดเสียงสั่น เหมาะกับที่เสียงดัง</li>
+        <li>ใช้ซ้ำได้ทั้ง 2 หน้า — จัดส่ง (continuous) กับ ตัดสต๊อก (ทีละครั้ง)</li>
+      </ul>
+    </div>
+  </section>
+
+  <footer>Lab Parfumo · ข้อเสนอออกแบบ UX — ผลการสแกนกล้อง · ยังไม่ลงมือ รอยืนยันแนวทาง</footer>
+
+</div></div>
