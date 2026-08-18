@@ -705,7 +705,7 @@ export type PackagingRow = { ref_key: string; label: string; category: string; q
 /** ขวดและแพ็คเกจ — รายการคงที่ */
 export async function listPackagingStock(): Promise<PackagingRow[]> {
   try {
-    return await q<PackagingRow>(`select ref_key, label, coalesce(category2,'อื่นๆ') as category, qty::float8 as qty, reorder_point::float8 as reorder from material_item where category='packaging' order by sort`);
+    return await q<PackagingRow>(`select ref_key, label, coalesce(category2,'อื่นๆ') as category, qty::float8 as qty, reorder_point::float8 as reorder from material_item where category='packaging' order by sort, ref_key`);
   } catch { return []; }
 }
 
