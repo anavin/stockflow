@@ -1,7 +1,7 @@
 import "server-only";
 import { q } from "./db";
 import type { Order, OrderItem, OrderRow, OrderWithItems } from "./types";
-import { LABEL_COMPONENTS, gradeToLabelKey, bulkRef, labelRef, mnorm } from "./materials";
+import { LABEL_COMPONENTS, gradeToLabelKey, labelSpecFor, bulkRef, labelRef, mnorm } from "./materials";
 
 /** PGlite returns `date`/`timestamptz` columns as JS Date objects while pg (with
  * our type parsers) returns strings. Normalize date-only fields to "YYYY-MM-DD"
@@ -678,16 +678,16 @@ export async function listLabelStock(): Promise<LabelScent[]> {
     const used = new Set<string>();
     const out: LabelScent[] = [];
     for (const p of prods) {
-      const gk = gradeToLabelKey(p.ptype);
-      if (!gk) continue;
+      const spec = labelSpecFor(p.name, p.ptype);   // override เฉพาะกลิ่น > ตาม Grade
+      if (!spec) continue;
       const nk = mnorm(p.name);
       used.add(nk);
       const owned = byScent.get(nk);
-      const catalogKeys = new Set(LABEL_COMPONENTS[gk].map((c) => c.key));
-      const comps = LABEL_COMPONENTS[gk].map((c) => { const it = owned?.get(c.key); return { key: c.key, label: c.label, qty: it ? Number(it.qty) : 0, reorder: it?.reorder ?? null }; });
-      // ชิ้นส่วนที่ import มาแต่ไม่อยู่ในแคตตาล็อกของ Grade นี้ → เพิ่มต่อท้าย ไม่ให้ตกหล่น
+      const catalogKeys = new Set(spec.comps.map((c) => c.key));
+      const comps = spec.comps.map((c) => { const it = owned?.get(c.key); return { key: c.key, label: c.label, qty: it ? Number(it.qty) : 0, reorder: it?.reorder ?? null }; });
+      // ชิ้นส่วนที่ import มาแต่ไม่อยู่ในแคตตาล็อกของกลิ่นนี้ → เพิ่มต่อท้าย ไม่ให้ตกหล่น
       if (owned) for (const [ck, it] of owned) if (!catalogKeys.has(ck)) comps.push({ key: ck, label: compLabel(it.label), qty: Number(it.qty), reorder: it.reorder ?? null });
-      out.push({ scent: p.name, grade: gk, components: comps });
+      out.push({ scent: p.name, grade: spec.grade, components: comps });
     }
     // กลิ่นที่มีข้อมูลในคลังแต่ไม่มีในรายการสินค้า (เช่น กลิ่นที่เลิกขาย/OEM) → แสดงเป็นกลุ่ม "อื่นๆ"
     for (const [nk, owned] of byScent) {
