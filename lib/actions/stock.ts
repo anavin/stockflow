@@ -216,10 +216,12 @@ export async function reverseIssue(orderNo: string): Promise<{ ok: boolean; erro
   const on = (orderNo || "").trim();
   try {
     await tx(async (run) => {
+      // for update = ล็อกแถว order ตลอด tx → กดยกเลิก 2 ครั้งพร้อมกัน คนที่ 2 จะรอ
+      // แล้วเห็น stock_issued_at = null → โยน error ไม่คืนสต๊อกซ้ำ (กันสต๊อกเฟ้อ)
       const [o] = await run<{ stock_issued_at: string | null; stock_issued_by: number | null; recent: boolean }>(
         `select stock_issued_at, stock_issued_by,
                 (stock_issued_at > now() - interval '24 hours') as recent
-         from orders where order_no = $1`, [on]);
+         from orders where order_no = $1 for update`, [on]);
       if (!o?.stock_issued_at) throw new Error("ใบเบิกนี้ยังไม่ได้ตัดสต๊อก");
       if (!isAdmin) {
         if (o.stock_issued_by !== user.id) throw new Error("ยกเลิกได้เฉพาะใบที่คุณตัดเอง (ใบอื่นให้แอดมิน)");
