@@ -38,7 +38,7 @@ export default function Sidebar({ user }: { user: { full_name: string; username:
     ...(can.viewStock(role) ? [{ href: "/ship", label: "จัดส่งสินค้า (สแกน)", icon: Truck, exact: true }] : []),
     ...(can.viewStock(role) ? [{ href: "/stock", label: "สต๊อกสินค้าสำเร็จรูป", icon: Boxes, exact: true }] : []),
     ...(can.viewStock(role) ? [{ href: "/stock/units", label: "ติดตาม SKU", icon: ScanBarcode }] : []),
-    ...(can.viewStock(role) ? [{ href: "/stock/bulk", label: "ปริมาตรน้ำหอม", icon: Droplets, exact: true }] : []),
+    ...(can.viewStock(role) ? [{ href: "/stock/bulk", label: "น้ำหอม (ยังไม่บรรจุ)", icon: Droplets, exact: true }] : []),
     ...(can.viewStock(role) ? [{ href: "/stock/labels", label: "สติ๊กเกอร์ & การ์ด", icon: Sticker, exact: true }] : []),
     ...(can.viewStock(role) ? [{ href: "/stock/packaging", label: "ขวด & แพ็คเกจ", icon: Package, exact: true }] : []),
     ...(can.manageStock(role) ? [{ href: "/stock/materials/issue?mode=receive", label: "รับเข้าวัตถุดิบ (รวม)", icon: PackagePlus }] : []),
