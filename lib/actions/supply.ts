@@ -105,6 +105,26 @@ export async function setReorderPoint(desc: ItemDesc, point: number | null): Pro
   return { ok: true };
 }
 
+/** ตั้งหมายเหตุต่อรายการ — ต้องมี material_item ก่อน (สร้าง lazy) */
+export async function setMaterialNote(desc: ItemDesc, note: string): Promise<{ ok: boolean; error?: string }> {
+  const g = await gate(); if ("error" in g) return { ok: false, error: g.error };
+  const n = (note || "").trim() || null;
+  try {
+    await tx(async (run) => {
+      let [it] = await run<{ id: number }>(`select id from material_item where category=$1 and ref_key=$2`, [desc.category, desc.refKey]);
+      if (!it) {
+        [it] = await run<{ id: number }>(
+          `insert into material_item (category, ref_key, scent, comp_key, brand, grade, label, category2, unit, sort)
+           values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) returning id`,
+          [desc.category, desc.refKey, desc.scent ?? null, desc.comp_key ?? null, desc.brand ?? null, desc.grade ?? null, desc.label, desc.category2 ?? null, desc.unit ?? "ชิ้น", desc.sort ?? 0]);
+      }
+      await run(`update material_item set note=$2, updated_at=now() where id=$1`, [it.id, n]);
+    });
+  } catch (e: any) { return { ok: false, error: e?.message || "บันทึกหมายเหตุไม่สำเร็จ (รัน SQL 0032 บน prod?)" }; }
+  revalidate(desc.category);
+  return { ok: true };
+}
+
 /** เพิ่มกลิ่น OEM เข้าลิสต์ปริมาตร (PUNN / Atepole ฯลฯ) */
 export async function addBulkScent(scent: string, brand: string, grade: string | null): Promise<{ ok: boolean; error?: string }> {
   const g = await gate(); if ("error" in g) return { ok: false, error: g.error };

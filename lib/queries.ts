@@ -635,23 +635,23 @@ export async function getMonths(platform?: string): Promise<string[]> {
 }
 
 // ---- คลังวัตถุดิบ & บรรจุภัณฑ์ (material_item + material_move) ---------------
-export type BulkRow = { scent: string; brand: string; grade: string | null; qty: number; reorder: number | null };
+export type BulkRow = { scent: string; brand: string; grade: string | null; qty: number; reorder: number | null; note: string | null };
 /** ปริมาตรน้ำหอม (ml) — กลิ่นที่ขาย (Lab Parfumo) + OEM ที่เพิ่มเอง */
 export async function listBulkStock(): Promise<BulkRow[]> {
   try {
     const [prods, items] = await Promise.all([
       q<{ name: string; ptype: string | null }>(`select name, ptype from products where active`),
-      q<{ ref_key: string; scent: string | null; brand: string | null; grade: string | null; label: string; qty: number; reorder: number | null }>(
-        `select ref_key, scent, brand, grade, label, qty::float8 as qty, reorder_point::float8 as reorder from material_item where category='bulk'`),
+      q<{ ref_key: string; scent: string | null; brand: string | null; grade: string | null; label: string; qty: number; reorder: number | null; note: string | null }>(
+        `select ref_key, scent, brand, grade, label, qty::float8 as qty, reorder_point::float8 as reorder, note from material_item where category='bulk'`),
     ]);
     const byRef = new Map(items.map((i) => [i.ref_key, i]));
     const rows: BulkRow[] = prods.map((p) => {
       const it = byRef.get(bulkRef(p.name, "Lab Parfumo"));
       if (it) byRef.delete(bulkRef(p.name, "Lab Parfumo"));
-      return { scent: p.name, brand: "Lab Parfumo", grade: p.ptype, qty: it ? Number(it.qty) : 0, reorder: it?.reorder ?? null };
+      return { scent: p.name, brand: "Lab Parfumo", grade: p.ptype, qty: it ? Number(it.qty) : 0, reorder: it?.reorder ?? null, note: it?.note ?? null };
     });
     for (const it of byRef.values()) {   // OEM / รายการที่ไม่มีในสินค้าปัจจุบัน
-      rows.push({ scent: it.scent || it.label, brand: it.brand || "OEM", grade: it.grade, qty: Number(it.qty), reorder: it.reorder ?? null });
+      rows.push({ scent: it.scent || it.label, brand: it.brand || "OEM", grade: it.grade, qty: Number(it.qty), reorder: it.reorder ?? null, note: it.note ?? null });
     }
     return rows.sort((a, b) => a.brand.localeCompare(b.brand, "en") || a.scent.localeCompare(b.scent, "en"));
   } catch { return []; }

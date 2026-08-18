@@ -70,3 +70,6 @@ on conflict (category, ref_key) do nothing;
 
 -- จุดสั่งซื้อ (reorder point) ต่อรายการ — แจ้งเตือน "ควรสั่งซื้อ" เมื่อคงเหลือ ≤ จุดนี้ (0030)
 alter table material_item add column if not exists reorder_point numeric;
+
+-- หมายเหตุต่อรายการ (0032)
+alter table material_item add column if not exists note text;
