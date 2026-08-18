@@ -3,6 +3,7 @@ import { revalidatePath } from "next/cache";
 import { q, tx } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth/session";
 import { can } from "@/lib/auth/roles";
+import { logActivity } from "@/lib/activity";
 import { isStockTracked } from "@/lib/config";
 import { getActiveSpecRules, getScentBarcodes, stockGapFor } from "@/lib/queries";
 
@@ -212,6 +213,7 @@ export async function confirmIssueByOrder(
         }
       } catch { /* stock_unit ยังไม่พร้อม — ข้าม (traceability เสริม) */ }
     }
+    if (out.ok) await logActivity("stock.issue", `${on}${out.doc_no ? " · " + out.doc_no : ""}`);
     revalidatePath("/stock");
     revalidatePath("/stock/moves");
     revalidatePath("/stock/units");
@@ -263,6 +265,7 @@ export async function reverseIssue(orderNo: string): Promise<{ ok: boolean; erro
       await q(`update stock_unit set status = 'in_stock', order_no = null, issued_at = null, issued_by = null
                where order_no = $1 and status = 'issued'`, [on]);
     } catch { /* stock_unit ยังไม่พร้อม — ข้าม */ }
+    await logActivity("stock.reverse", on);
     revalidatePath("/stock"); revalidatePath("/stock/moves"); revalidatePath("/stock/units");
     return { ok: true };
   } catch (e: any) {

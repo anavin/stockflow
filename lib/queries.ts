@@ -735,3 +735,18 @@ export async function listMaterialMoves(opts: { category?: string; date?: string
        order by m.created_at desc limit ${limit}`, params);
   } catch { return []; }
 }
+
+// ---- บันทึกการใช้งาน (activity_log) — เห็นเฉพาะ admin ----------------------
+export type ActivityRow = { id: number; user_id: number | null; username: string | null; role: string | null; action: string; detail: string | null; ip: string | null; created_at: string };
+export async function listActivityLog(opts: { user?: string; action?: string; date?: string; limit?: number } = {}): Promise<ActivityRow[]> {
+  try {
+    const params: any[] = []; const where: string[] = [];
+    if (opts.user) { params.push(`%${opts.user.trim()}%`); where.push(`username ilike $${params.length}`); }
+    if (opts.action) { params.push(opts.action); where.push(`action = $${params.length}`); }
+    if (opts.date) { params.push(opts.date); where.push(`(created_at at time zone 'Asia/Bangkok')::date = $${params.length}::date`); }
+    const limit = Math.min(opts.limit ?? 400, 2000);
+    return await q<ActivityRow>(
+      `select id, user_id, username, role, action, detail, ip, created_at from activity_log
+       ${where.length ? "where " + where.join(" and ") : ""} order by created_at desc, id desc limit ${limit}`, params);
+  } catch { return []; }
+}

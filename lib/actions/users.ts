@@ -4,6 +4,7 @@ import { z } from "zod";
 import { q } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth/session";
 import { hashBcrypt, validatePassword } from "@/lib/auth/password";
+import { logActivity } from "@/lib/activity";
 
 async function requireAdminUser() {
   const user = await getCurrentUser();
@@ -44,6 +45,7 @@ export async function createUser(input: unknown): Promise<{ ok: boolean; error?:
     `insert into users (username, password_hash, full_name, role) values ($1,$2,$3,$4)`,
     [username, await hashBcrypt(password), full_name, roles.join(",")],
   );
+  await logActivity("user.manage", `เพิ่มผู้ใช้ "${username}" (${roles.join(",")})`);
   revalidatePath("/users");
   return { ok: true };
 }
@@ -53,6 +55,7 @@ export async function setUserActive(id: number, active: boolean): Promise<{ ok: 
   if ("error" in gate) return { ok: false, error: gate.error };
   if (gate.user.id === id && !active) return { ok: false, error: "ปิดใช้งานตัวเองไม่ได้" };
   await q(`update users set is_active = $2 where id = $1`, [id, active]);
+  await logActivity("user.manage", `${active ? "เปิด" : "ปิด"}ใช้งานผู้ใช้ id ${id}`);
   revalidatePath("/users");
   return { ok: true };
 }
@@ -64,6 +67,7 @@ export async function setUserRoles(id: number, roles: string[]): Promise<{ ok: b
   if (!clean.length) return { ok: false, error: "เลือกบทบาทอย่างน้อย 1 อย่าง" };
   if (gate.user.id === id && !clean.includes("admin")) return { ok: false, error: "เอาสิทธิ์แอดมินของตัวเองออกไม่ได้" };
   await q(`update users set role = $2 where id = $1`, [id, clean.join(",")]);
+  await logActivity("user.manage", `แก้บทบาทผู้ใช้ id ${id} → ${clean.join(",")}`);
   revalidatePath("/users");
   return { ok: true };
 }
@@ -76,5 +80,6 @@ export async function resetPassword(id: number, password: string): Promise<{ ok:
   const pw = validatePassword(password, u.username);
   if (!pw.ok) return { ok: false, error: pw.message };
   await q(`update users set password_hash = $2 where id = $1`, [id, await hashBcrypt(password)]);
+  await logActivity("user.manage", `รีเซ็ตรหัสผ่าน "${u.username}"`);
   return { ok: true };
 }

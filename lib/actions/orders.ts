@@ -4,6 +4,7 @@ import { z } from "zod";
 import { q, tx } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth/session";
 import { can } from "@/lib/auth/roles";
+import { logActivity } from "@/lib/activity";
 import { buildProductLabel, type OrderWithItems } from "@/lib/types";
 import { formatDocNo, monthLabel, ymdKey } from "@/lib/docno";
 import { isAllowedFreeSize, FREE_ALLOWED_SIZES } from "@/lib/config";
@@ -126,6 +127,7 @@ export async function saveOrder(input: OrderInput): Promise<SaveResult> {
 
     revalidatePath("/shopee");
     revalidatePath(`/shopee/${encodeURIComponent(o.order_no)}`);
+    await logActivity("order.create", `${o.order_no}${outDoc ? " · " + outDoc : ""}`);
     return { ok: true, order_no: o.order_no, doc_no: outDoc };
   } catch (e: any) {
     return { ok: false, error: e?.message || "บันทึกไม่สำเร็จ" };
@@ -150,6 +152,7 @@ export async function deleteOrder(orderNo: string): Promise<{ ok: boolean; error
   if (!can.createOrders(user.role)) return { ok: false, error: "ไม่มีสิทธิ์จัดการใบเบิก (เฉพาะฝ่ายสร้างใบเบิก)" };
   try {
     await q(`update orders set deleted_at = now(), deleted_by = $2 where order_no = $1`, [orderNo, user.id]);
+    await logActivity("order.delete", orderNo);
     revalidatePath("/shopee");
     revalidatePath("/shopee/trash");
     return { ok: true };
@@ -519,6 +522,7 @@ export async function markShipped(orderNo: string, dateStr?: string): Promise<Sh
     : await q<{ shipped_at: string }>(
         `update orders set shipped_at = now(), shipped_by = $2 where order_no = $1 returning shipped_at`,
         [o.order_no, user.id]);
+  await logActivity("ship", `${o.order_no}${backdate ? " · ย้อนหลัง " + dateStr : ""}`);
   revalidatePath("/shopee");
   return { ok: true, already: false, at: u?.shipped_at ?? null, issued: !!o.stock_issued_at, order: info };
 }
@@ -528,6 +532,7 @@ export async function unshipOrder(orderNo: string): Promise<{ ok: boolean; error
   const user = await getCurrentUser();
   if (!user || !can.manageStock(user.role)) return { ok: false, error: "เฉพาะผู้ดูแล / ฝ่ายคลัง" };
   await q(`update orders set shipped_at = null, shipped_by = null where order_no = $1`, [(orderNo || "").trim()]);
+  await logActivity("unship", (orderNo || "").trim());
   revalidatePath("/ship/daily"); revalidatePath("/shopee");
   return { ok: true };
 }

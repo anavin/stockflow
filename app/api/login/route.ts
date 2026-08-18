@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { loginWithPassword } from "@/lib/auth/login";
 import { createSession, setSessionCookie } from "@/lib/auth/session";
+import { logActivity } from "@/lib/activity";
 
 export const runtime = "nodejs";
 
@@ -12,5 +13,6 @@ export async function POST(req: Request) {
   }
   const token = await createSession(res.user.id);
   await setSessionCookie(token);
+  await logActivity("login", null, { id: res.user.id, username: res.user.username, role: res.user.role });
   return NextResponse.json({ ok: true });
 }

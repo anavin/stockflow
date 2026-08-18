@@ -4,7 +4,7 @@ import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { PLATFORMS } from "@/lib/config";
 import { can, ROLE_LABELS, roleList } from "@/lib/auth/roles";
-import { Package, PlusCircle, Upload, List, LogOut, Menu, X, Trash2, Users, ScanLine, Boxes, LayoutDashboard, FlaskConical, ScanBarcode, ShieldCheck, Truck, Droplets, Sticker, PackageMinus, PackagePlus } from "lucide-react";
+import { Package, PlusCircle, Upload, List, LogOut, Menu, X, Trash2, Users, ScanLine, Boxes, LayoutDashboard, FlaskConical, ScanBarcode, ShieldCheck, Truck, Droplets, Sticker, PackageOpen, History, ScrollText } from "lucide-react";
 
 // สีเอกลักษณ์ของแต่ละแพลตฟอร์ม (ใช้เป็นจุดสีในเมนู)
 const PLATFORM_COLORS: Record<string, string> = {
@@ -33,20 +33,50 @@ export default function Sidebar({ user }: { user: { full_name: string; username:
         { href: "/shopee/trash", label: "ถังขยะ", icon: Trash2 },
       ]
     : [];
-  const stockNav = [
+  // กลุ่ม "สินค้าสำเร็จรูป" — ตัดสต๊อก/จัดส่ง/ดูสต๊อก/SKU
+  const finishedNav = [
     ...(can.issueStock(role) ? [{ href: "/stock/issue", label: "ตัดสต๊อก (สแกน)", icon: ScanLine }] : []),
     ...(can.viewStock(role) ? [{ href: "/ship", label: "จัดส่งสินค้า (สแกน)", icon: Truck, exact: true }] : []),
-    ...(can.viewStock(role) ? [{ href: "/stock", label: "สต๊อกสินค้าสำเร็จรูป", icon: Boxes, exact: true }] : []),
+    ...(can.viewStock(role) ? [{ href: "/stock", label: "สต๊อกคงเหลือ", icon: Boxes, exact: true }] : []),
     ...(can.viewStock(role) ? [{ href: "/stock/units", label: "ติดตาม SKU", icon: ScanBarcode }] : []),
+  ];
+  // กลุ่ม "คลังวัตถุดิบ" — กลิ่น(master)/น้ำหอม/สติ๊กเกอร์/ขวด/รับเข้า·เบิก/ประวัติ
+  const materialNav = [
+    ...(can.manageScents(role) ? [{ href: "/products", label: "จัดการกลิ่น", icon: FlaskConical, exact: true }] : []),
     ...(can.viewStock(role) ? [{ href: "/stock/bulk", label: "น้ำหอม (ยังไม่บรรจุ)", icon: Droplets, exact: true }] : []),
     ...(can.viewStock(role) ? [{ href: "/stock/labels", label: "สติ๊กเกอร์ & การ์ด", icon: Sticker, exact: true }] : []),
     ...(can.viewStock(role) ? [{ href: "/stock/packaging", label: "ขวด & แพ็คเกจ", icon: Package, exact: true }] : []),
-    ...(can.manageStock(role) ? [{ href: "/stock/materials/issue?mode=receive", label: "รับเข้าวัตถุดิบ (รวม)", icon: PackagePlus }] : []),
-    ...(can.manageStock(role) ? [{ href: "/stock/materials/issue", label: "เบิกวัตถุดิบ (รวม)", icon: PackageMinus, exact: true }] : []),
+    ...(can.manageStock(role) ? [{ href: "/stock/materials/issue", label: "รับเข้า / เบิก (รวม)", icon: PackageOpen, exact: true }] : []),
+    ...(can.viewStock(role) ? [{ href: "/stock/materials/moves", label: "ประวัติวัตถุดิบ", icon: History }] : []),
+  ];
+  // กลุ่ม "ตั้งค่า & ข้อมูล" — อย./บันทึกการใช้งาน/ผู้ใช้
+  const settingsNav = [
+    ...(can.viewStock(role) ? [{ href: "/fda", label: "ข้อมูล อย.", icon: ShieldCheck, exact: true }] : []),
+    ...(can.viewLogs(role) ? [{ href: "/activity", label: "บันทึกการใช้งาน", icon: ScrollText, exact: true }] : []),
+    ...(can.manageUsers(role) ? [{ href: "/users", label: "จัดการผู้ใช้", icon: Users }] : []),
   ];
 
   const isActive = (href: string, exact?: boolean) =>
     exact ? pathname === href : pathname.startsWith(href);
+
+  type NavItem = { href: string; label: string; icon: typeof Package; exact?: boolean };
+  const navItems = (items: NavItem[]) => items.map((n) => {
+    const Icon = n.icon;
+    return (
+      <Link key={n.href} href={n.href} onClick={() => setOpen(false)}
+        className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors ${
+          isActive(n.href, n.exact) ? "bg-soft font-medium text-ink" : "text-muted hover:bg-soft hover:text-ink"
+        }`}>
+        <Icon size={16} /> {n.label}
+      </Link>
+    );
+  });
+  const section = (title: string, items: NavItem[]) => items.length > 0 && (
+    <>
+      <div className="px-3 pb-1 pt-4 text-[11px] font-semibold uppercase tracking-wide text-faint">{title}</div>
+      {navItems(items)}
+    </>
+  );
 
   const body = (
     <div className="flex h-full w-64 flex-col border-r border-line bg-white">
@@ -69,63 +99,11 @@ export default function Sidebar({ user }: { user: { full_name: string; username:
       )}
 
       <nav className="mt-2 flex-1 space-y-0.5 overflow-y-auto px-3">
-        {[...dashNav, ...orderNav].map((n) => {
-          const Icon = n.icon;
-          return (
-            <Link
-              key={n.href}
-              href={n.href}
-              onClick={() => setOpen(false)}
-              className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors ${
-                isActive(n.href, n.exact) ? "bg-soft font-medium text-ink" : "text-muted hover:bg-soft hover:text-ink"
-              }`}
-            >
-              <Icon size={16} /> {n.label}
-            </Link>
-          );
-        })}
-
-        {stockNav.length > 0 && (
-          <>
-            <div className="px-3 pb-1 pt-4 text-[11px] font-semibold uppercase tracking-wide text-faint">สต๊อกสินค้า</div>
-            {stockNav.map((n) => {
-              const Icon = n.icon;
-              return (
-                <Link key={n.href} href={n.href} onClick={() => setOpen(false)}
-                  className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors ${
-                    isActive(n.href, n.exact) ? "bg-soft font-medium text-ink" : "text-muted hover:bg-soft hover:text-ink"
-                  }`}>
-                  <Icon size={16} /> {n.label}
-                </Link>
-              );
-            })}
-          </>
-        )}
-
-        {can.createOrders(role) && (
-          <Link href="/products" onClick={() => setOpen(false)}
-            className={`mt-1 flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors ${
-              isActive("/products", true) ? "bg-soft font-medium text-ink" : "text-muted hover:bg-soft hover:text-ink"
-            }`}>
-            <FlaskConical size={16} /> จัดการกลิ่น
-          </Link>
-        )}
-        {can.viewStock(role) && (
-          <Link href="/fda" onClick={() => setOpen(false)}
-            className={`mt-1 flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors ${
-              isActive("/fda", true) ? "bg-soft font-medium text-ink" : "text-muted hover:bg-soft hover:text-ink"
-            }`}>
-            <ShieldCheck size={16} /> ข้อมูล อย.
-          </Link>
-        )}
-        {can.manageUsers(role) && (
-          <Link href="/users" onClick={() => setOpen(false)}
-            className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors ${
-              isActive("/users") ? "bg-soft font-medium text-ink" : "text-muted hover:bg-soft hover:text-ink"
-            }`}>
-            <Users size={16} /> จัดการผู้ใช้
-          </Link>
-        )}
+        {navItems(dashNav)}
+        {navItems(orderNav)}
+        {section("สินค้าสำเร็จรูป", finishedNav)}
+        {section("คลังวัตถุดิบ", materialNav)}
+        {section("ตั้งค่า & ข้อมูล", settingsNav)}
 
         {orderNav.length > 0 && (
           <>

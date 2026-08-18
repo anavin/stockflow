@@ -12,10 +12,10 @@ export const ROLE_LABELS: Record<string, string> = {
 };
 
 export const ROLE_DESC: Record<string, string> = {
-  admin: "ทำได้ทุกอย่าง + ยกเลิกการตัดสต๊อก + จัดการผู้ใช้",
-  creator: "สร้าง / นำเข้า / แก้ไข / พิมพ์ใบเบิก + จัดการกลิ่น (ไม่ตัดสต๊อก)",
+  admin: "ทำได้ทุกอย่าง + ยกเลิกการตัดสต๊อก + จัดการผู้ใช้ + ดูบันทึกการใช้งาน",
+  creator: "สร้าง / นำเข้า / แก้ไข / พิมพ์ใบเบิก (ไม่ตัดสต๊อก)",
   picker: "สแกนใบเบิก ใส่ SKU/Spec แล้วตัดสต๊อก (ไม่สร้างใบเบิก)",
-  stock: "รับเข้า / ปรับยอด / นับสต๊อก + ดูแดชบอร์ด (ไม่สร้างใบเบิก ไม่ตัดสต๊อก)",
+  stock: "คลังวัตถุดิบ: รับเข้า / เบิก / ปรับยอด / นับสต๊อก + จัดการกลิ่น + ดูแดชบอร์ด",
 };
 
 // รองรับข้อมูลเก่า: role "staff" เดิม = ทำงานฝั่งสร้างใบเบิก
@@ -39,10 +39,14 @@ export const can = {
   viewStock: (role?: string | null) => hasAny(role, ["admin", "picker", "stock"]),
   /** รับเข้า / ปรับยอด / นับสต๊อก / ยกเลิกการตัด = เจ้าของ + ฝ่ายคลัง */
   manageStock: (role?: string | null) => hasAny(role, ["admin", "stock"]),
+  /** จัดการ master กลิ่น (เพิ่ม/แก้/ลบ) = เจ้าของ + ฝ่ายคลัง (กลิ่น = วัตถุดิบ) */
+  manageScents: (role?: string | null) => hasAny(role, ["admin", "stock"]),
   /** ดูแดชบอร์ดภาพรวม + กลิ่นขายดี = เจ้าของ + จัดของ + คลัง */
   viewDashboard: (role?: string | null) => hasAny(role, ["admin", "picker", "stock"]),
   /** จัดการผู้ใช้ */
   manageUsers: (role?: string | null) => hasAny(role, ["admin"]),
+  /** ดูบันทึกการใช้งาน (audit log) = เจ้าของเท่านั้น */
+  viewLogs: (role?: string | null) => hasAny(role, ["admin"]),
 };
 
 /** หน้าแรกที่ควรพาไปหลัง login / เวลาถูกกันสิทธิ์ (ไม่ให้ตาย/วนลูป)

@@ -3,6 +3,7 @@ import { revalidatePath } from "next/cache";
 import { q, tx } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth/session";
 import { can } from "@/lib/auth/roles";
+import { logActivity } from "@/lib/activity";
 
 // รายละเอียดรายการ (ใช้สร้าง material_item ถ้ายังไม่มี — bulk/label สร้าง lazy)
 export type ItemDesc = {
@@ -48,14 +49,14 @@ function revalidate(cat: string) {
 export async function receiveMaterial(desc: ItemDesc, amount: number, note?: string): Promise<{ ok: boolean; error?: string; balance?: number }> {
   const g = await gate(); if ("error" in g) return { ok: false, error: g.error };
   const n = Math.abs(Number(amount) || 0); if (!n) return { ok: false, error: "ใส่จำนวนที่รับเข้า" };
-  try { const bal = await apply(desc, n, "receive", note?.trim() || null, g.user.id); revalidate(desc.category); return { ok: true, balance: bal }; }
+  try { const bal = await apply(desc, n, "receive", note?.trim() || null, g.user.id); await logActivity("material.receive", `${desc.label} +${n} ${desc.unit || "ชิ้น"}`); revalidate(desc.category); return { ok: true, balance: bal }; }
   catch (e: any) { return { ok: false, error: e?.message || "รับเข้าไม่สำเร็จ (รัน SQL 0029 บน prod?)" }; }
 }
 
 export async function issueMaterial(desc: ItemDesc, amount: number, note?: string): Promise<{ ok: boolean; error?: string; balance?: number }> {
   const g = await gate(); if ("error" in g) return { ok: false, error: g.error };
   const n = Math.abs(Number(amount) || 0); if (!n) return { ok: false, error: "ใส่จำนวนที่เบิก" };
-  try { const bal = await apply(desc, -n, "issue", note?.trim() || null, g.user.id); revalidate(desc.category); return { ok: true, balance: bal }; }
+  try { const bal = await apply(desc, -n, "issue", note?.trim() || null, g.user.id); await logActivity("material.issue", `${desc.label} −${n} ${desc.unit || "ชิ้น"}${note?.trim() ? " · " + note.trim() : ""}`); revalidate(desc.category); return { ok: true, balance: bal }; }
   catch (e: any) { return { ok: false, error: e?.message || "เบิกไม่สำเร็จ (รัน SQL 0029 บน prod?)" }; }
 }
 
@@ -69,6 +70,7 @@ export async function batchMaterial(mode: "receive" | "issue", lines: { desc: It
   try {
     for (const l of valid) await apply(l.desc, sign * Math.abs(Number(l.amount)), mode, n, g.user.id);
   } catch (e: any) { return { ok: false, error: e?.message || (mode === "receive" ? "รับเข้าไม่สำเร็จ" : "เบิกไม่สำเร็จ") }; }
+  await logActivity(mode === "receive" ? "material.receive" : "material.issue", `รวม ${valid.length} รายการ${n ? " · " + n : ""}`);
   revalidatePath("/stock/bulk"); revalidatePath("/stock/labels"); revalidatePath("/stock/packaging"); revalidatePath("/stock/materials/moves");
   return { ok: true, done: valid.length };
 }
@@ -79,7 +81,7 @@ export async function issueMaterialBatch(lines: { desc: ItemDesc; amount: number
 
 export async function adjustMaterial(desc: ItemDesc, target: number): Promise<{ ok: boolean; error?: string; balance?: number }> {
   const g = await gate(); if ("error" in g) return { ok: false, error: g.error };
-  try { const bal = await apply(desc, Number(target) || 0, "adjust", "ปรับยอด (นับได้จริง)", g.user.id); revalidate(desc.category); return { ok: true, balance: bal }; }
+  try { const bal = await apply(desc, Number(target) || 0, "adjust", "ปรับยอด (นับได้จริง)", g.user.id); await logActivity("material.adjust", `${desc.label} → ${Number(target) || 0} ${desc.unit || "ชิ้น"}`); revalidate(desc.category); return { ok: true, balance: bal }; }
   catch (e: any) { return { ok: false, error: e?.message || "ปรับยอดไม่สำเร็จ" }; }
 }
 

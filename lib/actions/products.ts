@@ -3,12 +3,13 @@ import { revalidatePath } from "next/cache";
 import { q, tx } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth/session";
 import { can } from "@/lib/auth/roles";
+import { logActivity } from "@/lib/activity";
 
-// จัดการรายชื่อกลิ่น (master products) — admin + ฝ่ายสร้างใบเบิก (creator)
+// จัดการรายชื่อกลิ่น (master products) — admin + ฝ่ายคลัง (stock)
 async function gate() {
   const user = await getCurrentUser();
   if (!user) return { error: "กรุณาเข้าสู่ระบบ" as const };
-  if (!can.createOrders(user.role)) return { error: "ไม่มีสิทธิ์จัดการกลิ่น" as const };
+  if (!can.manageScents(user.role)) return { error: "ไม่มีสิทธิ์จัดการกลิ่น" as const };
   return { user };
 }
 
@@ -20,6 +21,7 @@ export async function createProduct(name: string, code?: string, ptype?: string,
   if (dup) return { ok: false, error: "มีกลิ่นนี้อยู่แล้ว" };
   await q(`insert into products (name, code, ptype, barcode, active, sort) values ($1, $2, $3, $4, true, coalesce((select max(sort) from products),0)+1)`,
     [n, (code || "").trim() || null, (ptype || "").trim() || null, (barcode || "").trim() || null]);
+  await logActivity("scent.manage", `เพิ่มกลิ่น "${n}"`);
   revalidatePath("/products");
   return { ok: true };
 }
@@ -144,6 +146,7 @@ export async function renameProduct(id: number, name: string): Promise<{ ok: boo
   for (const [tbl, col] of [["product_barcodes", "scent"], ["discontinued_sku", "scent"], ["closed_sku", "scent"]] as const) {
     try { await q(`update ${tbl} set ${col} = $2 where ${COL(col)} = ${NK}`, [oldName, n]); } catch { /* ไม่มีตาราง = ข้าม */ }
   }
+  await logActivity("scent.manage", `เปลี่ยนชื่อกลิ่น "${oldName}" → "${n}"`);
   revalidatePath("/products");
   revalidatePath("/stock");
   revalidatePath("/shopee/new");
@@ -153,6 +156,7 @@ export async function renameProduct(id: number, name: string): Promise<{ ok: boo
 export async function setProductActive(id: number, active: boolean): Promise<{ ok: boolean; error?: string }> {
   const g = await gate(); if ("error" in g) return { ok: false, error: g.error };
   await q(`update products set active = $2 where id = $1`, [id, active]);
+  await logActivity("scent.manage", `${active ? "เปิด" : "ปิด"}กลิ่น id ${id}`);
   revalidatePath("/products");
   return { ok: true };
 }
