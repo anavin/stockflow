@@ -43,8 +43,10 @@ export const can = {
   manageStock: (role?: string | null) => hasAny(role, ["admin", "stock"]),
   /** จัดการ master กลิ่น (เพิ่ม/แก้/ลบ) = เจ้าของ + ฝ่ายคลัง (กลิ่น = วัตถุดิบ) */
   manageScents: (role?: string | null) => hasAny(role, ["admin", "stock"]),
-  /** ดูแดชบอร์ดภาพรวม + กลิ่นขายดี = เจ้าของ + จัดของ + คลัง */
-  viewDashboard: (role?: string | null) => hasAny(role, ["admin", "picker", "stock"]),
+  /** ดูแดชบอร์ดภาพรวม + กลิ่นขายดี = เจ้าของ + จัดของ + คลัง + ฝ่ายขาย (อ้างอิงตอนสร้างออเดอร์) */
+  viewDashboard: (role?: string | null) => hasAny(role, ["admin", "picker", "stock", "creator"]),
+  /** ดูข้อมูล อย. (อ่านอย่างเดียว) = ทุกฝ่ายที่มีบทบาท (แก้ = manageStock) */
+  viewFda: (role?: string | null) => hasAny(role, ["admin", "picker", "stock", "creator"]),
   /** จัดการผู้ใช้ */
   manageUsers: (role?: string | null) => hasAny(role, ["admin"]),
   /** ดูบันทึกการใช้งาน (audit log) = เจ้าของเท่านั้น */

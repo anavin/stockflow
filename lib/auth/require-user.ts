@@ -43,9 +43,16 @@ export async function requireReturns(): Promise<User> {
   return user;
 }
 
-/** แดชบอร์ดภาพรวม — เจ้าของเท่านั้น (คนอื่นเด้งไปหน้างานตัวเอง) */
+/** แดชบอร์ดภาพรวม — แอดมิน/จัดของ/คลัง/ขาย */
 export async function requireDashboard(): Promise<User> {
   const user = await requireUser();
   if (!can.viewDashboard(user.role)) redirect(homeFor(user.role));
+  return user;
+}
+
+/** ข้อมูล อย. (อ่าน) — ทุกฝ่ายที่มีบทบาท */
+export async function requireFda(): Promise<User> {
+  const user = await requireUser();
+  if (!can.viewFda(user.role)) redirect(homeFor(user.role));
   return user;
 }
