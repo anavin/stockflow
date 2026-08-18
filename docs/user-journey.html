@@ -1,0 +1,759 @@
+<title>User Journey — ระบบเบิกสินค้า Lab Parfumo</title>
+<style>
+  :root {
+    --bg: #f3f6f8; --surface: #ffffff; --surface-2: #eaeff4; --raise: #ffffff;
+    --ink: #101a22; --muted: #56646f; --faint: #8b98a4; --line: #e0e7ed;
+    --teal: #0d9488; --teal-ink: #0f766e; --teal-wash: #e6f5f2;
+    --blue: #2563eb; --blue-ink: #1d4ed8; --blue-wash: #e8f0fe;
+    --orange: #ee4d2d; --orange-ink: #c2410c; --orange-wash: #fdece7;
+    --stock: #a06a33; --stock-ink: #85571f; --stock-wash: #f6efe3;
+    --green: #16a34a; --green-wash: #e7f6ec;
+    --amber: #d97706; --amber-wash: #fdf0dd;
+    --red: #dc2626; --red-wash: #fbe9e9;
+    --shadow: 0 1px 2px rgba(16,26,34,.04), 0 8px 24px -12px rgba(16,26,34,.14);
+    --font: "IBM Plex Sans Thai","Noto Sans Thai","Sarabun",-apple-system,BlinkMacSystemFont,"Segoe UI",Thonburi,sans-serif;
+    --mono: ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0c1218; --surface: #131c24; --surface-2: #1a2530; --raise: #172029;
+      --ink: #e9f0f5; --muted: #9aa7b3; --faint: #667581; --line: #24303a;
+      --teal: #2dd4bf; --teal-ink: #5eead4; --teal-wash: #123330;
+      --blue: #60a5fa; --blue-ink: #93c5fd; --blue-wash: #13263f;
+      --orange: #ff7d5e; --orange-ink: #ffab93; --orange-wash: #331810;
+      --stock: #cf9d5f; --stock-ink: #e2bd86; --stock-wash: #2b2114;
+      --green: #4ade80; --green-wash: #10281a;
+      --amber: #fbbf24; --amber-wash: #2c2109;
+      --red: #f87171; --red-wash: #311616;
+      --shadow: 0 1px 2px rgba(0,0,0,.3), 0 10px 30px -14px rgba(0,0,0,.6);
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0c1218; --surface: #131c24; --surface-2: #1a2530; --raise: #172029;
+    --ink: #e9f0f5; --muted: #9aa7b3; --faint: #667581; --line: #24303a;
+    --teal: #2dd4bf; --teal-ink: #5eead4; --teal-wash: #123330;
+    --blue: #60a5fa; --blue-ink: #93c5fd; --blue-wash: #13263f;
+    --orange: #ff7d5e; --orange-ink: #ffab93; --orange-wash: #331810;
+    --stock: #cf9d5f; --stock-ink: #e2bd86; --stock-wash: #2b2114;
+    --green: #4ade80; --green-wash: #10281a;
+    --amber: #fbbf24; --amber-wash: #2c2109;
+    --red: #f87171; --red-wash: #311616;
+    --shadow: 0 1px 2px rgba(0,0,0,.3), 0 10px 30px -14px rgba(0,0,0,.6);
+  }
+
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); }
+  .page {
+    background: var(--bg); color: var(--ink); font-family: var(--font);
+    line-height: 1.65; -webkit-font-smoothing: antialiased;
+    font-size: 15px; padding: 0 20px 80px;
+  }
+  .wrap { max-width: 940px; margin: 0 auto; }
+  h1,h2,h3 { text-wrap: balance; margin: 0; font-weight: 700; line-height: 1.25; }
+  p { margin: 0; }
+  .mono { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+
+  /* ---------- Hero ---------- */
+  .hero { padding: 56px 0 30px; border-bottom: 1px solid var(--line); }
+  .eyebrow {
+    font-size: 12px; font-weight: 600; letter-spacing: .14em; text-transform: uppercase;
+    color: var(--teal-ink); margin-bottom: 14px;
+  }
+  .hero h1 { font-size: clamp(1.9rem, 4vw, 2.6rem); letter-spacing: -.01em; }
+  .hero .lead { color: var(--muted); font-size: 1.05rem; margin-top: 14px; max-width: 64ch; }
+  .personas { display: grid; grid-template-columns: repeat(auto-fit, minmax(238px, 1fr)); gap: 12px; margin-top: 26px; }
+  .persona {
+    display: flex; align-items: center; gap: 12px; padding: 12px 16px 12px 12px;
+    background: var(--surface); border: 1px solid var(--line); border-radius: 14px;
+    box-shadow: var(--shadow);
+  }
+  .persona .avatar {
+    width: 42px; height: 42px; border-radius: 11px; display: grid; place-items: center;
+    font-size: 20px; flex-shrink: 0;
+  }
+  .persona.emp .avatar { background: var(--blue-wash); }
+  .persona.own .avatar { background: var(--teal-wash); }
+  .persona.create .avatar { background: var(--orange-wash); }
+  .persona.stock .avatar { background: var(--stock-wash); }
+  .persona .role { font-weight: 700; font-size: .95rem; }
+  .persona .ctx { font-size: .82rem; color: var(--muted); margin-top: 1px; }
+  .dchip {
+    display: inline-block; font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 999px;
+    margin-top: 5px; letter-spacing: .02em;
+  }
+  .persona.emp .dchip { background: var(--blue-wash); color: var(--blue-ink); }
+  .persona.own .dchip { background: var(--teal-wash); color: var(--teal-ink); }
+  .persona.create .dchip { background: var(--orange-wash); color: var(--orange-ink); }
+  .persona.stock .dchip { background: var(--stock-wash); color: var(--stock-ink); }
+
+  /* ---------- Section ---------- */
+  section { padding-top: 52px; }
+  .sec-head { display: flex; align-items: baseline; gap: 14px; margin-bottom: 8px; }
+  .sec-num {
+    font-family: var(--mono); font-size: .82rem; font-weight: 600; color: var(--faint);
+    letter-spacing: .05em;
+  }
+  .sec-head h2 { font-size: 1.5rem; letter-spacing: -.01em; }
+  .sec-sub { color: var(--muted); margin: 4px 0 26px; max-width: 66ch; }
+
+  /* ---------- Principles ---------- */
+  .principles { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; }
+  .prin {
+    background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 18px 18px 16px;
+    box-shadow: var(--shadow);
+  }
+  .prin .ic { font-size: 20px; }
+  .prin h3 { font-size: 1rem; margin: 10px 0 6px; }
+  .prin p { font-size: .88rem; color: var(--muted); }
+
+  /* ---------- Nav map ---------- */
+  .navmap { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 13px; }
+  .navcard {
+    background: var(--surface); border: 1px solid var(--line); border-left: 3px solid var(--line);
+    border-radius: 13px; padding: 15px 16px; box-shadow: var(--shadow);
+  }
+  .navcard .g-name { font-weight: 700; font-size: .95rem; display: flex; align-items: center; gap: 8px; }
+  .navcard .g-role { font-size: .74rem; color: var(--faint); margin: 3px 0 11px; }
+  .navcard ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 7px; }
+  .navcard ul li { font-size: .85rem; color: var(--muted); display: flex; align-items: baseline; gap: 7px; }
+  .navcard ul li::before { content: ""; width: 5px; height: 5px; border-radius: 999px; background: var(--faint); flex-shrink: 0; transform: translateY(-2px); }
+  .navcard.dash { border-left-color: var(--teal); }
+  .navcard.order { border-left-color: var(--orange); }
+  .navcard.finished { border-left-color: var(--blue); }
+  .navcard.material { border-left-color: var(--stock); }
+  .navcard.settings { border-left-color: var(--faint); }
+
+  /* ---------- Timeline ---------- */
+  .act-head {
+    display: flex; align-items: center; gap: 12px; margin: 40px 0 20px;
+    padding: 12px 16px; border-radius: 13px; border: 1px solid var(--line);
+  }
+  .act-head.emp { background: var(--blue-wash); border-color: color-mix(in srgb, var(--blue) 24%, transparent); }
+  .act-head.own { background: var(--teal-wash); border-color: color-mix(in srgb, var(--teal) 24%, transparent); }
+  .act-head.stock { background: var(--stock-wash); border-color: color-mix(in srgb, var(--stock) 26%, transparent); }
+  .act-head .tag {
+    font-size: 11px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase;
+    padding: 3px 9px; border-radius: 999px; background: var(--surface); flex-shrink: 0;
+  }
+  .act-head.emp .tag { color: var(--blue-ink); }
+  .act-head.own .tag { color: var(--teal-ink); }
+  .act-head.stock .tag { color: var(--stock-ink); }
+  .act-head h3 { font-size: 1.1rem; }
+  .act-head .sub { font-size: .82rem; color: var(--muted); margin-left: auto; text-align: right; }
+
+  .steps { display: flex; flex-direction: column; gap: 0; }
+  .step {
+    position: relative; display: grid; grid-template-columns: 46px 1fr; gap: 20px;
+    padding-bottom: 26px;
+  }
+  .step::before {
+    content: ""; position: absolute; left: 22px; top: 40px; bottom: -6px; width: 2px;
+    background: var(--line);
+  }
+  .step:last-child::before { display: none; }
+  .node {
+    width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center;
+    font-family: var(--mono); font-weight: 700; font-size: 1rem; z-index: 1;
+    border: 2px solid var(--line); background: var(--surface); color: var(--ink);
+  }
+  .step.emp .node { border-color: color-mix(in srgb, var(--blue) 55%, transparent); color: var(--blue-ink); }
+  .step.own .node { border-color: color-mix(in srgb, var(--teal) 55%, transparent); color: var(--teal-ink); }
+  .step.stock .node { border-color: color-mix(in srgb, var(--stock) 55%, transparent); color: var(--stock-ink); }
+  .card {
+    background: var(--surface); border: 1px solid var(--line); border-radius: 15px;
+    box-shadow: var(--shadow); overflow: hidden;
+  }
+  .card-body { padding: 18px 20px; }
+  .screen {
+    font-size: 11px; font-weight: 600; letter-spacing: .05em; color: var(--faint);
+    text-transform: uppercase; font-family: var(--mono);
+  }
+  .card h4 { font-size: 1.12rem; margin: 3px 0 4px; font-weight: 700; }
+  .does { color: var(--muted); font-size: .92rem; margin-bottom: 14px; }
+  .ux-label {
+    font-size: 11px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase;
+    color: var(--teal-ink); margin-bottom: 9px; display: flex; align-items: center; gap: 6px;
+  }
+  .step.emp .ux-label { color: var(--blue-ink); }
+  .step.stock .ux-label { color: var(--stock-ink); }
+  ul.ux { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 9px; }
+  ul.ux li { position: relative; padding-left: 22px; font-size: .9rem; }
+  ul.ux li::before {
+    content: ""; position: absolute; left: 4px; top: .55em; width: 7px; height: 7px;
+    border-radius: 2px; background: var(--teal);
+  }
+  .step.emp ul.ux li::before { background: var(--blue); }
+  .step.stock ul.ux li::before { background: var(--stock); }
+  ul.ux li b { font-weight: 700; }
+  ul.ux li .k { color: var(--muted); }
+
+  /* ---------- Wireframe (phone) ---------- */
+  .mock-split { display: grid; grid-template-columns: 1fr; gap: 0; }
+  @media (min-width: 720px) { .mock-split { grid-template-columns: 1fr 236px; } }
+  .mock-pane {
+    border-top: 1px solid var(--line); background: var(--surface-2);
+    padding: 20px; display: grid; place-items: center;
+  }
+  @media (min-width: 720px) { .mock-pane { border-top: none; border-left: 1px solid var(--line); } }
+  .phone {
+    width: 190px; border-radius: 24px; background: var(--surface); border: 6px solid var(--ink);
+    padding: 8px; box-shadow: var(--shadow);
+  }
+  .phone .notch { width: 46px; height: 4px; border-radius: 999px; background: var(--faint); margin: 2px auto 8px; }
+  .ph-scr { border-radius: 14px; overflow: hidden; border: 1px solid var(--line); }
+  .ph-top { padding: 8px 10px; font-size: 10px; font-weight: 700; color: #fff; }
+  .ph-body { padding: 10px; display: flex; flex-direction: column; gap: 7px; }
+  .fld { border: 1.5px solid var(--line); border-radius: 8px; padding: 7px 8px; font-size: 10px; color: var(--muted); background: var(--bg); }
+  .fld.focus { border-color: var(--blue); box-shadow: 0 0 0 3px var(--blue-wash); color: var(--ink); font-family: var(--mono); }
+  .btn-mock { border-radius: 8px; padding: 8px; text-align: center; font-size: 10px; font-weight: 700; color: #fff; }
+  .row-mock { display: flex; gap: 5px; align-items: center; }
+  .row-mock .fld { flex: 1; }
+  .cam { width: 26px; height: 26px; border-radius: 7px; display: grid; place-items: center; font-size: 12px; flex-shrink: 0; }
+  .line-item { border: 1px solid var(--line); border-radius: 9px; padding: 7px; display: flex; flex-direction: column; gap: 5px; }
+  .li-head { font-size: 9.5px; font-weight: 700; display: flex; justify-content: space-between; }
+  .li-head .sz { color: var(--muted); font-weight: 500; }
+  .res { border-radius: 9px; padding: 8px 9px; font-size: 10px; font-weight: 700; display: flex; align-items: center; gap: 5px; }
+  .mock-cap { font-size: .78rem; color: var(--faint); text-align: center; margin-top: 10px; max-width: 200px; }
+
+  /* ---------- Sheet mock (count) ---------- */
+  .sheet {
+    width: 216px; border-radius: 12px; overflow: hidden; border: 1px solid var(--line);
+    background: var(--surface); box-shadow: var(--shadow); font-size: 10px;
+  }
+  .sheet .s-top { padding: 8px 11px; font-weight: 700; color: #fff; background: var(--stock); display: flex; justify-content: space-between; }
+  .sheet .s-row { display: grid; grid-template-columns: 1fr 34px 34px; gap: 6px; padding: 7px 11px; border-top: 1px solid var(--line); align-items: center; }
+  .sheet .s-row.head { color: var(--faint); font-weight: 700; font-size: 9px; text-transform: uppercase; letter-spacing: .04em; background: var(--surface-2); }
+  .sheet .s-row .num { font-family: var(--mono); text-align: right; }
+  .sheet .diff-up { color: var(--green); font-weight: 700; }
+  .sheet .diff-dn { color: var(--red); font-weight: 700; }
+
+  /* ---------- Module grid ---------- */
+  .mods { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px,1fr)); gap: 13px; }
+  .mod { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 15px 16px; box-shadow: var(--shadow); }
+  .mod .m-top { display: flex; align-items: center; gap: 9px; margin-bottom: 7px; }
+  .mod .m-ic { font-size: 18px; }
+  .mod .m-name { font-weight: 700; font-size: .93rem; }
+  .mod .m-path { font-size: .7rem; color: var(--faint); font-family: var(--mono); }
+  .mod p { font-size: .84rem; color: var(--muted); }
+
+  /* ---------- Color language ---------- */
+  .colors { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px,1fr)); gap: 12px; }
+  .swatch { background: var(--surface); border: 1px solid var(--line); border-radius: 13px; padding: 14px; box-shadow: var(--shadow); }
+  .swatch .dot { width: 100%; height: 30px; border-radius: 8px; margin-bottom: 10px; }
+  .swatch .name { font-weight: 700; font-size: .9rem; }
+  .swatch .use { font-size: .8rem; color: var(--muted); margin-top: 3px; }
+
+  /* ---------- Roles ---------- */
+  .roles { display: grid; grid-template-columns: repeat(auto-fit,minmax(216px,1fr)); gap: 14px; }
+  .role-card { background: var(--surface); border: 1px solid var(--line); border-top: 3px solid var(--line); border-radius: 15px; padding: 16px 18px; box-shadow: var(--shadow); }
+  .role-card.own { border-top-color: var(--teal); }
+  .role-card.create { border-top-color: var(--orange); }
+  .role-card.emp { border-top-color: var(--blue); }
+  .role-card.stock { border-top-color: var(--stock); }
+  .role-top { display: flex; align-items: center; gap: 11px; margin-bottom: 13px; }
+  .role-ic { font-size: 22px; }
+  .role-name { font-weight: 700; font-size: 1rem; }
+  .role-key { font-size: .76rem; color: var(--faint); }
+  .role-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+  .role-list li { position: relative; padding-left: 23px; font-size: .87rem; line-height: 1.4; }
+  .role-list li::before { position: absolute; left: 2px; top: 0; font-weight: 700; }
+  .role-list li.yes { color: var(--ink); }
+  .role-list li.yes::before { content: "✓"; color: var(--green); }
+  .role-list li.no { color: var(--faint); }
+  .role-list li.no::before { content: "✕"; color: var(--red); }
+
+  /* ---------- Rules / callout ---------- */
+  .rules { display: grid; grid-template-columns: repeat(auto-fit,minmax(230px,1fr)); gap: 14px; }
+  .rule { background: var(--surface); border: 1px solid var(--line); border-left: 3px solid var(--teal); border-radius: 12px; padding: 15px 16px; box-shadow: var(--shadow); }
+  .rule h4 { font-size: .95rem; margin: 0 0 5px; }
+  .rule p { font-size: .85rem; color: var(--muted); }
+  .rule.warn { border-left-color: var(--amber); }
+  .rule.safe { border-left-color: var(--green); }
+
+  .callout {
+    margin-top: 20px; background: var(--amber-wash); border: 1px solid color-mix(in srgb, var(--amber) 35%, transparent);
+    border-radius: 13px; padding: 16px 18px; display: flex; gap: 12px;
+  }
+  .callout .ic { font-size: 20px; flex-shrink: 0; }
+  .callout h4 { font-size: .95rem; margin: 0 0 4px; color: var(--ink); }
+  .callout p { font-size: .87rem; color: var(--muted); }
+
+  footer { margin-top: 60px; padding-top: 22px; border-top: 1px solid var(--line); color: var(--faint); font-size: .82rem; text-align: center; }
+
+  @media (max-width: 560px) {
+    .principles { grid-template-columns: 1fr; }
+    .step { grid-template-columns: 38px 1fr; gap: 14px; }
+    .node { width: 36px; height: 36px; font-size: .85rem; }
+    .step::before { left: 18px; }
+    .act-head { flex-wrap: wrap; }
+    .act-head .sub { margin-left: 0; text-align: left; width: 100%; }
+  }
+</style>
+
+<div class="page">
+<div class="wrap">
+
+  <header class="hero">
+    <div class="eyebrow">คู่มือ UX · Lab Parfumo</div>
+    <h1>User Journey — ระบบเบิกสินค้า &amp; ตัดสต๊อก</h1>
+    <p class="lead">เส้นทางการใช้งานตั้งแต่ "ใบเบิกเกิดขึ้น" จนถึง "ตัดสต๊อก–ปรับยอด–ตรวจสอบย้อนหลังได้" — ครอบคลุมทั้ง <b>สินค้าสำเร็จรูป</b> และ <b>คลังวัตถุดิบ</b> (น้ำหอม·สติ๊กเกอร์·ขวด) พร้อมเหตุผลว่าแต่ละหน้าจอออกแบบยังไงให้ <b>เข้าใจง่าย ใช้งานเร็ว กันพลาด และมีร่องรอยตรวจสอบ</b></p>
+
+    <div class="personas">
+      <div class="persona own">
+        <div class="avatar">🧑‍💼</div>
+        <div>
+          <div class="role">แอดมิน / เจ้าของ</div>
+          <div class="ctx">ดูภาพรวม · คุมทุกอย่าง · ยกเลิก/แก้ไข</div>
+          <span class="dchip">💻 Desktop · ธีมเขียวมิ้นต์</span>
+        </div>
+      </div>
+      <div class="persona create">
+        <div class="avatar">📝</div>
+        <div>
+          <div class="role">ฝ่ายขาย / สร้างใบเบิก</div>
+          <div class="ctx">กรอก/นำเข้า/พิมพ์ใบเบิก Shopee</div>
+          <span class="dchip">💻 Desktop · ธีมส้ม Shopee</span>
+        </div>
+      </div>
+      <div class="persona emp">
+        <div class="avatar">📦</div>
+        <div>
+          <div class="role">ฝ่ายจัดของ / ตัดสต๊อก</div>
+          <div class="ctx">สแกนใบเบิก · หยิบของ · ยืนยันตัด</div>
+          <span class="dchip">📱 Mobile · ธีมน้ำเงิน</span>
+        </div>
+      </div>
+      <div class="persona stock">
+        <div class="avatar">🧪</div>
+        <div>
+          <div class="role">ฝ่ายคลัง / วัตถุดิบ</div>
+          <div class="ctx">รับเข้า·เบิก·นับสต๊อก · จัดการกลิ่น</div>
+          <span class="dchip">💻 Desktop · ธีมบรอนซ์</span>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- PRINCIPLES -->
+  <section>
+    <div class="sec-head"><span class="sec-num">00</span><h2>หลักคิดหลัก 4 ข้อ</h2></div>
+    <p class="sec-sub">ทุกหน้าจอในระบบยึด 4 หลักนี้ ถ้าออกแบบหน้าใหม่ให้เช็คกับ 4 ข้อนี้ก่อน</p>
+    <div class="principles">
+      <div class="prin"><div class="ic">🎯</div><h3>งานเดียวต่อหน้าจอ</h3><p>แต่ละหน้าถามคำถามเดียว — "จะเบิกอะไร?" / "สแกนใบไหน?" / "รับเข้าเท่าไร?" ไม่ยัดทุกอย่างในหน้าเดียว ลดการตัดสินใจของผู้ใช้</p></div>
+      <div class="prin"><div class="ic">🚦</div><h3>สีคือภาษา</h3><p>เขียว=สำเร็จ เหลือง=ระวัง(ติดลบ) แดง=ผิดพลาด · น้ำเงิน=ปุ่มลงมือ(สแกน) · บรอนซ์=คลังวัตถุดิบ · สีแพลตฟอร์ม(ส้ม Shopee)ใช้แค่ระบุช่องทาง</p></div>
+      <div class="prin"><div class="ic">✋</div><h3>ตรวจก่อนตัด · ย้อนได้ · มีร่องรอย</h3><p>ตัดสต๊อก/ปรับยอดเป็นเรื่องใหญ่ → ต้อง "ดึงรายการมาตรวจ + กดยืนยัน" ก่อน · ถ้าพลาดย้อนคืนได้ · และทุกการกระทำถูกบันทึกลงบันทึกการใช้งาน (audit)</p></div>
+      <div class="prin"><div class="ic">📱</div><h3>มือถืออยู่หน้างาน</h3><p>ฝ่ายจัดของถือมือถือยืนหน้าชั้นวาง → ปุ่มใหญ่ กดนิ้วโป้งถึง ช่องสแกนโฟกัสอัตโนมัติ ใช้กล้องแทนเครื่องสแกนได้ · งานคลัง/แดชบอร์ดเป็นเดสก์ท็อป</p></div>
+    </div>
+  </section>
+
+  <!-- NAV MAP -->
+  <section>
+    <div class="sec-head"><span class="sec-num">01</span><h2>แผนผังเมนู — 5 กลุ่มงาน</h2></div>
+    <p class="sec-sub">เมนูซ้ายจัดเป็น 5 กลุ่มตามหน้าที่ และ<b>ขึ้นตามสิทธิ์ของผู้ใช้</b> — เข้ามาก็เห็นเฉพาะงานของตัวเอง ไม่รก ไม่หลง</p>
+    <div class="navmap">
+      <div class="navcard dash">
+        <div class="g-name">🏠 หน้าหลัก</div>
+        <div class="g-role">แอดมิน · จัดของ · คลัง</div>
+        <ul><li>ภาพรวม (Dashboard) — สุขภาพสต๊อก, กลิ่นขายดี, ยอดตัดวันนี้</li></ul>
+      </div>
+      <div class="navcard order">
+        <div class="g-name">🧾 ใบเบิก Shopee</div>
+        <div class="g-role">แอดมิน · ฝ่ายขาย</div>
+        <ul><li>รายการใบเบิก</li><li>สร้างใบเบิกใหม่</li><li>นำเข้า Excel/CSV</li><li>ถังขยะ (กู้คืนได้)</li></ul>
+      </div>
+      <div class="navcard finished">
+        <div class="g-name">📦 สินค้าสำเร็จรูป</div>
+        <div class="g-role">แอดมิน · จัดของ · คลัง</div>
+        <ul><li>ตัดสต๊อก (สแกน)</li><li>จัดส่งสินค้า (สแกน)</li><li>สต๊อกคงเหลือ</li><li>ติดตาม SKU</li><li>อัปเดตยอด (ไฟล์)</li></ul>
+      </div>
+      <div class="navcard material">
+        <div class="g-name">🧪 คลังวัตถุดิบ</div>
+        <div class="g-role">แอดมิน · ฝ่ายคลัง</div>
+        <ul><li>จัดการกลิ่น (master)</li><li>น้ำหอม (ยังไม่บรรจุ)</li><li>สติ๊กเกอร์ &amp; การ์ด</li><li>ขวด &amp; แพ็คเกจ</li><li>รับเข้า / เบิก (รวม)</li><li>ประวัติวัตถุดิบ</li></ul>
+      </div>
+      <div class="navcard settings">
+        <div class="g-name">⚙️ ตั้งค่า &amp; ข้อมูล</div>
+        <div class="g-role">ตามสิทธิ์แต่ละเมนู</div>
+        <ul><li>ข้อมูล อย.</li><li>บันทึกการใช้งาน (แอดมิน)</li><li>จัดการผู้ใช้ (แอดมิน)</li></ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- JOURNEY -->
+  <section>
+    <div class="sec-head"><span class="sec-num">02</span><h2>เส้นทางหลัก · ใบเบิก → ตัดสต๊อก</h2></div>
+    <p class="sec-sub">ไล่ตามลำดับเวลาจริง 3 องก์ — ใบเบิกถูกสร้าง (ฝ่ายขาย) → ของถูกตัดสต๊อก (ฝ่ายจัดของ) → ตรวจสอบ/แก้ไข (แอดมิน)</p>
+
+    <div class="act-head create">
+      <span class="tag">องก์ 1 · ฝ่ายขาย</span>
+      <h3>สร้างใบเบิก &amp; พิมพ์</h3>
+      <span class="sub">💻 Desktop · ก่อนของออกจากคลัง</span>
+    </div>
+
+    <div class="steps">
+      <div class="step own">
+        <div class="node">1</div>
+        <div class="card"><div class="card-body">
+          <div class="screen">/shopee/new · /shopee/import</div>
+          <h4>สร้างใบเบิก หรือ นำเข้า Excel</h4>
+          <p class="does">พิมพ์เองทีละใบด้วย dropdown หรืออัปโหลดไฟล์ Shopee ทีละหลายร้อยออร์เดอร์</p>
+          <div class="ux-label">◆ ออกแบบยังไงให้ง่าย</div>
+          <ul class="ux">
+            <li><b>Dropdown ค้นหาได้ทุกช่อง</b> <span class="k">— กลิ่น/ขนาด/จังหวัด เลือกจากลิสต์ พิมพ์เองไม่ได้ → กันสะกดผิด กันชื่อกลิ่นไม่ตรง</span></li>
+            <li><b>จังหวัด → อำเภอ → รหัสไปรษณีย์ auto-fill</b> <span class="k">— เลือกจังหวัดแล้วที่เหลือเติมให้</span></li>
+            <li><b>Import = พรีวิว + ตรวจก่อนบันทึก</b> <span class="k">— เห็นว่าจะเข้ากี่ใบ แถวไหน error ก่อนกดยืนยัน</span></li>
+            <li><b>เตือน Order No. ซ้ำ</b> <span class="k">— Order No. คือกุญแจหลัก ระบบกันสร้างซ้ำ</span></li>
+          </ul>
+        </div></div>
+      </div>
+
+      <div class="step own">
+        <div class="node">2</div>
+        <div class="card"><div class="card-body">
+          <div class="screen">/api/print/[orderNo] · PDF</div>
+          <h4>พิมพ์ใบเบิก (มีบาร์โค้ด Order No.)</h4>
+          <p class="does">ออกใบเบิกสินค้า PDF แนบไปกับพัสดุ — บาร์โค้ดคือสะพานเชื่อมไปหน้าตัดสต๊อก</p>
+          <div class="ux-label">◆ ออกแบบยังไงให้ง่าย</div>
+          <ul class="ux">
+            <li><b>บาร์โค้ด Code128 ตัวใหญ่ชัด</b> <span class="k">— สแกนตัดสต๊อกทีหลังได้ใน 1 วินาที ไม่ต้องพิมพ์เลขยาว</span></li>
+            <li><b>ต้นฉบับ + สำเนา ในหน้าเดียว</b> <span class="k">— ครบทุกช่องตามฟอร์มจริง</span></li>
+            <li><b>เลขที่ใบเบิกออกอัตโนมัติ</b> <span class="k">— SH-YY-MM-DD-#### กันเลขซ้ำ/ตกหล่น</span></li>
+          </ul>
+        </div></div>
+      </div>
+    </div>
+
+    <div class="act-head emp">
+      <span class="tag">องก์ 2 · ฝ่ายจัดของ</span>
+      <h3>สแกน → ตรวจ → ตัดสต๊อก</h3>
+      <span class="sub">📱 Mobile · หัวใจของระบบ</span>
+    </div>
+
+    <div class="steps">
+      <div class="step emp">
+        <div class="node">3</div>
+        <div class="card">
+          <div class="mock-split">
+            <div class="card-body">
+              <div class="screen">/stock/issue · ธีมน้ำเงิน</div>
+              <h4>สแกนบาร์โค้ด Order No.</h4>
+              <p class="does">ฝ่ายจัดของหยิบพัสดุ ยิงบาร์โค้ดบนใบเบิก (หรือใช้กล้องมือถือ) — ช่องเดียว จบ</p>
+              <div class="ux-label">◆ ออกแบบยังไงให้ง่าย</div>
+              <ul class="ux">
+                <li><b>ช่องสแกนใหญ่ + โฟกัสอัตโนมัติ</b> <span class="k">— เปิดหน้ามายิงได้เลย เครื่องสแกน USB พิมพ์เลข+Enter เอง</span></li>
+                <li><b>ปุ่ม "สแกนด้วยกล้อง"</b> <span class="k">— ไม่มีเครื่องสแกนก็ใช้กล้องมือถือได้ สั่นเตือนเมื่อยิงติด</span></li>
+                <li><b>ทั้งหน้าเป็นสีน้ำเงิน</b> <span class="k">— แยกชัดจากหน้าอื่น "นี่คือหน้าลงมือตัดของ"</span></li>
+              </ul>
+            </div>
+            <div class="mock-pane">
+              <div>
+                <div class="phone"><div class="notch"></div><div class="ph-scr">
+                  <div class="ph-top" style="background:var(--blue)">ตัดสต๊อก (สแกน)</div>
+                  <div class="ph-body">
+                    <div class="fld">สแกน / กรอก Order No.</div>
+                    <div class="fld focus">260809TA3AFWWB▏</div>
+                    <div class="btn-mock" style="background:var(--blue)">ดึงรายการ</div>
+                    <div class="btn-mock" style="background:var(--surface-2);color:var(--muted)">📷 สแกนด้วยกล้อง</div>
+                  </div>
+                </div></div>
+                <p class="mock-cap">ช่องเดียว โฟกัสรอ ยิงแล้วเด้งต่อทันที</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="step emp">
+        <div class="node">4</div>
+        <div class="card">
+          <div class="mock-split">
+            <div class="card-body">
+              <div class="screen">ขั้นตรวจก่อนตัด</div>
+              <h4>ดึงรายการทั้งใบ → ใส่ SKU + Spec</h4>
+              <p class="does">ระบบดึงทุกบรรทัดของออร์เดอร์มาแสดง ฝ่ายจัดของสแกน/กรอก SKU จริงของแต่ละชิ้น + ระบุ Spec</p>
+              <div class="ux-label">◆ ออกแบบยังไงให้ง่าย</div>
+              <ul class="ux">
+                <li><b>เห็นทั้งใบก่อนตัด</b> <span class="k">— กลิ่น ขนาด จำนวน คงเหลือ ครบ ป้องกันตัดผิดใบ</span></li>
+                <li><b>ช่อง SKU สแกนได้ (มีปุ่มกล้องรายบรรทัด)</b> <span class="k">— ยืนยันว่าชิ้นที่หยิบตรงกับที่ระบบจะตัด</span></li>
+                <li><b>ป้าย "คงเหลือ" ต่อรายการ</b> <span class="k">— รู้ทันทีว่าของพอไหมก่อนกดยืนยัน</span></li>
+                <li><b>ปุ่มยืนยันใหญ่ท้ายรายการ</b> <span class="k">— ต้องกดเองเสมอ ระบบไม่ตัดให้อัตโนมัติ</span></li>
+              </ul>
+            </div>
+            <div class="mock-pane">
+              <div>
+                <div class="phone"><div class="notch"></div><div class="ph-scr">
+                  <div class="ph-top" style="background:var(--blue)">ตรวจก่อนตัด · 2 รายการ</div>
+                  <div class="ph-body">
+                    <div class="line-item">
+                      <div class="li-head"><span>Dionysus X <span class="sz">10 ml</span></span><span style="color:var(--muted)">เหลือ 42</span></div>
+                      <div class="row-mock"><div class="fld" style="font-family:var(--mono)">SKU-DNX10</div><div class="cam" style="background:var(--blue-wash);color:var(--blue-ink)">📷</div></div>
+                      <div class="fld">Spec / ล็อต</div>
+                    </div>
+                    <div class="line-item">
+                      <div class="li-head"><span>Senorita <span class="sz">4 ml</span></span><span style="color:var(--muted)">เหลือ 8</span></div>
+                      <div class="row-mock"><div class="fld" style="font-family:var(--mono)">SKU-SNR04</div><div class="cam" style="background:var(--blue-wash);color:var(--blue-ink)">📷</div></div>
+                      <div class="fld">Spec / ล็อต</div>
+                    </div>
+                    <div class="btn-mock" style="background:var(--green)">✓ ยืนยันตัดสต๊อก</div>
+                  </div>
+                </div></div>
+                <p class="mock-cap">ตรวจครบทั้งใบ แล้วค่อยกดยืนยันเอง</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="step emp">
+        <div class="node">5</div>
+        <div class="card">
+          <div class="mock-split">
+            <div class="card-body">
+              <div class="screen">ผลลัพธ์ · Feedback</div>
+              <h4>เห็นผลทันที — สำเร็จ / ติดลบ</h4>
+              <p class="does">ตัดเสร็จแสดงการ์ดผลลัพธ์ พร้อมยอดคงเหลือใหม่ทุกบรรทัด และค้างประวัติไว้ให้ทวน</p>
+              <div class="ux-label">◆ ออกแบบยังไงให้ง่าย</div>
+              <ul class="ux">
+                <li><b>การ์ดเขียว = สำเร็จ</b> <span class="k">— เห็นแวบเดียวรู้ว่าเรียบร้อย ตัดใบถัดไปได้เลย</span></li>
+                <li><b>การ์ดเหลือง = สต๊อกติดลบ</b> <span class="k">— เตือนว่าของไม่พอ/ยังไม่ได้รับเข้า ควรแจ้งแอดมิน แต่ไม่บล็อกงาน</span></li>
+                <li><b>ประวัติค้างบนจอ</b> <span class="k">— ยิงต่อได้เรื่อยๆ ย้อนดูใบที่เพิ่งตัดได้</span></li>
+              </ul>
+            </div>
+            <div class="mock-pane">
+              <div>
+                <div class="phone"><div class="notch"></div><div class="ph-scr">
+                  <div class="ph-top" style="background:var(--blue)">ตัดสต๊อกแล้ว</div>
+                  <div class="ph-body">
+                    <div class="res" style="background:var(--green-wash);color:var(--green)">✓ ตัดสต๊อกสำเร็จ · TA3AFWWB</div>
+                    <div class="res" style="background:var(--amber-wash);color:var(--amber)">⚠ 1 รายการสต๊อกติดลบ</div>
+                    <div class="fld" style="font-family:var(--mono)">Dionysus X 10ml −2 → 40</div>
+                    <div class="fld" style="font-family:var(--mono)">Senorita 4ml −1 → 7</div>
+                  </div>
+                </div></div>
+                <p class="mock-cap">สีบอกสถานะทันที ไม่ต้องอ่านเยอะ</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="act-head own">
+      <span class="tag">องก์ 3 · แอดมิน</span>
+      <h3>ตรวจสอบ &amp; แก้ไขเมื่อพลาด</h3>
+      <span class="sub">💻 Desktop · หลังตัดสต๊อก</span>
+    </div>
+
+    <div class="steps">
+      <div class="step own">
+        <div class="node">6</div>
+        <div class="card"><div class="card-body">
+          <div class="screen">/ · ภาพรวม (Dashboard)</div>
+          <h4>ดูภาพรวมสุขภาพสต๊อก</h4>
+          <p class="does">หน้าแรกสรุปสถานะทั้งร้าน — ของใกล้หมด กลิ่นที่เบิกมากสุด ยอดตัดวันนี้</p>
+          <div class="ux-label">◆ ออกแบบยังไงให้ง่าย</div>
+          <ul class="ux">
+            <li><b>สรุปก่อนรายละเอียด</b> <span class="k">— ตัวเลขใหญ่ + แถบสุขภาพสต๊อก(เขียว/เหลือง/แดง)อยู่บนสุด</span></li>
+            <li><b>กลิ่นเบิกมากสุด 10 อันดับ + "ดูทั้งหมด"</b> <span class="k">— เห็นภาพรวมเร็ว เจาะลึกได้เมื่ออยากดู</span></li>
+            <li><b>บันทึกการใช้งาน (audit)</b> <span class="k">— แอดมินย้อนดูได้ว่าใครเข้าใช้/ตัด/รับเข้า/แก้กลิ่น เมื่อไร</span></li>
+          </ul>
+        </div></div>
+      </div>
+
+      <div class="step own">
+        <div class="node">7</div>
+        <div class="card"><div class="card-body">
+          <div class="screen">/stock/issued → /shopee/[orderNo]</div>
+          <h4>ยกเลิกการตัด → แก้ไข → ตัดใหม่</h4>
+          <p class="does">ถ้าตัดผิด กด ↩ ยกเลิก สต๊อกคืนกลับ แล้วระบบพาไปหน้าใบเบิกนั้นเพื่อแก้ไข/ตัดใหม่ในที่เดียว</p>
+          <div class="ux-label">◆ ออกแบบยังไงให้ง่าย</div>
+          <ul class="ux">
+            <li><b>ยกเลิกได้ (คืนสต๊อก)</b> <span class="k">— ตาข่ายกันพลาด ฝ่ายจัดของทำงานกล้าขึ้น ไม่กลัวตัดผิด</span></li>
+            <li><b>ขอบเขตชัด</b> <span class="k">— แอดมิน = ยกเลิกใบไหนก็ได้ · ฝ่ายจัดของ = เฉพาะใบที่ตัวเองตัด ภายใน 24 ชม.</span></li>
+            <li><b>ยกเลิกแล้วพาไปหน้าใบเบิกทันที</b> <span class="k">— ไม่ต้องเดินหาว่าใบไปอยู่ไหน แก้/ตัดใหม่ได้เลย</span></li>
+          </ul>
+        </div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- MATERIALS WAREHOUSE -->
+  <section>
+    <div class="sec-head"><span class="sec-num">03</span><h2>คลังวัตถุดิบ &amp; นับสต๊อกจากไฟล์</h2></div>
+    <p class="sec-sub">ระบบย่อยที่ <b>ฝ่ายคลัง</b> ใช้จัดการของก่อนบรรจุ — น้ำหอมยังไม่บรรจุ, สติ๊กเกอร์/การ์ด, ขวด/แพ็คเกจ · แยกกลุ่มตามเกรด (EDP·EDP+·PARFUM·EDT) พับ/กางได้ รับเข้า-เบิกทีละหลายรายการ และนับทั้งคลังจากไฟล์เดียว</p>
+
+    <div class="mods">
+      <div class="mod">
+        <div class="m-top"><span class="m-ic">🌸</span><div><div class="m-name">จัดการกลิ่น</div><div class="m-path">/products</div></div></div>
+        <p>master กลิ่นทั้งหมด — เพิ่ม/แก้ชื่อ·เกรด·บาร์โค้ด, ตั้งเลิกผลิต, ลบ (เฉพาะแอดมิน) · แก้ชื่อแล้ว sync ไปคลังวัตถุดิบให้อัตโนมัติ</p>
+      </div>
+      <div class="mod">
+        <div class="m-top"><span class="m-ic">🧴</span><div><div class="m-name">น้ำหอม · สติ๊กเกอร์ · ขวด</div><div class="m-path">/stock/bulk · labels · packaging</div></div></div>
+        <p>3 หน้าสต๊อกวัตถุดิบ จัดกลุ่มตามเกรด (การ์ดพับได้) · ปุ่ม +/− ปรับยอดในตัว · ตั้งจุดสั่งซื้อ + หมายเหตุต่อรายการ</p>
+      </div>
+      <div class="mod">
+        <div class="m-top"><span class="m-ic">🔄</span><div><div class="m-name">รับเข้า / เบิก (รวม)</div><div class="m-path">/stock/materials/issue</div></div></div>
+        <p>สลับโหมดรับเข้า↔เบิก เลือกได้ทีละหลายรายการ ทำทั้งใบใน transaction เดียว — พลาดบรรทัดใด ยกเลิกทั้งใบ ไม่ทำครึ่งๆ</p>
+      </div>
+      <div class="mod">
+        <div class="m-top"><span class="m-ic">📋</span><div><div class="m-name">ประวัติวัตถุดิบ</div><div class="m-path">/stock/materials/moves</div></div></div>
+        <p>ทุกการเคลื่อนไหว รับเข้า/เบิก/ปรับยอด พร้อมยอดคงเหลือหลังทำ ใครทำ เมื่อไร — ตรวจย้อนได้</p>
+      </div>
+    </div>
+
+    <div class="act-head stock">
+      <span class="tag">โฟลว์เด่น · ฝ่ายคลัง</span>
+      <h3>อัปเดตยอด (ไฟล์) — นับสต๊อกทั้งคลังทีเดียว</h3>
+      <span class="sub">💻 Desktop · /stock/count</span>
+    </div>
+
+    <div class="steps">
+      <div class="step stock">
+        <div class="node">1</div>
+        <div class="card"><div class="card-body">
+          <div class="screen">ดาวน์โหลดเทมเพลต</div>
+          <h4>โหลดไฟล์ Excel ที่เติมยอดปัจจุบันให้แล้ว</h4>
+          <p class="does">ปุ่มเดียวได้ไฟล์ 4 ชีต (สำเร็จรูป · น้ำหอม · สติ๊กเกอร์ · ขวดและแพ็คเกจ) ทุก SKU มีอยู่พร้อมยอดล่าสุด</p>
+          <div class="ux-label">◆ ออกแบบยังไงให้ง่าย</div>
+          <ul class="ux">
+            <li><b>Pre-filled ทุกแถว</b> <span class="k">— ไม่ต้องพิมพ์รายการเอง แค่เดินนับแล้วเติมช่อง "นับได้จริง"</span></li>
+            <li><b>เรียงตามเกรด</b> <span class="k">— EDP → EDP+ → PARFUM → EDT → น้ำปรุง (OEM ล่างสุด) ตรงกับหน้าจอ เดินนับไล่ลงได้</span></li>
+            <li><b>คอลัมน์ "รหัส (ห้ามแก้)"</b> <span class="k">— ผูกแต่ละแถวกับของจริง ปลอดภัยแม้ชื่อซ้ำ</span></li>
+          </ul>
+        </div></div>
+      </div>
+
+      <div class="step stock">
+        <div class="node">2</div>
+        <div class="card">
+          <div class="mock-split">
+            <div class="card-body">
+              <div class="screen">อัปโหลด → พรีวิวส่วนต่าง</div>
+              <h4>เห็นส่วนต่างก่อนปรับจริง</h4>
+              <p class="does">อัปไฟล์ที่นับแล้วกลับเข้าระบบ → แสดงตารางเฉพาะแถวที่ยอดเปลี่ยน (เพิ่ม/ลด) ให้ตรวจก่อนกดยืนยัน</p>
+              <div class="ux-label">◆ ออกแบบยังไงให้ง่าย</div>
+              <ul class="ux">
+                <li><b>ช่องว่าง = ข้าม</b> <span class="k">— ไม่ได้นับแถวไหนก็เว้นไว้ ระบบไม่แตะยอดเดิม</span></li>
+                <li><b>โชว์เฉพาะที่ต่าง</b> <span class="k">— นับ 300 แถวแต่เปลี่ยนจริง 12 → เห็นแค่ 12 ตรวจง่าย</span></li>
+                <li><b>ปรับใน transaction เดียว + ลง audit</b> <span class="k">— บันทึกส่วนต่างเป็นการเคลื่อนไหว ย้อนดูได้</span></li>
+              </ul>
+            </div>
+            <div class="mock-pane">
+              <div>
+                <div class="sheet">
+                  <div class="s-top"><span>พรีวิวส่วนต่าง</span><span>12 แถว</span></div>
+                  <div class="s-row head"><span>รายการ</span><span class="num">เดิม</span><span class="num">นับ</span></div>
+                  <div class="s-row"><span>Found Peony 30ml</span><span class="num">18</span><span class="num diff-up">24</span></div>
+                  <div class="s-row"><span>สคบ. EDP</span><span class="num">540</span><span class="num diff-dn">512</span></div>
+                  <div class="s-row"><span>หัวสเปรย์ JEN สีเงิน</span><span class="num">70</span><span class="num diff-up">96</span></div>
+                  <div class="s-row"><span>ขวด EDP 50 กรม</span><span class="num">33</span><span class="num diff-dn">30</span></div>
+                </div>
+                <p class="mock-cap">เขียว=เพิ่ม แดง=ลด · ยืนยันแล้วค่อยปรับจริง</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="callout" style="background:var(--stock-wash);border-color:color-mix(in srgb, var(--stock) 34%, transparent)">
+      <div class="ic">🧪</div>
+      <div>
+        <h4>ทำไมแยก "คลังวัตถุดิบ" ออกจาก "สินค้าสำเร็จรูป"</h4>
+        <p>ของก่อนบรรจุ (น้ำหอม·ป้าย·ขวด) นับหน่วยและจัดกลุ่มคนละแบบกับสินค้าพร้อมขาย และเป็นงานของ<b>ฝ่ายคลัง</b>คนละมือกับฝ่ายจัดของ — แยกเมนู แยกสิทธิ์ ทำให้แต่ละฝ่ายเห็นเฉพาะงานตัวเอง แต่ยอดทั้งหมดนับรวมได้จากไฟล์เดียว</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ROLES -->
+  <section>
+    <div class="sec-head"><span class="sec-num">04</span><h2>สิทธิ์การเข้าถึง — 4 บทบาท</h2></div>
+    <p class="sec-sub">แยกงานตามบทบาท เมนู/หน้า/ปุ่ม ขึ้นตามสิทธิ์ และกันถึงระดับ server (สแกน URL ตรง ๆ ก็ไม่ผ่าน) · 1 คนถือได้หลายบทบาท เช่น <span class="mono">creator,stock</span></p>
+    <div class="roles">
+      <div class="role-card own">
+        <div class="role-top"><span class="role-ic">🧑‍💼</span><div><div class="role-name">แอดมิน / เจ้าของ</div><div class="role-key mono">admin</div></div></div>
+        <ul class="role-list">
+          <li class="yes">ทำได้ทุกอย่างในระบบ</li>
+          <li class="yes">ยกเลิกการตัด (ใบไหนก็ได้)</li>
+          <li class="yes">จัดการผู้ใช้ + บทบาท</li>
+          <li class="yes">ดูบันทึกการใช้งาน (audit)</li>
+        </ul>
+      </div>
+      <div class="role-card create">
+        <div class="role-top"><span class="role-ic">📝</span><div><div class="role-name">ฝ่ายขาย / สร้างใบเบิก</div><div class="role-key mono">creator</div></div></div>
+        <ul class="role-list">
+          <li class="yes">สร้าง / นำเข้า / แก้ไข / พิมพ์ใบเบิก</li>
+          <li class="yes">ถังขยะ (ลบ/กู้คืน)</li>
+          <li class="no">ตัดสต๊อก / สแกนใบเบิก</li>
+          <li class="no">ดูสต๊อก · คลังวัตถุดิบ · Dashboard</li>
+        </ul>
+      </div>
+      <div class="role-card emp">
+        <div class="role-top"><span class="role-ic">📦</span><div><div class="role-name">ฝ่ายจัดของ / ตัดสต๊อก</div><div class="role-key mono">picker</div></div></div>
+        <ul class="role-list">
+          <li class="yes">สแกนใบเบิก ใส่ SKU/Spec แล้วตัดสต๊อก</li>
+          <li class="yes">ดูสต๊อกคงเหลือ + จัดส่ง + Dashboard</li>
+          <li class="yes">ยกเลิกใบที่ตัวเองตัด (ใน 24 ชม.)</li>
+          <li class="no">สร้างใบเบิก · รับเข้า/ปรับยอดคลัง</li>
+        </ul>
+      </div>
+      <div class="role-card stock">
+        <div class="role-top"><span class="role-ic">🧪</span><div><div class="role-name">ฝ่ายคลัง / สต๊อก</div><div class="role-key mono">stock</div></div></div>
+        <ul class="role-list">
+          <li class="yes">รับเข้า / เบิก / ปรับยอด / นับสต๊อก</li>
+          <li class="yes">จัดการกลิ่น (กลิ่น = วัตถุดิบ)</li>
+          <li class="yes">ดูสต๊อก + Dashboard</li>
+          <li class="no">ตัดสต๊อก(สแกน) · สร้างใบเบิก · จัดการผู้ใช้</li>
+        </ul>
+      </div>
+    </div>
+    <div class="callout" style="background:var(--teal-wash);border-color:color-mix(in srgb, var(--teal) 35%, transparent)">
+      <div class="ic">🔄</div>
+      <div>
+        <h4>เส้นทางส่งงานระหว่างฝ่าย</h4>
+        <p><b>ฝ่ายคลัง</b> รับเข้าวัตถุดิบ+บรรจุเป็นสินค้าสำเร็จรูป → <b>ฝ่ายขาย</b> สร้างใบเบิก+พิมพ์ (มีบาร์โค้ด) → <b>ฝ่ายจัดของ</b> สแกน+ใส่ SKU/Spec → ตัดสต๊อก · ถ้าพลาด <b>แอดมิน</b> ยกเลิกใบไหนก็ได้ · แต่ละฝ่ายเข้าระบบมาเจอแต่หน้างานตัวเอง</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- COLOR LANGUAGE -->
+  <section>
+    <div class="sec-head"><span class="sec-num">05</span><h2>ระบบสี = ความหมาย</h2></div>
+    <p class="sec-sub">สีในระบบไม่ได้เลือกเพื่อสวย แต่ละสีมี "งาน" ของมัน — ใช้ให้ตรงเสมอ</p>
+    <div class="colors">
+      <div class="swatch"><div class="dot" style="background:var(--teal)"></div><div class="name">เขียวมิ้นต์</div><div class="use">สีหลักของแอป (ปุ่ม/เน้น) — สุภาพ อ่านนาน ๆ ได้</div></div>
+      <div class="swatch"><div class="dot" style="background:var(--blue)"></div><div class="name">น้ำเงิน</div><div class="use">หน้าตัดสต๊อก/ลงมือทำ — "กดตรงนี้"</div></div>
+      <div class="swatch"><div class="dot" style="background:var(--stock)"></div><div class="name">บรอนซ์</div><div class="use">คลังวัตถุดิบ — น้ำหอม·ป้าย·ขวด ก่อนบรรจุ</div></div>
+      <div class="swatch"><div class="dot" style="background:var(--orange)"></div><div class="name">ส้ม Shopee</div><div class="use">ระบุแพลตฟอร์ม — ใช้แค่ชื่อเมนู ไม่ท่วมทั้งหน้า</div></div>
+      <div class="swatch"><div class="dot" style="background:var(--green)"></div><div class="name">เขียวสำเร็จ</div><div class="use">ตัดสต๊อก/ปรับยอดสำเร็จ / ผ่าน</div></div>
+      <div class="swatch"><div class="dot" style="background:var(--amber)"></div><div class="name">เหลืองระวัง</div><div class="use">สต๊อกติดลบ / ใกล้หมด — เตือนแต่ไม่บล็อก</div></div>
+      <div class="swatch"><div class="dot" style="background:var(--red)"></div><div class="name">แดงผิดพลาด</div><div class="use">ไม่พบใบ / error / ตัดไม่ได้</div></div>
+    </div>
+
+    <div class="callout">
+      <div class="ic">📌</div>
+      <div>
+        <h4>สิ่งที่ต้องทำก่อนใช้จริงบน prod</h4>
+        <p>รัน SQL ที่ค้างบน Supabase: <span class="mono">RUN_ALL_FIXES.sql</span> (แก้เกรด/ชื่อ/ป้าย), <span class="mono">ADD_jen_spray_black.sql</span> (หัวสเปรย์ JEN สีเงิน/ดำ), และ <span class="mono">RUN_ON_PROD_materials.sql</span> ถ้ายังไม่ได้ seed คลังวัตถุดิบ — จากนั้นเทมเพลตหน้า "อัปเดตยอด (ไฟล์)" จะข้อมูลตรงทั้งหมด · ของตัวอย่าง 1.2/4 ml ที่ยังไม่มียอด ต้อง "รับเข้า" ก่อน ไม่งั้นตัดแล้วขึ้นการ์ดเหลือง (ติดลบ)</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- MOBILE VS DESKTOP -->
+  <section>
+    <div class="sec-head"><span class="sec-num">06</span><h2>มือถือ vs เดสก์ท็อป</h2></div>
+    <p class="sec-sub">ต่างคนต่างอุปกรณ์ ต่างบริบท — ออกแบบคนละแบบตามงานจริง</p>
+    <div class="rules">
+      <div class="rule"><h4>📱 ฝ่ายจัดของ = มือถือหน้าชั้นวาง</h4><p>เมนูซ้อนแนวตั้ง ปุ่มเต็มความกว้าง แตะนิ้วโป้งถึง ช่องสแกนโฟกัสรอ เทสต์ที่ 375px</p></div>
+      <div class="rule"><h4>💻 เจ้าของ/ขาย/คลัง = เดสก์ท็อปหลังร้าน</h4><p>ตาราง/แดชบอร์ด/คลังวัตถุดิบกว้าง เห็นข้อมูลเยอะพร้อมกัน กรอง/ค้นหา/พับกลุ่ม/พิมพ์สะดวก</p></div>
+      <div class="rule safe"><h4>✋ กันพลาดทุกจุด</h4><p>Dropdown แทนพิมพ์เอง · ตรวจก่อนตัด/ปรับ · ยืนยันก่อนลงมือ · ย้อนได้ · เตือน Order No. ซ้ำ · ทุกอย่างลง audit</p></div>
+      <div class="rule warn"><h4>⚡ ตอบสนองไว</h4><p>เซิร์ฟเวอร์อยู่สิงคโปร์ใกล้ฐานข้อมูล กดแต่ละเมนูขึ้นเร็ว — ความเร็วคือ UX</p></div>
+    </div>
+  </section>
+
+  <footer>
+    ระบบเบิกสินค้า &amp; ตัดสต๊อก — Lab Parfumo · เอกสาร User Journey &amp; UI/UX · ครอบคลุมคลังวัตถุดิบ &amp; นับสต๊อกจากไฟล์ · อัปเดต ส.ค. 2026
+  </footer>
+
+</div>
+</div>
