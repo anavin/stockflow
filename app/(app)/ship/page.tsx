@@ -19,7 +19,7 @@ export default async function ShipPage({ searchParams }: { searchParams: Promise
   return (
     // ใช้ได้ทั้งมือถือ (สแกนหน้างาน) และคอม (2 คอลัมน์) · ธีมน้ำเงินให้ปุ่มสแกนเด่น (เหมือนหน้าตัดสต๊อก)
     <div
-      className="mx-auto max-w-5xl px-4 py-6 md:px-8"
+      className="mx-auto max-w-6xl px-4 py-6 md:px-8"
       style={{ ["--brand" as any]: "37 99 235", ["--brand-600" as any]: "29 78 216", ["--brand-50" as any]: "239 246 255" }}
     >
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">

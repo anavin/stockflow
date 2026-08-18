@@ -17,7 +17,7 @@ export default async function StockIssuePage({ searchParams }: { searchParams: P
     // หน้าสแกน = ธีมน้ำเงิน (override --brand เฉพาะหน้านี้) ให้ action เด่น;
     // สีผลลัพธ์ เขียว/เหลือง/แดง ไม่เปลี่ยน
     <div
-      className="mx-auto max-w-5xl px-4 py-6 md:px-8"
+      className="mx-auto max-w-6xl px-4 py-6 md:px-8"
       style={{ ["--brand" as any]: "37 99 235", ["--brand-600" as any]: "29 78 216", ["--brand-50" as any]: "239 246 255" }}
     >
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
