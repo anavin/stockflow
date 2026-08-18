@@ -13,9 +13,15 @@ const CAT_CHIP: Record<string, { th: string; cls: string }> = {
 const keyOf = (p: { category: string; ref_key: string }) => `${p.category}|${p.ref_key}`;
 const descOf = (p: MaterialPick): ItemDesc => ({ category: p.category as any, refKey: p.ref_key, scent: p.scent, comp_key: p.comp_key, brand: p.brand, grade: p.grade, label: p.label, category2: p.category2, unit: p.unit });
 
+const CATS: { key: string; label: string }[] = [
+  { key: "", label: "ทั้งหมด" }, { key: "bulk", label: "ปริมาตร" }, { key: "label", label: "สติ๊กเกอร์/การ์ด" }, { key: "packaging", label: "ขวด/แพ็คเกจ" },
+];
+const MAX_RESULTS = 100;
+
 export default function MaterialIssue({ items, canIssue }: { items: MaterialPick[]; canIssue: boolean }) {
   const router = useRouter();
   const [term, setTerm] = useState("");
+  const [cat, setCat] = useState("");
   const [cart, setCart] = useState<Map<string, { pick: MaterialPick; amount: string }>>(new Map());
   const [note, setNote] = useState("");
   const [busy, setBusy] = useState(false);
@@ -23,11 +29,18 @@ export default function MaterialIssue({ items, canIssue }: { items: MaterialPick
   const [err, setErr] = useState("");
   const lastRef = useRef<HTMLInputElement>(null);
 
+  const counts = useMemo(() => {
+    const c: Record<string, number> = { "": items.length, bulk: 0, label: 0, packaging: 0 };
+    for (const i of items) c[i.category] = (c[i.category] || 0) + 1;
+    return c;
+  }, [items]);
+
   const t = term.trim().toLowerCase();
-  const results = useMemo(() => {
-    if (!t) return [];
-    return items.filter((i) => !cart.has(keyOf(i)) && i.label.toLowerCase().includes(t)).slice(0, 40);
-  }, [items, t, cart]);
+  const matched = useMemo(() => {
+    return items.filter((i) => !cart.has(keyOf(i)) && (!cat || i.category === cat) && (!t || i.label.toLowerCase().includes(t)));
+  }, [items, t, cat, cart]);
+  // โชว์รายการเมื่อเลือกหมวด หรือพิมพ์ค้นหา (เลือกหมวดแล้วเลื่อนดูได้เลยไม่ต้องพิมพ์)
+  const results = (cat || t) ? matched.slice(0, MAX_RESULTS) : [];
 
   const add = (p: MaterialPick) => {
     setCart((c) => { const n = new Map(c); n.set(keyOf(p), { pick: p, amount: "" }); return n; });
@@ -54,13 +67,27 @@ export default function MaterialIssue({ items, canIssue }: { items: MaterialPick
     <div className="grid gap-4 lg:grid-cols-2">
       {/* ค้นหา + เพิ่มรายการ */}
       <div className="card p-4">
+        {/* แท็บหมวด — เลือกแล้วเลื่อนดูรายการของหมวดนั้นได้เลย */}
+        <div className="mb-3 flex flex-wrap gap-1.5">
+          {CATS.map((c) => (
+            <button key={c.key} onClick={() => setCat(c.key)}
+              className={`rounded-lg px-2.5 py-1.5 text-xs font-medium transition-colors ${cat === c.key ? "bg-brand-600 text-white" : "border border-line text-muted hover:bg-soft"}`}>
+              {c.label} <span className={cat === c.key ? "opacity-80" : "text-faint"}>{counts[c.key] ?? 0}</span>
+            </button>
+          ))}
+        </div>
         <div className="relative">
           <Search size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-faint" />
-          <input autoFocus value={term} onChange={(e) => setTerm(e.target.value)} className="input pl-9" placeholder="ค้นหาชื่อวัตถุดิบ / บรรจุภัณฑ์ ที่จะเบิก" />
+          <input autoFocus value={term} onChange={(e) => setTerm(e.target.value)} className="input pl-9"
+            placeholder={cat ? `ค้นหาใน ${CATS.find((c) => c.key === cat)?.label}` : "ค้นหาทุกหมวด หรือเลือกแท็บด้านบน"} />
         </div>
-        <div className="mt-3 max-h-[26rem] space-y-1 overflow-y-auto">
-          {!t && <p className="py-10 text-center text-sm text-faint">พิมพ์ชื่อเพื่อค้นหา แล้วกด “เพิ่ม” ลงรายการเบิก</p>}
-          {t && results.length === 0 && <p className="py-10 text-center text-sm text-muted">ไม่พบรายการ (หรือถูกเพิ่มไปแล้ว)</p>}
+        <div className="mt-2 flex items-center justify-between px-0.5 text-[11px] text-faint">
+          <span>{(cat || t) ? `พบ ${matched.length.toLocaleString()} รายการ` : "เลือกหมวด หรือพิมพ์ค้นหา"}</span>
+          {matched.length > MAX_RESULTS && <span>แสดง {MAX_RESULTS} แรก — พิมพ์เพื่อแคบลง</span>}
+        </div>
+        <div className="mt-2 max-h-[26rem] space-y-1 overflow-y-auto">
+          {!cat && !t && <p className="py-10 text-center text-sm text-faint">เลือกหมวดด้านบน แล้วเลื่อนดู · หรือพิมพ์ชื่อค้นหา → กด “เพิ่ม”</p>}
+          {(cat || t) && results.length === 0 && <p className="py-10 text-center text-sm text-muted">ไม่พบรายการ (หรือถูกเพิ่มไปแล้ว)</p>}
           {results.map((p) => {
             const low = p.qty <= 10;
             return (
