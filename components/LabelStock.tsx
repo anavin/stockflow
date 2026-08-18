@@ -79,12 +79,13 @@ export default function LabelStock({ scents, canEdit }: { scents: LabelScent[]; 
               {gOpen && (
                 <div className="mt-2 space-y-2 sm:pl-4">
                   {grp.scents.map((s) => {
-                    const open = !collapsedScent.has(s.scent);
+                    const sk = `${grp.grade}|${s.scent}`;   // คีย์ไม่ชนแม้ชื่อกลิ่นซ้ำข้ามเกรด
+                    const open = !collapsedScent.has(sk);
                     const total = s.components.reduce((a, c) => a + c.qty, 0);
                     const low = s.components.filter((c) => isLow(c.qty, c.reorder)).length;
                     return (
-                      <div key={s.scent} className="overflow-hidden rounded-xl border border-line bg-white">
-                        <button onClick={() => toggleScent(s.scent)} className="flex w-full items-center gap-2 bg-soft/60 px-4 py-2 text-left">
+                      <div key={sk} className="overflow-hidden rounded-xl border border-line bg-white">
+                        <button onClick={() => toggleScent(sk)} className="flex w-full items-center gap-2 bg-soft/60 px-4 py-2 text-left">
                           {open ? <ChevronDown size={15} className="text-faint" /> : <ChevronRight size={15} className="text-faint" />}
                           <span className="font-medium text-ink">{s.scent}</span>
                           <span className="text-xs text-muted">· {s.components.length} ชิ้นส่วน · รวม {total.toLocaleString()}{low > 0 && <span className="text-amber-600"> · ใกล้หมด {low}</span>}</span>

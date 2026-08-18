@@ -100,7 +100,7 @@ export async function POST(req: Request) {
 
   try {
     await tx(async (run) => {
-      for (const c of changes) {
+      for (const c of diffOnly) {   // เฉพาะแถวที่ยอดเปลี่ยนจริง (ไม่เขียน move ยอด 0)
         if (c.kind === "fg") {
           const [cur] = await run<{ qty: number }>(`select qty::float8 as qty from stock where product=$1 and size=$2`, [c.product, c.size]);
           const old = cur?.qty ?? 0; const diff = c.to - old;
@@ -124,7 +124,7 @@ export async function POST(req: Request) {
     });
   } catch (e: any) { return NextResponse.json({ ok: false, error: e?.message || "อัปเดตไม่สำเร็จ" }, { status: 500 }); }
 
-  await logActivity("stock.count-import", `อัปเดตยอด ${changes.length} รายการ (เปลี่ยน ${diffOnly.length})`);
+  await logActivity("stock.count-import", `อัปเดตยอด ${diffOnly.length} รายการ (จากที่กรอก ${changes.length})`);
   for (const p of ["/stock", "/stock/moves", "/stock/bulk", "/stock/labels", "/stock/packaging", "/stock/materials/moves"]) revalidatePath(p);
-  return NextResponse.json({ ok: true, mode: "apply", applied: changes.length, changed: diffOnly.length });
+  return NextResponse.json({ ok: true, mode: "apply", applied: diffOnly.length, changed: diffOnly.length });
 }

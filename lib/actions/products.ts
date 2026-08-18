@@ -154,6 +154,17 @@ export async function renameProduct(id: number, name: string): Promise<{ ok: boo
   for (const [tbl, col] of [["product_barcodes", "scent"], ["discontinued_sku", "scent"], ["closed_sku", "scent"]] as const) {
     try { await q(`update ${tbl} set ${col} = $2 where ${COL(col)} = ${NK}`, [oldName, n]); } catch { /* ไม่มีตาราง = ข้าม */ }
   }
+  // material_item (คลังวัตถุดิบ bulk+label) — เปลี่ยน scent + ref_key ให้ตรง (กันสต๊อกกลายเป็นการ์ดซ้ำหลัง rename)
+  try {
+    await q(
+      `update material_item mi set scent = $2,
+              ref_key = regexp_replace(lower(btrim($2)),'[^a-z0-9ก-๙]','','g') || '|' || split_part(mi.ref_key,'|',2),
+              updated_at = now()
+       where mi.category in ('bulk','label') and ${COL("mi.scent")} = ${NK}
+         and not exists (select 1 from material_item x where x.category = mi.category
+           and x.ref_key = regexp_replace(lower(btrim($2)),'[^a-z0-9ก-๙]','','g') || '|' || split_part(mi.ref_key,'|',2))`,
+      [oldName, n]);
+  } catch { /* ไม่มีตาราง = ข้าม */ }
   await logActivity("scent.manage", `เปลี่ยนชื่อกลิ่น "${oldName}" → "${n}"`);
   revalidatePath("/products");
   revalidatePath("/stock");
