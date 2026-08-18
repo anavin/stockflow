@@ -93,8 +93,8 @@ export default function ShipScanner({ date, isToday, rows: initialRows, pending,
       )}
 
       {/* คอม = 2 คอลัมน์ (ซ้าย: สรุป+สแกน / ขวา: รายการ) · มือถือ = เรียงลง */}
-      <div className="grid gap-4 lg:grid-cols-3">
-        <div className="space-y-4 lg:col-span-1">
+      <div className="grid gap-4 lg:grid-cols-5">
+        <div className="space-y-4 lg:col-span-2">
           {/* สรุป */}
           <div className="grid grid-cols-2 gap-3">
             <div className="card bg-green-50 p-4 text-center">
@@ -114,7 +114,7 @@ export default function ShipScanner({ date, isToday, rows: initialRows, pending,
               <input ref={inputRef} autoFocus inputMode="text" value={value}
                 onChange={(e) => setValue(e.target.value)}
                 onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); scan(); } }}
-                className="input h-12 min-w-0 flex-1 font-mono text-base" placeholder="สแกน / พิมพ์ Order No. แล้ว Enter" />
+                className="input h-12 min-w-0 flex-1 font-mono text-lg" placeholder="สแกน / พิมพ์ Order No. แล้ว Enter" />
               <button type="button" onClick={() => setScanOpen(true)}
                 className="btn-primary h-12 shrink-0">
                 <Camera size={18} /> กล้อง
@@ -131,7 +131,7 @@ export default function ShipScanner({ date, isToday, rows: initialRows, pending,
         </div>
 
         {/* รายการที่ส่ง */}
-        <div className="card overflow-hidden lg:col-span-2">
+        <div className="card overflow-hidden lg:col-span-3">
           <div className="flex items-center gap-2 border-b border-line px-4 py-3 text-sm font-semibold text-ink">
             <Truck size={16} /> {isToday ? "รายการที่ส่งวันนี้" : `รายการที่ส่ง ${date}`} <span className="text-muted">({rows.length})</span>
           </div>
