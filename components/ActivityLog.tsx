@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import type { ActivityRow } from "@/lib/queries";
 import { ROLE_LABELS, roleList } from "@/lib/auth/roles";
 import { downloadCsv } from "@/lib/csv";
-import { Search, FileDown, LogIn, LogOut, FileText, Trash2, ScanLine, Undo2, Truck, PackagePlus, PackageMinus, SlidersHorizontal, FlaskConical, Users, Upload, RotateCcw, Boxes } from "lucide-react";
+import { Search, FileDown, LogIn, LogOut, FileText, Trash2, ScanLine, Undo2, Truck, PackagePlus, PackageMinus, SlidersHorizontal, FlaskConical, Users, Upload, RotateCcw, Boxes, ClipboardCheck } from "lucide-react";
 
 export const ACTIONS: Record<string, { label: string; icon: any; cls: string }> = {
   login: { label: "เข้าสู่ระบบ", icon: LogIn, cls: "bg-green-50 text-green-700" },
@@ -18,6 +18,7 @@ export const ACTIONS: Record<string, { label: string; icon: any; cls: string }> 
   "stock.reverse": { label: "ยกเลิกตัดสต๊อก", icon: Undo2, cls: "bg-red-50 text-red-600" },
   "stock.receive": { label: "รับเข้าสินค้า", icon: Boxes, cls: "bg-green-50 text-green-700" },
   "stock.adjust": { label: "ปรับยอดสินค้า", icon: SlidersHorizontal, cls: "bg-slate-100 text-slate-600" },
+  "stock.count-import": { label: "อัปเดตยอดจากไฟล์", icon: ClipboardCheck, cls: "bg-sky-50 text-sky-700" },
   ship: { label: "บันทึกจัดส่ง", icon: Truck, cls: "bg-emerald-50 text-emerald-700" },
   unship: { label: "ยกเลิกจัดส่ง", icon: Undo2, cls: "bg-red-50 text-red-600" },
   "material.receive": { label: "รับเข้าวัตถุดิบ", icon: PackagePlus, cls: "bg-green-50 text-green-700" },
