@@ -59,17 +59,22 @@ export async function issueMaterial(desc: ItemDesc, amount: number, note?: strin
   catch (e: any) { return { ok: false, error: e?.message || "เบิกไม่สำเร็จ (รัน SQL 0029 บน prod?)" }; }
 }
 
-/** เบิกหลายรายการทีเดียว (ใบเบิกวัตถุดิบ) — บันทึกจ่ายออกทุกบรรทัดด้วยหมายเหตุเดียวกัน */
-export async function issueMaterialBatch(lines: { desc: ItemDesc; amount: number }[], note?: string): Promise<{ ok: boolean; error?: string; done?: number }> {
+/** เบิก/รับเข้า หลายรายการทีเดียว (ใบเบิก/รับเข้าวัตถุดิบ) — บันทึกทุกบรรทัดด้วยหมายเหตุเดียวกัน */
+export async function batchMaterial(mode: "receive" | "issue", lines: { desc: ItemDesc; amount: number }[], note?: string): Promise<{ ok: boolean; error?: string; done?: number }> {
   const g = await gate(); if ("error" in g) return { ok: false, error: g.error };
   const valid = (lines || []).filter((l) => Math.abs(Number(l.amount) || 0) > 0);
-  if (!valid.length) return { ok: false, error: "ยังไม่ได้เลือกรายการเบิก" };
+  if (!valid.length) return { ok: false, error: mode === "receive" ? "ยังไม่ได้เลือกรายการรับเข้า" : "ยังไม่ได้เลือกรายการเบิก" };
   const n = note?.trim() || null;
+  const sign = mode === "receive" ? 1 : -1;
   try {
-    for (const l of valid) await apply(l.desc, -Math.abs(Number(l.amount)), "issue", n, g.user.id);
-  } catch (e: any) { return { ok: false, error: e?.message || "เบิกไม่สำเร็จ" }; }
+    for (const l of valid) await apply(l.desc, sign * Math.abs(Number(l.amount)), mode, n, g.user.id);
+  } catch (e: any) { return { ok: false, error: e?.message || (mode === "receive" ? "รับเข้าไม่สำเร็จ" : "เบิกไม่สำเร็จ") }; }
   revalidatePath("/stock/bulk"); revalidatePath("/stock/labels"); revalidatePath("/stock/packaging"); revalidatePath("/stock/materials/moves");
   return { ok: true, done: valid.length };
+}
+/** @deprecated ใช้ batchMaterial("issue", …) */
+export async function issueMaterialBatch(lines: { desc: ItemDesc; amount: number }[], note?: string) {
+  return batchMaterial("issue", lines, note);
 }
 
 export async function adjustMaterial(desc: ItemDesc, target: number): Promise<{ ok: boolean; error?: string; balance?: number }> {
