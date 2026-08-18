@@ -15,8 +15,8 @@ export default function LabelStock({ scents, canEdit }: { scents: LabelScent[]; 
   const [search, setSearch] = useState("");
   const [grade, setGrade] = useState("");
   const [lowOnly, setLowOnly] = useState(false);
-  const [collapsedGrade, setCollapsedGrade] = useState<Set<string>>(new Set());   // กรุปเกรด
-  const [openScent, setOpenScent] = useState<Set<string>>(new Set());              // กลิ่นที่กางอยู่ (default พับ)
+  const [collapsedGrade, setCollapsedGrade] = useState<Set<string>>(new Set());   // กรุปเกรด (default กาง)
+  const [collapsedScent, setCollapsedScent] = useState<Set<string>>(new Set());   // กลิ่น (default กาง)
 
   const grades = useMemo(() => [...new Set(scents.map((s) => s.grade))].sort((a, b) => gradeRank(a) - gradeRank(b) || a.localeCompare(b)), [scents]);
   const scentLow = (s: LabelScent) => s.components.some((c) => isLow(c.qty, c.reorder));
@@ -37,7 +37,7 @@ export default function LabelStock({ scents, canEdit }: { scents: LabelScent[]; 
   }, [filtered]);
 
   const toggleGrade = (g: string) => setCollapsedGrade((c) => { const n = new Set(c); n.has(g) ? n.delete(g) : n.add(g); return n; });
-  const toggleScent = (k: string) => setOpenScent((c) => { const n = new Set(c); n.has(k) ? n.delete(k) : n.add(k); return n; });
+  const toggleScent = (k: string) => setCollapsedScent((c) => { const n = new Set(c); n.has(k) ? n.delete(k) : n.add(k); return n; });
 
   function exportCsv() {
     const rows: (string | number)[][] = [];
@@ -79,7 +79,7 @@ export default function LabelStock({ scents, canEdit }: { scents: LabelScent[]; 
               {gOpen && (
                 <div className="mt-2 space-y-2 sm:pl-4">
                   {grp.scents.map((s) => {
-                    const open = openScent.has(s.scent);
+                    const open = !collapsedScent.has(s.scent);
                     const total = s.components.reduce((a, c) => a + c.qty, 0);
                     const low = s.components.filter((c) => isLow(c.qty, c.reorder)).length;
                     return (
