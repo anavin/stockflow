@@ -521,16 +521,25 @@ export async function markShipped(orderNo: string, dateStr?: string): Promise<Sh
   if (!o) return { ok: false, error: `ไม่พบออเดอร์ ${code}` };
   const info = { order_no: o.order_no, receiver: o.receiver || o.username, province: o.province, item_count: o.item_count };
   if (o.shipped_at) return { ok: true, already: true, at: o.shipped_at, issued: !!o.stock_issued_at, order: info };
+  // เคลมแบบ atomic — set เฉพาะตอน shipped_at ยัง null → สแกนซ้ำ/แข่งกันรัวๆ อีก request จะได้ 0 แถว
+  // (order_no เป็น PK มีแถวเดียว จึงไม่มีทางบันทึกส่งซ้ำ/นับซ้ำ)
   const [u] = backdate
     ? await q<{ shipped_at: string }>(
-        `update orders set shipped_at = (($2 || ' 12:00:00')::timestamp at time zone 'Asia/Bangkok'), shipped_by = $3 where order_no = $1 returning shipped_at`,
+        `update orders set shipped_at = (($2 || ' 12:00:00')::timestamp at time zone 'Asia/Bangkok'), shipped_by = $3
+         where order_no = $1 and shipped_at is null returning shipped_at`,
         [o.order_no, dateStr, user.id])
     : await q<{ shipped_at: string }>(
-        `update orders set shipped_at = now(), shipped_by = $2 where order_no = $1 returning shipped_at`,
+        `update orders set shipped_at = now(), shipped_by = $2
+         where order_no = $1 and shipped_at is null returning shipped_at`,
         [o.order_no, user.id]);
+  if (!u) {
+    // อีก request เคลมไปก่อนแล้ว (แข่งกันสแกน) → รายงานเป็น "ซ้ำ" ไม่บันทึก/นับส่งเพิ่ม
+    const [again] = await q<{ shipped_at: string | null }>(`select shipped_at from orders where order_no = $1`, [o.order_no]);
+    return { ok: true, already: true, at: again?.shipped_at ?? null, issued: !!o.stock_issued_at, order: info };
+  }
   await logActivity("ship", `${o.order_no}${backdate ? " · ย้อนหลัง " + dateStr : ""}`);
   revalidatePath("/shopee");
-  return { ok: true, already: false, at: u?.shipped_at ?? null, issued: !!o.stock_issued_at, order: info };
+  return { ok: true, already: false, at: u.shipped_at, issued: !!o.stock_issued_at, order: info };
 }
 
 /** ยกเลิกการส่ง (สแกนผิด) — เฉพาะแอดมิน/ฝ่ายคลัง */
