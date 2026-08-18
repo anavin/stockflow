@@ -4,7 +4,17 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { deleteOrder, bulkDeleteOrders } from "@/lib/actions/orders";
 import type { OrderRow } from "@/lib/types";
-import { Printer, Pencil, Trash2, PackageOpen, X, Zap, Clock } from "lucide-react";
+import { Printer, Pencil, Trash2, PackageOpen, X, Zap, Clock, Check } from "lucide-react";
+
+/** สถานะออเดอร์ — ชุดเดียวกัน ไล่สีตามขั้น: รอตัด (เหลือง) → ตัดแล้ว (ฟ้า) → ส่งแล้ว (เขียว) */
+function StatusChip({ order }: { order: OrderRow }) {
+  const base = "inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border px-2.5 py-1 text-xs font-medium";
+  if (order.shipped_at)
+    return <span className={`${base} border-emerald-200 bg-emerald-50 text-emerald-700`}><Check size={12} className="opacity-80" /> ส่งแล้ว</span>;
+  if (order.stock_issued_at)
+    return <span className={`${base} border-sky-200 bg-sky-50 text-sky-700`}><span className="h-1.5 w-1.5 rounded-full bg-sky-500" /> ตัดแล้ว</span>;
+  return <span className={`${base} border-amber-200 bg-amber-50 text-amber-700`}><span className="h-1.5 w-1.5 rounded-full bg-amber-400" /> รอตัด</span>;
+}
 
 export default function OrdersTable({ orders }: { orders: OrderRow[] }) {
   const router = useRouter();
@@ -134,13 +144,7 @@ export default function OrdersTable({ orders }: { orders: OrderRow[] }) {
                       {isNow && <span className="ml-1.5 inline-flex items-center gap-0.5 rounded-full border border-orange-200 bg-orange-50 px-2 py-0.5 align-middle text-[10px] font-semibold text-orange-700"><Clock size={10} /> ส่งทันที</span>}
                     </td>
                     <td className="px-4 py-3 text-muted">{o.province || "—"}</td>
-                    <td className="px-4 py-3">
-                      {o.shipped_at
-                        ? <span className="chip bg-green-600 text-white">ส่งแล้ว</span>
-                        : o.stock_issued_at
-                          ? <span className="chip bg-green-50 text-green-700">ตัดแล้ว</span>
-                          : <span className="chip bg-amber-50 text-amber-700">รอตัด</span>}
-                    </td>
+                    <td className="px-4 py-3"><StatusChip order={o} /></td>
                     <td className="px-4 py-3 text-center">
                       <span className="chip bg-brand-50 text-brand-600">{o.item_count}</span>
                     </td>
