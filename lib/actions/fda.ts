@@ -2,12 +2,12 @@
 import { revalidatePath } from "next/cache";
 import { q, tx } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth/session";
-import { can } from "@/lib/auth/roles";
+import { isAdmin } from "@/lib/auth/roles";
 
 async function gate() {
   const user = await getCurrentUser();
   if (!user) return { error: "กรุณาเข้าสู่ระบบ" as const };
-  if (!can.manageStock(user.role)) return { error: "เฉพาะผู้ดูแลระบบ / ฝ่ายคลัง เท่านั้นที่แก้ไขได้" as const };
+  if (!isAdmin(user.role)) return { error: "เฉพาะผู้ดูแลระบบเท่านั้นที่แก้ไขได้" as const };
   return { user };
 }
 

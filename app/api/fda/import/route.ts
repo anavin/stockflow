@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import ExcelJS from "exceljs";
 import { getCurrentUser } from "@/lib/auth/session";
-import { can } from "@/lib/auth/roles";
+import { isAdmin } from "@/lib/auth/roles";
 import { tx } from "@/lib/db";
 import { revalidatePath } from "next/cache";
 
@@ -48,7 +48,7 @@ function colMap(headers: string[]): Record<string, number> {
 export async function POST(req: Request) {
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ ok: false, error: "กรุณาเข้าสู่ระบบ" }, { status: 401 });
-  if (!can.manageStock(user.role)) return NextResponse.json({ ok: false, error: "เฉพาะผู้ดูแลระบบ / ฝ่ายคลัง" }, { status: 403 });
+  if (!isAdmin(user.role)) return NextResponse.json({ ok: false, error: "เฉพาะผู้ดูแลระบบ" }, { status: 403 });
 
   const form = await req.formData();
   const file = form.get("file");

@@ -1,5 +1,5 @@
 import { requireFda } from "@/lib/auth/require-user";
-import { can } from "@/lib/auth/roles";
+import { isAdmin } from "@/lib/auth/roles";
 import { listFda, fdaExpirySummary } from "@/lib/queries";
 import FdaManager from "@/components/FdaManager";
 import { ShieldCheck } from "lucide-react";
@@ -8,7 +8,7 @@ export const dynamic = "force-dynamic";
 
 export default async function FdaPage() {
   const me = await requireFda();
-  const canEdit = can.manageStock(me.role);
+  const canEdit = isAdmin(me.role);
   const [rows, summary] = await Promise.all([listFda(), fdaExpirySummary()]);
 
   return (
