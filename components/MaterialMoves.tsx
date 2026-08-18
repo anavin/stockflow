@@ -1,5 +1,7 @@
 "use client";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { Search, X } from "lucide-react";
 import type { MaterialMoveRow } from "@/lib/queries";
 
 const CATS: { key: string; label: string }[] = [
@@ -8,11 +10,13 @@ const CATS: { key: string; label: string }[] = [
 const CAT_TH: Record<string, string> = { bulk: "ปริมาตร", label: "สติ๊กเกอร์", packaging: "แพ็คเกจ" };
 const dt = (v: string) => new Date(v).toLocaleString("th-TH", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
 
-export default function MaterialMoves({ rows, cat, date }: { rows: MaterialMoveRow[]; cat: string; date: string }) {
+export default function MaterialMoves({ rows, cat, date, ref_, q, itemLabel }: { rows: MaterialMoveRow[]; cat: string; date: string; ref_: string; q: string; itemLabel: string }) {
   const router = useRouter();
-  const go = (next: { cat?: string; date?: string }) => {
-    const c = next.cat ?? cat, d = next.date ?? date; const sp = new URLSearchParams();
-    if (c) sp.set("cat", c); if (d) sp.set("date", d);
+  const [term, setTerm] = useState(q);
+  const go = (next: { cat?: string; date?: string; ref?: string; q?: string }) => {
+    const c = next.cat ?? cat, d = next.date ?? date;
+    const r = next.ref ?? ref_, qq = next.q ?? q; const sp = new URLSearchParams();
+    if (c) sp.set("cat", c); if (d) sp.set("date", d); if (r) sp.set("ref", r); if (qq) sp.set("q", qq);
     router.push(`/stock/materials/moves${sp.toString() ? "?" + sp.toString() : ""}`);
   };
   const reasonChip = (r: string) => r === "receive" ? "bg-green-50 text-green-700" : r === "issue" ? "bg-red-50 text-red-600" : "bg-slate-100 text-slate-600";
@@ -20,6 +24,13 @@ export default function MaterialMoves({ rows, cat, date }: { rows: MaterialMoveR
 
   return (
     <div className="space-y-4">
+      {(ref_ || q) && (
+        <div className="flex items-center gap-2 rounded-lg border border-brand-200 bg-brand-50/50 px-3 py-2 text-sm">
+          <span className="text-muted">ดูประวัติเฉพาะ:</span>
+          <span className="font-semibold text-ink">{ref_ ? itemLabel : `“${q}”`}</span>
+          <button onClick={() => go({ ref: "", q: "" })} className="ml-1 inline-flex items-center gap-0.5 text-xs text-brand-600 hover:underline"><X size={12} /> ล้าง ดูทั้งหมด</button>
+        </div>
+      )}
       <div className="flex flex-wrap items-center gap-2">
         <div className="flex flex-wrap gap-1.5">
           {CATS.map((c) => (
@@ -27,6 +38,10 @@ export default function MaterialMoves({ rows, cat, date }: { rows: MaterialMoveR
               className={`rounded-lg px-3 py-1.5 text-sm font-medium ${cat === c.key ? "bg-brand-50 text-brand-700" : "border border-line text-muted hover:bg-soft"}`}>{c.label}</button>
           ))}
         </div>
+        <form onSubmit={(e) => { e.preventDefault(); go({ q: term.trim(), ref: "" }); }} className="relative min-w-[180px] flex-1">
+          <Search size={15} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-faint" />
+          <input value={term} onChange={(e) => setTerm(e.target.value)} className="input h-9 pl-9" placeholder="ค้นหากลิ่น / รายการ" />
+        </form>
         <input type="date" value={date} onChange={(e) => go({ date: e.target.value })} className="input h-9 w-40" />
         {date && <button onClick={() => go({ date: "" })} className="btn-ghost text-xs">ทุกวัน</button>}
         <span className="ml-auto text-xs text-muted">{rows.length.toLocaleString()} รายการ</span>

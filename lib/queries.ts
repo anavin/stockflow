@@ -707,12 +707,24 @@ export async function listPackagingStock(): Promise<PackagingRow[]> {
   } catch { return []; }
 }
 
+export type MaterialPick = { category: string; ref_key: string; label: string; scent: string | null; comp_key: string | null; brand: string | null; grade: string | null; category2: string | null; unit: string; qty: number };
+/** ทุกรายการวัตถุดิบที่มีในคลัง (3 หมวด) — ใช้หน้าเบิกรวม */
+export async function listAllMaterials(): Promise<MaterialPick[]> {
+  try {
+    return await q<MaterialPick>(
+      `select category, ref_key, label, scent, comp_key, brand, grade, category2, unit, qty::float8 as qty
+       from material_item order by category, label`);
+  } catch { return []; }
+}
+
 export type MaterialMoveRow = { id: number; category: string; label: string; scent: string | null; qty_change: number; balance: number | null; reason: string; note: string | null; created_at: string; by_name: string | null };
-/** ประวัติเคลื่อนไหววัตถุดิบ (รับเข้า/จ่ายออก/ปรับ) — กรองหมวด/วันได้ */
-export async function listMaterialMoves(opts: { category?: string; date?: string; limit?: number } = {}): Promise<MaterialMoveRow[]> {
+/** ประวัติเคลื่อนไหววัตถุดิบ (รับเข้า/จ่ายออก/ปรับ) — กรองหมวด/วัน/รายการเดียว/ค้นหาชื่อ */
+export async function listMaterialMoves(opts: { category?: string; date?: string; ref?: string; q?: string; limit?: number } = {}): Promise<MaterialMoveRow[]> {
   try {
     const params: any[] = []; const where: string[] = [];
     if (opts.category) { params.push(opts.category); where.push(`i.category = $${params.length}`); }
+    if (opts.ref) { params.push(opts.ref); where.push(`i.ref_key = $${params.length}`); }
+    if (opts.q) { params.push(`%${opts.q.trim()}%`); where.push(`(i.label ilike $${params.length} or i.scent ilike $${params.length})`); }
     if (opts.date) { params.push(opts.date); where.push(`(m.created_at at time zone 'Asia/Bangkok')::date = $${params.length}::date`); }
     const limit = Math.min(opts.limit ?? 300, 1000);
     return await q<MaterialMoveRow>(

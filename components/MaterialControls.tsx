@@ -1,8 +1,9 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { receiveMaterial, issueMaterial, setReorderPoint, type ItemDesc } from "@/lib/actions/supply";
-import { Plus, Minus, X, Bell, Check, AlertTriangle } from "lucide-react";
+import { Plus, Minus, X, Bell, Check, AlertTriangle, History } from "lucide-react";
 
 /** เกณฑ์ "ใกล้หมด" — ใช้จุดสั่งซื้อถ้าตั้งไว้ ไม่งั้น default 10 */
 export function isLow(qty: number, reorder: number | null | undefined) {
@@ -22,6 +23,8 @@ export default function MaterialControls({ desc, qty, unit = "ชิ้น", reo
       {low && qty >= 0 && <span className="chip hidden bg-amber-50 text-[10px] text-amber-700 sm:inline-block" title={`ใกล้หมด (จุดสั่งซื้อ ${reorder ?? 10})`}>ควรสั่งซื้อ</span>}
       <span className={`min-w-[3rem] text-right font-semibold tabular-nums ${qty < 0 ? "text-red-600" : low ? "text-amber-600" : "text-ink"}`}>{qty.toLocaleString()}</span>
       <span className="w-8 text-xs text-faint">{unit}</span>
+      <Link href={`/stock/materials/moves?cat=${desc.category}&ref=${encodeURIComponent(desc.refKey)}`}
+        className="rounded-md p-1 text-muted hover:bg-soft hover:text-ink" title="ดูประวัติรายการนี้"><History size={14} /></Link>
       {canEdit && (
         <>
           <button onClick={() => setMode("receive")} className="rounded-md p-1 text-green-600 hover:bg-green-50" title="รับเข้า"><Plus size={15} /></button>

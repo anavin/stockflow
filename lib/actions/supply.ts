@@ -59,6 +59,19 @@ export async function issueMaterial(desc: ItemDesc, amount: number, note?: strin
   catch (e: any) { return { ok: false, error: e?.message || "เบิกไม่สำเร็จ (รัน SQL 0029 บน prod?)" }; }
 }
 
+/** เบิกหลายรายการทีเดียว (ใบเบิกวัตถุดิบ) — บันทึกจ่ายออกทุกบรรทัดด้วยหมายเหตุเดียวกัน */
+export async function issueMaterialBatch(lines: { desc: ItemDesc; amount: number }[], note?: string): Promise<{ ok: boolean; error?: string; done?: number }> {
+  const g = await gate(); if ("error" in g) return { ok: false, error: g.error };
+  const valid = (lines || []).filter((l) => Math.abs(Number(l.amount) || 0) > 0);
+  if (!valid.length) return { ok: false, error: "ยังไม่ได้เลือกรายการเบิก" };
+  const n = note?.trim() || null;
+  try {
+    for (const l of valid) await apply(l.desc, -Math.abs(Number(l.amount)), "issue", n, g.user.id);
+  } catch (e: any) { return { ok: false, error: e?.message || "เบิกไม่สำเร็จ" }; }
+  revalidatePath("/stock/bulk"); revalidatePath("/stock/labels"); revalidatePath("/stock/packaging"); revalidatePath("/stock/materials/moves");
+  return { ok: true, done: valid.length };
+}
+
 export async function adjustMaterial(desc: ItemDesc, target: number): Promise<{ ok: boolean; error?: string; balance?: number }> {
   const g = await gate(); if ("error" in g) return { ok: false, error: g.error };
   try { const bal = await apply(desc, Number(target) || 0, "adjust", "ปรับยอด (นับได้จริง)", g.user.id); revalidate(desc.category); return { ok: true, balance: bal }; }
