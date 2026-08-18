@@ -151,19 +151,27 @@ export async function lookupOrderForIssue(orderNo: string): Promise<IssueLookup>
 
   const rules = await getActiveSpecRules();
   const bcMap = await getScentBarcodes();  // ทนทาน: คืน {} ถ้าตาราง product_barcodes ยังไม่มี
+  // ยอดคงเหลือทุกบรรทัดในครั้งเดียว (LATERAL) — normalize เหมือน matchStockSku · เลี่ยง N+1 (เดิม query ต่อบรรทัด)
+  const sr = await q<{ line_no: number; qty: number }>(
+    `select oi.line_no, coalesce(s.qty,0)::float8 as qty
+     from order_items oi
+     left join lateral (
+       select qty from stock
+       where regexp_replace(lower(product),'[^a-z0-9ก-๙]','','g') = regexp_replace(lower(oi.product),'[^a-z0-9ก-๙]','','g')
+         and btrim(lower(size),' .') = btrim(lower(coalesce(oi.size,'')),' .')
+       order by (product = oi.product) desc, (size = oi.size) desc limit 1
+     ) s on true
+     where oi.order_no = $1 and coalesce(oi.product,'') <> ''`, [on]);
+  const stockByLine = new Map(sr.map((r) => [r.line_no, Number(r.qty)]));
   const withStock: IssueItemPreview[] = [];
   for (const it of items) {
-    // ยอดคงเหลือที่โชว์ต้องมาจาก SKU แถวเดียวกับที่จะตัดจริง (normalize ชื่อ+ขนาดเหมือน matchStockSku)
-    const [s] = await q<{ qty: number }>(
-      `select qty::float8 as qty from stock where ${SKU_MATCH} ${SKU_TIEBREAK}`,
-      [it.product, it.size || ""]);
     const bag = isBagProduct(it.product);
     // เลือกสเป็กอัตโนมัติ: ใช้ค่าที่เคยกรอกไว้ก่อน ถ้าไม่มีค่อยเดาจากกฎ (เฉพาะสินค้าที่ไม่ใช่ถุง)
     const spec = it.spec || (bag ? "" : pickAutoSpec(it.size, it.grade, rules));
     // บาร์โค้ด CTW ที่ตรงกับ (กลิ่น + ขนาด) — match ใน JS
     const szKey = normSize(it.size);
     const ctw_barcode = (bcMap[it.product.toLowerCase().replace(/[^a-z0-9ก-๙]/g, "")] || []).find((b) => normSize(b.size) === szKey)?.barcode ?? null;
-    withStock.push({ ...it, spec, stock: s?.qty ?? 0, tracked: isStockTracked(it.size), is_bag: bag, ctw_barcode });
+    withStock.push({ ...it, spec, stock: stockByLine.get(it.line_no) ?? 0, tracked: isStockTracked(it.size), is_bag: bag, ctw_barcode });
   }
   return { ok: true, order_no: on, doc_no: order.doc_no, note: order.note, items: withStock };
 }
@@ -473,7 +481,7 @@ export async function deleteUnit(sku: string): Promise<{ ok: boolean; error?: st
   if (!s) return { ok: false, error: "ไม่พบ SKU" };
   try {
     await tx(async (run) => {
-      const [u] = await run<{ product: string; size: string; status: string }>(`select product, size, status from stock_unit where btrim(sku) = $1`, [s]);
+      const [u] = await run<{ product: string; size: string; status: string }>(`select product, size, status from stock_unit where btrim(sku) = $1 for update`, [s]);
       if (!u) throw new Error("ไม่พบ SKU นี้");
       await run(`delete from stock_unit where btrim(sku) = $1`, [s]);
       if (u.status === "in_stock") {
@@ -498,15 +506,16 @@ export async function adjustStock(product: string, size: string, newQty: number,
   if (Number.isNaN(target)) return { ok: false, error: "จำนวนไม่ถูกต้อง" };
   try {
     await tx(async (run) => {
-      const [cur] = await run<{ qty: number }>(`select qty::float8 as qty from stock where product = $1 and size = $2`, [product.trim(), size.trim()]);
+      const m = await matchStockSku(run, product.trim(), size.trim());   // จับแถวจริง กันสร้างซ้ำจากชื่อ/ขนาดต่างฟอร์แมต
+      const [cur] = await run<{ qty: number }>(`select qty::float8 as qty from stock where product = $1 and size = $2`, [m.product, m.size]);
       const old = cur?.qty ?? 0;
       const diff = target - old;
       await run(
         `insert into stock (product, size, qty, updated_at) values ($1,$2,$3,now())
          on conflict (product, size) do update set qty = $3, updated_at = now()`,
-        [product.trim(), size.trim(), target]);
+        [m.product, m.size, target]);
       await run(`insert into stock_moves (product, size, qty_change, balance, reason, note, created_by)
-                 values ($1,$2,$3,$4,'adjust',$5,$6)`, [product.trim(), size.trim(), diff, target, note || `ปรับยอดเป็น ${target}`, user.id]);
+                 values ($1,$2,$3,$4,'adjust',$5,$6)`, [m.product, m.size, diff, target, note || `ปรับยอดเป็น ${target}`, user.id]);
     });
     await logActivity("stock.adjust", `${product.trim()} ${size.trim()} → ${target}`);
     revalidatePath("/stock"); revalidatePath("/stock/moves");

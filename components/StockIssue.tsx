@@ -33,8 +33,10 @@ export default function StockIssue({ isAdmin, initialOrder, specOptions = [] }: 
     const on = (codeArg ?? value).trim().toUpperCase();
     if (!on || busy) return;
     setBusy(true);
-    const res = await lookupOrderForIssue(on);
-    setBusy(false);
+    let res: IssueLookup;
+    try { res = await lookupOrderForIssue(on); }
+    catch { res = { ok: false, error: "ดึงรายการไม่สำเร็จ (ระบบขัดข้อง ลองใหม่)" }; }
+    finally { setBusy(false); }
     setValue("");
     if (!res.ok) {
       setLog((l) => [{ at: now(), res: res as IssueResult, input: on }, ...l].slice(0, 30));
@@ -54,8 +56,10 @@ export default function StockIssue({ isAdmin, initialOrder, specOptions = [] }: 
     if (missing && !window.confirm("บางรายการยังไม่ได้ใส่ SKU — ยืนยันตัดสต๊อกเลยไหม?")) return;
     setBusy(true);
     const entries = preview.items!.map((it) => ({ line_no: it.line_no, sku: form[it.line_no]?.sku, spec: form[it.line_no]?.spec }));
-    const res = await confirmIssueByOrder(preview.order_no, entries);
-    setBusy(false);
+    let res: IssueResult;
+    try { res = await confirmIssueByOrder(preview.order_no, entries); }
+    catch { res = { ok: false, error: "ตัดสต๊อกไม่สำเร็จ (ระบบขัดข้อง ลองใหม่)" }; }
+    finally { setBusy(false); }
     setLog((l) => [{ at: now(), res, input: preview.order_no! }, ...l].slice(0, 30));
     setPreview(null); setForm({});
     inputRef.current?.focus();

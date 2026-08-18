@@ -138,7 +138,7 @@ export async function saveOrder(input: OrderInput): Promise<SaveResult> {
 /** Check whether an Order No already exists (for the "duplicate" warning). */
 export async function orderExists(orderNo: string): Promise<{ exists: boolean; doc_no?: string | null; deleted?: boolean }> {
   const user = await getCurrentUser();
-  if (!user) return { exists: false };
+  if (!user || !can.createOrders(user.role)) return { exists: false };
   const [row] = await q<{ doc_no: string | null; deleted: boolean }>(
     `select doc_no, (deleted_at is not null) as deleted from orders where order_no = $1`,
     [(orderNo || "").trim()],
@@ -258,7 +258,7 @@ export type CustomerSuggestion = {
  * Returns distinct customer profiles with how many times they've ordered. */
 export async function searchCustomers(term: string): Promise<CustomerSuggestion[]> {
   const user = await getCurrentUser();
-  if (!user) return [];
+  if (!user || !can.createOrders(user.role)) return [];   // ข้อมูลลูกค้า (PII) = เฉพาะฝ่ายที่สร้างใบเบิก
   const t = (term || "").trim();
   if (t.length < 2) return [];
   const like = `%${t}%`;
@@ -285,16 +285,21 @@ export async function searchCustomers(term: string): Promise<CustomerSuggestion[
      limit 8`,
     [like],
   );
-  // จำนวนการคืนต่อลูกค้า — ทนทาน: ถ้าตาราง order_returns ยังไม่มี (prod ยังไม่รัน migration) คืน 0
-  try {
-    const rc = await q<{ k: string; c: number }>(
-      `select coalesce(nullif(btrim(x.phone),''), x.username, '') as k, count(distinct r.order_no)::int as c
-       from order_returns r join orders x on x.order_no = r.order_no
-       where r.voided_at is null and x.deleted_at is null
-       group by coalesce(nullif(btrim(x.phone),''), x.username, '')`);
-    const map = new Map(rc.map((r) => [r.k, r.c]));
-    for (const row of rows) row.return_count = map.get((row.phone?.trim() || row.username || "")) || 0;
-  } catch { for (const row of rows) row.return_count = 0; }
+  // จำนวนการคืนต่อลูกค้า — คิดเฉพาะ key ของลูกค้าที่แสดง (≤8) ไม่สแกนทั้งตาราง · ทนทาน: ถ้าตาราง order_returns ยังไม่มีคืน 0
+  const keyOf = (r: CustomerSuggestion) => r.phone?.trim() || r.username || "";
+  const keys = [...new Set(rows.map(keyOf).filter(Boolean))];
+  if (keys.length) {
+    try {
+      const rc = await q<{ k: string; c: number }>(
+        `select coalesce(nullif(btrim(x.phone),''), x.username, '') as k, count(distinct r.order_no)::int as c
+         from order_returns r join orders x on x.order_no = r.order_no
+         where r.voided_at is null and x.deleted_at is null
+           and coalesce(nullif(btrim(x.phone),''), x.username, '') = any($1)
+         group by coalesce(nullif(btrim(x.phone),''), x.username, '')`, [keys]);
+      const map = new Map(rc.map((r) => [r.k, r.c]));
+      for (const row of rows) row.return_count = map.get(keyOf(row)) || 0;
+    } catch { for (const row of rows) row.return_count = 0; }
+  }
   return rows;
 }
 
@@ -428,7 +433,7 @@ export type MatchResult = { found: MatchRow[]; missing: string[] };
  * existing orders so the user can print the ones already in the system. */
 export async function matchOrders(orderNos: string[]): Promise<{ ok: boolean; error?: string } & Partial<MatchResult>> {
   const user = await getCurrentUser();
-  if (!user) return { ok: false, error: "กรุณาเข้าสู่ระบบ" };
+  if (!user || !can.createOrders(user.role)) return { ok: false, error: "ไม่มีสิทธิ์" };
   const list = Array.from(new Set((orderNos || []).map((s) => String(s).trim()).filter(Boolean)));
   if (list.length === 0) return { ok: true, found: [], missing: [] };
 

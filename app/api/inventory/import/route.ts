@@ -102,12 +102,18 @@ export async function POST(req: Request) {
     await tx(async (run) => {
       for (const c of diffOnly) {   // เฉพาะแถวที่ยอดเปลี่ยนจริง (ไม่เขียน move ยอด 0)
         if (c.kind === "fg") {
-          const [cur] = await run<{ qty: number }>(`select qty::float8 as qty from stock where product=$1 and size=$2`, [c.product, c.size]);
-          const old = cur?.qty ?? 0; const diff = c.to - old;
+          // จับคู่แถวสต๊อกจริงแบบ normalize (กันสร้างแถวซ้ำจากขนาดต่างฟอร์แมต "50 ml" vs "50 ml.")
+          const [m] = await run<{ product: string; size: string; qty: number }>(
+            `select product, size, qty::float8 as qty from stock
+             where regexp_replace(lower(product),'[^a-z0-9ก-๙]','','g') = regexp_replace(lower($1),'[^a-z0-9ก-๙]','','g')
+               and btrim(lower(size),' .') = btrim(lower($2),' .')
+             order by (product=$1) desc, (size=$2) desc limit 1`, [c.product, c.size]);
+          const prod = m?.product ?? c.product, sz = m?.size ?? c.size;
+          const old = m?.qty ?? 0; const diff = c.to - old;
           await run(`insert into stock (product, size, qty, updated_at) values ($1,$2,$3,now())
-                     on conflict (product, size) do update set qty=$3, updated_at=now()`, [c.product, c.size, c.to]);
+                     on conflict (product, size) do update set qty=$3, updated_at=now()`, [prod, sz, c.to]);
           await run(`insert into stock_moves (product, size, qty_change, balance, reason, note, created_by)
-                     values ($1,$2,$3,$4,'adjust','นับสต๊อก (นำเข้าไฟล์)',$5)`, [c.product, c.size, diff, c.to, user.id]);
+                     values ($1,$2,$3,$4,'adjust','นับสต๊อก (นำเข้าไฟล์)',$5)`, [prod, sz, diff, c.to, user.id]);
         } else {
           // upsert material_item (กัน race) → ตั้งยอด + ลง move ส่วนต่าง
           const [it] = await run<{ id: number; qty: number }>(

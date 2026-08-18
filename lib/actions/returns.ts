@@ -163,14 +163,15 @@ export async function reverseReturn(returnId: number): Promise<{ ok: boolean; er
         const [row] = await run<{ qty: number }>(
           `update stock set qty = qty - $3, updated_at = now() where product=$1 and size=$2 returning qty::float8 as qty`,
           [sku.product, sku.size, qty]);
-        await run(`insert into stock_moves (product, size, qty_change, balance, reason, order_no, note, created_by)
-                   values ($1,$2,$3,$4,'adjust',$5,'ยกเลิกการคืน',$6)`, [sku.product, sku.size, -qty, row?.qty ?? 0, r.order_no, user.id]);
+        // ลง ledger เฉพาะเมื่อแถวเปลี่ยนจริง (กัน balance เพี้ยนถ้าแถวถูกลบไปแล้ว)
+        if (row) await run(`insert into stock_moves (product, size, qty_change, balance, reason, order_no, note, created_by)
+                   values ($1,$2,$3,$4,'adjust',$5,'ยกเลิกการคืน',$6)`, [sku.product, sku.size, -qty, row.qty, r.order_no, user.id]);
       } else {
         const [row] = await run<{ qty: number }>(
           `update damaged set qty = qty - $3, updated_at = now() where product=$1 and size=$2 returning qty::float8 as qty`,
           [sku.product, sku.size, qty]);
-        await run(`insert into damaged_moves (product, size, qty_change, balance, reason, ref, note, created_by)
-                   values ($1,$2,$3,$4,'writeoff',$5,'ยกเลิกการคืน',$6)`, [sku.product, sku.size, -qty, row?.qty ?? 0, r.order_no, user.id]);
+        if (row) await run(`insert into damaged_moves (product, size, qty_change, balance, reason, ref, note, created_by)
+                   values ($1,$2,$3,$4,'writeoff',$5,'ยกเลิกการคืน',$6)`, [sku.product, sku.size, -qty, row.qty, r.order_no, user.id]);
       }
       await run(`update order_returns set voided_at = now() where id = $1`, [returnId]);
       // อัปเดตสถานะออเดอร์
