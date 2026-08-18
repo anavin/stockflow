@@ -2,11 +2,13 @@
 -- (1) บาร์โค้ด Buoyant 50 ml. → 8857128011775 (เดิม 8857128012021)
 -- (2) เปลี่ยนชื่อ "Thai Perfume (น้ำปรุง)" → "Thai Perfume" ทุกตารางที่อ้างชื่อ
 
--- (1) Buoyant 50 ml.
+-- (1) Buoyant 50 ml.  — guard: ข้ามถ้าบาร์โค้ดปลายทางมีอยู่แล้ว (กันชน unique + run ซ้ำได้)
 update product_barcodes
 set barcode = '8857128011775'
 where regexp_replace(lower(btrim(scent)), '[^a-z0-9ก-๙]', '', 'g') = 'buoyant'
-  and regexp_replace(lower(size), '[^0-9a-z]', '', 'g') = '50ml';
+  and regexp_replace(lower(size), '[^0-9a-z]', '', 'g') = '50ml'
+  and barcode <> '8857128011775'
+  and not exists (select 1 from product_barcodes b2 where b2.barcode = '8857128011775');
 
 -- (2) rename "Thai Perfume (น้ำปรุง)" → "Thai Perfume"  (จับด้วยชื่อเดิมแบบ normalize)
 -- ตัวช่วย: NK = normalize ของชื่อเดิม
