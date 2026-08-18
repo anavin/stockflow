@@ -6,13 +6,19 @@ import { deleteOrder, bulkDeleteOrders } from "@/lib/actions/orders";
 import type { OrderRow } from "@/lib/types";
 import { Printer, Pencil, Trash2, PackageOpen, X, Zap, Clock, Check } from "lucide-react";
 
-/** สถานะออเดอร์ — ชุดเดียวกัน ไล่สีตามขั้น: รอตัด (เหลือง) → ตัดแล้ว (ฟ้า) → ส่งแล้ว (เขียว) */
+/** สถานะออเดอร์ — ชุดเดียวกัน ไล่สีตามขั้น: รอตัด (เหลือง) → ตัดแล้ว (ฟ้า) → ส่งแล้ว (เขียว)
+ *  + ป้ายการคืน (ถ้ามี) — return_status เป็น undefined ถ้า prod ยังไม่รัน migration รับคืน */
 function StatusChip({ order }: { order: OrderRow }) {
-  if (order.shipped_at)
-    return <span className="chip-ok whitespace-nowrap"><Check size={12} className="opacity-80" /> ส่งแล้ว</span>;
-  if (order.stock_issued_at)
-    return <span className="chip-info whitespace-nowrap"><span className="h-1.5 w-1.5 rounded-full bg-blue-500" /> ตัดแล้ว</span>;
-  return <span className="chip-warn whitespace-nowrap"><span className="h-1.5 w-1.5 rounded-full bg-amber-400" /> รอตัด</span>;
+  const ret = order.return_status;
+  const retChip = ret === "full" ? <span className="chip-danger whitespace-nowrap">↩ คืนแล้ว</span>
+    : ret === "partial" ? <span className="chip-warn whitespace-nowrap">↩ คืนบางส่วน</span> : null;
+  const base = order.shipped_at
+    ? <span className="chip-ok whitespace-nowrap"><Check size={12} className="opacity-80" /> ส่งแล้ว</span>
+    : order.stock_issued_at
+    ? <span className="chip-info whitespace-nowrap"><span className="h-1.5 w-1.5 rounded-full bg-blue-500" /> ตัดแล้ว</span>
+    : <span className="chip-warn whitespace-nowrap"><span className="h-1.5 w-1.5 rounded-full bg-amber-400" /> รอตัด</span>;
+  if (!retChip) return base;
+  return <span className="inline-flex flex-wrap items-center gap-1">{base}{retChip}</span>;
 }
 
 export default function OrdersTable({ orders }: { orders: OrderRow[] }) {

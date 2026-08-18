@@ -43,6 +43,8 @@ export type Order = {
   issued_by?: string | null;
   shipped_at?: string | null;
   shipped_by?: number | null;
+  returned_at?: string | null;
+  return_status?: string | null;     // none | partial | full (undefined ถ้า prod ยังไม่รัน migration)
 };
 
 export type OrderWithItems = Order & { items: OrderItem[] };
