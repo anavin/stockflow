@@ -49,10 +49,9 @@ export default function ReturnScanner() {
   const setDisp = (line: number, disp: Disp) => setForm((f) => ({ ...f, [line]: { ...f[line], disp } }));
 
   const totals = (() => {
-    let restock = 0, damaged = 0, none = 0;
+    let restock = 0, damaged = 0;
     for (const it of preview?.items || []) {
-      const v = form[it.line_no]; if (!v) continue;
-      if (v.qty <= 0) { none += it.remaining; continue; }
+      const v = form[it.line_no]; if (!v || v.qty <= 0) continue;
       if (v.disp === "restock") restock += v.qty; else damaged += v.qty;
     }
     return { restock, damaged };
@@ -161,8 +160,8 @@ export default function ReturnScanner() {
       {/* ขวา: ผลล่าสุด */}
       <div className="space-y-3 lg:col-span-2">
         <h3 className="flex items-center gap-2 text-sm font-semibold text-ink"><ClipboardList size={15} className="text-brand" /> รับคืนล่าสุด</h3>
-        {log.length > 0 ? log.map((e, i) => (
-          <div key={i} className="card p-4">
+        {log.length > 0 ? log.map((e) => (
+          <div key={e.at} className="card p-4">
             <div className="flex items-center gap-2 text-sm font-semibold text-green-700"><CheckCircle2 size={16} /> รับคืนแล้ว · <span className="font-mono text-ink">{e.order_no}</span></div>
             <div className="mt-1 flex gap-2 text-xs">
               {e.restocked > 0 && <span className="chip-ok"><RotateCcw size={12} /> คืนสต๊อก {e.restocked}</span>}

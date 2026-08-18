@@ -99,6 +99,7 @@ export async function confirmReturn(orderNo: string, entries: ReturnEntry[], rea
         const qty = Math.abs(Number(e.qty));
         const already = retMap.get(e.line_no) || 0;
         if (already + qty > Number(it.qty)) throw new Error(`${it.product}: คืนเกินจำนวนที่ส่ง (ส่ง ${it.qty}, คืนแล้ว ${already})`);
+        retMap.set(e.line_no, already + qty);   // สะสมในลูป กันหลาย entry ของ line เดียวกันรวมแล้วเกิน
         const tracked = isStockTracked(it.size);
 
         if (e.disposition === "restock") {
@@ -155,6 +156,7 @@ export async function reverseReturn(returnId: number): Promise<{ ok: boolean; er
       if (!r) throw new Error("ไม่พบรายการคืน");
       if (r.voided_at) throw new Error("รายการคืนนี้ถูกยกเลิกไปแล้ว");
       orderNo = r.order_no;
+      await run(`select 1 from orders where order_no = $1 for update`, [r.order_no]);   // ล็อก order → return_status ไม่เพี้ยนตอนแข่งกับ confirmReturn
       const qty = Number(r.qty);
       const sku = await matchStockSku(run, r.product, r.size || "");
       if (r.disposition === "restock") {

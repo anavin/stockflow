@@ -288,10 +288,10 @@ export async function searchCustomers(term: string): Promise<CustomerSuggestion[
   // จำนวนการคืนต่อลูกค้า — ทนทาน: ถ้าตาราง order_returns ยังไม่มี (prod ยังไม่รัน migration) คืน 0
   try {
     const rc = await q<{ k: string; c: number }>(
-      `select coalesce(nullif(x.phone,''), x.username, '') as k, count(distinct r.order_no)::int as c
+      `select coalesce(nullif(btrim(x.phone),''), x.username, '') as k, count(distinct r.order_no)::int as c
        from order_returns r join orders x on x.order_no = r.order_no
        where r.voided_at is null and x.deleted_at is null
-       group by coalesce(nullif(x.phone,''), x.username, '')`);
+       group by coalesce(nullif(btrim(x.phone),''), x.username, '')`);
     const map = new Map(rc.map((r) => [r.k, r.c]));
     for (const row of rows) row.return_count = map.get((row.phone?.trim() || row.username || "")) || 0;
   } catch { for (const row of rows) row.return_count = 0; }

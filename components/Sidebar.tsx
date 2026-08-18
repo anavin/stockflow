@@ -41,7 +41,6 @@ export default function Sidebar({ user }: { user: { full_name: string; username:
     ...(can.viewStock(role) ? [{ href: "/stock", label: "สต๊อกคงเหลือ", icon: Boxes, exact: true }] : []),
     ...(can.viewStock(role) ? [{ href: "/stock/damaged", label: "สต๊อกของชำรุด", icon: PackageX, exact: true }] : []),
     ...(can.viewStock(role) ? [{ href: "/stock/units", label: "ติดตาม SKU", icon: ScanBarcode }] : []),
-    ...(can.manageStock(role) ? [{ href: "/stock/count", label: "อัปเดตยอด (ไฟล์)", icon: ClipboardCheck, exact: true }] : []),
   ];
   // กลุ่ม "คลังวัตถุดิบ" — กลิ่น(master)/น้ำหอม/สติ๊กเกอร์/ขวด/รับเข้า·เบิก/ประวัติ
   const materialNav = [
@@ -52,8 +51,9 @@ export default function Sidebar({ user }: { user: { full_name: string; username:
     ...(can.manageStock(role) ? [{ href: "/stock/materials/issue", label: "รับเข้า / เบิก (รวม)", icon: PackageOpen, exact: true }] : []),
     ...(can.viewStock(role) ? [{ href: "/stock/materials/moves", label: "ประวัติวัตถุดิบ", icon: History }] : []),
   ];
-  // กลุ่ม "ตั้งค่า & ข้อมูล" — อย./บันทึกการใช้งาน/ผู้ใช้
+  // กลุ่ม "ตั้งค่า & ข้อมูล" — อัปเดตยอด(ไฟล์)/อย./บันทึกการใช้งาน/ผู้ใช้
   const settingsNav = [
+    ...(can.manageStock(role) ? [{ href: "/stock/count", label: "อัปเดตยอด (ไฟล์)", icon: ClipboardCheck, exact: true }] : []),
     ...(can.viewStock(role) ? [{ href: "/fda", label: "ข้อมูล อย.", icon: ShieldCheck, exact: true }] : []),
     ...(can.viewLogs(role) ? [{ href: "/activity", label: "บันทึกการใช้งาน", icon: ScrollText, exact: true }] : []),
     ...(can.manageUsers(role) ? [{ href: "/users", label: "จัดการผู้ใช้", icon: Users }] : []),

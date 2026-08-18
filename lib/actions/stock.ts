@@ -218,11 +218,19 @@ export async function reverseIssue(orderNo: string): Promise<{ ok: boolean; erro
     await tx(async (run) => {
       // for update = ล็อกแถว order ตลอด tx → กดยกเลิก 2 ครั้งพร้อมกัน คนที่ 2 จะรอ
       // แล้วเห็น stock_issued_at = null → โยน error ไม่คืนสต๊อกซ้ำ (กันสต๊อกเฟ้อ)
-      const [o] = await run<{ stock_issued_at: string | null; stock_issued_by: number | null; recent: boolean }>(
-        `select stock_issued_at, stock_issued_by,
+      const [o] = await run<{ stock_issued_at: string | null; stock_issued_by: number | null; shipped_at: string | null; recent: boolean }>(
+        `select stock_issued_at, stock_issued_by, shipped_at,
                 (stock_issued_at > now() - interval '24 hours') as recent
          from orders where order_no = $1 for update`, [on]);
       if (!o?.stock_issued_at) throw new Error("ใบเบิกนี้ยังไม่ได้ตัดสต๊อก");
+      // กันสต๊อกเฟ้อ: ห้ามยกเลิกการตัดหลังส่งแล้ว/มีการรับคืนแล้ว (ให้ใช้หน้า "รับคืนสินค้า" แทน)
+      if (o.shipped_at) throw new Error("ออเดอร์นี้ส่งแล้ว — ถ้าจะคืนสต๊อกให้ใช้ 'รับคืนสินค้า' (หรือยกเลิกการส่งก่อน)");
+      // เช็คตารางก่อน (to_regclass ไม่ error ถ้าตารางยังไม่มี — กัน tx abort บน prod ก่อนรัน migration รับคืน)
+      const [reg] = await run<{ ok: boolean }>(`select to_regclass('order_returns') is not null as ok`);
+      if (reg?.ok) {
+        const [ret] = await run<{ c: number }>(`select count(*)::int as c from order_returns where order_no = $1 and voided_at is null`, [on]);
+        if (Number(ret?.c) > 0) throw new Error("ออเดอร์นี้มีการรับคืนแล้ว — จัดการผ่านหน้า 'รับคืนสินค้า'");
+      }
       if (!isAdmin) {
         if (o.stock_issued_by !== user.id) throw new Error("ยกเลิกได้เฉพาะใบที่คุณตัดเอง (ใบอื่นให้แอดมิน)");
         if (!o.recent) throw new Error("เกิน 24 ชม. แล้ว — ให้แอดมินยกเลิกให้");

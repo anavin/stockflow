@@ -33,7 +33,7 @@ export default function DamagedStock({ rows, canManage }: { rows: DamagedRow[]; 
 
       <div className="overflow-hidden rounded-xl border border-line bg-white">
         <div className="divide-y divide-line">
-          {rows.map((r) => <Row key={`${r.product}|${r.size}`} r={r} canManage={canManage} busy={busy === `${r.product}|${r.size}`} onAct={act} />)}
+          {rows.map((r) => <Row key={`${r.product}|${r.size}|${r.qty}`} r={r} canManage={canManage} busy={busy === `${r.product}|${r.size}`} onAct={act} />)}
         </div>
       </div>
       {canManage && <p className="text-xs text-faint">ซ่อมคืนสต๊อก = ย้ายกลับเป็นของขายได้ · เคลม = ส่งเคลมขนส่ง/ผู้ผลิต · ทำลาย = ตัดทิ้งถาวร (ทุกอย่างลงประวัติ)</p>}

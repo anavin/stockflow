@@ -278,7 +278,7 @@ export default function OrderForm({ products, sizes, provinces, postcodes, initi
           </div>
           <div>
             <label className="label">ชื่อผู้ใช้ (Shopee)</label>
-            <CustomerSuggest value={f.username} onChange={(v) => set({ username: v })} onPick={fillFromCustomer} placeholder="พิมพ์ชื่อผู้ใช้ / ชื่อ / กลิ่นที่เคยซื้อ" />
+            <CustomerSuggest value={f.username} onChange={(v) => { set({ username: v }); setReturnWarn(0); }} onPick={fillFromCustomer} placeholder="พิมพ์ชื่อผู้ใช้ / ชื่อ / กลิ่นที่เคยซื้อ" />
           </div>
         </div>
         {returnWarn >= 2 && (
@@ -316,12 +316,12 @@ export default function OrderForm({ products, sizes, provinces, postcodes, initi
         <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
           <div>
             <label className="label">ชื่อผู้รับ <span className="text-brand">*</span></label>
-            <CustomerSuggest value={f.receiver} onChange={(v) => set({ receiver: v })} onPick={fillFromCustomer} placeholder="พิมพ์เพื่อค้นหาลูกค้าเดิม" invalid={fieldErrors.receiver} />
+            <CustomerSuggest value={f.receiver} onChange={(v) => { set({ receiver: v }); setReturnWarn(0); }} onPick={fillFromCustomer} placeholder="พิมพ์เพื่อค้นหาลูกค้าเดิม" invalid={fieldErrors.receiver} />
           </div>
           {/* ซ่อนเบอร์โทรไว้ก่อน (ยังเก็บใน DB + ใช้จับคู่ลูกค้าเดิม) — เอากลับมาโชว์ได้โดยเปิดบล็อกนี้
           <div>
             <label className="label">เบอร์โทร</label>
-            <CustomerSuggest value={f.phone} onChange={(v) => set({ phone: cleanPhone(v) })} onPick={fillFromCustomer} placeholder="พิมพ์เบอร์เพื่อค้นหา" type="tel" />
+            <CustomerSuggest value={f.phone} onChange={(v) => { set({ phone: cleanPhone(v) }); setReturnWarn(0); }} onPick={fillFromCustomer} placeholder="พิมพ์เบอร์เพื่อค้นหา" type="tel" />
           </div> */}
           <div className="grid grid-cols-2 gap-2">
             <div>
