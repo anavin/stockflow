@@ -47,7 +47,7 @@ export default function InventoryCount({ canUpload }: { canUpload: boolean }) {
     <div className="space-y-4">
       {!canUpload && (
         <div className="alert-warn flex items-center gap-2">
-          <AlertTriangle size={16} /> ดูขั้นตอนได้ แต่ <b>เฉพาะแอดมิน</b>เท่านั้นที่ดาวน์โหลดเทมเพลต / อัปโหลดไฟล์อัปเดตยอดได้
+          <AlertTriangle size={16} /> ดาวน์โหลดเทมเพลต + นับได้ปกติ · แต่ <b>เฉพาะแอดมิน</b>เท่านั้นที่อัปโหลดไฟล์อัปเดตยอดได้
         </div>
       )}
       {/* ขั้นตอน */}
@@ -58,9 +58,7 @@ export default function InventoryCount({ canUpload }: { canUpload: boolean }) {
             <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-brand-50 text-xs font-bold text-brand-600">1</span>
             <div className="flex-1">
               <span className="text-ink">ดาวน์โหลดเทมเพลต</span> — ไฟล์ Excel เติม SKU ทุกตัวให้แล้ว (4 ชีต: สำเร็จรูป/น้ำหอม/สติ๊กเกอร์/ขวด)
-              <div className="mt-1.5">{canUpload
-                ? <a href="/api/inventory/template" className="btn-primary inline-flex text-sm"><FileDown size={15} /> ดาวน์โหลดเทมเพลต</a>
-                : <span className="btn-primary pointer-events-none inline-flex text-sm opacity-40"><FileDown size={15} /> ดาวน์โหลดเทมเพลต</span>}</div>
+              <div className="mt-1.5"><a href="/api/inventory/template" className="btn-primary inline-flex text-sm"><FileDown size={15} /> ดาวน์โหลดเทมเพลต</a></div>
             </div>
           </li>
           <li className="flex items-start gap-3">

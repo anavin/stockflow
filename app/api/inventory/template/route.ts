@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import ExcelJS from "exceljs";
 import { getCurrentUser } from "@/lib/auth/session";
-import { isAdmin } from "@/lib/auth/roles";
+import { can } from "@/lib/auth/roles";
 import { q } from "@/lib/db";
 import { listBulkStock, listLabelStock, listPackagingStock } from "@/lib/queries";
 import { bulkRef, labelRef } from "@/lib/materials";
@@ -14,7 +14,7 @@ const NOTE_FILL = { type: "pattern" as const, pattern: "solid" as const, fgColor
 /** เทมเพลตอัปเดตยอดสต๊อก — 1 ไฟล์ 4 ชีต pre-fill ทุก SKU · กรอกแค่ช่อง "นับได้จริง" */
 export async function GET() {
   const user = await getCurrentUser();
-  if (!user || !isAdmin(user.role)) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  if (!user || !can.viewStock(user.role)) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
 
   const wb = new ExcelJS.Workbook();
   wb.creator = "Lab Parfumo";
