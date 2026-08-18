@@ -6,7 +6,7 @@ import type { MaterialPick } from "@/lib/queries";
 import { Search, Plus, Trash2, PackageMinus, PackagePlus, AlertTriangle, Check } from "lucide-react";
 
 const CAT_CHIP: Record<string, { th: string; cls: string }> = {
-  bulk: { th: "ปริมาตร", cls: "bg-brand-50 text-brand-600" },
+  bulk: { th: "น้ำหอม", cls: "bg-brand-50 text-brand-600" },
   label: { th: "สติ๊กเกอร์", cls: "bg-purple-50 text-purple-700" },
   packaging: { th: "แพ็คเกจ", cls: "bg-amber-50 text-amber-700" },
 };
@@ -14,7 +14,7 @@ const keyOf = (p: { category: string; ref_key: string }) => `${p.category}|${p.r
 const descOf = (p: MaterialPick): ItemDesc => ({ category: p.category as any, refKey: p.ref_key, scent: p.scent, comp_key: p.comp_key, brand: p.brand, grade: p.grade, label: p.label, category2: p.category2, unit: p.unit });
 
 const CATS: { key: string; label: string }[] = [
-  { key: "", label: "ทั้งหมด" }, { key: "bulk", label: "ปริมาตร" }, { key: "label", label: "สติ๊กเกอร์/การ์ด" }, { key: "packaging", label: "ขวด/แพ็คเกจ" },
+  { key: "", label: "ทั้งหมด" }, { key: "bulk", label: "น้ำหอม" }, { key: "label", label: "สติ๊กเกอร์/การ์ด" }, { key: "packaging", label: "ขวด/แพ็คเกจ" },
 ];
 const MAX_RESULTS = 100;
 type Mode = "receive" | "issue";

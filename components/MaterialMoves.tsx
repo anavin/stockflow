@@ -5,9 +5,9 @@ import { Search, X } from "lucide-react";
 import type { MaterialMoveRow } from "@/lib/queries";
 
 const CATS: { key: string; label: string }[] = [
-  { key: "", label: "ทั้งหมด" }, { key: "bulk", label: "ปริมาตรน้ำหอม" }, { key: "label", label: "สติ๊กเกอร์/การ์ด" }, { key: "packaging", label: "ขวด/แพ็คเกจ" },
+  { key: "", label: "ทั้งหมด" }, { key: "bulk", label: "น้ำหอม" }, { key: "label", label: "สติ๊กเกอร์/การ์ด" }, { key: "packaging", label: "ขวด/แพ็คเกจ" },
 ];
-const CAT_TH: Record<string, string> = { bulk: "ปริมาตร", label: "สติ๊กเกอร์", packaging: "แพ็คเกจ" };
+const CAT_TH: Record<string, string> = { bulk: "น้ำหอม", label: "สติ๊กเกอร์", packaging: "แพ็คเกจ" };
 const dt = (v: string) => new Date(v).toLocaleString("th-TH", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
 
 export default function MaterialMoves({ rows, cat, date, ref_, q, itemLabel }: { rows: MaterialMoveRow[]; cat: string; date: string; ref_: string; q: string; itemLabel: string }) {
