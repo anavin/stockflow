@@ -133,7 +133,7 @@ export default function FdaManager({ rows, summary, canEdit }: { rows: FdaRow[];
             <button key={tier} type="button" onClick={() => setTierF(active ? "" : tier)}
               className={`card border p-4 text-left transition-colors ${active ? "ring-2 ring-brand-300" : ""} ${n > 0 && (tier === "expired" || tier === "d10") ? "border-red-200" : "border-line"}`}>
               <div className="flex items-center justify-between">
-                <span className={`inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium ${m.chip}`}><Icon size={13} /> {tier === "expired" ? "หมดอายุแล้ว" : m.label}</span>
+                <span className={`chip ${m.chip}`}><Icon size={13} /> {tier === "expired" ? "หมดอายุแล้ว" : m.label}</span>
                 <span className={`text-2xl font-bold ${n > 0 && (tier === "expired" || tier === "d10") ? "text-red-600" : "text-ink"}`}>{n}</span>
               </div>
               <p className="mt-1.5 text-[11px] text-muted">{tier === "expired" ? "เกินวันสิ้นสุดแล้ว — ต่ออายุด่วน" : "ใกล้หมดอายุ — เตรียมต่ออายุ อย."}</p>

@@ -17,10 +17,16 @@ export default {
         soft: "#f1f4f9",    // cool soft bg / hover
         // Per-platform accent driven by CSS vars (see globals.css --brand*).
         // Shopee = orange by default; switch via data-platform on <html>.
+        canvas: "#f5f7fa",   // พื้นหลังแอป (= html,body) ใช้แทน hardcode #f5f7fa
         brand: {
           DEFAULT: "rgb(var(--brand) / <alpha-value>)",
           600: "rgb(var(--brand-600) / <alpha-value>)",
           50: "rgb(var(--brand-50) / <alpha-value>)",
+          // teal ramp — เดิมนิยามไม่ครบ ทำให้ border-brand-200 / text-brand-700 ฯลฯ ไม่ขึ้นสี
+          100: "#ccfbf1",
+          200: "#99f6e4",
+          300: "#5eead4",
+          700: "#0f766e",
         },
       },
       fontFamily: {

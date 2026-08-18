@@ -9,8 +9,8 @@ import { Search, FileDown, LogIn, LogOut, FileText, Trash2, ScanLine, Undo2, Tru
 export const ACTIONS: Record<string, { label: string; icon: any; cls: string }> = {
   login: { label: "เข้าสู่ระบบ", icon: LogIn, cls: "bg-green-50 text-green-700" },
   logout: { label: "ออกจากระบบ", icon: LogOut, cls: "bg-slate-100 text-slate-600" },
-  "order.create": { label: "สร้าง/แก้ใบเบิก", icon: FileText, cls: "bg-sky-50 text-sky-700" },
-  "order.import": { label: "นำเข้าใบเบิก", icon: Upload, cls: "bg-sky-50 text-sky-700" },
+  "order.create": { label: "สร้าง/แก้ใบเบิก", icon: FileText, cls: "bg-blue-50 text-blue-700" },
+  "order.import": { label: "นำเข้าใบเบิก", icon: Upload, cls: "bg-blue-50 text-blue-700" },
   "order.delete": { label: "ลบใบเบิก", icon: Trash2, cls: "bg-red-50 text-red-600" },
   "order.restore": { label: "กู้คืนใบเบิก", icon: RotateCcw, cls: "bg-slate-100 text-slate-600" },
   "order.purge": { label: "ลบถาวร", icon: Trash2, cls: "bg-red-100 text-red-700" },
@@ -18,8 +18,8 @@ export const ACTIONS: Record<string, { label: string; icon: any; cls: string }> 
   "stock.reverse": { label: "ยกเลิกตัดสต๊อก", icon: Undo2, cls: "bg-red-50 text-red-600" },
   "stock.receive": { label: "รับเข้าสินค้า", icon: Boxes, cls: "bg-green-50 text-green-700" },
   "stock.adjust": { label: "ปรับยอดสินค้า", icon: SlidersHorizontal, cls: "bg-slate-100 text-slate-600" },
-  "stock.count-import": { label: "อัปเดตยอดจากไฟล์", icon: ClipboardCheck, cls: "bg-sky-50 text-sky-700" },
-  ship: { label: "บันทึกจัดส่ง", icon: Truck, cls: "bg-emerald-50 text-emerald-700" },
+  "stock.count-import": { label: "อัปเดตยอดจากไฟล์", icon: ClipboardCheck, cls: "bg-blue-50 text-blue-700" },
+  ship: { label: "บันทึกจัดส่ง", icon: Truck, cls: "bg-green-50 text-green-700" },
   unship: { label: "ยกเลิกจัดส่ง", icon: Undo2, cls: "bg-red-50 text-red-600" },
   "material.receive": { label: "รับเข้าวัตถุดิบ", icon: PackagePlus, cls: "bg-green-50 text-green-700" },
   "material.issue": { label: "เบิกวัตถุดิบ", icon: PackageMinus, cls: "bg-orange-50 text-orange-700" },
@@ -83,7 +83,7 @@ export default function ActivityLog({ rows, user, action, date }: { rows: Activi
                       <div className="text-[11px] text-faint">{roleTh(r.role)}</div>
                     </td>
                     <td className="px-3 py-2.5">
-                      <span className={`inline-flex items-center gap-1 whitespace-nowrap rounded-full px-2 py-0.5 text-xs font-medium ${a?.cls || "bg-slate-100 text-slate-600"}`}>
+                      <span className={`chip whitespace-nowrap ${a?.cls || "bg-slate-100 text-slate-600"}`}>
                         {Icon && <Icon size={12} />} {a?.label || r.action}
                       </span>
                     </td>

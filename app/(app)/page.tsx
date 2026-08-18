@@ -32,7 +32,7 @@ export default async function Dashboard() {
       {/* ── header ── */}
       <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-ink">ภาพรวม</h1>
+          <h1 className="text-xl font-bold tracking-tight text-ink">ภาพรวม</h1>
           <p className="mt-0.5 text-sm text-muted">
             {name ? <>สวัสดี <span className="font-medium text-ink">{name}</span> · </> : null}
             ระบบเบิกสินค้า Shopee + สต๊อกกลาง
@@ -131,9 +131,7 @@ export default async function Dashboard() {
               </div>
             </div>
           </div>
-          <Link href="/stock/issue"
-            className="mt-4 inline-flex items-center justify-center gap-1 rounded-lg px-3 py-2 text-xs font-medium text-white transition-opacity hover:opacity-90"
-            style={{ backgroundColor: "rgb(var(--brand))" }}>
+          <Link href="/stock/issue" className="btn-primary mt-4 text-xs">
             <ScanLine size={13} /> ไปตัดสต๊อก
           </Link>
         </section>
@@ -281,7 +279,7 @@ export default async function Dashboard() {
 
 const TONES = {
   brand: "bg-brand-50 text-brand",
-  green: "bg-emerald-50 text-emerald-600",
+  green: "bg-green-50 text-green-600",
   amber: "bg-amber-50 text-amber-600",
   red: "bg-red-50 text-red-600",
 } as const;
@@ -304,7 +302,7 @@ function Kpi({ label, value, sub, icon, href, tone }: {
 /** SVG donut ring showing a 0..1 ratio. */
 function StockStat({ label, n, total, tone, href }: { label: string; n: number; total: number; tone: "green" | "amber" | "red"; href?: string }) {
   const t = {
-    green: { bg: "bg-emerald-50", text: "text-emerald-700", dot: "bg-emerald-500", ring: "" },
+    green: { bg: "bg-green-50", text: "text-green-700", dot: "bg-green-500", ring: "" },
     amber: { bg: "bg-amber-50", text: "text-amber-700", dot: "bg-amber-400", ring: "" },
     red: { bg: "bg-red-50", text: "text-red-600", dot: "bg-red-500", ring: n > 0 ? "ring-1 ring-red-200" : "" },
   }[tone];
@@ -347,7 +345,7 @@ function DailyIssueTable({ data }: { data: { day: string; orders: number; issued
                 <td className="py-1.5 pr-3 text-right font-medium text-ink">
                   <Link href={`/shopee?from=${d.day}&to=${d.day}`} className="hover:underline">{d.orders.toLocaleString()}</Link>
                 </td>
-                <td className="py-1.5 pr-3 text-right text-emerald-600">
+                <td className="py-1.5 pr-3 text-right text-green-600">
                   <Link href={`/shopee?from=${d.day}&to=${d.day}&issued=yes`} className="hover:underline">{d.issued.toLocaleString()}</Link>
                 </td>
                 <td className={`py-1.5 pr-3 text-right ${d.pending > 0 ? "font-semibold text-amber-600" : "text-faint"}`}>
@@ -358,7 +356,7 @@ function DailyIssueTable({ data }: { data: { day: string; orders: number; issued
                 <td className="hidden py-1.5 sm:table-cell">
                   <div className="flex items-center gap-2">
                     <div className="h-2 min-w-[80px] flex-1 overflow-hidden rounded-full bg-soft">
-                      <div className="h-full rounded-full bg-emerald-500" style={{ width: `${pct}%` }} />
+                      <div className="h-full rounded-full bg-green-500" style={{ width: `${pct}%` }} />
                     </div>
                     <span className="w-9 text-right text-xs text-muted">{pct}%</span>
                   </div>
@@ -395,7 +393,7 @@ function HealthBar({ normal, low, negative }: { normal: number; low: number; neg
   const seg = (n: number) => `${(n / total) * 100}%`;
   return (
     <div className="mt-3 flex h-3 w-full gap-1">
-      {normal > 0 && <div className="h-full rounded-full bg-emerald-500" style={{ width: seg(normal) }} />}
+      {normal > 0 && <div className="h-full rounded-full bg-green-500" style={{ width: seg(normal) }} />}
       {low > 0 && <div className="h-full rounded-full bg-amber-400" style={{ width: seg(low) }} />}
       {negative > 0 && <div className="h-full rounded-full bg-red-500" style={{ width: seg(negative) }} />}
       {normal + low + negative === 0 && <div className="h-full w-full rounded-full bg-soft" />}

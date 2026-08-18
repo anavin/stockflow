@@ -11,7 +11,7 @@ export default async function StockCountPage() {
   const me = await requireStock();
   if (!can.manageStock(me.role)) redirect(homeFor(me.role));   // ตั้งยอด = admin/คลัง
   return (
-    <div className="mx-auto max-w-4xl px-4 py-6 md:px-8">
+    <div className="mx-auto max-w-6xl px-4 py-6 md:px-8">
       <Link href="/stock" className="mb-4 inline-flex items-center gap-1 text-sm text-muted hover:text-ink">
         <ChevronLeft size={16} /> กลับหน้าสต๊อก
       </Link>

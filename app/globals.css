@@ -32,6 +32,10 @@ html, body {
   .btn-primary { @apply btn bg-brand text-white hover:bg-brand-600; }
   .btn-ghost   { @apply btn border border-line bg-white text-ink hover:bg-soft; }
   .btn-danger  { @apply btn border border-red-200 bg-white text-red-600 hover:bg-red-50; }
+  /* ปุ่มพื้นทึบตามความหมาย (สำเร็จ/เตือน/อันตราย) — ใช้แทนที่ปุ่มที่เขียน bg-green-600/amber-500/red-600 เองกระจัดกระจาย */
+  .btn-success      { @apply btn bg-green-600 text-white hover:bg-green-700; }
+  .btn-warn         { @apply btn bg-amber-500 text-white hover:bg-amber-600; }
+  .btn-danger-solid { @apply btn bg-red-600 text-white hover:bg-red-700; }
 
   .input {
     @apply h-10 w-full rounded-lg border border-line bg-white px-3 py-2 text-sm text-ink
@@ -41,7 +45,22 @@ html, body {
   textarea.input { @apply h-auto; }
   .label { @apply mb-1 block text-xs font-medium text-muted; }
   .card  { @apply rounded-xl border border-line bg-white shadow-card; }
-  .chip  { @apply inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium; }
+
+  /* ป้ายสถานะ — ทรงเดียวทั้งระบบ (rounded-full) + ชุดสีตามความหมาย ห้ามเขียน rounded-full px-2 เองซ้ำ */
+  .chip        { @apply inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium; }
+  .chip-brand  { @apply chip bg-brand-50 text-brand-600; }
+  .chip-ok     { @apply chip bg-green-50 text-green-700; }
+  .chip-warn   { @apply chip bg-amber-50 text-amber-700; }
+  .chip-danger { @apply chip bg-red-50 text-red-700; }
+  .chip-info   { @apply chip bg-blue-50 text-blue-700; }
+  .chip-muted  { @apply chip bg-soft text-muted; }
+
+  /* กล่องแจ้งเตือน — ทรง/ระยะเดียวกันทั้งระบบ */
+  .alert         { @apply rounded-lg border px-4 py-3 text-sm; }
+  .alert-error   { @apply alert border-red-200 bg-red-50 text-red-700; }
+  .alert-success { @apply alert border-green-200 bg-green-50 text-green-700; }
+  .alert-warn    { @apply alert border-amber-200 bg-amber-50 text-amber-700; }
+  .alert-info    { @apply alert border-blue-200 bg-blue-50 text-blue-700; }
 }
 
 /* Print: hide app chrome, show only the print target.

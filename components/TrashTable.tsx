@@ -75,7 +75,7 @@ export default function TrashTable({ orders }: { orders: OrderRow[] }) {
               <RotateCcw size={15} /> กู้คืนที่เลือก
             </button>
             <button onClick={bulkPurge} disabled={bulkBusy}
-              className="inline-flex items-center gap-1.5 rounded-lg bg-red-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-50">
+              className="btn-danger-solid px-3 py-1.5 text-sm">
               <Trash2 size={15} /> {bulkBusy ? "กำลังลบ…" : "ลบถาวรที่เลือก"}
             </button>
           </div>

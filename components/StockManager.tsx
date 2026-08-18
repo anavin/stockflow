@@ -14,10 +14,10 @@ type Status = "all" | "normal" | "low" | "out" | "neg";
 const keyOf = (r: StockRow) => `${r.product}|${r.size}`;
 
 function statusOf(qty: number) {
-  if (qty < 0) return { label: "ติดลบ", cls: "bg-red-100 text-red-700", dot: "bg-red-500" };
-  if (qty === 0) return { label: "หมด", cls: "bg-red-50 text-red-600", dot: "bg-red-400" };
-  if (qty <= 10) return { label: "ใกล้หมด", cls: "bg-amber-50 text-amber-700", dot: "bg-amber-500" };
-  return { label: "ปกติ", cls: "bg-green-50 text-green-700", dot: "bg-green-500" };
+  if (qty < 0) return { label: "ติดลบ", cls: "chip-danger", dot: "bg-red-500" };
+  if (qty === 0) return { label: "หมด", cls: "chip-danger", dot: "bg-red-400" };
+  if (qty <= 10) return { label: "ใกล้หมด", cls: "chip-warn", dot: "bg-amber-500" };
+  return { label: "ปกติ", cls: "chip-ok", dot: "bg-green-500" };
 }
 
 export default function StockManager({ rows, products, sizes, initialLow, isAdmin, discontinued = {}, skuMap = {}, closedSkus = {}, emptyScents = [] }:
@@ -414,9 +414,9 @@ export default function StockManager({ rows, products, sizes, initialLow, isAdmi
       <div className="flex flex-wrap items-center justify-between gap-2 px-1 text-xs text-muted">
         <div className="flex flex-wrap items-center gap-3">
           <span><b className="text-ink">{groups.length.toLocaleString()}</b> กลิ่น · {filtered.length.toLocaleString()} ขนาด{emptyCount > 0 && <span className="text-faint"> · {emptyCount} ยังไม่มีสต๊อก</span>}</span>
-          <button onClick={collapseAll} className="inline-flex items-center gap-1 rounded-md border border-line bg-white px-2 py-1 hover:bg-soft"><ChevronRight size={12} /> ย่อทั้งหมด</button>
-          <button onClick={expandAll} className="inline-flex items-center gap-1 rounded-md border border-line bg-white px-2 py-1 hover:bg-soft"><ChevronDown size={12} /> ขยายทั้งหมด</button>
-          <button onClick={exportCsv} className="inline-flex items-center gap-1 rounded-md border border-line bg-white px-2 py-1 hover:bg-soft"><FileDown size={12} /> Export ที่กรอง (CSV)</button>
+          <button onClick={collapseAll} className="btn-ghost text-xs"><ChevronRight size={12} /> ย่อทั้งหมด</button>
+          <button onClick={expandAll} className="btn-ghost text-xs"><ChevronDown size={12} /> ขยายทั้งหมด</button>
+          <button onClick={exportCsv} className="btn-ghost text-xs"><FileDown size={12} /> Export ที่กรอง (CSV)</button>
         </div>
         {isAdmin && <span className="flex items-center gap-1"><ClipboardCheck size={13} /> พิมพ์ยอดที่นับได้จริงในช่อง “นับได้จริง” แล้ว Enter เพื่อปรับให้ตรง</span>}
       </div>
@@ -444,9 +444,9 @@ export default function StockManager({ rows, products, sizes, initialLow, isAdmi
                     <tr key={grp.product} className="border-t border-line bg-white">
                       <td colSpan={isAdmin ? 5 : 4} className="px-4 py-2">
                         <div className="flex w-full flex-wrap items-center gap-2">
-                          <span className="ml-[23px] font-medium text-slate-500">{grp.product}</span>
+                          <span className="ml-[23px] font-medium text-muted">{grp.product}</span>
                           {grp.grade && <span className="chip bg-brand-50/60 text-brand-500">{grp.grade}</span>}
-                          <span className="rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-medium text-slate-500">ยังไม่มีสต๊อก</span>
+                          <span className="rounded bg-soft px-1.5 py-0.5 text-[10px] font-medium text-muted">ยังไม่มีสต๊อก</span>
                           {isAdmin && (
                             <button type="button"
                               onClick={() => { setF((s) => ({ ...s, product: grp.product, grade: grp.grade || "" })); window.scrollTo({ top: 0, behavior: "smooth" }); }}
@@ -500,7 +500,7 @@ export default function StockManager({ rows, products, sizes, initialLow, isAdmi
                               className={`font-semibold tabular-nums underline decoration-dotted underline-offset-2 hover:decoration-solid ${r.qty < 0 ? "text-red-600" : r.qty <= 10 ? "text-amber-600" : "text-ink"}`}>{r.qty}</Link>
                           </td>
                           <td className="px-3 py-2.5">
-                            <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ${st.cls}`}>
+                            <span className={st.cls}>
                               <span className={`h-1.5 w-1.5 rounded-full ${st.dot}`} /> {st.label}
                             </span>
                           </td>
@@ -513,7 +513,7 @@ export default function StockManager({ rows, products, sizes, initialLow, isAdmi
                                   className={`input h-8 w-20 py-0 text-right tabular-nums ${dirty ? "border-amber-400 ring-2 ring-amber-100" : ""}`} title="ยอดที่นับได้จริง" />
                                 {dirty ? (
                                   <button onClick={() => saveCount(r)} disabled={savingKey === k}
-                                    className="inline-flex items-center gap-1 rounded-md bg-amber-500 px-2 py-1.5 text-xs font-medium text-white hover:bg-amber-600 disabled:opacity-50">
+                                    className="btn-warn px-2 py-1.5 text-xs">
                                     <Check size={14} /> {savingKey === k ? "…" : "ปรับ"}
                                   </button>
                                 ) : (

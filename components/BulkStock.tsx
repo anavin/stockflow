@@ -83,7 +83,7 @@ export default function BulkStock({ rows, canEdit }: { rows: BulkRow[]; canEdit:
           <input value={search} onChange={(e) => setSearch(e.target.value)} className="input pl-9" placeholder="ค้นหากลิ่น / Brand / หมายเหตุ" />
         </div>
         {grades.length > 0 && (
-          <select value={grade} onChange={(e) => setGrade(e.target.value)} className="input w-32">
+          <select value={grade} onChange={(e) => setGrade(e.target.value)} className="input w-40">
             <option value="">Grade: ทั้งหมด</option>
             {grades.map((g) => <option key={g} value={g}>{g}</option>)}
           </select>

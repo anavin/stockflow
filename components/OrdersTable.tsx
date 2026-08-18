@@ -8,12 +8,11 @@ import { Printer, Pencil, Trash2, PackageOpen, X, Zap, Clock, Check } from "luci
 
 /** สถานะออเดอร์ — ชุดเดียวกัน ไล่สีตามขั้น: รอตัด (เหลือง) → ตัดแล้ว (ฟ้า) → ส่งแล้ว (เขียว) */
 function StatusChip({ order }: { order: OrderRow }) {
-  const base = "inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border px-2.5 py-1 text-xs font-medium";
   if (order.shipped_at)
-    return <span className={`${base} border-emerald-200 bg-emerald-50 text-emerald-700`}><Check size={12} className="opacity-80" /> ส่งแล้ว</span>;
+    return <span className="chip-ok whitespace-nowrap"><Check size={12} className="opacity-80" /> ส่งแล้ว</span>;
   if (order.stock_issued_at)
-    return <span className={`${base} border-sky-200 bg-sky-50 text-sky-700`}><span className="h-1.5 w-1.5 rounded-full bg-sky-500" /> ตัดแล้ว</span>;
-  return <span className={`${base} border-amber-200 bg-amber-50 text-amber-700`}><span className="h-1.5 w-1.5 rounded-full bg-amber-400" /> รอตัด</span>;
+    return <span className="chip-info whitespace-nowrap"><span className="h-1.5 w-1.5 rounded-full bg-blue-500" /> ตัดแล้ว</span>;
+  return <span className="chip-warn whitespace-nowrap"><span className="h-1.5 w-1.5 rounded-full bg-amber-400" /> รอตัด</span>;
 }
 
 export default function OrdersTable({ orders }: { orders: OrderRow[] }) {
@@ -87,14 +86,13 @@ export default function OrdersTable({ orders }: { orders: OrderRow[] }) {
             <button onClick={() => setSel(new Set())} className="text-muted hover:text-ink" title="ล้างที่เลือก"><X size={16} /></button>
             <span>เลือกไว้ <b>{sel.size}</b> รายการ</span>
             <button onClick={onBulkDelete} disabled={bulkBusy}
-              className="inline-flex items-center gap-1 rounded-lg border border-line bg-white px-2.5 py-1 text-xs font-medium text-muted transition-colors hover:border-red-300 hover:bg-red-50 hover:text-red-600 disabled:opacity-50"
+              className="btn-danger px-2.5 py-1 text-xs"
               title="ย้ายที่เลือกไปถังขยะ">
               <Trash2 size={14} /> {bulkBusy ? "กำลังลบ…" : "ลบ"}
             </button>
           </div>
           {/* ขวา: ปุ่มพิมพ์เป็นปุ่มหลักเด่น */}
-          <button onClick={onBulkPrint} disabled={bulkBusy}
-            className="inline-flex items-center gap-1.5 rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white hover:bg-brand-600 disabled:opacity-50">
+          <button onClick={onBulkPrint} disabled={bulkBusy} className="btn-primary">
             <Printer size={16} /> พิมพ์ที่เลือก ({sel.size})
           </button>
         </div>

@@ -3,6 +3,7 @@ import { useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { batchMaterial, type ItemDesc } from "@/lib/actions/supply";
 import type { MaterialPick } from "@/lib/queries";
+import { isLow } from "./MaterialControls";
 import { Search, Plus, Trash2, PackageMinus, PackagePlus, AlertTriangle, Check } from "lucide-react";
 
 const CAT_CHIP: Record<string, { th: string; cls: string }> = {
@@ -85,7 +86,7 @@ export default function MaterialIssue({ items, canIssue, initialMode = "issue" }
           <div className="mb-3 flex flex-wrap gap-1.5">
             {CATS.map((c) => (
               <button key={c.key} onClick={() => setCat(c.key)}
-                className={`rounded-lg px-2.5 py-1.5 text-xs font-medium transition-colors ${cat === c.key ? "bg-brand-600 text-white" : "border border-line text-muted hover:bg-soft"}`}>
+                className={`rounded-lg px-2.5 py-1.5 text-xs font-medium transition-colors ${cat === c.key ? "bg-brand text-white" : "border border-line text-muted hover:bg-soft"}`}>
                 {c.label} <span className={cat === c.key ? "opacity-80" : "text-faint"}>{counts[c.key] ?? 0}</span>
               </button>
             ))}
@@ -103,7 +104,7 @@ export default function MaterialIssue({ items, canIssue, initialMode = "issue" }
             {!cat && !t && <p className="py-10 text-center text-sm text-faint">เลือกหมวดด้านบน แล้วเลื่อนดู · หรือพิมพ์ชื่อค้นหา → กด “เพิ่ม”</p>}
             {(cat || t) && results.length === 0 && <p className="py-10 text-center text-sm text-muted">ไม่พบรายการ (หรือถูกเพิ่มไปแล้ว)</p>}
             {results.map((p) => {
-              const low = p.qty <= 10;
+              const low = isLow(p.qty, null);
               return (
                 <div key={keyOf(p)} className="flex items-center gap-2 rounded-lg border border-line px-3 py-2">
                   <span className={`chip shrink-0 ${CAT_CHIP[p.category]?.cls}`}>{CAT_CHIP[p.category]?.th}</span>
@@ -160,7 +161,7 @@ export default function MaterialIssue({ items, canIssue, initialMode = "issue" }
             <input id="mi-note" value={note} onChange={(e) => setNote(e.target.value)} className="input" placeholder={rcv ? "เช่น ล็อตผลิต 08/2026 · รับจากผู้ผลิต" : "เช่น เบิกผลิตล็อต 08/2026 · โดยสมชาย"} />
             {err && <p className="mt-2 text-xs text-red-600">{err}</p>}
             <button onClick={submit} disabled={busy || !canIssue || totalPicked === 0}
-              className={`mt-3 w-full rounded-lg py-2.5 text-sm font-semibold text-white disabled:opacity-50 ${rcv ? "bg-green-600 hover:bg-green-700" : "bg-red-500 hover:bg-red-600"}`}>
+              className={`mt-3 w-full py-2.5 text-sm font-semibold ${rcv ? "btn-success" : "btn-danger-solid"}`}>
               {busy ? (rcv ? "กำลังรับเข้า…" : "กำลังเบิก…") : !canIssue ? "เฉพาะฝ่ายคลัง / แอดมิน" : `${rcv ? "รับเข้า" : "เบิก"}ทั้งหมด (${totalPicked} รายการ)`}
             </button>
           </div>

@@ -95,8 +95,8 @@ export default function ImportWizard() {
       </div>
 
       {busy && !preview && <p className="text-sm text-muted">กำลังอ่านไฟล์…</p>}
-      {error && <div className="flex items-start gap-2 rounded-lg bg-red-50 px-4 py-3 text-sm text-red-600"><AlertTriangle size={16} className="mt-0.5" /> {error}</div>}
-      {savedMsg && <div className="flex items-center gap-2 rounded-lg bg-green-50 px-4 py-3 text-sm text-green-700"><CheckCircle2 size={16} /> {savedMsg}</div>}
+      {error && <div className="alert-error flex items-start gap-2"><AlertTriangle size={16} className="mt-0.5" /> {error}</div>}
+      {savedMsg && <div className="alert-success flex items-center gap-2"><CheckCircle2 size={16} /> {savedMsg}</div>}
 
       {preview && (
         <div className="space-y-4">
@@ -108,7 +108,7 @@ export default function ImportWizard() {
           </div>
 
           {preview.orders.length > 0 && (
-            <div className="rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-800">
+            <div className="alert-info">
               <div className="flex items-start gap-2">
                 <CheckCircle2 size={16} className="mt-0.5 shrink-0" />
                 <div>
@@ -124,7 +124,7 @@ export default function ImportWizard() {
 
           {preview.orders.length === 0 && preview.noItemOrders > 0 && (
             <div className="space-y-3">
-              <div className="rounded-lg bg-amber-50 px-4 py-3 text-sm text-amber-800">
+              <div className="alert-warn">
                 ไฟล์นี้มีแต่ <b>หมายเลขคำสั่งซื้อ {preview.noItemOrders} รายการ</b> (ไม่มีข้อมูลสินค้า) — สร้างใบเบิกใหม่ไม่ได้
                 <div className="mt-1 text-xs text-amber-700">
                   แต่ถ้าออร์เดอร์เหล่านี้มีอยู่ในระบบแล้ว สามารถ<b>จับคู่แล้วสั่งพิมพ์</b>ได้เลย 👇
@@ -167,7 +167,7 @@ export default function ImportWizard() {
                     </div>
                   )}
                   {match.missing.length > 0 && (
-                    <div className="rounded-lg bg-amber-50 px-4 py-2 text-xs text-amber-700">
+                    <div className="alert-warn py-2 text-xs">
                       ไม่พบในระบบ {match.missing.length} รายการ (ต้องสร้างใบเบิกก่อน): {match.missing.slice(0, 10).join(", ")}{match.missing.length > 10 ? " …" : ""}
                     </div>
                   )}
@@ -177,7 +177,7 @@ export default function ImportWizard() {
           )}
 
           {preview.errors.length > 0 && (
-            <div className="rounded-lg bg-amber-50 px-4 py-3 text-xs text-amber-700">
+            <div className="alert-warn text-xs">
               {preview.errors.slice(0, 8).map((e, i) => <div key={i}>แถว {e.row}: {e.message}</div>)}
               {preview.errors.length > 8 && <div>… และอีก {preview.errors.length - 8} รายการ</div>}
             </div>
@@ -215,7 +215,7 @@ export default function ImportWizard() {
                                 <ChevronDown size={12} className={exp ? "rotate-180 transition" : "transition"} />
                               </button>
                             ) : (
-                              <span className="chip bg-green-50 text-green-700">ใหม่</span>
+                              <span className="chip-ok">ใหม่</span>
                             )}
                           </td>
                           <td className="px-4 py-2 text-muted">{o.province || "—"}</td>

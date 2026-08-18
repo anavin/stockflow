@@ -76,10 +76,10 @@ export default function InventoryCount() {
         </ol>
       </div>
 
-      {err && <div className="flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"><AlertTriangle size={16} /> {err}</div>}
+      {err && <div className="alert-error flex items-center gap-2"><AlertTriangle size={16} /> {err}</div>}
 
       {done && (
-        <div className="flex items-center gap-2 rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-800">
+        <div className="alert-success flex items-center gap-2">
           <Check size={16} /> อัปเดตสำเร็จ — ตั้งยอด {done.applied.toLocaleString()} รายการ (เปลี่ยนจริง {done.changed.toLocaleString()}) · ลงประวัติแล้ว
         </div>
       )}
@@ -97,13 +97,13 @@ export default function InventoryCount() {
               </div>
             </div>
             <button onClick={apply} disabled={busy || preview.changed === 0}
-              className="rounded-lg bg-green-600 px-4 py-2 text-sm font-semibold text-white hover:bg-green-700 disabled:opacity-50">
+              className="btn-success">
               {busy ? "กำลังอัปเดต…" : `ยืนยันอัปเดต (${preview.changed})`}
             </button>
           </div>
 
           {preview.invalid.length > 0 && (
-            <div className="mb-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+            <div className="alert-warn mb-3 text-xs">
               ข้ามแถวผิดรูปแบบ {preview.invalid.length}: {preview.invalid.slice(0, 5).join(" · ")}{preview.invalid.length > 5 ? " …" : ""}
             </div>
           )}

@@ -52,15 +52,15 @@ export default function LabelStock({ scents, canEdit }: { scents: LabelScent[]; 
           <Search size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-faint" />
           <input value={search} onChange={(e) => setSearch(e.target.value)} className="input pl-9" placeholder="ค้นหากลิ่น" />
         </div>
-        <select value={grade} onChange={(e) => setGrade(e.target.value)} className="input w-36">
+        <select value={grade} onChange={(e) => setGrade(e.target.value)} className="input w-40">
           <option value="">เกรด: ทั้งหมด</option>
           {grades.map((g) => <option key={g} value={g}>{g}</option>)}
         </select>
-        <button onClick={() => setCollapsedGrade(new Set(groups.map((g) => g.grade)))} className="btn-ghost text-xs"><ChevronRight size={14} /> ย่อกรุป</button>
-        <button onClick={() => setCollapsedGrade(new Set())} className="btn-ghost text-xs"><ChevronDown size={14} /> ขยายกรุป</button>
+        <button onClick={() => setCollapsedGrade(new Set(groups.map((g) => g.grade)))} className="btn-ghost text-xs"><ChevronRight size={14} /> ย่อ</button>
+        <button onClick={() => setCollapsedGrade(new Set())} className="btn-ghost text-xs"><ChevronDown size={14} /> ขยาย</button>
       </SummaryBar>
 
-      <div className="space-y-4">
+      <div className="space-y-3">
         {groups.length === 0 && <p className="card p-10 text-center text-sm text-muted">ไม่พบกลิ่น</p>}
         {groups.map((grp) => {
           const gOpen = !collapsedGrade.has(grp.grade);
@@ -68,11 +68,11 @@ export default function LabelStock({ scents, canEdit }: { scents: LabelScent[]; 
           const lowScents = grp.scents.filter(scentLow).length;
           return (
             <section key={grp.grade}>
-              {/* หัวกรุปเกรด */}
+              {/* หัวกรุปเกรด — สไตล์เดียวกับหัวกลุ่มหน้า Bulk/Packaging */}
               <button onClick={() => toggleGrade(grp.grade)}
-                className="flex w-full items-center gap-2 rounded-xl border border-brand-200 bg-brand-50/60 px-4 py-2.5 text-left">
-                {gOpen ? <ChevronDown size={16} className="text-brand-500" /> : <ChevronRight size={16} className="text-brand-500" />}
-                <span className="text-sm font-bold uppercase tracking-wide text-brand-700">{grp.grade}</span>
+                className="flex w-full items-center gap-2 overflow-hidden rounded-xl border border-line bg-soft/60 px-4 py-2.5 text-left">
+                {gOpen ? <ChevronDown size={15} className="text-faint" /> : <ChevronRight size={15} className="text-faint" />}
+                <span className="font-semibold text-ink">{grp.grade}</span>
                 <span className="text-xs text-muted">· {grp.scents.length} กลิ่น · รวม {totalQty.toLocaleString()}{lowScents > 0 && <span className="text-amber-600"> · ใกล้หมด {lowScents}</span>}</span>
               </button>
 

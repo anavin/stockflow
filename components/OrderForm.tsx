@@ -256,8 +256,8 @@ export default function OrderForm({ products, sizes, provinces, postcodes, initi
 
   return (
     <div className="space-y-6">
-      {savedMsg && <div className="flex items-center gap-2 rounded-lg bg-green-50 px-4 py-3 text-sm font-medium text-green-700"><CheckCircle2 size={16} /> {savedMsg}</div>}
-      {error && <div className="flex items-center gap-2 rounded-lg bg-red-50 px-4 py-3 text-sm text-red-600"><AlertTriangle size={16} /> {error}</div>}
+      {savedMsg && <div className="alert-success flex items-center gap-2 font-medium"><CheckCircle2 size={16} /> {savedMsg}</div>}
+      {error && <div className="alert-error flex items-center gap-2"><AlertTriangle size={16} /> {error}</div>}
 
       {/* header / customer */}
       <section className="card p-5">
@@ -411,7 +411,7 @@ export default function OrderForm({ products, sizes, provinces, postcodes, initi
         </div>
       </section>
 
-      <div className="sticky bottom-0 flex flex-wrap gap-3 border-t border-line bg-[#f5f7fa]/90 py-4 backdrop-blur">
+      <div className="sticky bottom-0 flex flex-wrap gap-3 border-t border-line bg-canvas/90 py-4 backdrop-blur">
         <button className="btn-primary" disabled={busy} onClick={() => onSave(false)}>
           <Save size={16} /> {busy ? "กำลังบันทึก…" : "บันทึก"}
         </button>

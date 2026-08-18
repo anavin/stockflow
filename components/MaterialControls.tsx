@@ -20,7 +20,7 @@ export default function MaterialControls({ desc, qty, unit = "ชิ้น", reo
 
   return (
     <div className="flex items-center justify-end gap-1.5">
-      {low && qty >= 0 && <span className="chip hidden bg-amber-50 text-[10px] text-amber-700 sm:inline-block" title={`ใกล้หมด (จุดสั่งซื้อ ${reorder ?? 10})`}>ควรสั่งซื้อ</span>}
+      {low && qty >= 0 && <span className="chip-warn hidden text-[10px] sm:inline-block" title={`ใกล้หมด (จุดสั่งซื้อ ${reorder ?? 10})`}>ควรสั่งซื้อ</span>}
       <span className={`min-w-[3rem] text-right font-semibold tabular-nums ${qty < 0 ? "text-red-600" : low ? "text-amber-600" : "text-ink"}`}>{qty.toLocaleString()}</span>
       <span className="w-8 text-xs text-faint">{unit}</span>
       <Link href={`/stock/materials/moves?cat=${desc.category}&ref=${encodeURIComponent(desc.refKey)}`}
@@ -116,7 +116,7 @@ function MaterialModal({ desc, qty, unit, reorder, mode: initial, onClose, onDon
         {err && <p className="mt-2 text-xs text-red-600">{err}</p>}
 
         <button onClick={submit} disabled={busy || !n}
-          className={`mt-4 w-full rounded-lg py-2.5 text-sm font-semibold text-white disabled:opacity-50 ${isRcv ? "bg-green-600 hover:bg-green-700" : "bg-red-500 hover:bg-red-600"}`}>
+          className={`mt-4 w-full py-2.5 text-sm font-semibold ${isRcv ? "btn-success" : "btn-danger-solid"}`}>
           {busy ? "กำลังบันทึก…" : isRcv ? `รับเข้า ${n || ""} ${unit}` : `เบิก ${n || ""} ${unit}`}
         </button>
 

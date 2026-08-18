@@ -104,7 +104,7 @@ export default function StockIssue({ isAdmin, initialOrder, specOptions = [] }: 
           </div>
 
           {preview.note && (
-            <div className="mb-3 flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+            <div className="alert-warn mb-3 flex items-start gap-2">
               <StickyNote size={15} className="mt-0.5 shrink-0" />
               <div><span className="font-medium">หมายเหตุ:</span> {preview.note}</div>
             </div>

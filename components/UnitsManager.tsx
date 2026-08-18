@@ -158,15 +158,15 @@ function ReconcilePanel({ product, size, qty, units, gap }: Reconcile) {
   }
 
   return (
-    <div className="rounded-xl border border-amber-200 bg-amber-50/60 p-4">
+    <div className="alert-warn">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
           <p className="flex items-center gap-1.5 text-sm font-semibold text-amber-800"><Wrench size={15} /> ผูก SKU ให้ตรงยอด — {product} {size}</p>
           <p className="mt-0.5 text-xs text-amber-700">สต๊อก <b>{qty}</b> · มี SKU แล้ว <b>{units}</b> · <b>ยังไม่ผูก SKU {gap} ชิ้น</b> — กรอก/สแกน SKU ลงช่องว่างด้านล่างเพื่อให้ตรง (ไม่เพิ่มยอด)</p>
         </div>
         <div className="flex items-center gap-2">
-          <button type="button" onClick={() => setScanOpen(true)} className="inline-flex items-center gap-1 rounded-md border border-amber-300 bg-white px-2.5 py-1.5 text-xs font-medium text-amber-800 hover:bg-amber-100"><Camera size={13} /> สแกน SKU</button>
-          <button type="button" onClick={() => setSlots((l) => [...l, ""])} className="inline-flex items-center gap-1 rounded-md border border-amber-300 bg-white px-2.5 py-1.5 text-xs text-amber-800 hover:bg-amber-100"><Plus size={13} /> เพิ่มช่อง</button>
+          <button type="button" onClick={() => setScanOpen(true)} className="btn-ghost text-xs"><Camera size={13} /> สแกน SKU</button>
+          <button type="button" onClick={() => setSlots((l) => [...l, ""])} className="btn-ghost text-xs"><Plus size={13} /> เพิ่มช่อง</button>
         </div>
       </div>
       <div className="mt-3 grid grid-cols-2 gap-1.5 sm:grid-cols-3 md:grid-cols-4">
@@ -182,7 +182,7 @@ function ReconcilePanel({ product, size, qty, units, gap }: Reconcile) {
       <div className="mt-3 flex items-center justify-between">
         <span className="text-xs text-amber-700">กรอกแล้ว <b>{filled.length}</b>/{gap} ชิ้น</span>
         <button type="button" onClick={save} disabled={busy || !filled.length}
-          className="rounded-lg bg-amber-600 px-3 py-2 text-xs font-medium text-white hover:bg-amber-700 disabled:opacity-50">
+          className="btn-warn text-xs">
           {busy ? "กำลังผูก…" : `ผูก SKU (${filled.length})`}
         </button>
       </div>

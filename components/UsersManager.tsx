@@ -10,7 +10,7 @@ import { UserPlus, KeyRound, CheckCircle2, Search, Shield, FileText, ScanLine, B
 const ROLE_OPTS = ["creator", "picker", "stock", "admin"] as const;
 const ROLE_META: Record<string, { icon: any; chip: string; ring: string }> = {
   creator: { icon: FileText, chip: "bg-blue-50 text-blue-700", ring: "border-blue-200" },
-  picker: { icon: ScanLine, chip: "bg-emerald-50 text-emerald-700", ring: "border-emerald-200" },
+  picker: { icon: ScanLine, chip: "bg-green-50 text-green-700", ring: "border-green-200" },
   stock: { icon: Boxes, chip: "bg-amber-50 text-amber-700", ring: "border-amber-200" },
   admin: { icon: Shield, chip: "bg-violet-50 text-violet-700", ring: "border-violet-200" },
 };
@@ -75,7 +75,7 @@ export default function UsersManager({ users, meId }: { users: UserRow[]; meId: 
           return (
             <div key={r} className={`card border p-4 ${ROLE_META[r].ring}`}>
               <div className="flex items-center justify-between">
-                <span className={`inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-semibold ${ROLE_META[r].chip}`}><Icon size={14} /> {ROLE_LABELS[r]}</span>
+                <span className={`chip font-semibold ${ROLE_META[r].chip}`}><Icon size={14} /> {ROLE_LABELS[r]}</span>
                 <span className="text-lg font-bold text-ink">{countActive(r)}</span>
               </div>
               <p className="mt-2 text-[11px] leading-relaxed text-muted">{ROLE_DESC[r]}</p>
@@ -173,7 +173,7 @@ export default function UsersManager({ users, meId }: { users: UserRow[]; meId: 
                     </div>
                   </td>
                   <td className="px-4 py-3">
-                    <span className={`chip ${u.is_active ? "bg-green-50 text-green-700" : "bg-red-50 text-red-600"}`}>{u.is_active ? "ใช้งาน" : "ปิด"}</span>
+                    <span className={u.is_active ? "chip-ok" : "chip-danger"}>{u.is_active ? "ใช้งาน" : "ปิด"}</span>
                   </td>
                   <td className="px-4 py-3 text-xs text-muted">{fmtDate(u.last_login_at)}</td>
                   <td className="px-4 py-3">

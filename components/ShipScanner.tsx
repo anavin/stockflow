@@ -70,16 +70,16 @@ export default function ShipScanner({ date, isToday, rows: initialRows, pending,
     setRows((r) => r.filter((x) => x.order_no !== orderNo));
   }
 
-  const bannerCls = banner?.kind === "ok" ? "border-green-200 bg-green-50 text-green-800"
-    : banner?.kind === "already" ? "border-amber-200 bg-amber-50 text-amber-800"
-    : "border-red-200 bg-red-50 text-red-700";
+  const bannerCls = banner?.kind === "ok" ? "alert-success"
+    : banner?.kind === "already" ? "alert-warn"
+    : "alert-error";
   const BannerIcon = banner?.kind === "ok" ? CheckCircle2 : banner?.kind === "already" ? AlertTriangle : XCircle;
 
   const todayStr = new Date(Date.now() + 7 * 3600 * 1000).toISOString().slice(0, 10);
   return (
     <div className="space-y-4">
       {/* เมนูวันที่ — สแกนย้อนหลังได้ (เต็มความกว้าง) */}
-      <div className="flex items-center gap-2 rounded-2xl border border-line bg-white p-3">
+      <div className="card flex items-center gap-2 p-3">
         <Calendar size={16} className="shrink-0 text-brand" />
         <label className="shrink-0 text-sm font-medium text-ink">วันที่ส่ง</label>
         <input type="date" value={date} max={todayStr}
@@ -87,7 +87,7 @@ export default function ShipScanner({ date, isToday, rows: initialRows, pending,
         {!isToday && <button type="button" onClick={() => router.push("/ship")} className="btn-ghost shrink-0 whitespace-nowrap text-xs">วันนี้</button>}
       </div>
       {!isToday && (
-        <div className="flex items-center gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+        <div className="alert-warn flex items-center gap-2 text-xs">
           <AlertTriangle size={14} className="shrink-0" /> โหมดย้อนหลัง — ที่สแกนจะบันทึกเป็นวันที่ <b>{date}</b> (ไม่ใช่วันนี้)
         </div>
       )}
@@ -97,18 +97,18 @@ export default function ShipScanner({ date, isToday, rows: initialRows, pending,
         <div className="space-y-4 lg:col-span-1">
           {/* สรุป */}
           <div className="grid grid-cols-2 gap-3">
-            <div className="rounded-2xl border border-green-200 bg-green-50 p-4 text-center">
+            <div className="card bg-green-50 p-4 text-center">
               <div className="text-3xl font-bold text-green-700">{total.toLocaleString()}</div>
               <div className="mt-0.5 text-xs font-medium text-green-700/80">{isToday ? "ส่งแล้ววันนี้" : "ส่งวันที่เลือก"}</div>
             </div>
-            <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-center">
+            <div className="card bg-amber-50 p-4 text-center">
               <div className="text-3xl font-bold text-amber-700">{left.toLocaleString()}</div>
               <div className="mt-0.5 text-xs font-medium text-amber-700/80">ค้างส่ง (ตัดแล้ว)</div>
             </div>
           </div>
 
           {/* ช่องสแกน */}
-          <div className="rounded-2xl border border-line bg-white p-4 lg:sticky lg:top-4">
+          <div className="card p-4 lg:sticky lg:top-4">
             <label className="mb-2 flex items-center gap-1.5 text-sm font-medium text-ink"><ScanLine size={16} /> สแกน Order No. จากใบปะหน้า</label>
             <div className="flex gap-2">
               <input ref={inputRef} autoFocus inputMode="text" value={value}
@@ -116,12 +116,12 @@ export default function ShipScanner({ date, isToday, rows: initialRows, pending,
                 onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); scan(); } }}
                 className="input h-12 min-w-0 flex-1 font-mono text-base" placeholder="สแกน / พิมพ์ Order No. แล้ว Enter" />
               <button type="button" onClick={() => setScanOpen(true)}
-                className="inline-flex h-12 shrink-0 items-center gap-1.5 rounded-lg bg-brand px-4 font-semibold text-white hover:bg-brand-600">
+                className="btn-primary h-12 shrink-0">
                 <Camera size={18} /> กล้อง
               </button>
             </div>
             {banner && (
-              <div className={`mt-3 flex items-start gap-2 rounded-xl border px-3 py-2.5 text-sm ${bannerCls}`}>
+              <div className={`mt-3 flex items-start gap-2 text-sm ${bannerCls}`}>
                 <BannerIcon size={18} className="mt-0.5 shrink-0" />
                 <div><div className="font-semibold">{banner.text}</div>{banner.sub && <div className="text-xs opacity-80">{banner.sub}</div>}</div>
               </div>
@@ -131,7 +131,7 @@ export default function ShipScanner({ date, isToday, rows: initialRows, pending,
         </div>
 
         {/* รายการที่ส่ง */}
-        <div className="overflow-hidden rounded-2xl border border-line bg-white lg:col-span-2">
+        <div className="card overflow-hidden lg:col-span-2">
           <div className="flex items-center gap-2 border-b border-line px-4 py-3 text-sm font-semibold text-ink">
             <Truck size={16} /> {isToday ? "รายการที่ส่งวันนี้" : `รายการที่ส่ง ${date}`} <span className="text-muted">({rows.length})</span>
           </div>

@@ -35,7 +35,7 @@ export default function MaterialMoves({ rows, cat, date, ref_, q, itemLabel }: {
         <div className="flex flex-wrap gap-1.5">
           {CATS.map((c) => (
             <button key={c.key} onClick={() => go({ cat: c.key })}
-              className={`rounded-lg px-3 py-1.5 text-sm font-medium ${cat === c.key ? "bg-brand-50 text-brand-700" : "border border-line text-muted hover:bg-soft"}`}>{c.label}</button>
+              className={`rounded-lg px-3 py-1.5 text-sm font-medium ${cat === c.key ? "bg-brand text-white" : "border border-line text-muted hover:bg-soft"}`}>{c.label}</button>
           ))}
         </div>
         <form onSubmit={(e) => { e.preventDefault(); go({ q: term.trim(), ref: "" }); }} className="relative min-w-[180px] flex-1">
