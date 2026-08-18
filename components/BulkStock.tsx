@@ -6,7 +6,7 @@ import { bulkRef } from "@/lib/materials";
 import type { BulkRow } from "@/lib/queries";
 import MaterialControls, { isLow } from "./MaterialControls";
 import { downloadCsv } from "@/lib/csv";
-import { Plus, Search, FileDown, AlertTriangle, ChevronDown, ChevronRight } from "lucide-react";
+import { Plus, Search, FileDown, AlertTriangle, ChevronDown, ChevronRight, StickyNote } from "lucide-react";
 
 // เรียงกลุ่มตาม Grade: EDP → EDP+ → PARFUM → EDT → อื่นๆ
 const GRADE_ORDER = ["EDP", "EDP+", "PARFUM", "EDT"];
@@ -109,14 +109,12 @@ export default function BulkStock({ rows, canEdit }: { rows: BulkRow[]; canEdit:
               {open && (
                 <div className="divide-y divide-line">
                   {grp.items.map((r) => (
-                    <div key={r.brand + "|" + r.scent} className="flex items-start justify-between gap-3 px-4 py-2.5 sm:pl-6">
-                      <div className="min-w-0 flex-1">
-                        <div className="flex flex-wrap items-center gap-1.5">
-                          <span className="font-medium text-ink">{r.scent}</span>
-                          {grp.oem && <span className="chip bg-purple-50 text-purple-700">{r.brand}</span>}
-                          {grp.oem && r.grade && <span className="text-xs text-muted">{r.grade}</span>}
-                        </div>
-                        <div className="mt-1 max-w-xs"><NoteCell row={r} canEdit={canEdit} /></div>
+                    <div key={r.brand + "|" + r.scent} className="group flex items-center justify-between gap-3 px-4 py-2 sm:pl-6">
+                      <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-2 gap-y-1">
+                        <span className="font-medium text-ink">{r.scent}</span>
+                        {grp.oem && <span className="chip bg-purple-50 text-purple-700">{r.brand}</span>}
+                        {grp.oem && r.grade && <span className="text-xs text-muted">{r.grade}</span>}
+                        <NoteInline row={r} canEdit={canEdit} />
                       </div>
                       <MaterialControls canEdit={canEdit} qty={r.qty} unit="ml" reorder={r.reorder} desc={descOf(r)} />
                     </div>
@@ -131,23 +129,46 @@ export default function BulkStock({ rows, canEdit }: { rows: BulkRow[]; canEdit:
   );
 }
 
-/** ช่องหมายเหตุต่อรายการ — บันทึกเมื่อออกจากช่อง (blur) / กด Enter */
-function NoteCell({ row, canEdit }: { row: BulkRow; canEdit: boolean }) {
+/** หมายเหตุแบบ inline ต่อท้ายชื่อ — มีค่า = โชว์ป้าย · ไม่มี = ปุ่มจางๆ "+ หมายเหตุ" (กดแล้วพิมพ์) */
+function NoteInline({ row, canEdit }: { row: BulkRow; canEdit: boolean }) {
   const router = useRouter();
   const orig = row.note ?? "";
+  const [editing, setEditing] = useState(false);
   const [val, setVal] = useState(orig);
   const [busy, setBusy] = useState(false);
-  if (!canEdit) return <span className="text-xs text-muted">{orig || <span className="text-faint">—</span>}</span>;
+
   async function save() {
-    if (val.trim() === orig.trim()) return;
+    if (val.trim() === orig.trim()) { setEditing(false); return; }
     setBusy(true); const r = await setMaterialNote(descOf(row), val); setBusy(false);
-    if (!r.ok) { alert(r.error); setVal(orig); return; }
-    router.refresh();
+    if (!r.ok) { alert(r.error); setVal(orig); setEditing(false); return; }
+    setEditing(false); router.refresh();
   }
+
+  if (editing) {
+    return (
+      <input autoFocus value={val} disabled={busy}
+        onChange={(e) => setVal(e.target.value)} onBlur={save}
+        onKeyDown={(e) => { if (e.key === "Enter") save(); if (e.key === "Escape") { setVal(orig); setEditing(false); } }}
+        className="input h-7 w-52 max-w-full py-0 text-xs disabled:opacity-50" placeholder="พิมพ์หมายเหตุ… (Enter บันทึก)" />
+    );
+  }
+  // มีหมายเหตุ → ป้ายเหลืองต่อท้ายชื่อ (กดแก้ได้)
+  if (orig) {
+    return (
+      <button type="button" onClick={() => canEdit && setEditing(true)} title={canEdit ? "แก้หมายเหตุ" : orig}
+        className={`inline-flex max-w-[18rem] items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-xs text-amber-700 ${canEdit ? "hover:bg-amber-100" : "cursor-default"}`}>
+        <StickyNote size={11} className="shrink-0 opacity-70" />
+        <span className="truncate">{orig}</span>
+      </button>
+    );
+  }
+  // ไม่มีหมายเหตุ → ปุ่มจางๆ (โผล่ตอน hover บนคอม · จางๆ บนมือถือ)
+  if (!canEdit) return null;
   return (
-    <input value={val} onChange={(e) => setVal(e.target.value)} onBlur={save} disabled={busy}
-      onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); }}
-      className="input h-8 w-full min-w-[8rem] py-0 text-xs disabled:opacity-50" placeholder="หมายเหตุ…" />
+    <button type="button" onClick={() => setEditing(true)}
+      className="inline-flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[11px] text-faint opacity-0 transition-opacity hover:bg-soft hover:text-muted group-hover:opacity-100 max-sm:opacity-60">
+      <Plus size={11} /> หมายเหตุ
+    </button>
   );
 }
 
