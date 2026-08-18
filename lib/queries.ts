@@ -719,6 +719,45 @@ export async function listAllMaterials(): Promise<MaterialPick[]> {
   } catch { return []; }
 }
 
+// ── ระบบรับคืน ──────────────────────────────────────────────────────────
+export type DamagedRow = { product: string; size: string; qty: number };
+/** คลังของชำรุด — คงเหลือต่อ SKU (ที่ยังมี > 0) */
+export async function listDamaged(): Promise<DamagedRow[]> {
+  try {
+    return await q<DamagedRow>(`select product, size, qty::float8 as qty from damaged where qty > 0 order by product, size`);
+  } catch { return []; }
+}
+
+export type ReturnRow = {
+  id: number; order_no: string; product: string; size: string; qty: number;
+  disposition: string; reason: string | null; note: string | null; voided_at: string | null;
+  created_at: string; by_name: string | null;
+};
+/** ประวัติการคืน (ล่าสุดก่อน) */
+export async function listReturns(limit = 200): Promise<ReturnRow[]> {
+  try {
+    return await q<ReturnRow>(
+      `select r.id, r.order_no, r.product, r.size, r.qty::float8 as qty, r.disposition, r.reason, r.note, r.voided_at,
+              r.created_at, u.full_name as by_name
+       from order_returns r left join users u on u.id = r.created_by
+       order by r.created_at desc limit $1`, [limit]);
+  } catch { return []; }
+}
+
+export type ReturnStat = { product: string; returned: number; damaged: number; times: number };
+/** รายงานอัตราคืนต่อกลิ่น (นับเฉพาะที่ไม่ถูกยกเลิก) */
+export async function returnStatsByScent(): Promise<ReturnStat[]> {
+  try {
+    return await q<ReturnStat>(
+      `select product,
+              sum(qty)::float8 as returned,
+              sum(case when disposition='damaged' then qty else 0 end)::float8 as damaged,
+              count(distinct order_no)::int as times
+       from order_returns where voided_at is null and coalesce(product,'') <> ''
+       group by product order by returned desc limit 50`);
+  } catch { return []; }
+}
+
 export type MaterialMoveRow = { id: number; category: string; label: string; scent: string | null; qty_change: number; balance: number | null; reason: string; note: string | null; created_at: string; by_name: string | null };
 /** ประวัติเคลื่อนไหววัตถุดิบ (รับเข้า/จ่ายออก/ปรับ) — กรองหมวด/วัน/รายการเดียว/ค้นหาชื่อ */
 export async function listMaterialMoves(opts: { category?: string; date?: string; ref?: string; q?: string; limit?: number } = {}): Promise<MaterialMoveRow[]> {

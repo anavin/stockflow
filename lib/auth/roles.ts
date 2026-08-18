@@ -47,6 +47,10 @@ export const can = {
   manageUsers: (role?: string | null) => hasAny(role, ["admin"]),
   /** ดูบันทึกการใช้งาน (audit log) = เจ้าของเท่านั้น */
   viewLogs: (role?: string | null) => hasAny(role, ["admin"]),
+  /** รับคืนสินค้า (สแกน → คืนสต๊อก/ชำรุด) = เจ้าของ + จัดของ + คลัง (คนรับของจริง) */
+  handleReturns: (role?: string | null) => hasAny(role, ["admin", "picker", "stock"]),
+  /** จัดการคลังของชำรุด (ทำลาย/เคลม/ซ่อมคืนสต๊อก) + ยกเลิกการคืน = เจ้าของ + ฝ่ายคลัง */
+  manageDamaged: (role?: string | null) => hasAny(role, ["admin", "stock"]),
 };
 
 /** หน้าแรกที่ควรพาไปหลัง login / เวลาถูกกันสิทธิ์ (ไม่ให้ตาย/วนลูป)

@@ -1,0 +1,311 @@
+<title>ระบบรับคืนสินค้า</title>
+<style>
+  :root{
+    --bg:#eef1f5; --surface:#fff; --ink:#0f1720; --muted:#5a6675; --faint:#8a95a3; --line:#e2e7ee;
+    --violet:#6d4bd6; --violet-ink:#5a37c4; --violet-wash:#efeafc;
+    --blue:#2563eb; --green:#16a34a; --green-ink:#15803d; --green-wash:#e7f6ec;
+    --amber:#d97706; --amber-wash:#fdf0dd; --red:#dc2626; --red-ink:#b91c1c; --red-wash:#fbe9e9;
+    --teal:#0d9488;
+    --shadow:0 1px 2px rgba(15,23,32,.05),0 12px 30px -14px rgba(15,23,32,.22);
+    --font:"IBM Plex Sans Thai","Noto Sans Thai","Sarabun",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+    --mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+  }
+  @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+    --bg:#0b0f14; --surface:#141b23; --ink:#e8eef4; --muted:#9aa6b2; --faint:#66727e; --line:#232e39;
+    --violet:#a78bfa; --violet-ink:#c4b5fd; --violet-wash:#241a3d;
+    --blue:#60a5fa; --green:#4ade80; --green-ink:#86efac; --green-wash:#10281a;
+    --amber:#fbbf24; --amber-wash:#2c2109; --red:#f87171; --red-ink:#fca5a5; --red-wash:#311616; --teal:#2dd4bf;
+    --shadow:0 1px 2px rgba(0,0,0,.4),0 14px 34px -16px rgba(0,0,0,.7);
+  }}
+  :root[data-theme="dark"]{
+    --bg:#0b0f14; --surface:#141b23; --ink:#e8eef4; --muted:#9aa6b2; --faint:#66727e; --line:#232e39;
+    --violet:#a78bfa; --violet-ink:#c4b5fd; --violet-wash:#241a3d;
+    --blue:#60a5fa; --green:#4ade80; --green-ink:#86efac; --green-wash:#10281a;
+    --amber:#fbbf24; --amber-wash:#2c2109; --red:#f87171; --red-ink:#fca5a5; --red-wash:#311616; --teal:#2dd4bf;
+    --shadow:0 1px 2px rgba(0,0,0,.4),0 14px 34px -16px rgba(0,0,0,.7);
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg)}
+  .page{background:var(--bg);color:var(--ink);font-family:var(--font);line-height:1.6;-webkit-font-smoothing:antialiased;padding:0 20px 72px}
+  .wrap{max-width:960px;margin:0 auto}
+  h1,h2,h3{margin:0;font-weight:700;text-wrap:balance;line-height:1.25}
+  p{margin:0}
+  .mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
+
+  header{padding:46px 0 26px;border-bottom:1px solid var(--line)}
+  .eyebrow{font-size:12px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--violet-ink);margin-bottom:12px;display:flex;align-items:center;gap:7px}
+  h1{font-size:clamp(1.7rem,3.6vw,2.35rem);letter-spacing:-.01em}
+  .lead{color:var(--muted);font-size:1.02rem;margin-top:12px;max-width:66ch}
+  .now{margin-top:18px;display:flex;gap:10px;align-items:flex-start;background:var(--surface);border:1px solid var(--line);border-left:3px solid var(--violet);border-radius:12px;padding:13px 15px;box-shadow:var(--shadow)}
+  .now b{color:var(--ink)}
+  .now p{font-size:.9rem;color:var(--muted)}
+
+  section{padding-top:44px}
+  .sec-h{display:flex;align-items:baseline;gap:12px;margin-bottom:6px}
+  .sec-n{font-family:var(--mono);font-size:.8rem;font-weight:600;color:var(--faint)}
+  .sec-h h2{font-size:1.35rem;letter-spacing:-.01em}
+  .sec-sub{color:var(--muted);margin:3px 0 24px;max-width:68ch;font-size:.95rem}
+
+  /* flow */
+  .flow{display:flex;flex-wrap:wrap;align-items:stretch;gap:10px}
+  .fstep{flex:1 1 150px;background:var(--surface);border:1px solid var(--line);border-radius:13px;padding:14px;box-shadow:var(--shadow);min-width:140px;border-top:3px solid var(--violet)}
+  .fstep .n{font-family:var(--mono);font-size:.72rem;color:var(--faint);font-weight:700}
+  .fstep h4{font-size:.92rem;margin:5px 0 4px}
+  .fstep p{font-size:.8rem;color:var(--muted)}
+  .farrow{align-self:center;color:var(--faint);font-weight:700}
+
+  /* mockup */
+  .mock{background:var(--surface);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);overflow:hidden;max-width:520px}
+  .mock .m-top{background:var(--violet);color:#fff;padding:12px 16px;font-weight:700;font-size:.95rem;display:flex;align-items:center;gap:8px}
+  .mock .m-body{padding:14px 16px;display:flex;flex-direction:column;gap:11px}
+  .m-ord{font-size:.82rem;color:var(--muted)}
+  .m-ord b{color:var(--ink);font-family:var(--mono)}
+  .ritem{border:1px solid var(--line);border-radius:11px;padding:11px 12px;display:flex;flex-direction:column;gap:9px}
+  .ri-head{display:flex;justify-content:space-between;align-items:baseline;gap:8px;font-size:.9rem}
+  .ri-head .nm{font-weight:700}
+  .ri-head .sz{color:var(--muted);font-weight:400}
+  .ri-head .sent{font-size:.76rem;color:var(--faint);white-space:nowrap}
+  .ri-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  .seg{display:inline-flex;border:1px solid var(--line);border-radius:9px;overflow:hidden;font-size:.8rem;font-weight:600}
+  .seg span{padding:6px 11px;display:flex;align-items:center;gap:5px;cursor:default}
+  .seg .on-green{background:var(--green);color:#fff}
+  .seg .on-red{background:var(--red);color:#fff}
+  .seg .off{color:var(--muted);background:var(--surface)}
+  .qty{display:inline-flex;align-items:center;border:1px solid var(--line);border-radius:9px;overflow:hidden;font-size:.82rem}
+  .qty b{padding:6px 12px;font-family:var(--mono);border-inline:1px solid var(--line)}
+  .qty i{padding:6px 10px;color:var(--muted);font-style:normal}
+  .reason{border:1px solid var(--line);border-radius:9px;padding:6px 10px;font-size:.8rem;color:var(--muted);background:var(--bg)}
+  .m-foot{border-top:1px solid var(--line);padding:13px 16px;display:flex;justify-content:space-between;align-items:center;gap:10px;background:color-mix(in srgb,var(--line) 22%,transparent)}
+  .m-sum{font-size:.8rem;color:var(--muted)}
+  .m-sum b.g{color:var(--green-ink)} .m-sum b.r{color:var(--red-ink)}
+  .m-btn{background:var(--violet);color:#fff;border-radius:10px;padding:9px 16px;font-weight:700;font-size:.85rem}
+
+  /* disposition table */
+  .tw{overflow-x:auto;border:1px solid var(--line);border-radius:13px;box-shadow:var(--shadow);background:var(--surface)}
+  table{width:100%;border-collapse:collapse;font-size:.87rem;min-width:600px}
+  th,td{text-align:left;padding:12px 15px;border-bottom:1px solid var(--line);vertical-align:top}
+  th{background:color-mix(in srgb,var(--line) 40%,transparent);font-size:.75rem;text-transform:uppercase;letter-spacing:.04em;color:var(--muted)}
+  tr:last-child td{border-bottom:none}
+  .pill{display:inline-flex;align-items:center;gap:6px;font-weight:700;font-size:.82rem;padding:3px 10px;border-radius:999px}
+  .pill.g{background:var(--green-wash);color:var(--green-ink)} .pill.r{background:var(--red-wash);color:var(--red-ink)}
+  td code{font-family:var(--mono);font-size:.82rem;background:color-mix(in srgb,var(--line) 30%,transparent);padding:1px 6px;border-radius:5px}
+
+  /* cards grid */
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:13px}
+  .gc{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:15px 16px;box-shadow:var(--shadow)}
+  .gc h4{font-size:.95rem;display:flex;align-items:center;gap:8px}
+  .gc .k{font-family:var(--mono);font-size:.72rem;color:var(--faint)}
+  .gc p{font-size:.85rem;color:var(--muted);margin-top:7px}
+  .gc.v{border-top:3px solid var(--violet)} .gc.b{border-top:3px solid var(--blue)} .gc.t{border-top:3px solid var(--teal)}
+  .gc.r-top{border-top:3px solid var(--red)} .gc.a-top{border-top:3px solid var(--amber)}
+  .gc .k{display:inline-block;margin-top:2px}
+
+  ul.chk{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:9px}
+  ul.chk li{position:relative;padding-left:26px;font-size:.9rem;color:var(--muted)}
+  ul.chk li::before{content:"✓";position:absolute;left:2px;top:0;color:var(--green);font-weight:800}
+  ul.chk li b{color:var(--ink)}
+
+  .impl{margin-top:18px;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:18px 20px;box-shadow:var(--shadow)}
+  .impl h3{font-size:1rem;margin-bottom:10px}
+  .impl pre{overflow-x:auto;background:color-mix(in srgb,var(--line) 30%,transparent);border-radius:10px;padding:13px 15px;margin:0;font-family:var(--mono);font-size:.79rem;line-height:1.6}
+  .impl .cmt{color:var(--faint)}
+  .impl .kw{color:var(--violet-ink);font-weight:700}
+
+  footer{margin-top:52px;padding-top:20px;border-top:1px solid var(--line);color:var(--faint);font-size:.8rem;text-align:center}
+</style>
+
+<div class="page"><div class="wrap">
+
+  <header>
+    <div class="eyebrow">↩ Lab Parfumo · UX Proposal</div>
+    <h1>รับคืนสินค้า — คืนเข้าสต๊อก หรือ ตีชำรุด</h1>
+    <p class="lead">เมื่อลูกค้าส่งของกลับ (ตีกลับ/ไม่รับ/เปลี่ยนใจ/ของเสีย) พนักงาน <b>สแกน Order No. เดิม</b> แล้วตัดสินใจต่อชิ้นว่า <b>คืนเข้าสต๊อกขายได้</b> หรือ <b>ตีเป็นของชำรุด</b> — ไหลตามระบบเดิมทุกจุด (สแกน + ledger + กันซ้ำ)</p>
+    <div class="now">
+      <span style="font-size:18px">💡</span>
+      <p><b>ทำไมต้องมี:</b> ตอนนี้มีแค่ <b>"ยกเลิกการตัดสต๊อก"</b> (reverseIssue) ที่คืนสต๊อกทั้งใบ — แต่นั่นคือ "แก้ตอนตัดผิด" ไม่ใช่ "รับของคืนจริง" · การรับคืนต้องเลือกได้ทีละชิ้น + แยกของดี/ของเสีย + มีเหตุผล + คืนได้บางส่วน</p>
+    </div>
+    <div class="now" style="border-left-color:var(--green)">
+      <span style="font-size:18px">✅</span>
+      <p><b>ข้อสรุปที่ล็อกแล้ว:</b> (1) ของชำรุดมี <b>ตารางคลังของเสีย (damaged)</b> แยก + หน้า /stock/damaged &nbsp;·&nbsp; (2) <b>รับคืนได้เฉพาะออเดอร์ที่ส่งแล้ว</b> (shipped_at ไม่ null) &nbsp;·&nbsp; สถานะ: ออกแบบเสร็จ รอสั่งลงมือ</p>
+    </div>
+  </header>
+
+  <!-- FLOW -->
+  <section>
+    <div class="sec-h"><span class="sec-n">01</span><h2>เส้นทางการทำงาน</h2></div>
+    <p class="sec-sub">ใช้โครงเดียวกับหน้า "จัดส่ง" — สแกน Order No. จากใบปะหน้า/ใบเบิกที่ตีกลับมา แล้วจัดการรายชิ้น</p>
+    <div class="flow">
+      <div class="fstep"><div class="n">STEP 1</div><h4>สแกน Order No.</h4><p>ยิงบาร์โค้ดใบเบิกที่ตีกลับ → ดึงรายการ · <b>รับคืนได้เฉพาะออเดอร์ที่ "ส่งแล้ว"</b> (ยังไม่ส่ง → ใช้ยกเลิกออเดอร์/ยกเลิกการตัดแทน)</p></div>
+      <span class="farrow">→</span>
+      <div class="fstep"><div class="n">STEP 2</div><h4>เลือกต่อชิ้น</h4><p>แต่ละรายการ: จำนวนที่คืน + เลือก <b>คืนสต๊อก</b> หรือ <b>ชำรุด</b></p></div>
+      <span class="farrow">→</span>
+      <div class="fstep"><div class="n">STEP 3</div><h4>ใส่เหตุผล</h4><p>ตีกลับ/ไม่รับ/เปลี่ยนใจ/เสียจากขนส่ง + หมายเหตุ (ต่อใบ)</p></div>
+      <span class="farrow">→</span>
+      <div class="fstep"><div class="n">STEP 4</div><h4>ยืนยัน</h4><p>คืนสต๊อก +qty · ชำรุดเข้าคลังของเสีย · บันทึก ledger + audit</p></div>
+    </div>
+  </section>
+
+  <!-- MOCKUP -->
+  <section>
+    <div class="sec-h"><span class="sec-n">02</span><h2>หน้าจอ (mockup)</h2></div>
+    <p class="sec-sub">หลังสแกน — การ์ดรายการที่เคยส่ง พร้อมสวิตช์ คืนสต๊อก/ชำรุด และช่องจำนวน (การ์ดสไตล์เดียวกับหน้าตัดสต๊อก)</p>
+    <div class="mock">
+      <div class="m-top">↩ รับคืนสินค้า · ตรวจก่อนบันทึก</div>
+      <div class="m-body">
+        <div class="m-ord">Order No. <b>260809TA3AFWWB</b> · ส่งเมื่อ 10 ส.ค. · ผู้รับ ธนพร · 3 รายการ</div>
+
+        <div class="ritem">
+          <div class="ri-head"><span class="nm">Dionysus X <span class="sz">10 ml</span></span><span class="sent">ส่งไป 2</span></div>
+          <div class="ri-row">
+            <span class="qty"><i>−</i><b>2</b><i>+</i></span>
+            <span class="seg"><span class="on-green">✓ คืนสต๊อก</span><span class="off">ชำรุด</span></span>
+          </div>
+        </div>
+
+        <div class="ritem">
+          <div class="ri-head"><span class="nm">Senorita <span class="sz">4 ml</span></span><span class="sent">ส่งไป 1</span></div>
+          <div class="ri-row">
+            <span class="qty"><i>−</i><b>1</b><i>+</i></span>
+            <span class="seg"><span class="off">คืนสต๊อก</span><span class="on-red">⚠ ชำรุด</span></span>
+          </div>
+        </div>
+
+        <div class="ritem">
+          <div class="ri-head"><span class="nm">Angel <span class="sz">30 ml</span></span><span class="sent">ส่งไป 1</span></div>
+          <div class="ri-row">
+            <span class="qty"><i>−</i><b>0</b><i>+</i></span>
+            <span class="seg"><span class="off">คืนสต๊อก</span><span class="off">ชำรุด</span></span>
+            <span style="font-size:.76rem;color:var(--faint)">= ไม่คืน (ลูกค้าเก็บไว้)</span>
+          </div>
+        </div>
+
+        <div class="reason">เหตุผลการคืน: ลูกค้าตีกลับ — พัสดุตกหล่น ▾ &nbsp;·&nbsp; หมายเหตุ…</div>
+      </div>
+      <div class="m-foot">
+        <div class="m-sum">คืนเข้าสต๊อก <b class="g">2</b> · ชำรุด <b class="r">1</b> · ไม่คืน 1</div>
+        <div class="m-btn">✓ ยืนยันรับคืน</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- DISPOSITION -->
+  <section>
+    <div class="sec-h"><span class="sec-n">03</span><h2>2 ปลายทาง — ทำอะไรกับข้อมูล</h2></div>
+    <div class="tw"><table>
+      <thead><tr><th>เลือก</th><th>ความหมาย</th><th>ผลต่อสต๊อก</th><th>บันทึก ledger</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><span class="pill g">✓ คืนสต๊อก</span></td>
+          <td>ของสภาพดี ขายต่อได้ → คืนเข้าคลังปกติ</td>
+          <td><code>stock.qty += จำนวน</code> (ขนาดที่ติดตามเท่านั้น)</td>
+          <td><code>stock_moves</code> reason <code>'return'</code> (+qty, ผูก order_no)</td>
+        </tr>
+        <tr>
+          <td><span class="pill r">⚠ ชำรุด</span></td>
+          <td>ของเสีย/แตก/ใช้ไม่ได้ → แยกออก ไม่เข้าสต๊อกขาย</td>
+          <td><code>stock ไม่ขยับ</code> · เข้าคลังของเสีย <code>damaged.qty += จำนวน</code></td>
+          <td><code>stock_moves</code> reason <code>'damage'</code> (ไว้ตรวจ/เคลม/ทำลายต่อ)</td>
+        </tr>
+      </tbody>
+    </table></div>
+    <p class="sec-sub" style="margin-top:14px">ของชำรุด <b>ไม่ปนสต๊อกขาย</b> เด็ดขาด — มีหน้า "สต๊อกของชำรุด" แยก ไว้ตัดสินใจต่อ (เคลมขนส่ง / ทำลาย / ซ่อม)</p>
+  </section>
+
+  <!-- DATA MODEL -->
+  <section>
+    <div class="sec-h"><span class="sec-n">04</span><h2>โครงข้อมูล (สอดคล้องระบบเดิม)</h2></div>
+    <p class="sec-sub">ต่อยอดจากตารางเดิม ไม่รื้อ — เพิ่ม reason ใน ledger เดิม + 2 ตารางเล็ก + 1 คอลัมน์บน orders</p>
+    <div class="impl">
+      <pre><span class="cmt">-- 1) ledger เดิม stock_moves — reason เป็น text อยู่แล้ว (issue/receive/adjust) เพิ่มได้เลย</span>
+reason: <span class="kw">'return'</span>   <span class="cmt">// คืนเข้าสต๊อก (+qty, มี order_no + note)</span>
+reason: <span class="kw">'damage'</span>   <span class="cmt">// ตีชำรุด (log ไว้ ไม่ขยับ stock ขาย)</span>
+
+<span class="cmt">-- 2) order_returns — ประวัติการคืนราย "บรรทัด" (audit ครบ + กันคืนเกิน)</span>
+<span class="kw">create table order_returns</span> (
+  id, order_no, line_no, product, size,
+  qty int, disposition <span class="cmt">-- 'restock' | 'damaged'</span>,
+  reason text, note text, created_at, created_by
+);
+
+<span class="cmt">-- 3) damaged — ยอดของชำรุดคงเหลือต่อ SKU (คู่ขนานกับ stock)</span>
+<span class="kw">create table damaged</span> ( product, size, qty, updated_at );
+
+<span class="cmt">-- 4) orders — ธงไว้กรอง/รู้สถานะเร็ว</span>
+orders.<span class="kw">returned_at</span>       <span class="cmt">// คืนครั้งแรกเมื่อไร (null = ยังไม่คืน)</span>
+orders.<span class="kw">return_status</span>    <span class="cmt">// 'none' | 'partial' | 'full' → โชว์ป้ายบนรายการ/จัดส่ง</span>
+
+<span class="cmt">-- 5) ลูกค้าคืนบ่อย — ไม่ต้องมีตารางใหม่ คำนวณจาก order_returns join orders</span>
+<span class="cmt">--    ตาม key เดิมของ CustomerSuggest (username / phone / receiver)</span>
+returnCount(customer) = count(distinct order_no ที่มี order_returns)
+<span class="cmt">// ≥ เกณฑ์ (เช่น 3 ครั้ง หรือ rate สูง) → ป้ายเตือนตอนสร้างออเดอร์ใหม่</span></pre>
+      <ul class="chk" style="margin-top:14px">
+        <li><b>กันคืนเกิน:</b> รวม qty ที่คืนแล้วต่อบรรทัด (order_returns) ต้อง ≤ จำนวนที่ส่ง — เกินไม่ให้ยืนยัน</li>
+        <li><b>คืนบางส่วน/หลายรอบ:</b> คืน 2 จาก 3 วันนี้ อีก 1 พรุ่งนี้ก็ได้ — order_returns เก็บทุกรอบ</li>
+        <li><b>ขนาดตัวอย่าง 1.2/4 ml</b> คืนสต๊อกเฉพาะขนาดที่ติดตาม (STOCK_TRACKED_SIZES) เหมือนตอนตัด</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- CONSISTENCY -->
+  <section>
+    <div class="sec-h"><span class="sec-n">05</span><h2>อิงระบบเดิมทุกจุด</h2></div>
+    <div class="grid">
+      <div class="gc b"><h4>📷 สแกน + แจ้งผล</h4><p>ใช้ <span class="k">CameraScan</span> ตัวเดิม — สแกน Order No. + overlay ผลรายชิ้น (คืนสต๊อก ✓ / ชำรุด ⚠ / ไม่พบ ✕) เหมือนหน้าจัดส่ง</p></div>
+      <div class="gc t"><h4>📒 Ledger เดียวกัน</h4><p>บันทึกลง <span class="k">stock_moves</span> เดิม (reason return/damage) → ประวัติวัตถุดิบ/สต๊อกเห็นครบ ตรวจย้อนได้</p></div>
+      <div class="gc v"><h4>🔒 กันซ้ำแบบ atomic</h4><p>เคลมด้วย <span class="k">FOR UPDATE</span> + กันคืนเกินจำนวนส่ง — แนวเดียวกับ markShipped/reverseIssue ที่เพิ่งแก้</p></div>
+      <div class="gc v"><h4>👤 สิทธิ์</h4><p>รับคืน = <span class="k">picker / stock / admin</span> (คนรับของจริง) · ลง <span class="k">logActivity('return')</span> ให้แอดมินย้อนดู</p></div>
+      <div class="gc t"><h4>🎨 โทน/คอมโพเนนต์</h4><p><span class="k">chip-ok</span>=คืนสต๊อก · <span class="k">chip-danger</span>=ชำรุด · <span class="k">.card / .btn / .alert</span> เดิม · หน้ากว้าง max-w-6xl</p></div>
+      <div class="gc b"><h4>🧭 เมนู</h4><p>อยู่กลุ่ม <span class="k">สินค้าสำเร็จรูป</span> → "รับคืนสินค้า" (/returns) + "สต๊อกของชำรุด" (/stock/damaged) + ประวัติการคืน</p></div>
+    </div>
+  </section>
+
+  <!-- HIGH-RETURN CUSTOMER -->
+  <section>
+    <div class="sec-h"><span class="sec-n">06</span><h2>ลูกค้าคืนบ่อย — เตือนตอนรับออเดอร์ใหม่</h2></div>
+    <p class="sec-sub">ต่อยอด <span class="mono">CustomerSuggest</span> เดิม — พอเลือก/จับคู่ลูกค้าเก่าที่คืนบ่อย ขึ้นป้ายเตือนให้ระวังก่อนยืนยันออเดอร์ (กันโดนคืนซ้ำ/กันโกง)</p>
+    <div class="mock" style="max-width:480px">
+      <div class="m-top" style="background:var(--teal)">📝 สร้างใบเบิกใหม่ · จับคู่ลูกค้าเดิม</div>
+      <div class="m-body">
+        <div class="ritem" style="gap:6px">
+          <div class="ri-head"><span class="nm">ธนพร ส. <span class="sz">· 08x-xxx-1234</span></span></div>
+          <div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center">
+            <span class="pill r">⚠ ลูกค้าคืนบ่อย · คืน 4 จาก 7 ออเดอร์</span>
+            <span style="font-size:.76rem;color:var(--faint)">ล่าสุด: ตีกลับ 12 ส.ค.</span>
+          </div>
+          <div style="font-size:.8rem;color:var(--muted)">→ เติมที่อยู่/ประวัติให้เหมือนเดิม แต่เตือนให้ตรวจก่อนส่ง (เช่น แนะนำเก็บปลายทาง/ยืนยันที่อยู่)</div>
+        </div>
+      </div>
+    </div>
+    <ul class="chk" style="margin-top:16px">
+      <li><b>ไม่ต้องมีตารางใหม่</b> — นับจำนวนคืนต่อลูกค้าจาก <span class="mono">order_returns</span> join orders ตาม key เดิม (ชื่อผู้ใช้/เบอร์/ผู้รับ)</li>
+      <li><b>เกณฑ์ปรับได้</b> — เช่น คืน ≥ 3 ครั้ง หรือ อัตราคืนสูง → ขึ้นป้ายแดง · ต่ำกว่านั้นไม่รบกวน</li>
+      <li>โชว์ที่ <b>CustomerSuggest</b> (ตอนพิมพ์ชื่อ/เลือกลูกค้า) + การ์ดประวัติลูกค้า — ที่เดียวกับที่ autofill อยู่แล้ว</li>
+    </ul>
+  </section>
+
+  <!-- EXTENSIONS -->
+  <section>
+    <div class="sec-h"><span class="sec-n">07</span><h2>ส่วนขยายให้ครอบคลุม</h2></div>
+    <p class="sec-sub">ปิดช่องโหว่ + ครบวงจร ตั้งแต่รับคืน จนของชำรุดมีทางออก และเห็นภาพรวมทั้งระบบ</p>
+    <div class="grid">
+      <div class="gc v"><h4>↩ ยกเลิก/แก้การคืน</h4><span class="k">admin</span><p>บันทึกคืนผิด (คืนสต๊อกทั้งที่ชำรุด / จำนวนพลาด) → ย้อนได้: void แถว order_returns + กลับรายการ stock/damaged · ใช้ <span class="mono">FOR UPDATE</span> กันย้อนซ้ำ (แนวเดียวกับ reverseIssue)</p></div>
+      <div class="gc r-top"><h4>🗑 จัดการของชำรุด</h4><span class="k">/stock/damaged</span><p>ของเสียไม่กองค้าง — ต่อชิ้นเลือก: <b>ทำลาย</b>(write-off) · <b>เคลมขนส่ง</b> · <b>ซ่อมแล้วคืนสต๊อก</b> (damaged → stock) · ลง ledger ทุกครั้ง</p></div>
+      <div class="gc a-top"><h4>⚠ กัน edge "ส่งแต่ยังไม่ตัดสต๊อก"</h4><p>ออเดอร์ที่ส่งแล้วแต่ <span class="mono">stock_issued_at</span> ยัง null → ของไม่เคยถูกหัก · คืน "เข้าสต๊อก" จะบวกเกิน → <b>บล็อก/เตือน</b> (โยงกับพฤติกรรมที่เว้นไว้ #1)</p></div>
+      <div class="gc b"><h4>🏷 สถานะคืนบนรายการ</h4><p><span class="mono">orders.return_status</span> = คืนบางส่วน/คืนครบ → ป้าย <span class="pill g" style="padding:1px 8px">คืนบางส่วน</span> บนหน้ารายการออเดอร์ + จัดส่ง เห็นทั้งระบบ</p></div>
+      <div class="gc t"><h4>📊 รายงานการคืน</h4><p>อัตราคืนต่อกลิ่น (กลิ่นไหนถูกคืนบ่อย = คุณภาพ/ขนส่ง) + สรุปเหตุผลการคืน · ดึงจาก order_returns</p></div>
+      <div class="gc v"><h4>🎁 ของแถม/ตัวอย่าง</h4><p>ขนาด 1.2/4 ml (ไม่ track สต๊อก) — คืนได้แต่<b>เข้าชำรุดอย่างเดียว</b> ไม่บวกสต๊อกขาย (สอดคล้อง STOCK_TRACKED_SIZES)</p></div>
+    </div>
+  </section>
+
+  <!-- SCOPE -->
+  <section>
+    <div class="sec-h"><span class="sec-n">08</span><h2>ขอบเขต (ระบุให้ชัด)</h2></div>
+    <div class="grid">
+      <div class="gc"><h4>💸 ไม่รวมเรื่องเงิน/refund</h4><p>ระบบนี้ track "<b>ของจริง</b>" เท่านั้น (คืนสต๊อก/ของเสีย) · การคืนเงินลูกค้าจัดการใน <b>Shopee</b> ตามปกติ</p></div>
+      <div class="gc"><h4>⌨️ สแกนไม่ได้</h4><p>ป้ายฉีก/บาร์โค้ดเสีย → <b>พิมพ์ Order No. เอง</b> ได้ (ช่องมีอยู่แล้วเหมือนหน้าจัดส่ง/ตัดสต๊อก)</p></div>
+    </div>
+  </section>
+
+  <footer>Lab Parfumo · ข้อเสนอออกแบบ UX — ระบบรับคืนสินค้า (ครอบคลุม) · ยังไม่ลงมือ รอสั่งทำ</footer>
+
+</div></div>
