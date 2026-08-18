@@ -24,7 +24,7 @@ export default async function StockPage({ searchParams }: { searchParams: Promis
           <h1 className="text-xl font-bold text-ink">สต๊อกสินค้า</h1>
           <p className="text-sm text-muted">{sum.skus.toLocaleString()} รายการ (SKU) · ใกล้หมด {sum.low.toLocaleString()} · ตัดสต๊อกแล้ว {sum.issuedOrders.toLocaleString()} ใบ</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           {isAdmin && <SalesManager rows={rows} closed={closedSkus} />}
           <Link href="/stock/units" className="btn-ghost"><ScanBarcode size={16} /> ติดตาม SKU</Link>
           <a href="/api/export/stock" className="btn-ghost"><FileDown size={16} /> Export</a>

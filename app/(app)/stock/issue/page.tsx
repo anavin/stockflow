@@ -25,7 +25,7 @@ export default async function StockIssuePage({ searchParams }: { searchParams: P
           <h1 className="text-xl font-bold text-ink">ตัดสต๊อก (สแกนใบเบิก)</h1>
           <p className="text-sm text-muted">สแกน Order No. → ตัดสต๊อกตามรายการอัตโนมัติ · ตัดไปแล้ว {sum.issuedOrders.toLocaleString()} ใบ</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <Link href="/stock/specs" className="btn-ghost"><Tags size={16} /> จัดการสเป็ก</Link>
           <Link href="/stock/issued" className="btn-ghost"><ClipboardList size={16} /> ใบที่ตัดแล้ว</Link>
           <Link href="/stock" className="btn-ghost"><Boxes size={16} /> สต๊อกสินค้าสำเร็จรูป</Link>

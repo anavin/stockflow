@@ -242,7 +242,7 @@ export default function StockManager({ rows, products, sizes, initialLow, isAdmi
         <form onSubmit={submitBatch} className="card p-5">
           <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
             <h2 className="flex items-center gap-2 text-sm font-semibold text-ink"><PackagePlus size={16} /> รับสินค้าเข้าสต๊อก</h2>
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               <a href="/api/stock/sku-template" className="btn-ghost text-xs"><FileDown size={14} /> เทมเพลต SKU</a>
               <button type="button" className="btn-ghost text-xs" disabled={busy} onClick={() => fileRef.current?.click()}>
                 <FileUp size={14} /> {busy ? "กำลังนำเข้า…" : "นำเข้า SKU (Excel)"}
@@ -368,7 +368,7 @@ export default function StockManager({ rows, products, sizes, initialLow, isAdmi
                 ? <>รวมที่จะรับเข้า <b className="text-ink">{grandTotal}</b> ชิ้น · {grandLines} กลิ่น/ขนาด{hasCur && batch.length > 0 ? " (รวมกลิ่นที่กำลังกรอก)" : ""}</>
                 : "กรอก SKU แล้วกด 'รับเข้าทั้งหมด' — หรือ 'เพิ่มลงรายการ' เพื่อสะสมหลายกลิ่นก่อน"}
             </span>
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               <button type="button" onClick={addToBatch} className="btn-ghost whitespace-nowrap" disabled={busy || !hasCur}
                 title="สะสมกลิ่นนี้ไว้ แล้วรับกลิ่นถัดไปต่อ">
                 <Plus size={15} /> เพิ่มลงรายการ{hasCur ? ` (${curCount})` : ""}
