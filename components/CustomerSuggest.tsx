@@ -84,9 +84,12 @@ export default function CustomerSuggest({
         {list.map((c, i) => (
           <li key={i}>
             <button type="button" onClick={() => pick(c)} className="w-full px-3 py-2 text-left hover:bg-soft">
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-medium text-ink">{c.receiver || c.username || "-"}</span>
-                <span className="chip bg-brand-50 text-brand-600">ซื้อมาแล้ว {c.total_orders} ครั้ง</span>
+              <div className="flex items-center justify-between gap-2">
+                <span className="flex items-center gap-1.5 text-sm font-medium text-ink">
+                  {c.receiver || c.username || "-"}
+                  {(c.return_count || 0) >= 2 && <span className="chip-danger">⚠ คืนบ่อย {c.return_count}</span>}
+                </span>
+                <span className="chip-brand shrink-0">ซื้อมาแล้ว {c.total_orders} ครั้ง</span>
               </div>
               <div className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-muted">
                 <span className="inline-flex items-center gap-0.5 font-medium text-ink">

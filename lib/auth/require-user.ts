@@ -36,6 +36,13 @@ export async function requireScents(): Promise<User> {
   return user;
 }
 
+/** รับคืนสินค้า — admin + picker + stock (คนรับของจริง) */
+export async function requireReturns(): Promise<User> {
+  const user = await requireUser();
+  if (!can.handleReturns(user.role)) redirect(homeFor(user.role));
+  return user;
+}
+
 /** แดชบอร์ดภาพรวม — เจ้าของเท่านั้น (คนอื่นเด้งไปหน้างานตัวเอง) */
 export async function requireDashboard(): Promise<User> {
   const user = await requireUser();

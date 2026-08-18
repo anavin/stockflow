@@ -4,7 +4,7 @@ import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { PLATFORMS } from "@/lib/config";
 import { can, ROLE_LABELS, roleList } from "@/lib/auth/roles";
-import { Package, PlusCircle, Upload, List, LogOut, Menu, X, Trash2, Users, ScanLine, Boxes, LayoutDashboard, FlaskConical, ScanBarcode, ShieldCheck, Truck, Droplets, Sticker, PackageOpen, History, ScrollText, ClipboardCheck } from "lucide-react";
+import { Package, PlusCircle, Upload, List, LogOut, Menu, X, Trash2, Users, ScanLine, Boxes, LayoutDashboard, FlaskConical, ScanBarcode, ShieldCheck, Truck, Droplets, Sticker, PackageOpen, History, ScrollText, ClipboardCheck, Undo2, PackageX } from "lucide-react";
 
 // สีเอกลักษณ์ของแต่ละแพลตฟอร์ม (ใช้เป็นจุดสีในเมนู)
 const PLATFORM_COLORS: Record<string, string> = {
@@ -37,7 +37,9 @@ export default function Sidebar({ user }: { user: { full_name: string; username:
   const finishedNav = [
     ...(can.issueStock(role) ? [{ href: "/stock/issue", label: "ตัดสต๊อก (สแกน)", icon: ScanLine }] : []),
     ...(can.viewStock(role) ? [{ href: "/ship", label: "จัดส่งสินค้า (สแกน)", icon: Truck, exact: true }] : []),
+    ...(can.handleReturns(role) ? [{ href: "/returns", label: "รับคืนสินค้า (สแกน)", icon: Undo2, exact: true }] : []),
     ...(can.viewStock(role) ? [{ href: "/stock", label: "สต๊อกคงเหลือ", icon: Boxes, exact: true }] : []),
+    ...(can.viewStock(role) ? [{ href: "/stock/damaged", label: "สต๊อกของชำรุด", icon: PackageX, exact: true }] : []),
     ...(can.viewStock(role) ? [{ href: "/stock/units", label: "ติดตาม SKU", icon: ScanBarcode }] : []),
     ...(can.manageStock(role) ? [{ href: "/stock/count", label: "อัปเดตยอด (ไฟล์)", icon: ClipboardCheck, exact: true }] : []),
   ];

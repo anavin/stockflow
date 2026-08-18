@@ -250,6 +250,7 @@ export type CustomerSuggestion = {
   username: string | null; receiver: string | null; phone: string | null;
   province: string | null; district: string | null; postcode: string | null; address: string | null;
   total_orders: number;
+  return_count?: number;           // จำนวนออเดอร์ที่ลูกค้ารายนี้เคยส่งคืน (เตือน "คืนบ่อย")
   past_items: PastItem[] | null;   // รายการที่เคยซื้อ (ล่าสุดก่อน) — ใช้ autofill
 };
 
@@ -265,7 +266,7 @@ export async function searchCustomers(term: string): Promise<CustomerSuggestion[
     (nullif(o.phone,'') is not null and x.phone = o.phone)
     or (nullif(o.phone,'') is null and nullif(o.username,'') is not null and x.username = o.username)
   )`;
-  return q<CustomerSuggestion>(
+  const rows = await q<CustomerSuggestion>(
     `select o.username, o.receiver, o.phone, o.province, o.district, o.postcode, o.address,
             (select count(distinct x.order_no) from orders x where x.deleted_at is null and ${sameCustomer})::int as total_orders,
             (select json_agg(row_to_json(t)) from (
@@ -284,6 +285,17 @@ export async function searchCustomers(term: string): Promise<CustomerSuggestion[
      limit 8`,
     [like],
   );
+  // จำนวนการคืนต่อลูกค้า — ทนทาน: ถ้าตาราง order_returns ยังไม่มี (prod ยังไม่รัน migration) คืน 0
+  try {
+    const rc = await q<{ k: string; c: number }>(
+      `select coalesce(nullif(x.phone,''), x.username, '') as k, count(distinct r.order_no)::int as c
+       from order_returns r join orders x on x.order_no = r.order_no
+       where r.voided_at is null and x.deleted_at is null
+       group by coalesce(nullif(x.phone,''), x.username, '')`);
+    const map = new Map(rc.map((r) => [r.k, r.c]));
+    for (const row of rows) row.return_count = map.get((row.phone?.trim() || row.username || "")) || 0;
+  } catch { for (const row of rows) row.return_count = 0; }
+  return rows;
 }
 
 export type PostcodeHit = { province: string; district: string; subdistrict: string; postcode: string };

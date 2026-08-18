@@ -76,6 +76,7 @@ export default function OrderForm({ products, sizes, provinces, postcodes, initi
   const [dirty, setDirty] = useState(false);
   const [hist, setHist] = useState<CustomerHistory | null>(null);   // ประวัติลูกค้าเก่า
   const [histOpen, setHistOpen] = useState(true);                    // กาง/พับการ์ดประวัติ
+  const [returnWarn, setReturnWarn] = useState(0);                   // ลูกค้าคืนบ่อย (เตือน)
 
   const set = (patch: Partial<typeof f>) => { setF((prev) => ({ ...prev, ...patch })); setDirty(true); };
 
@@ -113,6 +114,7 @@ export default function OrderForm({ products, sizes, provinces, postcodes, initi
       customer_type: "ลูกค้าเก่า",
       purchase_count: String((c.total_orders || 0) + 1),
     }));
+    setReturnWarn(c.return_count || 0);
     loadHistory({ phone: c.phone, username: c.username, receiver: c.receiver });
   }
 
@@ -279,6 +281,12 @@ export default function OrderForm({ products, sizes, provinces, postcodes, initi
             <CustomerSuggest value={f.username} onChange={(v) => set({ username: v })} onPick={fillFromCustomer} placeholder="พิมพ์ชื่อผู้ใช้ / ชื่อ / กลิ่นที่เคยซื้อ" />
           </div>
         </div>
+        {returnWarn >= 2 && (
+          <div className="alert-warn mt-3 flex items-start gap-2">
+            <span className="text-base leading-none">⚠️</span>
+            <div><b>ลูกค้ารายนี้เคยส่งคืน {returnWarn} ครั้ง</b> — ควรตรวจก่อนส่ง (เช่น ยืนยันที่อยู่/เบอร์ หรือแนะนำเก็บเงินปลายทาง)</div>
+          </div>
+        )}
       </section>
 
       {/* recipient */}
