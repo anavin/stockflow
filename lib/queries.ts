@@ -195,7 +195,9 @@ export async function listFda(): Promise<FdaRow[]> {
   const sel = `select id, seq, product, grade, reg_no, issue_date, expiry_date, fda_status, prod_status,
               name_en, name_th, brand,
               case when expiry_date is null then null else (expiry_date - current_date)::int end as days_left`;
-  const ord = `order by expiry_date asc nulls last, seq nulls last, product`;
+  // เลิกผลิต + หมดอายุ → ล่างสุด · ที่เหลือเรียงใกล้หมดอายุก่อน (เตือนต่ออายุ)
+  const ord = `order by (case when (prod_status like '%เลิก%') or (expiry_date is not null and expiry_date < current_date) then 1 else 0 end) asc,
+                        expiry_date asc nulls last, seq nulls last, product`;
   try {
     // รวมจำนวนครั้งที่ต่ออายุ (ถ้ามีตาราง fda_renewals)
     return await q<FdaRow>(
