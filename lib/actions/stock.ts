@@ -119,23 +119,6 @@ async function runIssue(
   return { ok: true, order_no: on, doc_no: order.doc_no, lines, negatives: lines.filter((l) => l.balance < 0), skipped };
 }
 
-export async function issueStockByOrder(orderNo: string): Promise<IssueResult> {
-  const user = await getCurrentUser();
-  if (!user) return { ok: false, error: "กรุณาเข้าสู่ระบบ" };
-  if (!can.issueStock(user.role)) return { ok: false, error: "ไม่มีสิทธิ์ตัดสต๊อก (เฉพาะฝ่ายจัดของ)" };
-  const on = (orderNo || "").trim();
-  if (!on) return { ok: false, error: "กรอก/สแกน Order No." };
-
-  try {
-    const out = await tx<IssueResult>((run) => runIssue(run, on, user.id));
-    revalidatePath("/stock");
-    revalidatePath("/stock/moves");
-    return out;
-  } catch (e: any) {
-    return { ok: false, error: e?.message || "ตัดสต๊อกไม่สำเร็จ" };
-  }
-}
-
 export type IssueItemPreview = {
   line_no: number; product: string; size: string; qty: number; unit: string;
   is_free: boolean; sku: string | null; spec: string | null; stock: number; tracked: boolean;
