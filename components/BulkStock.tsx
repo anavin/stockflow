@@ -6,7 +6,7 @@ import { bulkRef } from "@/lib/materials";
 import type { BulkRow } from "@/lib/queries";
 import MaterialControls, { isLow } from "./MaterialControls";
 import { downloadCsv } from "@/lib/csv";
-import { Plus, Search, FileDown, AlertTriangle } from "lucide-react";
+import { Plus, Search, FileDown, AlertTriangle, ChevronDown, ChevronRight } from "lucide-react";
 
 // เรียงกลุ่มตาม Grade: EDP → EDP+ → PARFUM → EDT → อื่นๆ
 const GRADE_ORDER = ["EDP", "EDP+", "PARFUM", "EDT"];
@@ -18,8 +18,10 @@ export default function BulkStock({ rows, canEdit }: { rows: BulkRow[]; canEdit:
   const [search, setSearch] = useState("");
   const [grade, setGrade] = useState("");
   const [lowOnly, setLowOnly] = useState(false);
+  const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
   const [oem, setOem] = useState({ scent: "", brand: "PUNN", grade: "" });
   const [busy, setBusy] = useState(false);
+  const toggle = (k: string) => setCollapsed((c) => { const n = new Set(c); n.has(k) ? n.delete(k) : n.add(k); return n; });
 
   const grades = useMemo(() => [...new Set(rows.map((r) => r.grade).filter(Boolean))].sort() as string[], [rows]);
   const lowCount = useMemo(() => rows.filter((r) => isLow(r.qty, r.reorder)).length, [rows]);
@@ -86,6 +88,8 @@ export default function BulkStock({ rows, canEdit }: { rows: BulkRow[]; canEdit:
             {grades.map((g) => <option key={g} value={g}>{g}</option>)}
           </select>
         )}
+        <button onClick={() => setCollapsed(new Set(groups.map((g) => g.key)))} className="btn-ghost text-xs"><ChevronRight size={14} /> ย่อ</button>
+        <button onClick={() => setCollapsed(new Set())} className="btn-ghost text-xs"><ChevronDown size={14} /> ขยาย</button>
       </SummaryBar>
 
       <div className="overflow-hidden rounded-xl border border-line bg-white">
@@ -99,15 +103,20 @@ export default function BulkStock({ rows, canEdit }: { rows: BulkRow[]; canEdit:
           </thead>
           <tbody>
             {groups.length === 0 && <tr><td colSpan={3} className="px-4 py-12 text-center text-muted">ไม่พบกลิ่น</td></tr>}
-            {groups.map((grp) => (
+            {groups.map((grp) => {
+              const open = !collapsed.has(grp.key);
+              return (
               <Fragment key={grp.key}>
-                <tr className={`border-t border-line ${grp.oem ? "bg-purple-50/60" : "bg-brand-50/50"}`}>
+                <tr className={`cursor-pointer border-t border-line ${grp.oem ? "bg-purple-50/60" : "bg-brand-50/50"}`} onClick={() => toggle(grp.key)}>
                   <td colSpan={3} className="px-4 py-2 text-xs font-bold uppercase tracking-wide">
-                    <span className={grp.oem ? "text-purple-700" : "text-brand-700"}>{grp.title}</span>
+                    <span className="inline-flex items-center gap-1">
+                      {open ? <ChevronDown size={13} className="text-faint" /> : <ChevronRight size={13} className="text-faint" />}
+                      <span className={grp.oem ? "text-purple-700" : "text-brand-700"}>{grp.title}</span>
+                    </span>
                     {!grp.oem && <span className="ml-1.5 font-normal text-faint">· {grp.items.length} กลิ่น</span>}
                   </td>
                 </tr>
-                {grp.items.map((r) => (
+                {open && grp.items.map((r) => (
                   <tr key={r.brand + "|" + r.scent} className="border-t border-line hover:bg-soft/40">
                     <td className="px-4 py-2.5">
                       <div className="font-medium text-ink">{r.scent}</div>
@@ -122,7 +131,8 @@ export default function BulkStock({ rows, canEdit }: { rows: BulkRow[]; canEdit:
                   </tr>
                 ))}
               </Fragment>
-            ))}
+              );
+            })}
           </tbody>
         </table>
       </div>
