@@ -2,7 +2,7 @@
 import { revalidatePath } from "next/cache";
 import { q, tx } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth/session";
-import { can } from "@/lib/auth/roles";
+import { can, isAdmin } from "@/lib/auth/roles";
 import { logActivity } from "@/lib/activity";
 import { isStockTracked } from "@/lib/config";
 import { getActiveSpecRules, getScentBarcodes, stockGapFor } from "@/lib/queries";
@@ -212,7 +212,7 @@ export async function reverseIssue(orderNo: string): Promise<{ ok: boolean; erro
   const user = await getCurrentUser();
   if (!user) return { ok: false, error: "กรุณาเข้าสู่ระบบ" };
   if (!can.issueStock(user.role)) return { ok: false, error: "ไม่มีสิทธิ์ยกเลิกการตัดสต๊อก" };
-  const isAdmin = user.role === "admin";
+  const admin = isAdmin(user.role);
   const on = (orderNo || "").trim();
   try {
     await tx(async (run) => {
@@ -231,7 +231,7 @@ export async function reverseIssue(orderNo: string): Promise<{ ok: boolean; erro
         const [ret] = await run<{ c: number }>(`select count(*)::int as c from order_returns where order_no = $1 and voided_at is null`, [on]);
         if (Number(ret?.c) > 0) throw new Error("ออเดอร์นี้มีการรับคืนแล้ว — จัดการผ่านหน้า 'รับคืนสินค้า'");
       }
-      if (!isAdmin) {
+      if (!admin) {
         if (o.stock_issued_by !== user.id) throw new Error("ยกเลิกได้เฉพาะใบที่คุณตัดเอง (ใบอื่นให้แอดมิน)");
         if (!o.recent) throw new Error("เกิน 24 ชม. แล้ว — ให้แอดมินยกเลิกให้");
       }

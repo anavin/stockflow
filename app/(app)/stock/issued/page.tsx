@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { requireStock } from "@/lib/auth/require-user";
+import { isAdmin } from "@/lib/auth/roles";
 import { listIssuedOrders } from "@/lib/queries";
 import { ChevronLeft, Search, Printer, Eye, ListChecks } from "lucide-react";
 import ReverseIssueButton from "@/components/ReverseIssueButton";
@@ -15,7 +16,7 @@ export default async function IssuedOrdersPage({ searchParams }: { searchParams:
     <div className="mx-auto max-w-6xl px-4 py-6 md:px-8">
       <Link href="/stock/issue" className="mb-4 inline-flex items-center gap-1 text-sm text-muted hover:text-ink"><ChevronLeft size={16} /> กลับ</Link>
       <h1 className="mb-1 text-xl font-bold text-ink">ใบเบิกที่ตัดสต๊อกแล้ว</h1>
-      <p className="mb-6 text-sm text-muted">{rows.length} ใบ — ดูรายการ / พิมพ์ / ดูการตัดสต๊อก · ผิดพลาดกด ↩ ยกเลิก (คืนสต๊อก){me.role === "admin" ? " ได้ทุกใบ" : " เฉพาะใบที่คุณตัดเองภายใน 24 ชม."}</p>
+      <p className="mb-6 text-sm text-muted">{rows.length} ใบ — ดูรายการ / พิมพ์ / ดูการตัดสต๊อก · ผิดพลาดกด ↩ ยกเลิก (คืนสต๊อก){isAdmin(me.role) ? " ได้ทุกใบ" : " เฉพาะใบที่คุณตัดเองภายใน 24 ชม."}</p>
 
       <form className="mb-4 flex gap-2" action="/stock/issued">
         <div className="relative flex-1 min-w-[220px]">
@@ -54,7 +55,7 @@ export default async function IssuedOrdersPage({ searchParams }: { searchParams:
                       <Link href={`/shopee/${encodeURIComponent(o.order_no)}`} className="rounded-md p-1.5 text-muted hover:bg-soft hover:text-ink" title="ดูรายละเอียดใบเบิก"><Eye size={16} /></Link>
                       <Link href={`/stock/moves?order=${encodeURIComponent(o.order_no)}`} className="rounded-md p-1.5 text-muted hover:bg-soft hover:text-ink" title="ดูการตัดสต๊อก"><ListChecks size={16} /></Link>
                       <a href={`/print/pdf/${encodeURIComponent(o.order_no)}`} target="_blank" rel="noreferrer" className="rounded-md p-1.5 text-muted hover:bg-brand-50 hover:text-brand-600" title="พิมพ์"><Printer size={16} /></a>
-                      {(me.role === "admin" || o.issued_by === me.username) && <ReverseIssueButton orderNo={o.order_no} />}
+                      {(isAdmin(me.role) || o.issued_by === me.username) && <ReverseIssueButton orderNo={o.order_no} />}
                     </div>
                   </td>
                 </tr>

@@ -28,6 +28,8 @@ export function roleList(role?: string | null): string[] {
   return (role || "").split(",").map((r) => norm(r.trim())).filter(Boolean);
 }
 const hasAny = (role: string | null | undefined, set: string[]) => roleList(role).some((r) => set.includes(r));
+/** เป็นแอดมินไหม — รองรับหลายบทบาท ("admin,stock") อย่าใช้ role === "admin" ตรงๆ */
+export const isAdmin = (role?: string | null) => roleList(role).includes("admin");
 
 /** ความสามารถแยกตามงาน — เช็คที่นี่ที่เดียว (ผ่านทุกสิทธิ์ที่ user มี) */
 export const can = {

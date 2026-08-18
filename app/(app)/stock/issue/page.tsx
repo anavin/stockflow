@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { requireStock } from "@/lib/auth/require-user";
-import { can, homeFor } from "@/lib/auth/roles";
+import { can, homeFor, isAdmin } from "@/lib/auth/roles";
 import { stockSummary, getSpecOptionsForIssue } from "@/lib/queries";
 import StockIssue from "@/components/StockIssue";
 import { Boxes, History, ClipboardList, Tags } from "lucide-react";
@@ -32,7 +32,7 @@ export default async function StockIssuePage({ searchParams }: { searchParams: P
           <Link href="/stock/moves" className="btn-ghost"><History size={16} /> ประวัติ</Link>
         </div>
       </div>
-      <StockIssue isAdmin={me.role === "admin"} initialOrder={order} specOptions={specOptions} />
+      <StockIssue isAdmin={isAdmin(me.role)} initialOrder={order} specOptions={specOptions} />
     </div>
   );
 }

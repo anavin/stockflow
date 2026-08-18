@@ -4,12 +4,13 @@ import { z } from "zod";
 import { q } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth/session";
 import { hashBcrypt, validatePassword } from "@/lib/auth/password";
+import { isAdmin } from "@/lib/auth/roles";
 import { logActivity } from "@/lib/activity";
 
 async function requireAdminUser() {
   const user = await getCurrentUser();
   if (!user) return { error: "กรุณาเข้าสู่ระบบ" as const };
-  if (user.role !== "admin") return { error: "เฉพาะผู้ดูแลระบบ" as const };
+  if (!isAdmin(user.role)) return { error: "เฉพาะผู้ดูแลระบบ" as const };   // รองรับหลายบทบาท "admin,stock"
   return { user };
 }
 
