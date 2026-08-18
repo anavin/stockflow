@@ -1,5 +1,5 @@
 "use client";
-import { Fragment, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { addBulkScent, setMaterialNote, type ItemDesc } from "@/lib/actions/supply";
 import { bulkRef } from "@/lib/materials";
@@ -92,49 +92,40 @@ export default function BulkStock({ rows, canEdit }: { rows: BulkRow[]; canEdit:
         <button onClick={() => setCollapsed(new Set())} className="btn-ghost text-xs"><ChevronDown size={14} /> ขยาย</button>
       </SummaryBar>
 
-      <div className="overflow-hidden rounded-xl border border-line bg-white">
-        <table className="w-full text-sm">
-          <thead className="bg-soft text-left text-xs text-muted">
-            <tr>
-              <th className="px-4 py-3">กลิ่น</th>
-              <th className="hidden px-3 py-3 sm:table-cell">หมายเหตุ</th>
-              <th className="px-3 py-3 text-right">คงเหลือ (ml)</th>
-            </tr>
-          </thead>
-          <tbody>
-            {groups.length === 0 && <tr><td colSpan={3} className="px-4 py-12 text-center text-muted">ไม่พบกลิ่น</td></tr>}
-            {groups.map((grp) => {
-              const open = !collapsed.has(grp.key);
-              return (
-              <Fragment key={grp.key}>
-                <tr className={`cursor-pointer border-t border-line ${grp.oem ? "bg-purple-50/60" : "bg-brand-50/50"}`} onClick={() => toggle(grp.key)}>
-                  <td colSpan={3} className="px-4 py-2 text-xs font-bold uppercase tracking-wide">
-                    <span className="inline-flex items-center gap-1">
-                      {open ? <ChevronDown size={13} className="text-faint" /> : <ChevronRight size={13} className="text-faint" />}
-                      <span className={grp.oem ? "text-purple-700" : "text-brand-700"}>{grp.title}</span>
-                    </span>
-                    {!grp.oem && <span className="ml-1.5 font-normal text-faint">· {grp.items.length} กลิ่น</span>}
-                  </td>
-                </tr>
-                {open && grp.items.map((r) => (
-                  <tr key={r.brand + "|" + r.scent} className="border-t border-line hover:bg-soft/40">
-                    <td className="px-4 py-2.5">
-                      <div className="font-medium text-ink">{r.scent}</div>
-                      {grp.oem && <div className="mt-0.5"><span className="chip bg-purple-50 text-purple-700">{r.brand}</span>{r.grade && <span className="ml-1 text-xs text-muted">{r.grade}</span>}</div>}
-                      {/* มือถือ: หมายเหตุใต้ชื่อ */}
-                      <div className="mt-1 sm:hidden"><NoteCell row={r} canEdit={canEdit} /></div>
-                    </td>
-                    <td className="hidden px-3 py-2.5 align-middle sm:table-cell"><NoteCell row={r} canEdit={canEdit} /></td>
-                    <td className="px-3 py-2.5">
+      {/* การ์ดพับได้ต่อกลุ่ม Grade — สไตล์เดียวกับหน้าสติ๊กเกอร์ & การ์ด */}
+      <div className="space-y-3">
+        {groups.length === 0 && <p className="card p-10 text-center text-sm text-muted">ไม่พบกลิ่น</p>}
+        {groups.map((grp) => {
+          const open = !collapsed.has(grp.key);
+          const total = grp.items.reduce((a, r) => a + r.qty, 0);
+          const low = grp.items.filter((r) => isLow(r.qty, r.reorder)).length;
+          return (
+            <div key={grp.key} className="overflow-hidden rounded-xl border border-line bg-white">
+              <button onClick={() => toggle(grp.key)} className={`flex w-full items-center gap-2 px-4 py-2.5 text-left ${grp.oem ? "bg-purple-50/60" : "bg-soft/60"}`}>
+                {open ? <ChevronDown size={15} className="text-faint" /> : <ChevronRight size={15} className="text-faint" />}
+                <span className={`font-semibold ${grp.oem ? "text-purple-700" : "text-ink"}`}>{grp.oem ? "OEM · แบรนด์อื่น" : grp.title}</span>
+                <span className="text-xs text-muted">· {grp.items.length} กลิ่น · รวม {total.toLocaleString()} ml{low > 0 && <span className="text-amber-600"> · ใกล้หมด {low}</span>}</span>
+              </button>
+              {open && (
+                <div className="divide-y divide-line">
+                  {grp.items.map((r) => (
+                    <div key={r.brand + "|" + r.scent} className="flex items-start justify-between gap-3 px-4 py-2.5 sm:pl-6">
+                      <div className="min-w-0 flex-1">
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          <span className="font-medium text-ink">{r.scent}</span>
+                          {grp.oem && <span className="chip bg-purple-50 text-purple-700">{r.brand}</span>}
+                          {grp.oem && r.grade && <span className="text-xs text-muted">{r.grade}</span>}
+                        </div>
+                        <div className="mt-1 max-w-xs"><NoteCell row={r} canEdit={canEdit} /></div>
+                      </div>
                       <MaterialControls canEdit={canEdit} qty={r.qty} unit="ml" reorder={r.reorder} desc={descOf(r)} />
-                    </td>
-                  </tr>
-                ))}
-              </Fragment>
-              );
-            })}
-          </tbody>
-        </table>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          );
+        })}
       </div>
     </div>
   );
