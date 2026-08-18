@@ -53,7 +53,7 @@ export default function Sidebar({ user }: { user: { full_name: string; username:
   ];
   // กลุ่ม "ตั้งค่า & ข้อมูล" — อัปเดตยอด(ไฟล์)/อย./บันทึกการใช้งาน/ผู้ใช้
   const settingsNav = [
-    ...(can.manageStock(role) ? [{ href: "/stock/count", label: "อัปเดตยอด (ไฟล์)", icon: ClipboardCheck, exact: true }] : []),
+    ...(can.viewStock(role) ? [{ href: "/stock/count", label: "อัปเดตยอด (ไฟล์)", icon: ClipboardCheck, exact: true }] : []),
     ...(can.viewFda(role) ? [{ href: "/fda", label: "ข้อมูล อย.", icon: ShieldCheck, exact: true }] : []),
     ...(can.viewLogs(role) ? [{ href: "/activity", label: "บันทึกการใช้งาน", icon: ScrollText, exact: true }] : []),
     ...(can.manageUsers(role) ? [{ href: "/users", label: "จัดการผู้ใช้", icon: Users }] : []),

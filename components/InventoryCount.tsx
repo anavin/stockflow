@@ -10,7 +10,7 @@ type Preview = {
   invalid: string[];
 };
 
-export default function InventoryCount() {
+export default function InventoryCount({ canUpload }: { canUpload: boolean }) {
   const router = useRouter();
   const fileRef = useRef<HTMLInputElement>(null);
   const [file, setFile] = useState<File | null>(null);
@@ -45,6 +45,11 @@ export default function InventoryCount() {
 
   return (
     <div className="space-y-4">
+      {!canUpload && (
+        <div className="alert-warn flex items-center gap-2">
+          <AlertTriangle size={16} /> ดูขั้นตอนได้ แต่ <b>เฉพาะแอดมิน</b>เท่านั้นที่ดาวน์โหลดเทมเพลต / อัปโหลดไฟล์อัปเดตยอดได้
+        </div>
+      )}
       {/* ขั้นตอน */}
       <div className="card p-5">
         <h2 className="mb-3 text-sm font-semibold text-ink">ขั้นตอน</h2>
@@ -53,7 +58,9 @@ export default function InventoryCount() {
             <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-brand-50 text-xs font-bold text-brand-600">1</span>
             <div className="flex-1">
               <span className="text-ink">ดาวน์โหลดเทมเพลต</span> — ไฟล์ Excel เติม SKU ทุกตัวให้แล้ว (4 ชีต: สำเร็จรูป/น้ำหอม/สติ๊กเกอร์/ขวด)
-              <div className="mt-1.5"><a href="/api/inventory/template" className="btn-primary inline-flex text-sm"><FileDown size={15} /> ดาวน์โหลดเทมเพลต</a></div>
+              <div className="mt-1.5">{canUpload
+                ? <a href="/api/inventory/template" className="btn-primary inline-flex text-sm"><FileDown size={15} /> ดาวน์โหลดเทมเพลต</a>
+                : <span className="btn-primary pointer-events-none inline-flex text-sm opacity-40"><FileDown size={15} /> ดาวน์โหลดเทมเพลต</span>}</div>
             </div>
           </li>
           <li className="flex items-start gap-3">
@@ -65,9 +72,9 @@ export default function InventoryCount() {
             <div className="flex-1">
               อัปโหลดไฟล์ที่กรอกแล้ว → ดูตัวอย่างก่อน แล้วยืนยัน
               <div className="mt-1.5">
-                <label className="btn-ghost inline-flex cursor-pointer text-sm">
+                <label className={`btn-ghost inline-flex text-sm ${canUpload ? "cursor-pointer" : "pointer-events-none opacity-40"}`}>
                   <FileUp size={15} /> {file ? file.name : "เลือกไฟล์ที่กรอกแล้ว…"}
-                  <input ref={fileRef} type="file" accept=".xlsx" className="hidden"
+                  <input ref={fileRef} type="file" accept=".xlsx" className="hidden" disabled={!canUpload}
                     onChange={(e) => { const f = e.target.files?.[0] || null; setFile(f); if (f) doPreview(f); }} />
                 </label>
               </div>
