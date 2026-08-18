@@ -22,7 +22,7 @@ export default async function ProductsPage() {
         </div>
         {can.issueStock(me.role) && <Link href="/stock/specs" className="btn-ghost shrink-0"><Tags size={16} /> จัดการสเป็ก</Link>}
       </div>
-      <ProductsManager products={products} sizesByScent={sizesByScent} discontinued={discontinued} sizes={sizes} />
+      <ProductsManager products={products} sizesByScent={sizesByScent} discontinued={discontinued} sizes={sizes} isAdmin={can.manageUsers(me.role)} />
     </div>
   );
 }

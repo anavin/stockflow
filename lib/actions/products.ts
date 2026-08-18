@@ -180,6 +180,34 @@ export async function setProductActive(id: number, active: boolean): Promise<{ o
   return { ok: true };
 }
 
+/** ลบกลิ่นถาวร — เฉพาะแอดมิน · กันลบกลิ่นที่มีในใบเบิก (ให้ปิดแทน กันประวัติเสีย)
+ *  ลบพร้อมข้อมูลผูก: บาร์โค้ด + สต๊อกสำเร็จรูป + วัตถุดิบ + flag เลิกผลิต/ปิดขาย (ประวัติใบเบิกไม่กระทบ) */
+export async function deleteProduct(id: number): Promise<{ ok: boolean; error?: string }> {
+  const user = await getCurrentUser();
+  if (!user) return { ok: false, error: "กรุณาเข้าสู่ระบบ" };
+  if (!can.manageUsers(user.role)) return { ok: false, error: "เฉพาะแอดมินลบได้" };   // manageUsers = admin
+  const [p] = await q<{ name: string }>(`select name from products where id = $1`, [id]);
+  if (!p) return { ok: false, error: "ไม่พบกลิ่น" };
+  const NK = `regexp_replace(lower(btrim($1)),'[^a-z0-9ก-๙]','','g')`;
+  const COL = (c: string) => `regexp_replace(lower(btrim(${c})),'[^a-z0-9ก-๙]','','g')`;
+  // กันลบกลิ่นที่มีในใบเบิก (ประวัติ)
+  const [u] = await q<{ n: number }>(`select count(*)::int n from order_items where ${COL("product")} = ${NK}`, [p.name]);
+  if ((u?.n ?? 0) > 0) return { ok: false, error: `กลิ่นนี้มีในใบเบิก ${u.n} รายการ — ปิดการใช้งานแทน (ลบไม่ได้ กันประวัติเสีย)` };
+  try {
+    await q(`delete from products where id = $1`, [id]);
+    for (const stmt of [
+      `delete from product_barcodes where ${COL("scent")} = ${NK}`,
+      `delete from material_item where category in ('bulk','label') and ${COL("scent")} = ${NK}`,
+      `delete from stock where ${COL("product")} = ${NK}`,
+      `delete from discontinued_sku where ${COL("scent")} = ${NK}`,
+      `delete from closed_sku where ${COL("scent")} = ${NK}`,
+    ]) { try { await q(stmt, [p.name]); } catch { /* ตารางอาจไม่มีบน prod */ } }
+  } catch (e: any) { return { ok: false, error: e?.message || "ลบไม่สำเร็จ" }; }
+  await logActivity("scent.manage", `ลบกลิ่น "${p.name}"`);
+  revalidatePath("/products"); revalidatePath("/stock"); revalidatePath("/shopee/new");
+  return { ok: true };
+}
+
 /** ปิด/เปิดการขายราย กลิ่น+ขนาด — ปิดแล้วขนาดนั้นจะถูกซ่อนในสต๊อก + เลือกในใบเบิกไม่ได้ (ยอดสต๊อกยังอยู่) */
 export async function setSkuSold(scent: string, size: string, sold: boolean): Promise<{ ok: boolean; error?: string }> {
   const g = await gate(); if ("error" in g) return { ok: false, error: g.error };

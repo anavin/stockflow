@@ -1,10 +1,10 @@
 "use client";
 import { Fragment, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { createProduct, renameProduct, setProductActive, setProductType, bulkSetProductTypes, addScentBarcode, deleteScentBarcode, setDiscontinued } from "@/lib/actions/products";
+import { createProduct, renameProduct, setProductActive, setProductType, bulkSetProductTypes, addScentBarcode, deleteScentBarcode, setDiscontinued, deleteProduct } from "@/lib/actions/products";
 import type { ProductAdminRow, ScentBarcode } from "@/lib/queries";
 import { PERFUME_TYPES } from "@/lib/types";
-import { Plus, Check, X, Pencil, Search, CheckCircle2, Ban } from "lucide-react";
+import { Plus, Check, X, Pencil, Search, CheckCircle2, Ban, Trash2 } from "lucide-react";
 
 type Filter = "all" | "untyped" | "typed" | "discontinued";
 const normKey = (s: string) => (s || "").toLowerCase().replace(/[^a-z0-9ก-๙]/g, "");
@@ -14,11 +14,13 @@ export default function ProductsManager({
   sizesByScent = {},
   discontinued = {},
   sizes = [],
+  isAdmin = false,
 }: {
   products: ProductAdminRow[];
   sizesByScent?: Record<string, ScentBarcode[]>;
   discontinued?: Record<string, string[]>;
   sizes?: string[];
+  isAdmin?: boolean;
 }) {
   const router = useRouter();
   const [name, setName] = useState("");
@@ -89,6 +91,11 @@ export default function ProductsManager({
   }
   async function toggle(p: ProductAdminRow) {
     const res = await setProductActive(p.id, !p.active); if (!res.ok) { alert(res.error); return; } router.refresh();
+  }
+  async function del(p: ProductAdminRow) {
+    if (p.used > 0) { alert(`กลิ่นนี้มีในใบเบิก ${p.used.toLocaleString()} รายการ — ปิดการใช้งานแทน (ลบไม่ได้ กันประวัติเสีย)`); return; }
+    if (!confirm(`ลบกลิ่น "${p.name}" ถาวร?\nจะลบบาร์โค้ด + สต๊อกสำเร็จรูป + วัตถุดิบของกลิ่นนี้ทั้งหมด (ประวัติใบเบิกไม่กระทบ)`)) return;
+    const res = await deleteProduct(p.id); if (!res.ok) { alert(res.error); return; } router.refresh();
   }
   function openAdd(id: number) { setAddId(id); setASize(""); setABarcode(""); setASku(""); }
   async function saveBarcode(scent: string) {
@@ -271,6 +278,11 @@ export default function ProductsManager({
                           <button onClick={() => { setEditId(p.id); setEditVal(p.name); }} className="rounded-md p-1.5 text-muted hover:bg-soft hover:text-ink" title="แก้ชื่อ"><Pencil size={15} /></button>
                         )}
                         <button onClick={() => toggle(p)} className="rounded-md px-2 py-1 text-xs text-muted hover:bg-soft">{p.active ? "ปิด" : "เปิด"}</button>
+                        {isAdmin && (
+                          <button onClick={() => del(p)}
+                            className={`rounded-md p-1.5 ${p.used > 0 ? "text-faint hover:bg-soft" : "text-red-400 hover:bg-red-50 hover:text-red-600"}`}
+                            title={p.used > 0 ? "ลบไม่ได้ (มีในใบเบิก) — ปิดแทน" : "ลบกลิ่นถาวร (แอดมิน)"}><Trash2 size={15} /></button>
+                        )}
                       </div>
                     </td>
                   </tr>
