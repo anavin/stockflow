@@ -158,7 +158,7 @@ export default function MaterialIssue({ items, canIssue, initialMode = "issue" }
 
           <div className="mt-3 border-t border-line pt-3">
             <label className="label">{rcv ? "หมายเหตุ / ล็อต / ที่มา" : "หมายเหตุ / ผู้เบิก / เบิกไปทำอะไร"} — เว้นว่างได้</label>
-            <input id="mi-note" value={note} onChange={(e) => setNote(e.target.value)} className="input" placeholder={rcv ? "เช่น ล็อตผลิต 08/2026 · รับจากผู้ผลิต" : "เช่น เบิกผลิตล็อต 08/2026 · โดยสมชาย"} />
+            <input id="mi-note" value={note} onChange={(e) => setNote(e.target.value)} className="input" placeholder={rcv ? "เช่น ล็อตผลิต 08/2026 · รับจากผู้ผลิต" : "เช่น เบิกผลิตล็อต 08/2026 · โดยอนาวิน"} />
             {err && <p className="mt-2 text-xs text-red-600">{err}</p>}
             <button onClick={submit} disabled={busy || !canIssue || totalPicked === 0}
               className={`mt-3 w-full py-2.5 text-sm font-semibold ${rcv ? "btn-success" : "btn-danger-solid"}`}>
