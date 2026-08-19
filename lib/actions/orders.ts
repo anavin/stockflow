@@ -467,41 +467,48 @@ export async function bulkSaveOrders(orders: OrderWithItems[]): Promise<{ ok: bo
     if (!k) continue;                         // ไม่มี username → ใช้ค่าเดิมจากไฟล์
     const arr = groups.get(k); if (arr) arr.push(o); else groups.set(k, [o]);
   }
-  for (const [k, list] of groups) {
-    const ons = list.map((o) => o.order_no);
-    let existing = 0;
-    try {
-      const [r] = await q<{ c: number }>(
-        `select count(*)::int as c from orders
-          where lower(btrim(username)) = $1 and deleted_at is null and order_no <> all($2::text[])`,
-        [k, ons]);
-      existing = r?.c ?? 0;
-    } catch { existing = 0; }
-    list.sort((a, b) =>
-      String(a.order_date || a.doc_date || "").localeCompare(String(b.order_date || b.doc_date || ""))
-      || String(a.order_no).localeCompare(String(b.order_no)));
-    list.forEach((o, i) => {
-      const n = existing + i + 1;
-      o.purchase_count = n as any;
-      o.customer_type = (n > 1 ? "ลูกค้าเก่า" : "ลูกค้าใหม่") as any;
-    });
+  const groupArr = [...groups];
+  for (let gi = 0; gi < groupArr.length; gi += 10) {   // ทีละ 10 ไม่ให้ล้น pool (max 10)
+    await Promise.all(groupArr.slice(gi, gi + 10).map(async ([k, list]) => {
+      const ons = list.map((o) => o.order_no);
+      let existing = 0;
+      try {
+        const [r] = await q<{ c: number }>(
+          `select count(*)::int as c from orders
+            where lower(btrim(username)) = $1 and deleted_at is null and order_no <> all($2::text[])`,
+          [k, ons]);
+        existing = r?.c ?? 0;
+      } catch { existing = 0; }
+      list.sort((a, b) =>
+        String(a.order_date || a.doc_date || "").localeCompare(String(b.order_date || b.doc_date || ""))
+        || String(a.order_no).localeCompare(String(b.order_no)));
+      list.forEach((o, i) => {
+        const n = existing + i + 1;
+        o.purchase_count = n as any;
+        o.customer_type = (n > 1 ? "ลูกค้าเก่า" : "ลูกค้าใหม่") as any;
+      });
+    }));
   }
 
   // พยายามบันทึกทุกออร์เดอร์ (แต่ละอันเป็น tx ของตัวเอง) — ไม่หยุดกลางคันเมื่อเจอแถวเสีย
-  // เพื่อไม่ให้เหลือสถานะค้างครึ่งๆ และรายงานจำนวนสำเร็จ/ล้มเหลวให้ครบ
-  for (const ord of orders) {
-    try {
-      const res = await saveOrder({
-        ...ord,
-        items: ord.items.map((it) => ({
-          product: it.product, size: it.size, is_free: it.is_free, qty: it.qty, unit: it.unit, sku: it.sku ?? null,
-        })),
-      } as OrderInput);
-      if (res.ok) saved += 1;
-      else errors.push(`${ord.order_no}: ${res.error}`);
-    } catch (e: any) {
-      errors.push(`${ord.order_no}: ${e?.message || "บันทึกไม่สำเร็จ"}`);
-    }
+  // บันทึกทีละชุด (chunk) ขนานกัน → เร็วกว่า loop ทีละใบมาก (round-trip ข้ามทวีป) ·
+  //   ปลอดภัย: doc_no ใช้ counter atomic, แต่ละใบ order_no ต่างกันจึงไม่ชนกัน · จำกัดไม่ให้ล้น pool (max 10)
+  const CHUNK = 6;
+  for (let i = 0; i < orders.length; i += CHUNK) {
+    const results = await Promise.all(orders.slice(i, i + CHUNK).map(async (ord) => {
+      try {
+        const res = await saveOrder({
+          ...ord,
+          items: ord.items.map((it) => ({
+            product: it.product, size: it.size, is_free: it.is_free, qty: it.qty, unit: it.unit, sku: it.sku ?? null,
+          })),
+        } as OrderInput);
+        return res.ok ? { ok: true as const } : { ok: false as const, err: `${ord.order_no}: ${res.error}` };
+      } catch (e: any) {
+        return { ok: false as const, err: `${ord.order_no}: ${e?.message || "บันทึกไม่สำเร็จ"}` };
+      }
+    }));
+    for (const r of results) { if (r.ok) saved += 1; else errors.push(r.err); }
   }
   await logActivity("order.import", `นำเข้า ${saved} ใบ${errors.length ? ` · ล้มเหลว ${errors.length}` : ""}`);
   revalidatePath("/shopee");
