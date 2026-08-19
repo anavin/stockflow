@@ -4,12 +4,13 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { createProduct, renameProduct, setProductActive, setProductType, bulkSetProductTypes, addScentBarcode, deleteScentBarcode, setDiscontinued, deleteProduct } from "@/lib/actions/products";
 import type { ProductAdminRow, ScentBarcode } from "@/lib/queries";
 import { PERFUME_TYPES } from "@/lib/types";
-import { Plus, Check, X, Pencil, Search, CheckCircle2, Ban, Trash2, ChevronDown, ChevronRight } from "lucide-react";
+import { Plus, Check, X, Pencil, Search, CheckCircle2, Ban, Trash2, ChevronDown, ChevronRight, ArrowLeftRight } from "lucide-react";
 
 type Filter = "all" | "untyped" | "discontinued";
 const normKey = (s: string) => (s || "").toLowerCase().replace(/[^a-z0-9ก-๙]/g, "");
 const GRADE_ORDER = ["EDP", "EDP+", "PARFUM", "EDT"];   // ลำดับแสดง (เหมือนหน้าสต๊อก) — ต่างจาก PERFUME_TYPES
 const grank = (g: string) => { const i = GRADE_ORDER.indexOf(g); return i < 0 ? 90 : i; };
+const sizeMl = (s: string) => { const m = (s || "").match(/[\d.]+/); return m ? parseFloat(m[0]) : 9999; };   // เรียงขนาดน้อย→มาก
 
 export default function ProductsManager({
   products, sizesByScent = {}, discontinued = {}, sizes = [], isAdmin = false,
@@ -32,6 +33,7 @@ export default function ProductsManager({
   const [editVal, setEditVal] = useState("");
   const [bulkType, setBulkType] = useState("");
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());   // กลุ่มเกรดที่พับ (default กาง)
+  const [moveId, setMoveId] = useState<number | null>(null);            // เปิด dropdown "ย้ายเกรด" ของแถวไหน (ในกลุ่มเกรด)
   // เพิ่มบาร์โค้ดเองต่อกลิ่น
   const [addId, setAddId] = useState<number | null>(null);
   const [aSize, setASize] = useState("");
@@ -59,10 +61,11 @@ export default function ProductsManager({
       const k = p.ptype || "";
       (m.get(k) ?? m.set(k, []).get(k)!).push(p);
     }
+    const bottom = (p: ProductAdminRow) => (discSizes(p.name).length > 0 || !p.active) ? 1 : 0;   // เลิกผลิต/ปิด → ล่างสุด
     return [...m.entries()]
       .sort((a, b) => (a[0] === "" ? -1 : b[0] === "" ? 1 : grank(a[0]) - grank(b[0]) || a[0].localeCompare(b[0])))
-      .map(([grade, rows]) => ({ grade, rows: rows.sort((x, y) => x.name.localeCompare(y.name, "en")) }));
-  }, [filtered]);
+      .map(([grade, rows]) => ({ grade, rows: rows.sort((x, y) => bottom(x) - bottom(y) || x.name.localeCompare(y.name, "en")) }));
+  }, [filtered, discontinued]);
 
   const counts = useMemo(() => {
     const c: Record<string, number> = { "": 0 };
@@ -91,7 +94,7 @@ export default function ProductsManager({
     if (!res.ok) { setError(res.error || "เพิ่มไม่สำเร็จ"); return; }
     setMsg(`เพิ่มกลิ่น "${name.trim()}" แล้ว`); setName(""); setPtype(""); router.refresh();
   }
-  async function changeType(id: number, v: string) { const res = await setProductType(id, v); if (!res.ok) { alert(res.error); return; } router.refresh(); }
+  async function changeType(id: number, v: string) { const res = await setProductType(id, v); if (!res.ok) { alert(res.error); return; } setMoveId(null); router.refresh(); }
   async function saveRename(id: number) { const res = await renameProduct(id, editVal); if (!res.ok) { alert(res.error); return; } setEditId(null); router.refresh(); }
   async function toggle(p: ProductAdminRow) { const res = await setProductActive(p.id, !p.active); if (!res.ok) { alert(res.error); return; } router.refresh(); }
   async function del(p: ProductAdminRow) {
@@ -193,7 +196,7 @@ export default function ProductsManager({
               {open && (
                 <div className="divide-y divide-line">
                   {grp.rows.map((p) => {
-                    const barcodes = sizesFor(p.name);
+                    const barcodes = sizesFor(p.name).slice().sort((a, b) => sizeMl(a.size) - sizeMl(b.size));
                     return (
                       <div key={p.id} id={`prod-${p.id}`} className={`px-4 py-3 ${!p.active ? "bg-soft/40" : ""} ${addId === p.id ? "bg-brand-50/40" : ""}`}>
                         <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
@@ -214,13 +217,15 @@ export default function ProductsManager({
                             )}
                           </div>
 
-                          {/* เกรด — เด่น(เหลือง)ในกลุ่มยังไม่ระบุ · เงียบ(ย้ายเกรด)ในกลุ่มเกรด */}
-                          <select value={p.ptype ?? ""} onChange={(e) => changeType(p.id, e.target.value)} title="เกรดน้ำหอม (เปลี่ยนแล้วย้ายกลุ่ม)"
-                            className={untyped ? "input h-8 w-32 border-amber-400 py-0 text-xs font-semibold text-amber-700" : "input h-8 w-20 py-0 text-xs text-muted"}>
-                            <option value="">{untyped ? "เลือกเกรด…" : "—"}</option>
-                            {PERFUME_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
-                            {p.ptype && !(PERFUME_TYPES as readonly string[]).includes(p.ptype) && <option value={p.ptype}>{p.ptype}</option>}
-                          </select>
+                          {/* เกรด — กลุ่มยังไม่ระบุ: dropdown เด่นเสมอ · กลุ่มเกรด: โชว์เฉพาะตอนกด "ย้ายเกรด" (เกรดบอกด้วยกลุ่มอยู่แล้ว) */}
+                          {(untyped || moveId === p.id) && (
+                            <select value={p.ptype ?? ""} onChange={(e) => changeType(p.id, e.target.value)} title="เกรดน้ำหอม (เปลี่ยนแล้วย้ายกลุ่ม)" autoFocus={moveId === p.id}
+                              className={untyped ? "input h-8 w-32 border-amber-400 py-0 text-xs font-semibold text-amber-700" : "input h-8 w-24 py-0 text-xs"}>
+                              <option value="">{untyped ? "เลือกเกรด…" : "— (ล้างเกรด)"}</option>
+                              {PERFUME_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
+                              {p.ptype && !(PERFUME_TYPES as readonly string[]).includes(p.ptype) && <option value={p.ptype}>{p.ptype}</option>}
+                            </select>
+                          )}
 
                           {/* บาร์โค้ดต่อขนาด */}
                           <div className="flex min-w-[180px] flex-1 flex-wrap items-center gap-1.5">
@@ -237,7 +242,7 @@ export default function ProductsManager({
                                 </div>
                               );
                             })}
-                            {discSizes(p.name).filter((dk) => !barcodes.some((s) => normKey(s.size) === dk)).map((dk) => (
+                            {discSizes(p.name).filter((dk) => !barcodes.some((s) => normKey(s.size) === dk)).sort((a, b) => sizeMl(a) - sizeMl(b)).map((dk) => (
                               <span key={"d" + dk} className="inline-flex items-center gap-1 rounded-lg border border-red-200 bg-red-50/60 px-2.5 py-1 text-xs font-medium text-red-600">
                                 <span className="line-through">{dk.replace(/ml$/, " ml")}</span> เลิกผลิต
                                 <button onClick={() => toggleDisc(p.name, dk.replace(/ml$/, " ml"), false)} title="ยกเลิก 'เลิกผลิต'" className="hover:text-red-800"><X size={11} /></button>
@@ -263,10 +268,13 @@ export default function ProductsManager({
                             )}
                           </div>
 
-                          {/* ใช้ + สถานะ + จัดการ */}
-                          <span className="whitespace-nowrap text-xs text-faint">{p.used > 0 ? `ใช้ ${p.used.toLocaleString()}` : "—"}</span>
+                          {/* ใช้ในใบเบิก + สถานะ + จัดการ */}
+                          <span className="whitespace-nowrap text-xs text-faint" title="จำนวนบรรทัดในใบเบิกที่ใช้กลิ่นนี้ (ลบไม่ได้ถ้า >0)">{p.used > 0 ? `ในใบเบิก ${p.used.toLocaleString()}` : "—"}</span>
                           <span className={p.active ? "chip-ok" : "chip-muted"}>{p.active ? "ใช้งาน" : "ปิด"}</span>
                           <div className="flex items-center gap-1">
+                            {!untyped && (
+                              <button onClick={() => setMoveId(moveId === p.id ? null : p.id)} className={`rounded-md p-1.5 ${moveId === p.id ? "bg-amber-50 text-amber-700" : "text-faint hover:bg-soft hover:text-ink"}`} title="ย้ายเกรด"><ArrowLeftRight size={14} /></button>
+                            )}
                             <button onClick={() => toggle(p)} className="rounded-md px-2 py-1 text-xs text-muted hover:bg-soft" title={p.active ? "ปิดการใช้งาน" : "เปิดใช้งาน"}>{p.active ? "ปิด" : "เปิด"}</button>
                             {isAdmin && (
                               <button onClick={() => del(p)} className={`rounded-md p-1.5 ${p.used > 0 ? "text-faint hover:bg-soft" : "text-red-400 hover:bg-red-50 hover:text-red-600"}`}
