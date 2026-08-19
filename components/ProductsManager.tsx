@@ -13,14 +13,18 @@ const grank = (g: string) => { const i = GRADE_ORDER.indexOf(g); return i < 0 ? 
 const sizeMl = (s: string) => { const m = (s || "").match(/[\d.]+/); return m ? parseFloat(m[0]) : 9999; };   // เรียงขนาดน้อย→มาก
 
 export default function ProductsManager({
-  products, sizesByScent = {}, discontinued = {}, sizes = [], isAdmin = false,
+  products, sizesByScent = {}, discontinued = {}, sizes = [], fdaKeys = [], isAdmin = false,
 }: {
   products: ProductAdminRow[];
   sizesByScent?: Record<string, ScentBarcode[]>;
   discontinued?: Record<string, string[]>;
   sizes?: string[];
+  fdaKeys?: string[];         // ชื่อกลิ่น (normalize) ที่มีทะเบียน อย.
   isAdmin?: boolean;
 }) {
+  const fdaSet = useMemo(() => new Set(fdaKeys), [fdaKeys]);
+  const hasFdaData = fdaKeys.length > 0;                                   // มีข้อมูล อย. ให้เทียบไหม
+  const noFda = (n: string) => hasFdaData && !fdaSet.has(normKey(n));      // กลิ่นนี้ยังไม่มีใน อย.
   const router = useRouter();
   const [name, setName] = useState("");
   const [ptype, setPtype] = useState("");
@@ -73,6 +77,7 @@ export default function ProductsManager({
     return c;
   }, [products]);
   const discCount = useMemo(() => products.filter((p) => discSizes(p.name).length > 0).length, [products, discontinued]);
+  const noFdaCount = useMemo(() => products.filter((p) => noFda(p.name)).length, [products, fdaSet, hasFdaData]);
   const activeCount = products.filter((p) => p.active).length;
 
   // ทางลัด "เพิ่มบาร์โค้ด" จากหน้าสต๊อก (/products?scent=..&size=..)
@@ -89,9 +94,11 @@ export default function ProductsManager({
   // ── actions (เหมือนเดิม) ──
   async function add(e: React.FormEvent) {
     e.preventDefault(); setError(""); setMsg(""); setBusy(true);
+    const nm = name.trim();
     const res = await createProduct(name, "", ptype); setBusy(false);
     if (!res.ok) { setError(res.error || "เพิ่มไม่สำเร็จ"); return; }
-    setMsg(`เพิ่มกลิ่น "${name.trim()}" แล้ว`); setName(""); setPtype(""); router.refresh();
+    setMsg(`เพิ่มกลิ่น "${nm}" แล้ว${noFda(nm) ? " · ⚠ ยังไม่มีในทะเบียน อย. (ควรจดแจ้ง/ตรวจชื่อให้ตรง)" : ""}`);
+    setName(""); setPtype(""); router.refresh();
   }
   async function changeType(id: number, v: string) { const res = await setProductType(id, v); if (!res.ok) { alert(res.error); return; } setMoveId(null); router.refresh(); }
   async function toggle(p: ProductAdminRow) { const res = await setProductActive(p.id, !p.active); if (!res.ok) { alert(res.error); return; } router.refresh(); }
@@ -167,6 +174,7 @@ export default function ProductsManager({
         {GRADE_ORDER.map((t) => <span key={t} className="chip-brand">{t} {counts[t] ?? 0}</span>)}
         <span className={counts[""] > 0 ? "chip-warn" : "chip-muted"}>ยังไม่ระบุ {counts[""] ?? 0}</span>
         {discCount > 0 && <span className="chip-danger">เลิกผลิต {discCount}</span>}
+        {noFdaCount > 0 && <span className="chip-warn" title="กลิ่นที่ยังไม่มีในทะเบียน อย.">⚠ ไม่มีใน อย. {noFdaCount}</span>}
         <span className="ml-auto flex items-center gap-1.5 text-xs text-muted">
           ตั้งเกรด {filtered.length} ที่กรอง →
           <select className="input h-8 w-24 py-0 text-xs" value={bulkType} onChange={(e) => setBulkType(e.target.value)}>
@@ -197,9 +205,12 @@ export default function ProductsManager({
                     const barcodes = sizesFor(p.name).slice().sort((a, b) => sizeMl(a.size) - sizeMl(b.size));
                     return (
                       <div key={p.id} id={`prod-${p.id}`} className={`px-4 py-3 ${!p.active ? "bg-soft/40" : ""} ${addId === p.id ? "bg-brand-50/40" : ""}`}>
-                        <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
-                          {/* ชื่อกลิ่น (อ่านอย่างเดียว) */}
-                          <span className={`min-w-[150px] ${p.active ? "font-medium text-ink" : "text-muted line-through"}`}>{p.name}</span>
+                        <div className="flex flex-wrap items-start gap-x-3 gap-y-2">
+                          {/* ชื่อกลิ่น (อ่านอย่างเดียว) + เตือนถ้าไม่มีใน อย. */}
+                          <span className="flex min-w-[150px] flex-wrap items-center gap-1.5">
+                            <span className={p.active ? "font-medium text-ink" : "text-muted line-through"}>{p.name}</span>
+                            {noFda(p.name) && <span className="chip-warn" title="ยังไม่มีในทะเบียน อย. — ควรจดแจ้ง/ตรวจชื่อให้ตรง">⚠ ไม่มีใน อย.</span>}
+                          </span>
 
                           {/* เกรด — กลุ่มยังไม่ระบุ: dropdown เด่นเสมอ · กลุ่มเกรด: โชว์เฉพาะตอนกด "ย้ายเกรด" (เกรดบอกด้วยกลุ่มอยู่แล้ว) */}
                           {(untyped || moveId === p.id) && (
@@ -211,8 +222,8 @@ export default function ProductsManager({
                             </select>
                           )}
 
-                          {/* บาร์โค้ดต่อขนาด */}
-                          <div className="flex min-w-[180px] flex-1 flex-wrap items-center gap-1.5">
+                          {/* บาร์โค้ดต่อขนาด — เรียงแนวตั้ง (บน→ล่าง ตามขนาด) */}
+                          <div className="flex flex-col items-start gap-1">
                             {barcodes.length === 0 && addId !== p.id && discSizes(p.name).length === 0 && <span className="text-xs text-faint">— ยังไม่มีบาร์โค้ด</span>}
                             {barcodes.map((s) => {
                               const disc = isDisc(p.name, s.size);
@@ -252,8 +263,8 @@ export default function ProductsManager({
                             )}
                           </div>
 
-                          {/* ใช้ในใบเบิก + สถานะ + จัดการ */}
-                          <span className="whitespace-nowrap text-xs text-faint" title="จำนวนบรรทัดในใบเบิกที่ใช้กลิ่นนี้ (ลบไม่ได้ถ้า >0)">{p.used > 0 ? `ในใบเบิก ${p.used.toLocaleString()}` : "—"}</span>
+                          {/* ใช้ในใบเบิก + สถานะ + จัดการ (ดันไปขวา) */}
+                          <span className="ml-auto whitespace-nowrap text-xs text-faint" title="จำนวนบรรทัดในใบเบิกที่ใช้กลิ่นนี้ (ลบไม่ได้ถ้า >0)">{p.used > 0 ? `ในใบเบิก ${p.used.toLocaleString()}` : "—"}</span>
                           <span className={p.active ? "chip-ok" : "chip-muted"}>{p.active ? "ใช้งาน" : "ปิด"}</span>
                           <div className="flex items-center gap-1">
                             {!untyped && (

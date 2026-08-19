@@ -191,6 +191,16 @@ export type FdaRow = {
   name_en: string | null; name_th: string | null; brand: string | null; days_left: number | null;
   renewal_count?: number; last_renewed?: string | null;
 };
+/** คีย์ชื่อกลิ่น (normalize) ที่มีทะเบียน อย. — ใช้เตือนกลิ่นที่ยังไม่มีใน อย. · ทนทานถ้าตารางยังไม่มี */
+export async function getFdaScentKeys(): Promise<string[]> {
+  try {
+    const rows = await q<{ k: string }>(
+      `select distinct regexp_replace(lower(btrim(product)),'[^a-z0-9ก-๙]','','g') as k
+       from fda_registrations where coalesce(product,'') <> ''`);
+    return rows.map((r) => r.k).filter(Boolean);
+  } catch { return []; }
+}
+
 export async function listFda(): Promise<FdaRow[]> {
   const sel = `select id, seq, product, grade, reg_no, issue_date, expiry_date, fda_status, prod_status,
               name_en, name_th, brand,
