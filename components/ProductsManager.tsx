@@ -246,25 +246,25 @@ export default function ProductsManager({
                           )}
                         </div>
 
-                        {/* บาร์โค้ดต่อขนาด — แนวตั้ง เยื้องเข้า (nested ใต้ชื่อ) กล่องกระชับพอดีเนื้อหา */}
-                        <div className="mt-2 flex flex-col items-start gap-1 border-l-2 border-line/70 pl-3">
-                          {barcodes.length === 0 && addId !== p.id && discSizes(p.name).length === 0 && <span className="text-xs text-faint">— ยังไม่มีบาร์โค้ด</span>}
+                        {/* บาร์โค้ดต่อขนาด — แนวตั้ง เยื้องเข้า (nested ใต้ชื่อ) กล่องเต็มแถวสมดุลซ้าย-ขวา */}
+                        <div className="mt-2 flex flex-col gap-1 border-l-2 border-line/70 pl-3">
+                          {barcodes.length === 0 && addId !== p.id && discSizes(p.name).length === 0 && <span className="self-start text-xs text-faint">— ยังไม่มีบาร์โค้ด</span>}
                           {barcodes.map((s) => {
                             const disc = isDisc(p.name, s.size);
                             return (
-                              <div key={s.id} className={`flex items-center gap-2 rounded-lg border px-2.5 py-1 ${disc ? "border-red-200 bg-red-50/60" : "border-line bg-white"}`}>
-                                <span className={`w-12 shrink-0 text-xs font-semibold ${disc ? "text-red-600 line-through" : "text-ink"}`}>{s.size.replace(/\.$/, "")}</span>
-                                <span className="font-mono text-xs text-muted">{s.barcode}</span>
-                                {s.sku && <span className="text-[11px] text-faint">{s.sku}</span>}
+                              <div key={s.id} className={`flex w-full items-center gap-2 rounded-lg border px-3 py-1 ${disc ? "border-red-200 bg-red-50/60" : "border-line bg-white"}`}>
+                                <span className={`w-14 shrink-0 text-xs font-semibold ${disc ? "text-red-600 line-through" : "text-ink"}`}>{s.size.replace(/\.$/, "")}</span>
+                                <span className="min-w-0 flex-1 truncate font-mono text-xs text-muted">{s.barcode}</span>
+                                {s.sku && <span className="shrink-0 text-[11px] text-faint">{s.sku}</span>}
                                 <button onClick={() => toggleDisc(p.name, s.size, !disc)} title={disc ? "ยกเลิก 'เลิกผลิต'" : "ทำเครื่องหมายเลิกผลิต"} className={disc ? "shrink-0 text-red-600" : "shrink-0 text-faint hover:text-red-500"}><Ban size={12} /></button>
                                 <button onClick={() => delBarcode(s.id)} className="shrink-0 text-faint hover:text-red-500" title="ลบบาร์โค้ดนี้"><X size={12} /></button>
                               </div>
                             );
                           })}
                           {discSizes(p.name).filter((dk) => !barcodes.some((s) => normKey(s.size) === dk)).sort((a, b) => sizeMl(a) - sizeMl(b)).map((dk) => (
-                            <span key={"d" + dk} className="flex items-center gap-1 rounded-lg border border-red-200 bg-red-50/60 px-2.5 py-1 text-xs font-medium text-red-600">
-                              <span className="w-12 shrink-0 line-through">{dk.replace(/ml$/, " ml")}</span> เลิกผลิต
-                              <button onClick={() => toggleDisc(p.name, dk.replace(/ml$/, " ml"), false)} title="ยกเลิก 'เลิกผลิต'" className="ml-1 shrink-0 hover:text-red-800"><X size={11} /></button>
+                            <span key={"d" + dk} className="flex w-full items-center gap-1 rounded-lg border border-red-200 bg-red-50/60 px-3 py-1 text-xs font-medium text-red-600">
+                              <span className="w-14 shrink-0 line-through">{dk.replace(/ml$/, " ml")}</span> เลิกผลิต
+                              <button onClick={() => toggleDisc(p.name, dk.replace(/ml$/, " ml"), false)} title="ยกเลิก 'เลิกผลิต'" className="ml-auto shrink-0 hover:text-red-800"><X size={11} /></button>
                             </span>
                           ))}
                           {/* ควบคุม: เลิกผลิตขนาด (เฉพาะขนาดที่มีบาร์โค้ด active) + เพิ่มรายการ */}
