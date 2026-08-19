@@ -13,7 +13,7 @@ const grank = (g: string) => { const i = GRADE_ORDER.indexOf(g); return i < 0 ? 
 const sizeMl = (s: string) => { const m = (s || "").match(/[\d.]+/); return m ? parseFloat(m[0]) : 9999; };   // เรียงขนาดน้อย→มาก
 
 export default function ProductsManager({
-  products, sizesByScent = {}, discontinued = {}, sizes = [], fdaKeys = [], isAdmin = false,
+  products: productsRaw, sizesByScent = {}, discontinued = {}, sizes = [], fdaKeys = [], isAdmin = false,
 }: {
   products: ProductAdminRow[];
   sizesByScent?: Record<string, ScentBarcode[]>;
@@ -22,6 +22,8 @@ export default function ProductsManager({
   fdaKeys?: string[];         // ชื่อกลิ่น (normalize) ที่มีทะเบียน อย.
   isAdmin?: boolean;
 }) {
+  // ซ่อนบรรจุภัณฑ์ (ถุงกระดาษ ฯลฯ) — ไม่ใช่กลิ่นน้ำหอม จัดการที่วัตถุดิบ/สเป็กแทน (ยังเลือกในฟอร์มออเดอร์ได้)
+  const products = useMemo(() => productsRaw.filter((p) => !/ถุง/.test(p.name)), [productsRaw]);
   const fdaSet = useMemo(() => new Set(fdaKeys), [fdaKeys]);
   const hasFdaData = fdaKeys.length > 0;                                   // มีข้อมูล อย. ให้เทียบไหม
   const noFda = (n: string) => hasFdaData && !fdaSet.has(normKey(n));      // กลิ่นนี้ยังไม่มีใน อย.
@@ -35,6 +37,7 @@ export default function ProductsManager({
   const [error, setError] = useState("");
   const [bulkType, setBulkType] = useState("");
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());   // กลุ่มเกรดที่พับ (default กาง)
+  const [showAdd, setShowAdd] = useState(false);                        // แผงเพิ่มกลิ่นใหม่ (ซ่อนไว้ให้หน้าสะอาด)
   // เพิ่มบาร์โค้ดเองต่อกลิ่น
   const [addId, setAddId] = useState<number | null>(null);
   const [aSize, setASize] = useState("");
@@ -134,57 +137,75 @@ export default function ProductsManager({
 
   return (
     <div className="space-y-4">
-      {/* เพิ่มกลิ่นใหม่ */}
-      <form onSubmit={add} className="card p-5">
-        <h2 className="mb-3 flex items-center gap-2 text-sm font-semibold text-ink"><Plus size={16} /> เพิ่มกลิ่นใหม่</h2>
-        <div className="flex flex-wrap gap-2">
-          <input className="input min-w-[220px] flex-1" value={name} onChange={(e) => setName(e.target.value)} placeholder="ชื่อกลิ่น เช่น Volt - Twilight (EDT)" />
-          <select className="input w-36" value={ptype} onChange={(e) => setPtype(e.target.value)}>
-            <option value="">Grade…</option>
-            {PERFUME_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
-          </select>
-          <button className="btn-primary" disabled={busy}>{busy ? "กำลังเพิ่ม…" : "เพิ่มกลิ่น"}</button>
-        </div>
-        {error && <div className="alert-error mt-2">{error}</div>}
-        {msg && <div className="alert-success mt-2 flex items-center gap-1"><CheckCircle2 size={14} /> {msg}</div>}
-      </form>
-
-      {/* toolbar: ค้นหา + ฟิลเตอร์ + ย่อ/ขยาย */}
-      <div className="card flex flex-wrap items-center justify-between gap-2 p-3">
-        <div className="relative min-w-[180px] flex-1">
-          <Search size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-faint" />
-          <input className="input pl-9" value={q} onChange={(e) => setQ(e.target.value)} placeholder="ค้นหากลิ่น" />
-        </div>
-        <div className="flex overflow-hidden rounded-lg border border-line text-sm">
-          {(["all", "untyped", "discontinued"] as Filter[]).map((f) => (
-            <button key={f} type="button" onClick={() => setFilter(f)}
-              className={`px-3 py-2 ${filter === f ? "bg-brand text-white" : "bg-white text-muted hover:bg-soft"}`}>
-              {f === "all" ? "ทั้งหมด" : f === "untyped" ? "ยังไม่ระบุ" : "เลิกผลิต"}
-            </button>
-          ))}
-        </div>
-        <button onClick={() => setCollapsed(new Set(groups.map((g) => g.grade)))} className="btn-ghost text-xs"><ChevronRight size={14} /> ย่อ</button>
-        <button onClick={() => setCollapsed(new Set())} className="btn-ghost text-xs"><ChevronDown size={14} /> ขยาย</button>
+      {/* ── แถบสรุปภาพรวมเกรด (stat tiles) ── */}
+      <div className="flex flex-wrap gap-2">
+        {[
+          { label: "กลิ่นทั้งหมด", value: products.length, cls: "border-line bg-white text-ink" },
+          ...GRADE_ORDER.map((t) => ({ label: t, value: counts[t] ?? 0, cls: "border-brand-200 bg-brand-50/40 text-brand-700" })),
+          { label: "ยังไม่ระบุเกรด", value: counts[""] ?? 0, cls: (counts[""] ?? 0) > 0 ? "border-amber-200 bg-amber-50 text-amber-700" : "border-line bg-white text-muted" },
+          ...(discCount > 0 ? [{ label: "เลิกผลิต", value: discCount, cls: "border-red-200 bg-red-50 text-red-600" }] : []),
+          ...(noFdaCount > 0 ? [{ label: "⚠ ไม่มีใน อย.", value: noFdaCount, cls: "border-amber-200 bg-amber-50 text-amber-700" }] : []),
+        ].map((s) => (
+          <div key={s.label} className={`flex min-w-[80px] flex-1 flex-col items-start rounded-xl border px-3.5 py-2.5 ${s.cls}`}>
+            <span className="text-xl font-bold leading-none tabular-nums">{s.value.toLocaleString()}</span>
+            <span className="mt-1 whitespace-nowrap text-[11px] font-medium opacity-75">{s.label}</span>
+          </div>
+        ))}
       </div>
 
-      {/* สรุปเกรด + ตั้งเกรดหลายกลิ่น */}
-      <div className="flex flex-wrap items-center gap-2">
-        <span className="chip-muted">ทั้งหมด {products.length}</span>
-        {GRADE_ORDER.map((t) => <span key={t} className="chip-brand">{t} {counts[t] ?? 0}</span>)}
-        <span className={counts[""] > 0 ? "chip-warn" : "chip-muted"}>ยังไม่ระบุ {counts[""] ?? 0}</span>
-        {discCount > 0 && <span className="chip-danger">เลิกผลิต {discCount}</span>}
-        {noFdaCount > 0 && <span className="chip-warn" title="กลิ่นที่ยังไม่มีในทะเบียน อย.">⚠ ไม่มีใน อย. {noFdaCount}</span>}
-        <span className="ml-auto flex items-center gap-1.5 text-xs text-muted">
-          ตั้งเกรด {filtered.length} ที่กรอง →
-          <select className="input h-8 w-24 py-0 text-xs" value={bulkType} onChange={(e) => setBulkType(e.target.value)}>
-            <option value="">— (ล้าง)</option>
-            {PERFUME_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
-          </select>
-          <button type="button" onClick={applyBulk} className="btn-ghost text-xs" disabled={busy || filtered.length === 0}>ใช้</button>
-        </span>
+      {/* ── แถบเครื่องมือ: ค้นหา · ฟิลเตอร์ · ตั้งเกรดหลายกลิ่น · เพิ่มกลิ่น · ย่อ/ขยาย ── */}
+      <div className="card space-y-3 p-3">
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="relative min-w-[200px] flex-1">
+            <Search size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-faint" />
+            <input className="input pl-9" value={q} onChange={(e) => setQ(e.target.value)} placeholder="ค้นหากลิ่น…" />
+          </div>
+          <div className="flex overflow-hidden rounded-lg border border-line text-sm">
+            {(["all", "untyped", "discontinued"] as Filter[]).map((f) => (
+              <button key={f} type="button" onClick={() => setFilter(f)}
+                className={`px-3 py-2 transition-colors ${filter === f ? "bg-brand font-medium text-white" : "bg-white text-muted hover:bg-soft"}`}>
+                {f === "all" ? "ทั้งหมด" : f === "untyped" ? "ยังไม่ระบุ" : "เลิกผลิต"}
+              </button>
+            ))}
+          </div>
+          <div className="flex items-center overflow-hidden rounded-lg border border-line">
+            <button onClick={() => setCollapsed(new Set(groups.map((g) => g.grade)))} className="px-2.5 py-2 text-xs text-muted hover:bg-soft" title="ย่อทุกกลุ่ม"><ChevronRight size={14} /></button>
+            <span className="h-4 w-px bg-line" />
+            <button onClick={() => setCollapsed(new Set())} className="px-2.5 py-2 text-xs text-muted hover:bg-soft" title="กางทุกกลุ่ม"><ChevronDown size={14} /></button>
+          </div>
+          <button type="button" onClick={() => setShowAdd((v) => !v)} className={showAdd ? "btn-ghost" : "btn-primary"}>
+            <Plus size={16} className={showAdd ? "rotate-45 transition-transform" : "transition-transform"} /> {showAdd ? "ปิด" : "เพิ่มกลิ่น"}
+          </button>
+        </div>
+
+        {/* ตั้งเกรดหลายกลิ่น (โชว์เมื่อกำลังกรอง เพื่อกันพลาด) */}
+        {(q.trim() !== "" || filter !== "all") && filtered.length > 0 && (
+          <div className="flex flex-wrap items-center gap-1.5 rounded-lg bg-soft/50 px-3 py-2 text-xs text-muted">
+            ตั้งเกรดให้ <b className="text-ink">{filtered.length}</b> กลิ่นที่กรองอยู่ →
+            <select className="input h-8 w-28 py-0 text-xs" value={bulkType} onChange={(e) => setBulkType(e.target.value)}>
+              <option value="">— (ล้างเกรด)</option>
+              {PERFUME_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
+            </select>
+            <button type="button" onClick={applyBulk} className="btn-ghost text-xs" disabled={busy || filtered.length === 0}>ใช้กับทั้งหมด</button>
+          </div>
+        )}
+
+        {/* แผงเพิ่มกลิ่นใหม่ (ซ่อน/แสดง) */}
+        {showAdd && (
+          <form onSubmit={add} className="flex flex-wrap gap-2 rounded-lg border border-brand-200 bg-brand-50/30 p-3">
+            <input autoFocus className="input min-w-[220px] flex-1" value={name} onChange={(e) => setName(e.target.value)} placeholder="ชื่อกลิ่น เช่น Volt - Twilight (EDT)" />
+            <select className="input w-36" value={ptype} onChange={(e) => setPtype(e.target.value)}>
+              <option value="">Grade…</option>
+              {PERFUME_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
+            </select>
+            <button className="btn-primary" disabled={busy}>{busy ? "กำลังเพิ่ม…" : "เพิ่มกลิ่น"}</button>
+          </form>
+        )}
+        {error && <div className="alert-error">{error}</div>}
+        {msg && <div className="alert-success flex items-center gap-1"><CheckCircle2 size={14} /> {msg}</div>}
       </div>
 
-      {/* กลุ่มตามเกรด — พับ/กางได้ (แนวเดียวกับหน้าสต๊อก) */}
+      {/* ── กลุ่มตามเกรด — พับ/กางได้ ── */}
       <div className="space-y-3">
         {groups.length === 0 && <p className="card p-10 text-center text-sm text-muted">ไม่พบกลิ่น</p>}
         {groups.map((grp) => {
@@ -192,18 +213,25 @@ export default function ProductsManager({
           const open = !collapsed.has(grp.grade);
           const discN = grp.rows.filter((p) => discSizes(p.name).length > 0).length;
           return (
-            <div key={grp.grade || "__untyped__"} className="overflow-hidden rounded-xl border border-line bg-white">
-              <button onClick={() => toggleGrp(grp.grade)} className={`flex w-full items-center gap-2 px-4 py-2.5 text-left ${untyped ? "bg-amber-50" : "bg-soft/60"}`}>
-                {open ? <ChevronDown size={15} className="text-faint" /> : <ChevronRight size={15} className="text-faint" />}
-                <span className={`font-semibold ${untyped ? "text-amber-700" : "text-ink"}`}>{untyped ? "⚠ ยังไม่ระบุ Grade" : grp.grade}</span>
-                <span className="text-xs text-muted">· {grp.rows.length} กลิ่น{untyped ? " · ตั้งเกรดให้ครบเพื่อให้สต๊อก/ป้ายทำงาน" : discN > 0 ? <span className="text-red-600"> · เลิกผลิต {discN}</span> : ""}</span>
+            <div key={grp.grade || "__untyped__"} className="overflow-hidden rounded-xl border border-line bg-white shadow-sm">
+              <button onClick={() => toggleGrp(grp.grade)}
+                className={`flex w-full items-center gap-3 border-l-4 px-4 py-3 text-left transition-colors ${untyped ? "border-l-amber-400 bg-amber-50/70 hover:bg-amber-50" : "border-l-brand bg-soft/40 hover:bg-soft/70"}`}>
+                {open ? <ChevronDown size={16} className="shrink-0 text-faint" /> : <ChevronRight size={16} className="shrink-0 text-faint" />}
+                <span className={`text-sm font-bold tracking-wide ${untyped ? "text-amber-700" : "text-ink"}`}>{untyped ? "⚠ ยังไม่ระบุเกรด" : grp.grade}</span>
+                <span className="ml-auto flex items-center gap-1.5">
+                  {discN > 0 && <span className="chip-danger">เลิกผลิต {discN}</span>}
+                  <span className="rounded-full bg-white/80 px-2.5 py-0.5 text-xs font-semibold text-muted ring-1 ring-line">{grp.rows.length} กลิ่น</span>
+                </span>
               </button>
+              {untyped && open && (
+                <p className="border-b border-amber-100 bg-amber-50/40 px-4 py-2 text-xs text-amber-700">ℹ️ ตั้งเกรดให้ครบ เพื่อให้ระบบสต๊อก/ป้ายทำงานถูกต้อง</p>
+              )}
               {open && (
                 <div className="grid grid-cols-1 lg:grid-cols-2">
                   {grp.rows.map((p) => {
                     const barcodes = sizesFor(p.name).slice().sort((a, b) => sizeMl(a.size) - sizeMl(b.size));
                     return (
-                      <div key={p.id} id={`prod-${p.id}`} className={`border-t border-line px-4 py-3 lg:odd:border-r ${!p.active ? "bg-soft/40" : ""} ${addId === p.id ? "bg-brand-50/40" : ""}`}>
+                      <div key={p.id} id={`prod-${p.id}`} className={`border-t border-line px-4 py-3 transition-colors lg:odd:border-r ${addId === p.id ? "bg-brand-50/40" : !p.active ? "bg-soft/40 hover:bg-soft/60" : "hover:bg-soft/25"}`}>
                         {/* หัวการ์ด: ชื่อ (อ่านอย่างเดียว) + เตือน อย. + เกรด (เฉพาะกลุ่มยังไม่ระบุ) */}
                         <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
                           <span className={p.active ? "font-medium text-ink" : "text-muted line-through"}>{p.name}</span>
