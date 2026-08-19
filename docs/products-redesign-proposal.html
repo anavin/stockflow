@@ -1,0 +1,244 @@
+<title>จัดการกลิ่น — ออกแบบใหม่</title>
+<style>
+  :root{
+    --bg:#f2f5f8; --surface:#fff; --ink:#101a22; --muted:#56646f; --faint:#8b98a4; --line:#e0e7ed; --soft:#f1f4f9;
+    --teal:#0d9488; --teal-ink:#0f766e; --teal-wash:#e6f5f2;
+    --amber:#d97706; --amber-ink:#b45309; --amber-wash:#fdf0dd;
+    --green:#16a34a; --green-wash:#e7f6ec; --red:#dc2626; --red-wash:#fbe9e9;
+    --purple:#7c3aed; --purple-wash:#f0e9fd;
+    --shadow:0 1px 2px rgba(16,26,34,.04),0 10px 26px -14px rgba(16,26,34,.18);
+    --font:"IBM Plex Sans Thai","Noto Sans Thai","Sarabun",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+    --mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+  }
+  @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+    --bg:#0c1218; --surface:#131c24; --ink:#e9f0f5; --muted:#9aa7b3; --faint:#667581; --line:#24303a; --soft:#1a2530;
+    --teal:#2dd4bf; --teal-ink:#5eead4; --teal-wash:#123330;
+    --amber:#fbbf24; --amber-ink:#fcd34d; --amber-wash:#2c2109;
+    --green:#4ade80; --green-wash:#10281a; --red:#f87171; --red-wash:#311616;
+    --purple:#a78bfa; --purple-wash:#241a3d;
+    --shadow:0 1px 2px rgba(0,0,0,.3),0 12px 30px -16px rgba(0,0,0,.7);
+  }}
+  :root[data-theme="dark"]{
+    --bg:#0c1218; --surface:#131c24; --ink:#e9f0f5; --muted:#9aa7b3; --faint:#667581; --line:#24303a; --soft:#1a2530;
+    --teal:#2dd4bf; --teal-ink:#5eead4; --teal-wash:#123330;
+    --amber:#fbbf24; --amber-ink:#fcd34d; --amber-wash:#2c2109;
+    --green:#4ade80; --green-wash:#10281a; --red:#f87171; --red-wash:#311616;
+    --purple:#a78bfa; --purple-wash:#241a3d;
+    --shadow:0 1px 2px rgba(0,0,0,.3),0 12px 30px -16px rgba(0,0,0,.7);
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg)}
+  .page{background:var(--bg);color:var(--ink);font-family:var(--font);line-height:1.6;-webkit-font-smoothing:antialiased;padding:0 20px 72px}
+  .wrap{max-width:940px;margin:0 auto}
+  h1,h2,h3{margin:0;font-weight:700;text-wrap:balance;line-height:1.25}
+  p{margin:0}
+  .mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
+
+  header{padding:44px 0 24px;border-bottom:1px solid var(--line)}
+  .eyebrow{font-size:12px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--teal-ink);margin-bottom:11px}
+  h1{font-size:clamp(1.6rem,3.4vw,2.2rem);letter-spacing:-.01em}
+  .lead{color:var(--muted);font-size:1rem;margin-top:11px;max-width:64ch}
+
+  section{padding-top:42px}
+  .sec-h{display:flex;align-items:baseline;gap:12px;margin-bottom:6px}
+  .sec-n{font-family:var(--mono);font-size:.8rem;font-weight:600;color:var(--faint)}
+  .sec-h h2{font-size:1.3rem;letter-spacing:-.01em}
+  .sec-sub{color:var(--muted);margin:3px 0 22px;max-width:66ch;font-size:.94rem}
+
+  /* mock app frame */
+  .mock{background:var(--bg);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);overflow:hidden}
+  .mock-top{background:var(--surface);border-bottom:1px solid var(--line);padding:13px 18px}
+  .mock-top h3{font-size:1.05rem;display:flex;align-items:center;gap:8px}
+  .mock-top .sub{font-size:.82rem;color:var(--muted);margin-top:1px}
+  .mock-body{padding:16px 18px;display:flex;flex-direction:column;gap:13px}
+
+  .card{background:var(--surface);border:1px solid var(--line);border-radius:13px;box-shadow:var(--shadow)}
+  .addbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:13px 15px}
+  .fld{border:1px solid var(--line);border-radius:9px;padding:8px 11px;font-size:.85rem;color:var(--muted);background:var(--surface)}
+  .btn{border-radius:9px;padding:8px 14px;font-size:.83rem;font-weight:600;display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+  .btn-primary{background:var(--teal);color:#fff}
+  .btn-ghost{background:var(--surface);border:1px solid var(--line);color:var(--muted)}
+
+  .toolbar{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:9px}
+  .seg{display:inline-flex;border:1px solid var(--line);border-radius:9px;overflow:hidden;font-size:.8rem;font-weight:600}
+  .seg span{padding:7px 12px;color:var(--muted);background:var(--surface)}
+  .seg span.on{background:var(--teal);color:#fff}
+  .chips{display:flex;flex-wrap:wrap;gap:6px}
+  .chip{font-size:.76rem;font-weight:600;padding:3px 9px;border-radius:999px}
+  .chip.g{background:var(--teal-wash);color:var(--teal-ink)} .chip.a{background:var(--amber-wash);color:var(--amber-ink)} .chip.r{background:var(--red-wash);color:var(--red)} .chip.n{background:var(--soft);color:var(--muted)}
+
+  /* group card */
+  .grp{border:1px solid var(--line);border-radius:13px;overflow:hidden;background:var(--surface);box-shadow:var(--shadow)}
+  .grp-head{display:flex;align-items:center;gap:9px;padding:11px 15px;background:color-mix(in srgb,var(--soft) 65%,transparent);cursor:default}
+  .grp-head .chev{color:var(--faint);font-size:.9rem;width:14px}
+  .grp-head .gname{font-weight:700;color:var(--ink)}
+  .grp-head .meta{font-size:.8rem;color:var(--muted)}
+  .grp-head.warn{background:var(--amber-wash)} .grp-head.warn .gname{color:var(--amber-ink)}
+  .grp-body{border-top:1px solid var(--line)}
+  .srow{display:flex;align-items:center;gap:12px;padding:11px 15px;border-top:1px solid var(--line);flex-wrap:wrap}
+  .srow:first-child{border-top:none}
+  .srow .nm{font-weight:600;min-width:150px;flex:0 0 auto}
+  .srow .nm .edit{color:var(--faint);font-size:.85rem;margin-left:5px}
+  .bcs{display:flex;flex-wrap:wrap;gap:5px;flex:1;min-width:180px}
+  .bc{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:8px;padding:2px 8px;font-size:.74rem;background:var(--bg)}
+  .bc .sz{font-weight:700} .bc .code{font-family:var(--mono);color:var(--muted)}
+  .bc.disc{border-color:color-mix(in srgb,var(--red) 30%,transparent);background:var(--red-wash)} .bc.disc .sz{color:var(--red);text-decoration:line-through}
+  .addbc{font-size:.74rem;color:var(--teal-ink);border:1px dashed color-mix(in srgb,var(--teal) 40%,transparent);border-radius:8px;padding:2px 8px}
+  .srow .use{font-size:.76rem;color:var(--faint);min-width:52px;text-align:right}
+  .srow .st{font-size:.72rem;font-weight:600;padding:2px 9px;border-radius:999px;background:var(--green-wash);color:var(--green)}
+  .srow .acts{display:flex;gap:4px;color:var(--faint)}
+  .srow .acts b{width:26px;height:26px;border-radius:7px;display:grid;place-items:center;font-weight:400;border:1px solid var(--line);background:var(--surface)}
+  .grade-pick{border:1px solid color-mix(in srgb,var(--amber) 45%,transparent);background:var(--surface);border-radius:8px;padding:5px 9px;font-size:.78rem;font-weight:700;color:var(--amber-ink)}
+
+  /* rec cards */
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:13px}
+  .rc{background:var(--surface);border:1px solid var(--line);border-radius:13px;padding:15px 16px;box-shadow:var(--shadow);border-top:3px solid var(--teal)}
+  .rc h4{font-size:.95rem;display:flex;align-items:center;gap:8px;margin-bottom:6px}
+  .rc p{font-size:.85rem;color:var(--muted)}
+  .rc.amber{border-top-color:var(--amber)} .rc.purple{border-top-color:var(--purple)}
+
+  ul.chk{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+  ul.chk li{position:relative;padding-left:24px;font-size:.88rem;color:var(--muted)}
+  ul.chk li::before{content:"✓";position:absolute;left:2px;color:var(--green);font-weight:800}
+  ul.chk li b{color:var(--ink)}
+
+  .callout{margin-top:18px;background:var(--surface);border:1px solid var(--line);border-left:3px solid var(--amber);border-radius:12px;padding:14px 16px;display:flex;gap:11px;box-shadow:var(--shadow)}
+  .callout .ic{font-size:19px}
+  .callout h4{font-size:.95rem;margin-bottom:3px} .callout p{font-size:.86rem;color:var(--muted)}
+
+  footer{margin-top:50px;padding-top:20px;border-top:1px solid var(--line);color:var(--faint);font-size:.8rem;text-align:center}
+</style>
+
+<div class="page"><div class="wrap">
+
+  <header>
+    <div class="eyebrow">◆ Lab Parfumo · UX Proposal</div>
+    <h1>จัดการกลิ่น — จัดกลุ่มตามเกรด (แนวเดียวกับหน้าสต๊อก)</h1>
+    <p class="lead">เปลี่ยนจาก<b>ตารางแบนยาว</b> เป็น<b>การ์ดจัดกลุ่มตามเกรด พับ/กางได้</b> — หน้าตา + วิธีใช้เหมือนหน้าสต๊อกคงเหลือ / สติ๊กเกอร์ &amp; การ์ด เพื่อให้ทั้งระบบไปทางเดียวกัน หากลิ่นง่ายขึ้น</p>
+  </header>
+
+  <!-- MOCKUP -->
+  <section>
+    <div class="sec-h"><span class="sec-n">01</span><h2>หน้าตาใหม่ (mockup)</h2></div>
+    <p class="sec-sub">ฟอร์มเพิ่มกลิ่นด้านบน → แถบค้นหา/ฟิลเตอร์ + ปุ่มย่อ/ขยาย + ชิปสรุปเกรด → การ์ดกลุ่มตามเกรด (EDP · EDP+ · PARFUM · EDT · ยังไม่ระบุ)</p>
+
+    <div class="mock">
+      <div class="mock-top">
+        <h3>🧪 จัดการกลิ่น</h3>
+        <div class="sub">เพิ่ม/แก้ชื่อ · ตั้งเกรด · บาร์โค้ดต่อขนาด · เลิกผลิต · เปิด-ปิด · ลบ (แอดมิน)</div>
+      </div>
+      <div class="mock-body">
+
+        <!-- add -->
+        <div class="card addbar">
+          <span style="font-size:.85rem;font-weight:600">＋ เพิ่มกลิ่นใหม่</span>
+          <span class="fld" style="flex:1;min-width:180px">ชื่อกลิ่น เช่น Volt - Twilight (EDT)</span>
+          <span class="fld">Grade… ▾</span>
+          <span class="btn btn-primary">เพิ่มกลิ่น</span>
+        </div>
+
+        <!-- toolbar -->
+        <div class="toolbar">
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+            <span class="fld">🔍 ค้นหากลิ่น</span>
+            <span class="seg"><span class="on">ทั้งหมด</span><span>ยังไม่ระบุ</span><span>เลิกผลิต</span></span>
+          </div>
+          <div style="display:flex;gap:6px"><span class="btn btn-ghost">▸ ย่อ</span><span class="btn btn-ghost">▾ ขยาย</span></div>
+        </div>
+        <div class="chips">
+          <span class="chip n">ทั้งหมด 125</span><span class="chip g">EDP 58</span><span class="chip g">EDP+ 19</span>
+          <span class="chip g">PARFUM 12</span><span class="chip g">EDT 22</span><span class="chip a">ยังไม่ระบุ 14</span><span class="chip r">เลิกผลิต 3</span>
+        </div>
+
+        <!-- group: untyped (top, warn, open) -->
+        <div class="grp">
+          <div class="grp-head warn"><span class="chev">▾</span><span class="gname">⚠ ยังไม่ระบุ Grade</span><span class="meta" style="color:var(--amber-ink)">· 14 กลิ่น · ตั้งเกรดให้ครบเพื่อให้สต๊อก/ป้ายทำงาน</span></div>
+          <div class="grp-body">
+            <div class="srow">
+              <span class="nm">Volt - Twilight <span class="edit">✎</span></span>
+              <span class="grade-pick">เลือกเกรด… ▾</span>
+              <div class="bcs"><span class="addbc">＋ บาร์โค้ด</span></div>
+              <span class="use">—</span><span class="st">ใช้งาน</span>
+              <span class="acts"><b>✎</b><b>⊘</b></span>
+            </div>
+            <div class="srow">
+              <span class="nm">Blind Magnolia <span class="edit">✎</span></span>
+              <span class="grade-pick">เลือกเกรด… ▾</span>
+              <div class="bcs"><span class="bc"><span class="sz">50 ml</span><span class="code">8857…1775</span></span><span class="addbc">＋</span></div>
+              <span class="use">42</span><span class="st">ใช้งาน</span>
+              <span class="acts"><b>✎</b><b>⊘</b></span>
+            </div>
+          </div>
+        </div>
+
+        <!-- group: EDP (open) -->
+        <div class="grp">
+          <div class="grp-head"><span class="chev">▾</span><span class="gname">EDP</span><span class="meta">· 58 กลิ่น · บาร์โค้ดครบ 54</span></div>
+          <div class="grp-body">
+            <div class="srow">
+              <span class="nm">Found Peony <span class="edit">✎</span></span>
+              <div class="bcs">
+                <span class="bc"><span class="sz">10 ml</span><span class="code">8857…2077</span></span>
+                <span class="bc"><span class="sz">30 ml</span><span class="code">8857…2025</span></span>
+                <span class="bc"><span class="sz">50 ml</span><span class="code">8857…1775</span></span>
+                <span class="addbc">＋</span>
+              </div>
+              <span class="use">128</span><span class="st">ใช้งาน</span>
+              <span class="acts"><b>✎</b><b>⇄</b><b>⊘</b><b>🗑</b></span>
+            </div>
+            <div class="srow">
+              <span class="nm">Dream Island <span class="edit">✎</span></span>
+              <div class="bcs">
+                <span class="bc"><span class="sz">50 ml</span><span class="code">8857…3011</span></span>
+                <span class="bc disc"><span class="sz">30 ml</span> เลิกผลิต</span>
+                <span class="addbc">＋</span>
+              </div>
+              <span class="use">63</span><span class="st">ใช้งาน</span>
+              <span class="acts"><b>✎</b><b>⇄</b><b>⊘</b><b>🗑</b></span>
+            </div>
+          </div>
+        </div>
+
+        <!-- collapsed groups -->
+        <div class="grp"><div class="grp-head"><span class="chev">▸</span><span class="gname">EDP+</span><span class="meta">· 19 กลิ่น</span></div></div>
+        <div class="grp"><div class="grp-head"><span class="chev">▸</span><span class="gname">PARFUM</span><span class="meta">· 12 กลิ่น</span></div></div>
+        <div class="grp"><div class="grp-head"><span class="chev">▸</span><span class="gname">EDT</span><span class="meta">· 22 กลิ่น</span></div></div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- RECOMMENDATION -->
+  <section>
+    <div class="sec-h"><span class="sec-n">02</span><h2>ผมคิดว่าแบบนี้ใช้ง่ายสุด — เพราะ…</h2></div>
+    <div class="grid">
+      <div class="rc amber"><h4>⚠ "ยังไม่ระบุ" อยู่บนสุด กางไว้</h4><p>งานหลักของหน้านี้คือ<b>ตั้งเกรดให้ครบ</b> → เอากลุ่มนี้ขึ้นบนสุด สีเหลือง กางค้าง มีปุ่ม "เลือกเกรด" เด่น · พอตั้งเสร็จกลิ่นย้ายเข้ากลุ่ม กลุ่มเหลืองหดลง = <b>เห็นความคืบหน้า</b></p></div>
+      <div class="rc"><h4>📂 จัดกลุ่มตามเกรด</h4><p>หากลิ่นตามเกรดได้เร็ว (EDP อยู่ไหน) + ตรงกับหน้าสต๊อก/สติ๊กเกอร์ → ทั้งระบบ<b>หน้าตาเดียวกัน</b> เรียนรู้ครั้งเดียวใช้ได้ทุกหน้า</p></div>
+      <div class="rc"><h4>🃏 กลิ่น = 1 แถวในการ์ด</h4><p>ชื่อ · บาร์โค้ดต่อขนาด (ชิป) · จำนวนที่ใช้ · สถานะ · ปุ่มจัดการ — เหมือนแถวในหน้าสต๊อก อ่านง่าย ไม่ต้องเลื่อนตารางแนวนอน</p></div>
+      <div class="rc purple"><h4>⇄ ในกลุ่มเกรดแล้ว ซ่อน dropdown เกรด</h4><p>เกรดบอกด้วยกลุ่มอยู่แล้ว → ในกลุ่มไม่ต้องมี dropdown ซ้ำ · ถ้าต้องแก้เกรด มีปุ่ม <b>⇄ ย้ายเกรด</b> เล็กๆ (กดแล้วเลือกใหม่ กลิ่นย้ายกลุ่ม)</p></div>
+    </div>
+
+    <div class="callout">
+      <div class="ic">💡</div>
+      <div>
+        <h4>จุดที่ต่างจากหน้าสต๊อก (และวิธีจัดการ)</h4>
+        <p>หน้าสต๊อกเกรด<b>ตายตัว</b> แต่หน้านี้เกรด<b>แก้ได้</b> → พอแก้เกรด กลิ่นจะ<b>ย้ายกลุ่ม</b> (หลัง refresh) · ผมทำให้เป็น<b>ข้อดี</b>: กลุ่ม "ยังไม่ระบุ" หดลงทุกครั้งที่ตั้งเกรด = รู้สึกเหมือนเคลียร์งานทีละอัน · ไม่ใช่ปัญหา</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- KEEPS -->
+  <section>
+    <div class="sec-h"><span class="sec-n">03</span><h2>ฟังก์ชันเดิมอยู่ครบ (แค่จัดวางใหม่)</h2></div>
+    <ul class="chk">
+      <li><b>เพิ่มกลิ่นใหม่</b> · <b>แก้ชื่อ</b> (inline) · <b>ตั้ง/เปลี่ยนเกรด</b> · <b>เปิด-ปิดการใช้งาน</b> · <b>ลบ</b> (แอดมิน)</li>
+      <li><b>บาร์โค้ดต่อขนาด</b> — เพิ่ม/ลบ/ย้าย (ชิปต่อขนาด เหมือนเดิม)</li>
+      <li><b>เลิกผลิตต่อขนาด</b> — ชิปแดง + ปุ่มสลับ</li>
+      <li><b>ค้นหา + ฟิลเตอร์</b> (ทั้งหมด / ยังไม่ระบุ / เลิกผลิต) + <b>ตั้งเกรดหลายกลิ่นพร้อมกัน</b> (bulk ยังอยู่ในแถบเครื่องมือ)</li>
+      <li><b>ปุ่มย่อ/ขยาย</b> ทุกกลุ่ม + <b>ทางลัดจากหน้าสต๊อก</b> (?scent=..) เด้งมาเปิดกลิ่นนั้น</li>
+    </ul>
+  </section>
+
+  <footer>Lab Parfumo · ข้อเสนอออกแบบ UX — จัดการกลิ่น (จัดกลุ่มตามเกรด) · ยังไม่ลงมือ รอเลือกแนวทาง</footer>
+
+</div></div>
