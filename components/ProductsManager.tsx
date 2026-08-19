@@ -61,10 +61,11 @@ export default function ProductsManager({
       const k = p.ptype || "";
       (m.get(k) ?? m.set(k, []).get(k)!).push(p);
     }
-    const bottom = (p: ProductAdminRow) => (discSizes(p.name).length > 0 || !p.active) ? 1 : 0;   // เลิกผลิต/ปิด → ล่างสุด
+    // ลำดับในกลุ่ม: ใช้งานปกติ(0) → ใช้งานแต่เลิกผลิตบางขนาด(1) → ปิด(2 ล่างสุด)
+    const rank = (p: ProductAdminRow) => !p.active ? 2 : (discSizes(p.name).length > 0 ? 1 : 0);
     return [...m.entries()]
       .sort((a, b) => (a[0] === "" ? -1 : b[0] === "" ? 1 : grank(a[0]) - grank(b[0]) || a[0].localeCompare(b[0])))
-      .map(([grade, rows]) => ({ grade, rows: rows.sort((x, y) => bottom(x) - bottom(y) || x.name.localeCompare(y.name, "en")) }));
+      .map(([grade, rows]) => ({ grade, rows: rows.sort((x, y) => rank(x) - rank(y) || x.name.localeCompare(y.name, "en")) }));
   }, [filtered, discontinued]);
 
   const counts = useMemo(() => {
