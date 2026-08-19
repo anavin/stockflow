@@ -165,7 +165,12 @@ async function resolveDbConfig(): Promise<{ connectionString?: string; ssl: any;
   } catch {
     /* not running on Workers / no Hyperdrive binding — fall through */
   }
-  return { connectionString: process.env.DATABASE_URL, ssl: pgSsl(), options: `-c search_path=${APP_KEY},public` };
+  // Transaction pooler (Supabase :6543) ไม่รองรับ startup param `options` → ข้าม search_path option
+  //   (prod ตารางอยู่ public + default search_path ครอบ public อยู่แล้ว จึงไม่ต้องตั้ง) ·
+  //   Session pooler / direct ยังตั้ง search_path ตามปกติ
+  const url = process.env.DATABASE_URL || "";
+  const isTxPooler = /pooler\.supabase\.com:6543/.test(url);
+  return { connectionString: url, ssl: pgSsl(), ...(isTxPooler ? {} : { options: `-c search_path=${APP_KEY},public` }) };
 }
 
 // On Vercel/Node a persistent Pool is the fast, correct choice — connections are
