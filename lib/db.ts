@@ -180,11 +180,13 @@ async function getPool(): Promise<any> {
     types.setTypeParser(20, (v: string | null) => (v == null ? null : parseInt(v, 10))); // bigint→number
     types.setTypeParser(1082, (v: string | null) => v); // date→string
     const cfg = await resolveDbConfig();
+    // Vercel serverless เปิดหลาย instance แต่ละตัวมี Pool ของตัวเอง → รวมกันต้องไม่เกิน
+    // Supabase Session pooler (ฟรี = pool_size 15) · max เล็ก + คืน idle เร็ว กัน EMAXCONNSESSION
     gp._pgPool = new Pool({
       connectionString: cfg.connectionString,
       ssl: cfg.ssl,
-      max: 10,
-      idleTimeoutMillis: 30_000,
+      max: Number(process.env.PG_POOL_MAX || 3),
+      idleTimeoutMillis: 10_000,
       connectionTimeoutMillis: 10_000,
       keepAlive: true,
       ...(cfg.options ? { options: cfg.options } : {}),
