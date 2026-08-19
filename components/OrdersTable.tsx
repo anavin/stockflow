@@ -116,7 +116,7 @@ export default function OrdersTable({ orders }: { orders: OrderRow[] }) {
                 </th>
                 <th className="px-4 py-3">เลขที่ใบเบิก</th>
                 <th className="px-4 py-3">Order No.</th>
-                <th className="px-4 py-3">วันที่</th>
+                <th className="whitespace-nowrap px-4 py-3">วันที่</th>
                 <th className="px-4 py-3">ผู้รับ</th>
                 <th className="px-4 py-3">จังหวัด</th>
                 <th className="px-4 py-3">สถานะ</th>
@@ -141,7 +141,7 @@ export default function OrdersTable({ orders }: { orders: OrderRow[] }) {
                     </td>
                     <td className="px-4 py-3 font-mono text-xs font-medium text-ink">{o.doc_no || "—"}</td>
                     <td className="px-4 py-3 font-mono text-xs">{o.order_no}</td>
-                    <td className="px-4 py-3 text-muted">{o.doc_date || "—"}</td>
+                    <td className="whitespace-nowrap px-4 py-3 text-xs text-muted">{o.doc_date || "—"}</td>
                     <td className="px-4 py-3">
                       <span className="align-middle">{o.receiver || o.username || "—"}</span>
                       {isExpress && <span className="ml-1.5 inline-flex items-center gap-0.5 rounded-full border border-red-200 bg-red-50 px-2 py-0.5 align-middle text-[10px] font-semibold text-red-700"><Zap size={10} /> ส่งด่วน</span>}

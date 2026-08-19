@@ -4,7 +4,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { createProduct, setProductActive, setProductType, bulkSetProductTypes, addScentBarcode, deleteScentBarcode, setDiscontinued, deleteProduct } from "@/lib/actions/products";
 import type { ProductAdminRow, ScentBarcode } from "@/lib/queries";
 import { PERFUME_TYPES } from "@/lib/types";
-import { Plus, Check, X, Search, CheckCircle2, Ban, Trash2, ChevronDown, ChevronRight, ArrowLeftRight } from "lucide-react";
+import { Plus, Check, X, Search, CheckCircle2, Ban, Trash2, ChevronDown, ChevronRight } from "lucide-react";
 
 type Filter = "all" | "untyped" | "discontinued";
 const normKey = (s: string) => (s || "").toLowerCase().replace(/[^a-z0-9ก-๙]/g, "");
@@ -35,7 +35,6 @@ export default function ProductsManager({
   const [error, setError] = useState("");
   const [bulkType, setBulkType] = useState("");
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());   // กลุ่มเกรดที่พับ (default กาง)
-  const [moveId, setMoveId] = useState<number | null>(null);            // เปิด dropdown "ย้ายเกรด" ของแถวไหน (ในกลุ่มเกรด)
   // เพิ่มบาร์โค้ดเองต่อกลิ่น
   const [addId, setAddId] = useState<number | null>(null);
   const [aSize, setASize] = useState("");
@@ -100,7 +99,7 @@ export default function ProductsManager({
     setMsg(`เพิ่มกลิ่น "${nm}" แล้ว${noFda(nm) ? " · ⚠ ยังไม่มีในทะเบียน อย. (ควรจดแจ้ง/ตรวจชื่อให้ตรง)" : ""}`);
     setName(""); setPtype(""); router.refresh();
   }
-  async function changeType(id: number, v: string) { const res = await setProductType(id, v); if (!res.ok) { alert(res.error); return; } setMoveId(null); router.refresh(); }
+  async function changeType(id: number, v: string) { const res = await setProductType(id, v); if (!res.ok) { alert(res.error); return; } router.refresh(); }
   async function toggle(p: ProductAdminRow) { const res = await setProductActive(p.id, !p.active); if (!res.ok) { alert(res.error); return; } router.refresh(); }
   async function del(p: ProductAdminRow) {
     if (p.used > 0) { alert(`กลิ่นนี้มีในใบเบิก ${p.used.toLocaleString()} รายการ — ปิดการใช้งานแทน (ลบไม่ได้ กันประวัติเสีย)`); return; }
@@ -205,44 +204,43 @@ export default function ProductsManager({
                     const barcodes = sizesFor(p.name).slice().sort((a, b) => sizeMl(a.size) - sizeMl(b.size));
                     return (
                       <div key={p.id} id={`prod-${p.id}`} className={`border-t border-line px-4 py-3 lg:odd:border-r ${!p.active ? "bg-soft/40" : ""} ${addId === p.id ? "bg-brand-50/40" : ""}`}>
-                        <div className="flex flex-wrap items-start gap-x-3 gap-y-2">
-                          {/* ชื่อกลิ่น (อ่านอย่างเดียว) + เตือนถ้าไม่มีใน อย. */}
-                          <span className="flex min-w-[150px] flex-wrap items-center gap-1.5">
-                            <span className={p.active ? "font-medium text-ink" : "text-muted line-through"}>{p.name}</span>
-                            {noFda(p.name) && <span className="chip-warn" title="ยังไม่มีในทะเบียน อย. — ควรจดแจ้ง/ตรวจชื่อให้ตรง">⚠ ไม่มีใน อย.</span>}
-                          </span>
-
-                          {/* เกรด — กลุ่มยังไม่ระบุ: dropdown เด่นเสมอ · กลุ่มเกรด: โชว์เฉพาะตอนกด "ย้ายเกรด" (เกรดบอกด้วยกลุ่มอยู่แล้ว) */}
-                          {(untyped || moveId === p.id) && (
-                            <select value={p.ptype ?? ""} onChange={(e) => changeType(p.id, e.target.value)} title="เกรดน้ำหอม (เปลี่ยนแล้วย้ายกลุ่ม)" autoFocus={moveId === p.id}
-                              className={untyped ? "input h-8 w-32 border-amber-400 py-0 text-xs font-semibold text-amber-700" : "input h-8 w-24 py-0 text-xs"}>
-                              <option value="">{untyped ? "เลือกเกรด…" : "— (ล้างเกรด)"}</option>
+                        {/* หัวการ์ด: ชื่อ (อ่านอย่างเดียว) + เตือน อย. + เกรด (เฉพาะกลุ่มยังไม่ระบุ) */}
+                        <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                          <span className={p.active ? "font-medium text-ink" : "text-muted line-through"}>{p.name}</span>
+                          {noFda(p.name) && <span className="chip-warn" title="ยังไม่มีในทะเบียน อย. — ควรจดแจ้ง/ตรวจชื่อให้ตรง">⚠ ไม่มีใน อย.</span>}
+                          {untyped && (
+                            <select value={p.ptype ?? ""} onChange={(e) => changeType(p.id, e.target.value)} title="เลือกเกรดน้ำหอม (เลือกแล้วย้ายเข้ากลุ่ม)"
+                              className="input h-8 w-32 border-amber-400 py-0 text-xs font-semibold text-amber-700">
+                              <option value="">เลือกเกรด…</option>
                               {PERFUME_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
                               {p.ptype && !(PERFUME_TYPES as readonly string[]).includes(p.ptype) && <option value={p.ptype}>{p.ptype}</option>}
                             </select>
                           )}
+                        </div>
 
-                          {/* บาร์โค้ดต่อขนาด — เรียงแนวตั้ง (บน→ล่าง ตามขนาด) */}
-                          <div className="flex flex-col items-start gap-1">
-                            {barcodes.length === 0 && addId !== p.id && discSizes(p.name).length === 0 && <span className="text-xs text-faint">— ยังไม่มีบาร์โค้ด</span>}
-                            {barcodes.map((s) => {
-                              const disc = isDisc(p.name, s.size);
-                              return (
-                                <div key={s.id} className={`flex items-center gap-2 rounded-lg border px-2.5 py-1 ${disc ? "border-red-200 bg-red-50/60" : "border-line bg-white"}`}>
-                                  <span className={`text-xs font-semibold ${disc ? "text-red-600 line-through" : "text-ink"}`}>{s.size.replace(/\.$/, "")}</span>
-                                  <span className="font-mono text-xs text-muted">{s.barcode}</span>
-                                  {s.sku && <span className="text-[11px] text-faint">{s.sku}</span>}
-                                  <button onClick={() => toggleDisc(p.name, s.size, !disc)} title={disc ? "ยกเลิก 'เลิกผลิต'" : "ทำเครื่องหมายเลิกผลิต"} className={disc ? "text-red-600" : "text-faint hover:text-red-500"}><Ban size={12} /></button>
-                                  <button onClick={() => delBarcode(s.id)} className="text-faint hover:text-red-500" title="ลบบาร์โค้ดนี้"><X size={12} /></button>
-                                </div>
-                              );
-                            })}
-                            {discSizes(p.name).filter((dk) => !barcodes.some((s) => normKey(s.size) === dk)).sort((a, b) => sizeMl(a) - sizeMl(b)).map((dk) => (
-                              <span key={"d" + dk} className="inline-flex items-center gap-1 rounded-lg border border-red-200 bg-red-50/60 px-2.5 py-1 text-xs font-medium text-red-600">
-                                <span className="line-through">{dk.replace(/ml$/, " ml")}</span> เลิกผลิต
-                                <button onClick={() => toggleDisc(p.name, dk.replace(/ml$/, " ml"), false)} title="ยกเลิก 'เลิกผลิต'" className="hover:text-red-800"><X size={11} /></button>
-                              </span>
-                            ))}
+                        {/* บาร์โค้ดต่อขนาด — แนวตั้ง กล่องกว้างเท่ากัน (บน→ล่าง ตามขนาด) */}
+                        <div className="mt-2 flex flex-col items-start gap-1">
+                          {barcodes.length === 0 && addId !== p.id && discSizes(p.name).length === 0 && <span className="text-xs text-faint">— ยังไม่มีบาร์โค้ด</span>}
+                          {barcodes.map((s) => {
+                            const disc = isDisc(p.name, s.size);
+                            return (
+                              <div key={s.id} className={`flex w-full max-w-[20rem] items-center gap-2 rounded-lg border px-2.5 py-1 ${disc ? "border-red-200 bg-red-50/60" : "border-line bg-white"}`}>
+                                <span className={`w-14 shrink-0 text-xs font-semibold ${disc ? "text-red-600 line-through" : "text-ink"}`}>{s.size.replace(/\.$/, "")}</span>
+                                <span className="min-w-0 flex-1 truncate font-mono text-xs text-muted">{s.barcode}</span>
+                                {s.sku && <span className="shrink-0 text-[11px] text-faint">{s.sku}</span>}
+                                <button onClick={() => toggleDisc(p.name, s.size, !disc)} title={disc ? "ยกเลิก 'เลิกผลิต'" : "ทำเครื่องหมายเลิกผลิต"} className={disc ? "shrink-0 text-red-600" : "shrink-0 text-faint hover:text-red-500"}><Ban size={12} /></button>
+                                <button onClick={() => delBarcode(s.id)} className="shrink-0 text-faint hover:text-red-500" title="ลบบาร์โค้ดนี้"><X size={12} /></button>
+                              </div>
+                            );
+                          })}
+                          {discSizes(p.name).filter((dk) => !barcodes.some((s) => normKey(s.size) === dk)).sort((a, b) => sizeMl(a) - sizeMl(b)).map((dk) => (
+                            <span key={"d" + dk} className="flex w-full max-w-[20rem] items-center gap-1 rounded-lg border border-red-200 bg-red-50/60 px-2.5 py-1 text-xs font-medium text-red-600">
+                              <span className="w-14 shrink-0 line-through">{dk.replace(/ml$/, " ml")}</span> เลิกผลิต
+                              <button onClick={() => toggleDisc(p.name, dk.replace(/ml$/, " ml"), false)} title="ยกเลิก 'เลิกผลิต'" className="ml-auto shrink-0 hover:text-red-800"><X size={11} /></button>
+                            </span>
+                          ))}
+                          {/* ควบคุม: เลิกผลิตขนาด + เพิ่มบาร์โค้ด */}
+                          <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
                             {sizes.filter((sz) => !isDisc(p.name, sz)).length > 0 && (
                               <select value="" onChange={(e) => { if (e.target.value) toggleDisc(p.name, e.target.value, true); }} className="h-7 rounded-md border border-line bg-white px-1.5 text-xs text-muted" title="ทำเครื่องหมายเลิกผลิตขนาด">
                                 <option value="">⊘ เลิกผลิต…</option>
@@ -262,14 +260,13 @@ export default function ProductsManager({
                               <button onClick={() => openAdd(p.id)} className="inline-flex items-center gap-1 rounded-md border border-dashed border-brand/40 px-2 py-1 text-xs text-brand-600 hover:bg-brand-50"><Plus size={12} /> บาร์โค้ด</button>
                             )}
                           </div>
+                        </div>
 
-                          {/* ใช้ในใบเบิก + สถานะ + จัดการ (ดันไปขวา) */}
-                          <span className="ml-auto whitespace-nowrap text-xs text-faint" title="จำนวนบรรทัดในใบเบิกที่ใช้กลิ่นนี้ (ลบไม่ได้ถ้า >0)">{p.used > 0 ? `ในใบเบิก ${p.used.toLocaleString()}` : "—"}</span>
-                          <span className={p.active ? "chip-ok" : "chip-muted"}>{p.active ? "ใช้งาน" : "ปิด"}</span>
+                        {/* แถวล่าง: ในใบเบิก (ซ้าย) · สถานะ+เปิด/ปิด+ลบ (ขวา) */}
+                        <div className="mt-2 flex items-center justify-between gap-2">
+                          <span className="whitespace-nowrap text-xs text-faint" title="จำนวนบรรทัดในใบเบิกที่ใช้กลิ่นนี้ (ลบไม่ได้ถ้า >0)">{p.used > 0 ? `ในใบเบิก ${p.used.toLocaleString()}` : "—"}</span>
                           <div className="flex items-center gap-1">
-                            {!untyped && (
-                              <button onClick={() => setMoveId(moveId === p.id ? null : p.id)} className={`rounded-md p-1.5 ${moveId === p.id ? "bg-amber-50 text-amber-700" : "text-faint hover:bg-soft hover:text-ink"}`} title="ย้ายเกรด"><ArrowLeftRight size={14} /></button>
-                            )}
+                            <span className={p.active ? "chip-ok" : "chip-muted"}>{p.active ? "ใช้งาน" : "ปิด"}</span>
                             <button onClick={() => toggle(p)} className="rounded-md px-2 py-1 text-xs text-muted hover:bg-soft" title={p.active ? "ปิดการใช้งาน" : "เปิดใช้งาน"}>{p.active ? "ปิด" : "เปิด"}</button>
                             {isAdmin && (
                               <button onClick={() => del(p)} className={`rounded-md p-1.5 ${p.used > 0 ? "text-faint hover:bg-soft" : "text-red-400 hover:bg-red-50 hover:text-red-600"}`}
