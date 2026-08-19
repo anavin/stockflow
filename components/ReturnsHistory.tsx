@@ -1,13 +1,13 @@
 "use client";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import type { ReturnRow, ReturnStat } from "@/lib/queries";
+import type { ReturnRow, ReturnStat, ReturnCustomerStat } from "@/lib/queries";
 import { reverseReturn } from "@/lib/actions/returns";
-import { RotateCcw, Trash2, Undo2, BarChart3 } from "lucide-react";
+import { RotateCcw, Trash2, Undo2, BarChart3, UserRound } from "lucide-react";
 
 const dt = (s: string) => new Date(s).toLocaleString("th-TH", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" });
 
-export default function ReturnsHistory({ rows, stats, canReverse }: { rows: ReturnRow[]; stats: ReturnStat[]; canReverse: boolean }) {
+export default function ReturnsHistory({ rows, stats, customers = [], canReverse }: { rows: ReturnRow[]; stats: ReturnStat[]; customers?: ReturnCustomerStat[]; canReverse: boolean }) {
   const router = useRouter();
   const [busy, setBusy] = useState(0);
 
@@ -44,6 +44,33 @@ export default function ReturnsHistory({ rows, stats, canReverse }: { rows: Retu
         </div>
       )}
 
+      {/* รายงานลูกค้าที่คืนบ่อย */}
+      {customers.length > 0 && (
+        <div className="overflow-hidden rounded-xl border border-line bg-white">
+          <div className="flex items-center gap-2 border-b border-line px-4 py-3 text-sm font-semibold text-ink"><UserRound size={16} className="text-brand" /> ลูกค้าที่คืนบ่อย (ตามผู้ใช้ Shopee)</div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="bg-soft text-left text-xs text-muted"><tr><th className="px-4 py-2">ผู้ใช้ Shopee</th><th className="px-4 py-2">ผู้รับ</th><th className="px-4 py-2 text-right">จำนวนครั้งที่คืน</th><th className="px-4 py-2 text-right">ชิ้นรวม</th><th className="px-4 py-2 text-right">ชำรุด</th><th className="px-4 py-2 text-right">คืนล่าสุด</th></tr></thead>
+              <tbody>
+                {customers.map((c) => {
+                  const hot = c.times >= 3, warn = c.times === 2;
+                  return (
+                    <tr key={c.username} className="border-t border-line">
+                      <td className="px-4 py-2 font-medium text-ink">{c.username}{hot && <span className="chip-danger ml-1.5">คืนบ่อย</span>}{warn && <span className="chip-warn ml-1.5">เฝ้าดู</span>}</td>
+                      <td className="px-4 py-2 text-xs text-muted">{c.receiver || "-"}</td>
+                      <td className={`px-4 py-2 text-right font-mono font-semibold ${hot ? "text-red-700" : warn ? "text-amber-700" : "text-ink"}`}>{c.times}</td>
+                      <td className="px-4 py-2 text-right font-mono text-muted">{c.qty}</td>
+                      <td className="px-4 py-2 text-right font-mono text-red-700">{c.damaged}</td>
+                      <td className="whitespace-nowrap px-4 py-2 text-right text-xs text-muted">{dt(c.last_at)}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
       {/* ประวัติการคืน */}
       <div className="overflow-hidden rounded-xl border border-line bg-white">
         <div className="flex items-center gap-2 border-b border-line px-4 py-3 text-sm font-semibold text-ink"><Undo2 size={16} className="text-brand" /> ประวัติการคืน ({rows.length})</div>
@@ -51,7 +78,7 @@ export default function ReturnsHistory({ rows, stats, canReverse }: { rows: Retu
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead className="bg-soft text-left text-xs text-muted">
-                <tr><th className="px-4 py-2">เวลา</th><th className="px-4 py-2">Order No.</th><th className="px-4 py-2">รายการ</th><th className="px-4 py-2 text-right">จำนวน</th><th className="px-4 py-2">ปลายทาง</th><th className="px-4 py-2">เหตุผล</th><th className="px-4 py-2">โดย</th>{canReverse && <th className="px-4 py-2"></th>}</tr>
+                <tr><th className="px-4 py-2">เวลา</th><th className="px-4 py-2">Order No.</th><th className="px-4 py-2">ผู้ใช้ Shopee</th><th className="px-4 py-2">รายการ</th><th className="px-4 py-2 text-right">จำนวน</th><th className="px-4 py-2">ปลายทาง</th><th className="px-4 py-2">เหตุผล</th><th className="px-4 py-2">โดย</th>{canReverse && <th className="px-4 py-2"></th>}</tr>
               </thead>
               <tbody>
                 {rows.map((r) => {
@@ -60,6 +87,7 @@ export default function ReturnsHistory({ rows, stats, canReverse }: { rows: Retu
                     <tr key={r.id} className={`border-t border-line ${voided ? "opacity-45" : ""}`}>
                       <td className="whitespace-nowrap px-4 py-2 text-xs text-muted">{dt(r.created_at)}</td>
                       <td className="px-4 py-2 font-mono text-xs text-ink">{r.order_no}</td>
+                      <td className="px-4 py-2 text-xs text-ink">{r.username || "-"}{r.receiver ? <span className="block text-faint">{r.receiver}</span> : null}</td>
                       <td className="px-4 py-2">{r.product} <span className="text-muted">{r.size}</span></td>
                       <td className="px-4 py-2 text-right font-mono">{r.qty}</td>
                       <td className="px-4 py-2">{r.disposition === "restock" ? <span className="chip-ok"><RotateCcw size={11} /> คืนสต๊อก</span> : r.disposition === "damaged" ? <span className="chip-danger"><Trash2 size={11} /> ชำรุด</span> : <span className="chip-muted">∅ ไม่นับ</span>}{voided && <span className="chip-muted ml-1">ยกเลิกแล้ว</span>}</td>

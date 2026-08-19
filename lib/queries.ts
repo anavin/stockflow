@@ -739,7 +739,7 @@ export async function listDamaged(): Promise<DamagedRow[]> {
 }
 
 export type ReturnRow = {
-  id: number; order_no: string; product: string; size: string; qty: number;
+  id: number; order_no: string; username: string | null; receiver: string | null; product: string; size: string; qty: number;
   disposition: string; reason: string | null; note: string | null; voided_at: string | null;
   created_at: string; by_name: string | null;
 };
@@ -747,10 +747,29 @@ export type ReturnRow = {
 export async function listReturns(limit = 200): Promise<ReturnRow[]> {
   try {
     return await q<ReturnRow>(
-      `select r.id, r.order_no, r.product, r.size, r.qty::float8 as qty, r.disposition, r.reason, r.note, r.voided_at,
+      `select r.id, r.order_no, o.username, o.receiver, r.product, r.size, r.qty::float8 as qty, r.disposition, r.reason, r.note, r.voided_at,
               r.created_at, u.full_name as by_name
-       from order_returns r left join users u on u.id = r.created_by
+       from order_returns r
+       left join users u on u.id = r.created_by
+       left join orders o on o.order_no = r.order_no
        order by r.created_at desc limit $1`, [limit]);
+  } catch { return []; }
+}
+
+export type ReturnCustomerStat = { username: string; receiver: string | null; times: number; qty: number; damaged: number; last_at: string };
+/** รายงานลูกค้าที่คืนบ่อย — นับจำนวนครั้ง (ออเดอร์ที่มีการคืน) ต่อผู้ใช้ Shopee */
+export async function returnStatsByCustomer(): Promise<ReturnCustomerStat[]> {
+  try {
+    return await q<ReturnCustomerStat>(
+      `select coalesce(nullif(btrim(o.username), ''), '(ไม่ระบุผู้ใช้)') as username,
+              max(o.receiver) as receiver,
+              count(distinct r.order_no)::int as times,
+              sum(r.qty)::float8 as qty,
+              sum(case when r.disposition='damaged' then r.qty else 0 end)::float8 as damaged,
+              max(r.created_at) as last_at
+       from order_returns r left join orders o on o.order_no = r.order_no
+       where r.voided_at is null
+       group by 1 order by times desc, qty desc limit 50`);
   } catch { return []; }
 }
 
