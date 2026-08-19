@@ -64,8 +64,8 @@ export async function lookupOrderForReturn(orderNo: string): Promise<ReturnLooku
 }
 
 // ── ยืนยันรับคืน ──────────────────────────────────────────────────────────
-export type ReturnEntry = { line_no: number; qty: number; disposition: "restock" | "damaged" };
-export type ReturnResult = { ok: boolean; error?: string; order_no?: string; restocked?: number; damaged?: number };
+export type ReturnEntry = { line_no: number; qty: number; disposition: "restock" | "damaged" | "none" };
+export type ReturnResult = { ok: boolean; error?: string; order_no?: string; restocked?: number; damaged?: number; skipped?: number };
 
 export async function confirmReturn(orderNo: string, entries: ReturnEntry[], reason?: string, note?: string): Promise<ReturnResult> {
   const user = await getCurrentUser();
@@ -91,7 +91,7 @@ export async function confirmReturn(orderNo: string, entries: ReturnEntry[], rea
         `select line_no, coalesce(sum(qty),0)::float8 as qty from order_returns where order_no = $1 and voided_at is null group by line_no`, [on]);
       const retMap = new Map(ret.map((r) => [r.line_no, Number(r.qty)]));
 
-      let restocked = 0, damaged = 0;
+      let restocked = 0, damaged = 0, skipped = 0;
       const n = (note || "").trim() || null, rsn = (reason || "").trim() || null;
       for (const e of picked) {
         const it = itemMap.get(e.line_no);
@@ -113,7 +113,7 @@ export async function confirmReturn(orderNo: string, entries: ReturnEntry[], rea
           await run(`insert into stock_moves (product, size, qty_change, balance, reason, order_no, note, created_by)
                      values ($1,$2,$3,$4,'return',$5,$6,$7)`, [sku.product, sku.size, qty, row.qty, on, n, user.id]);
           restocked += qty;
-        } else {
+        } else if (e.disposition === "damaged") {
           const sku = await matchStockSku(run, it.product, it.size || "");
           const [row] = await run<{ qty: number }>(
             `insert into damaged (product, size, qty, updated_at) values ($1,$2,$3,now())
@@ -122,6 +122,9 @@ export async function confirmReturn(orderNo: string, entries: ReturnEntry[], rea
           await run(`insert into damaged_moves (product, size, qty_change, balance, reason, ref, note, created_by)
                      values ($1,$2,$3,$4,'return',$5,$6,$7)`, [sku.product, sku.size, qty, row.qty, on, n, user.id]);
           damaged += qty;
+        } else {
+          // "none" (ไม่นับ) — ของแถม/รายการที่ไม่นับสต๊อก: บันทึกประวัติการคืนเฉยๆ ไม่แตะสต๊อก/ของชำรุด
+          skipped += qty;
         }
         await run(`insert into order_returns (order_no, line_no, product, size, qty, disposition, reason, note, created_by)
                    values ($1,$2,$3,$4,$5,$6,$7,$8,$9)`, [on, e.line_no, it.product, it.size || "", qty, e.disposition, rsn, n, user.id]);
@@ -133,9 +136,9 @@ export async function confirmReturn(orderNo: string, entries: ReturnEntry[], rea
                 coalesce((select sum(qty) from order_returns where order_no=$1 and voided_at is null),0)::float8 as returned`, [on]);
       const status = Number(tot.returned) <= 0 ? "none" : Number(tot.returned) >= Number(tot.sent) ? "full" : "partial";
       await run(`update orders set returned_at = coalesce(returned_at, now()), return_status = $2 where order_no = $1`, [on, status]);
-      return { ok: true, order_no: on, restocked, damaged };
+      return { ok: true, order_no: on, restocked, damaged, skipped };
     });
-    await logActivity("return", `${on} · คืนสต๊อก ${out.restocked} · ชำรุด ${out.damaged}`);
+    await logActivity("return", `${on} · คืนสต๊อก ${out.restocked} · ชำรุด ${out.damaged}${out.skipped ? ` · ไม่นับ ${out.skipped}` : ""}`);
     revalidatePath("/returns"); revalidatePath("/stock"); revalidatePath("/stock/damaged"); revalidatePath("/shopee"); revalidatePath("/ship/daily");
     return out;
   } catch (e: any) {
@@ -158,21 +161,23 @@ export async function reverseReturn(returnId: number): Promise<{ ok: boolean; er
       orderNo = r.order_no;
       await run(`select 1 from orders where order_no = $1 for update`, [r.order_no]);   // ล็อก order → return_status ไม่เพี้ยนตอนแข่งกับ confirmReturn
       const qty = Number(r.qty);
-      const sku = await matchStockSku(run, r.product, r.size || "");
       if (r.disposition === "restock") {
+        const sku = await matchStockSku(run, r.product, r.size || "");
         const [row] = await run<{ qty: number }>(
           `update stock set qty = qty - $3, updated_at = now() where product=$1 and size=$2 returning qty::float8 as qty`,
           [sku.product, sku.size, qty]);
         // ลง ledger เฉพาะเมื่อแถวเปลี่ยนจริง (กัน balance เพี้ยนถ้าแถวถูกลบไปแล้ว)
         if (row) await run(`insert into stock_moves (product, size, qty_change, balance, reason, order_no, note, created_by)
                    values ($1,$2,$3,$4,'adjust',$5,'ยกเลิกการคืน',$6)`, [sku.product, sku.size, -qty, row.qty, r.order_no, user.id]);
-      } else {
+      } else if (r.disposition === "damaged") {
+        const sku = await matchStockSku(run, r.product, r.size || "");
         const [row] = await run<{ qty: number }>(
           `update damaged set qty = qty - $3, updated_at = now() where product=$1 and size=$2 returning qty::float8 as qty`,
           [sku.product, sku.size, qty]);
         if (row) await run(`insert into damaged_moves (product, size, qty_change, balance, reason, ref, note, created_by)
                    values ($1,$2,$3,$4,'writeoff',$5,'ยกเลิกการคืน',$6)`, [sku.product, sku.size, -qty, row.qty, r.order_no, user.id]);
       }
+      // "none" (ไม่นับ) — ไม่มีผลกับสต๊อก/ของชำรุด แค่ void แถวด้านล่าง
       await run(`update order_returns set voided_at = now() where id = $1`, [returnId]);
       // อัปเดตสถานะออเดอร์
       const [tot] = await run<{ sent: number; returned: number }>(

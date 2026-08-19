@@ -62,7 +62,7 @@ export default function ReturnsHistory({ rows, stats, canReverse }: { rows: Retu
                       <td className="px-4 py-2 font-mono text-xs text-ink">{r.order_no}</td>
                       <td className="px-4 py-2">{r.product} <span className="text-muted">{r.size}</span></td>
                       <td className="px-4 py-2 text-right font-mono">{r.qty}</td>
-                      <td className="px-4 py-2">{r.disposition === "restock" ? <span className="chip-ok"><RotateCcw size={11} /> คืนสต๊อก</span> : <span className="chip-danger"><Trash2 size={11} /> ชำรุด</span>}{voided && <span className="chip-muted ml-1">ยกเลิกแล้ว</span>}</td>
+                      <td className="px-4 py-2">{r.disposition === "restock" ? <span className="chip-ok"><RotateCcw size={11} /> คืนสต๊อก</span> : r.disposition === "damaged" ? <span className="chip-danger"><Trash2 size={11} /> ชำรุด</span> : <span className="chip-muted">∅ ไม่นับ</span>}{voided && <span className="chip-muted ml-1">ยกเลิกแล้ว</span>}</td>
                       <td className="px-4 py-2 text-xs text-muted">{r.reason || "-"}{r.note ? ` · ${r.note}` : ""}</td>
                       <td className="px-4 py-2 text-xs text-muted">{r.by_name || "-"}</td>
                       {canReverse && <td className="px-4 py-2 text-right">{!voided && <button disabled={busy === r.id} onClick={() => undo(r.id)} className="btn-ghost px-2 py-1 text-xs">ยกเลิก</button>}</td>}

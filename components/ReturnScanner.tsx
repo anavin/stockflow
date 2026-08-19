@@ -8,9 +8,9 @@ const CameraScan = dynamic(() => import("./CameraScan"), { ssr: false });
 
 const REASONS = ["ลูกค้าตีกลับ (ไม่รับพัสดุ)", "ลูกค้าเปลี่ยนใจ / ขอคืน", "ส่งผิด / ผิดรายการ", "ชำรุด/เสียหายจากขนส่ง", "อื่นๆ"];
 
-type Disp = "restock" | "damaged";
+type Disp = "restock" | "damaged" | "none";
 type Form = Record<number, { qty: number; disp: Disp }>;
-type Done = { order_no: string; restocked: number; damaged: number; at: number };
+type Done = { order_no: string; restocked: number; damaged: number; skipped: number; at: number };
 
 export default function ReturnScanner() {
   const [value, setValue] = useState("");
@@ -24,12 +24,12 @@ export default function ReturnScanner() {
   const [log, setLog] = useState<Done[]>([]);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // ค่าเริ่มต้นต่อรายการ: คืนเต็มจำนวนที่เหลือ · restock ถ้าคืนเข้าสต๊อกได้ ไม่งั้น damaged
+  // ค่าเริ่มต้นต่อรายการ: คืนเต็มจำนวนที่เหลือ · คืนเข้าสต๊อกได้→restock · ของแถม→ไม่นับ · ที่เหลือ→ชำรุด
   function initForm(items: ReturnItemPreview[], issued: boolean): Form {
     const f: Form = {};
     for (const it of items) {
       const canRestock = it.tracked && issued;
-      f[it.line_no] = { qty: it.remaining, disp: canRestock ? "restock" : "damaged" };
+      f[it.line_no] = { qty: it.remaining, disp: canRestock ? "restock" : it.is_free ? "none" : "damaged" };
     }
     return f;
   }
@@ -49,12 +49,12 @@ export default function ReturnScanner() {
   const setDisp = (line: number, disp: Disp) => setForm((f) => ({ ...f, [line]: { ...f[line], disp } }));
 
   const totals = (() => {
-    let restock = 0, damaged = 0;
+    let restock = 0, damaged = 0, none = 0;
     for (const it of preview?.items || []) {
       const v = form[it.line_no]; if (!v || v.qty <= 0) continue;
-      if (v.disp === "restock") restock += v.qty; else damaged += v.qty;
+      if (v.disp === "restock") restock += v.qty; else if (v.disp === "damaged") damaged += v.qty; else none += v.qty;
     }
-    return { restock, damaged };
+    return { restock, damaged, none };
   })();
 
   async function submit() {
@@ -67,7 +67,7 @@ export default function ReturnScanner() {
     const res = await confirmReturn(preview.order_no, entries, reason, note);
     setBusy(false);
     if (!res.ok) { setErr(res.error || "รับคืนไม่สำเร็จ"); return; }
-    setLog((l) => [{ order_no: res.order_no!, restocked: res.restocked || 0, damaged: res.damaged || 0, at: Date.now() }, ...l]);
+    setLog((l) => [{ order_no: res.order_no!, restocked: res.restocked || 0, damaged: res.damaged || 0, skipped: res.skipped || 0, at: Date.now() }, ...l]);
     setPreview(null); setForm({}); setNote("");
     setTimeout(() => inputRef.current?.focus(), 0);
   }
@@ -105,7 +105,7 @@ export default function ReturnScanner() {
 
             <div className="space-y-2">
               {preview.items!.map((it) => {
-                const v = form[it.line_no] || { qty: 0, disp: "damaged" as Disp };
+                const v = form[it.line_no] || { qty: 0, disp: "none" as Disp };
                 const canRestock = it.tracked && preview.issued;
                 const full = it.remaining <= 0;
                 return (
@@ -129,8 +129,12 @@ export default function ReturnScanner() {
                             title={canRestock ? "" : "คืนเข้าสต๊อกไม่ได้ (ขนาดตัวอย่าง/ยังไม่ตัดสต๊อก)"}
                             className={v.disp === "restock" ? "bg-green-600 px-3 py-1.5 text-white" : `px-3 py-1.5 text-muted ${canRestock ? "hover:bg-soft" : "cursor-not-allowed opacity-40"}`}>✓ คืนสต๊อก</button>
                           <button type="button" onClick={() => setDisp(it.line_no, "damaged")}
-                            className={v.disp === "damaged" ? "bg-red-600 px-3 py-1.5 text-white" : "px-3 py-1.5 text-muted hover:bg-soft"}>⚠ ชำรุด</button>
+                            className={"border-l border-line " + (v.disp === "damaged" ? "bg-red-600 px-3 py-1.5 text-white" : "px-3 py-1.5 text-muted hover:bg-soft")}>⚠ ชำรุด</button>
+                          <button type="button" onClick={() => setDisp(it.line_no, "none")}
+                            title="ไม่นับสต๊อก (ของแถม/ไม่คิดเป็นของชำรุด) — บันทึกประวัติเฉยๆ"
+                            className={"border-l border-line " + (v.disp === "none" ? "bg-slate-500 px-3 py-1.5 text-white" : "px-3 py-1.5 text-muted hover:bg-soft")}>∅ ไม่นับ</button>
                         </div>
+                        {it.is_free && <span className="chip-brand">ของแถม</span>}
                         {v.qty === 0 && <span className="text-xs text-faint">= ไม่คืน (ลูกค้าเก็บไว้)</span>}
                       </div>
                     )}
@@ -148,8 +152,8 @@ export default function ReturnScanner() {
 
             {err && <div className="alert-error mt-3">{err}</div>}
             <div className="mt-3 flex items-center justify-between gap-2">
-              <span className="text-xs text-muted">คืนเข้าสต๊อก <b className="text-green-700">{totals.restock}</b> · ชำรุด <b className="text-red-700">{totals.damaged}</b></span>
-              <button onClick={submit} disabled={busy || (totals.restock + totals.damaged === 0)} className="btn-primary">
+              <span className="text-xs text-muted">คืนเข้าสต๊อก <b className="text-green-700">{totals.restock}</b> · ชำรุด <b className="text-red-700">{totals.damaged}</b>{totals.none > 0 && <> · ไม่นับ <b className="text-slate-600">{totals.none}</b></>}</span>
+              <button onClick={submit} disabled={busy || (totals.restock + totals.damaged + totals.none === 0)} className="btn-primary">
                 <CheckCircle2 size={16} /> {busy ? "กำลังบันทึก…" : "ยืนยันรับคืน"}
               </button>
             </div>
@@ -166,6 +170,7 @@ export default function ReturnScanner() {
             <div className="mt-1 flex gap-2 text-xs">
               {e.restocked > 0 && <span className="chip-ok"><RotateCcw size={12} /> คืนสต๊อก {e.restocked}</span>}
               {e.damaged > 0 && <span className="chip-danger"><Trash2 size={12} /> ชำรุด {e.damaged}</span>}
+              {e.skipped > 0 && <span className="chip-muted">∅ ไม่นับ {e.skipped}</span>}
             </div>
           </div>
         )) : (
