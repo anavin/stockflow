@@ -5,7 +5,7 @@ type Field =
   | "line" | "month_label" | "doc_date" | "doc_no" | "channel" | "order_no"
   | "product" | "size" | "free" | "qty" | "product_label" | "note" | "campaign"
   | "username" | "receiver" | "phone" | "customer_type" | "purchase_count"
-  | "district" | "province" | "postcode" | "address" | "box_scent" | "order_date" | "sku";
+  | "district" | "subdistrict" | "province" | "postcode" | "address" | "box_scent" | "order_date" | "sku";
 
 const norm = (s: string) => s.toString().trim().toLowerCase().replace(/\s+/g, "").replace(/[.]/g, "");
 
@@ -31,6 +31,7 @@ def("phone", "หมายเลขโทรศัพท์", "เบอร์�
 def("customer_type", "ลูกค้าเก่า/ใหม่", "ลูกค้าเก่าใหม่", "ลูกค้า", "customertype");
 def("purchase_count", "ซื้อครั้งที่", "ครั้งที่");
 def("district", "อำเภอ/เขต", "อำเภอ", "เขต", "district");
+def("subdistrict", "ตำบล", "แขวง", "ตำบล/แขวง", "แขวง/ตำบล", "subdistrict", "sub-district", "sub district", "ตําบล");
 def("province", "จังหวัด", "province");
 def("postcode", "postcode", "รหัสไปรษณีย์", "ไปรษณีย์", "zip");
 def("address", "address", "ที่อยู่");
@@ -43,7 +44,7 @@ def("username", "username (buyer)", "buyer username", "ชื่อผู้ใ�
 def("receiver", "recipient", "recipient name", "ชื่อ-นามสกุลผู้รับ", "ผู้รับสินค้า");
 def("phone", "phone number", "recipient phone no.", "เบอร์โทรผู้รับ");
 def("address", "delivery address", "ที่อยู่ในการจัดส่ง", "ที่อยู่จัดส่ง");
-def("district", "city", "town", "เมือง", "เขต/อำเภอ", "ตำบล/แขวง", "อําเภอ / เขต");
+def("district", "city", "town", "เมือง", "เขต/อำเภอ", "อําเภอ / เขต");
 def("province", "state/region", "state / region");
 def("postcode", "zip code", "zipcode");
 def("qty", "quantity");
@@ -118,6 +119,9 @@ function deriveProductSize(title: string, sku: string, variation: string, produc
 /** ตัด prefix "จังหวัด/อำเภอ/เขต" ให้ตรงกับ dropdown ในระบบ */
 const cleanProvince = (s: any) => str(s).replace(/^จังหวัด\s*/, "").replace(/^จ\.\s*/, "").trim();
 const cleanDistrict = (s: any) => str(s).replace(/^(อำเภอ|เขต|อ\.)\s*/, "").trim();
+// แกะ "ตำบล/แขวง" จาก address blob ถ้าไม่มีคอลัมน์ตำบลแยก (ข้อมูล Shopee เก่ามักเก็บรวมในที่อยู่)
+const subFromAddress = (addr: any) => { const m = str(addr).match(/(แขวง|ตำบล)\s*([^\s,]+)/); return m ? m[1] + m[2] : ""; };
+const cleanSub = (r: any) => str(r.subdistrict) || subFromAddress(r.address);
 
 export type ParseResult = {
   orders: OrderWithItems[];
@@ -175,6 +179,7 @@ export function rowsToOrders(rows: Record<string, any>[], products: string[] = [
         customer_type: str(r.customer_type) || null,
         purchase_count: r.purchase_count ? Number(r.purchase_count) : null,
         district: cleanDistrict(r.district) || null,
+        subdistrict: cleanSub(r) || null,
         province: cleanProvince(r.province) || null,
         postcode: str(r.postcode) || null,
         address: str(r.address) || null,
@@ -192,6 +197,7 @@ export function rowsToOrders(rows: Record<string, any>[], products: string[] = [
       fill("phone", str(r.phone));
       fill("province", cleanProvince(r.province));
       fill("district", cleanDistrict(r.district));
+      fill("subdistrict", cleanSub(r));
       fill("postcode", str(r.postcode));
       fill("address", str(r.address));
       fill("customer_type", str(r.customer_type));

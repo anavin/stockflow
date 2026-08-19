@@ -459,4 +459,15 @@ on conflict (category, ref_key) do nothing;
 update products set ptype = null where name = 'ถุงกระดาษ';
 
 
+-- ═══════════════════════════════════════════════════════════════════════
+-- ▼▼▼ Backfill ตำบล/แขวง จาก address (ออเดอร์เก่าที่ import ก่อนแยกคอลัมน์) ▼▼▼
+-- ═══════════════════════════════════════════════════════════════════════
+-- ข้อมูล Shopee เก่าเก็บตำบลรวมใน address (เช่น "…แขวงออเงิน เขตสายไหม…")
+-- ดึง "แขวงX / ตำบลX" ลงคอลัมน์ subdistrict เฉพาะแถวที่ยังว่าง · idempotent
+update orders
+   set subdistrict = (regexp_match(address, '((?:แขวง|ตำบล)\s*[^ ,]+)'))[1]
+ where coalesce(subdistrict, '') = ''
+   and address ~ '(แขวง|ตำบล)';
+
+
 commit;
