@@ -9,7 +9,7 @@ import { Calendar, ChevronLeft, ChevronRight } from "lucide-react";
  * portal with fixed positioning so it's never clipped and cells are big/tappable.
  * ตั้ง quickPick เพื่อโชว์ชิปลัด วันนี้/เมื่อวาน/2 วันก่อน ใต้ช่อง.
  */
-const QUICK = [{ days: 0, label: "วันนี้" }, { days: -1, label: "เมื่อวาน" }, { days: -2, label: "2 วันก่อน" }];
+const QUICK = [{ days: 0, label: "วันนี้" }, { days: -1, label: "เมื่อวาน" }, { days: -2, label: "2 วันก่อน" }, { days: -3, label: "3 วันก่อน" }];
 function offsetISO(n: number): string {
   const d = new Date(); d.setDate(d.getDate() + n);
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
