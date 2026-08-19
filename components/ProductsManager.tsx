@@ -200,11 +200,11 @@ export default function ProductsManager({
                 <span className="text-xs text-muted">· {grp.rows.length} กลิ่น{untyped ? " · ตั้งเกรดให้ครบเพื่อให้สต๊อก/ป้ายทำงาน" : discN > 0 ? <span className="text-red-600"> · เลิกผลิต {discN}</span> : ""}</span>
               </button>
               {open && (
-                <div className="divide-y divide-line">
+                <div className="grid grid-cols-1 lg:grid-cols-2">
                   {grp.rows.map((p) => {
                     const barcodes = sizesFor(p.name).slice().sort((a, b) => sizeMl(a.size) - sizeMl(b.size));
                     return (
-                      <div key={p.id} id={`prod-${p.id}`} className={`px-4 py-3 ${!p.active ? "bg-soft/40" : ""} ${addId === p.id ? "bg-brand-50/40" : ""}`}>
+                      <div key={p.id} id={`prod-${p.id}`} className={`border-t border-line px-4 py-3 lg:odd:border-r ${!p.active ? "bg-soft/40" : ""} ${addId === p.id ? "bg-brand-50/40" : ""}`}>
                         <div className="flex flex-wrap items-start gap-x-3 gap-y-2">
                           {/* ชื่อกลิ่น (อ่านอย่างเดียว) + เตือนถ้าไม่มีใน อย. */}
                           <span className="flex min-w-[150px] flex-wrap items-center gap-1.5">
