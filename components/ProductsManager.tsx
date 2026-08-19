@@ -1,10 +1,10 @@
 "use client";
 import { useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { createProduct, renameProduct, setProductActive, setProductType, bulkSetProductTypes, addScentBarcode, deleteScentBarcode, setDiscontinued, deleteProduct } from "@/lib/actions/products";
+import { createProduct, setProductActive, setProductType, bulkSetProductTypes, addScentBarcode, deleteScentBarcode, setDiscontinued, deleteProduct } from "@/lib/actions/products";
 import type { ProductAdminRow, ScentBarcode } from "@/lib/queries";
 import { PERFUME_TYPES } from "@/lib/types";
-import { Plus, Check, X, Pencil, Search, CheckCircle2, Ban, Trash2, ChevronDown, ChevronRight, ArrowLeftRight } from "lucide-react";
+import { Plus, Check, X, Search, CheckCircle2, Ban, Trash2, ChevronDown, ChevronRight, ArrowLeftRight } from "lucide-react";
 
 type Filter = "all" | "untyped" | "discontinued";
 const normKey = (s: string) => (s || "").toLowerCase().replace(/[^a-z0-9ก-๙]/g, "");
@@ -29,8 +29,6 @@ export default function ProductsManager({
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState("");
   const [error, setError] = useState("");
-  const [editId, setEditId] = useState<number | null>(null);
-  const [editVal, setEditVal] = useState("");
   const [bulkType, setBulkType] = useState("");
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());   // กลุ่มเกรดที่พับ (default กาง)
   const [moveId, setMoveId] = useState<number | null>(null);            // เปิด dropdown "ย้ายเกรด" ของแถวไหน (ในกลุ่มเกรด)
@@ -96,7 +94,6 @@ export default function ProductsManager({
     setMsg(`เพิ่มกลิ่น "${name.trim()}" แล้ว`); setName(""); setPtype(""); router.refresh();
   }
   async function changeType(id: number, v: string) { const res = await setProductType(id, v); if (!res.ok) { alert(res.error); return; } setMoveId(null); router.refresh(); }
-  async function saveRename(id: number) { const res = await renameProduct(id, editVal); if (!res.ok) { alert(res.error); return; } setEditId(null); router.refresh(); }
   async function toggle(p: ProductAdminRow) { const res = await setProductActive(p.id, !p.active); if (!res.ok) { alert(res.error); return; } router.refresh(); }
   async function del(p: ProductAdminRow) {
     if (p.used > 0) { alert(`กลิ่นนี้มีในใบเบิก ${p.used.toLocaleString()} รายการ — ปิดการใช้งานแทน (ลบไม่ได้ กันประวัติเสีย)`); return; }
@@ -201,22 +198,8 @@ export default function ProductsManager({
                     return (
                       <div key={p.id} id={`prod-${p.id}`} className={`px-4 py-3 ${!p.active ? "bg-soft/40" : ""} ${addId === p.id ? "bg-brand-50/40" : ""}`}>
                         <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
-                          {/* ชื่อ + แก้ไข */}
-                          <div className="flex min-w-[150px] items-center gap-1">
-                            {editId === p.id ? (
-                              <>
-                                <input autoFocus className="input h-8 py-0" value={editVal} onChange={(e) => setEditVal(e.target.value)}
-                                  onKeyDown={(e) => { if (e.key === "Enter") saveRename(p.id); if (e.key === "Escape") setEditId(null); }} />
-                                <button onClick={() => saveRename(p.id)} className="rounded-md p-1.5 text-green-600 hover:bg-green-50" title="บันทึก"><Check size={16} /></button>
-                                <button onClick={() => setEditId(null)} className="rounded-md p-1.5 text-muted hover:bg-soft" title="ยกเลิก"><X size={16} /></button>
-                              </>
-                            ) : (
-                              <>
-                                <span className={p.active ? "font-medium text-ink" : "text-muted line-through"}>{p.name}</span>
-                                <button onClick={() => { setEditId(p.id); setEditVal(p.name); }} className="text-faint hover:text-ink" title="แก้ชื่อ"><Pencil size={13} /></button>
-                              </>
-                            )}
-                          </div>
+                          {/* ชื่อกลิ่น (อ่านอย่างเดียว) */}
+                          <span className={`min-w-[150px] ${p.active ? "font-medium text-ink" : "text-muted line-through"}`}>{p.name}</span>
 
                           {/* เกรด — กลุ่มยังไม่ระบุ: dropdown เด่นเสมอ · กลุ่มเกรด: โชว์เฉพาะตอนกด "ย้ายเกรด" (เกรดบอกด้วยกลุ่มอยู่แล้ว) */}
                           {(untyped || moveId === p.id) && (
@@ -293,7 +276,7 @@ export default function ProductsManager({
         })}
       </div>
 
-      <p className="text-xs text-faint">แก้ชื่อมีผลกับใบใหม่ (ใบเก่ายังชื่อเดิม) · เปลี่ยนเกรดแล้วกลิ่นย้ายกลุ่ม · ขนาด+บาร์โค้ดดึงจาก master CTW (เฉพาะกลิ่นชื่อตรง) · ใช้งาน {activeCount} · ทั้งหมด {products.length}</p>
+      <p className="text-xs text-faint">เปลี่ยนเกรดแล้วกลิ่นย้ายกลุ่ม · ขนาด+บาร์โค้ดดึงจาก master CTW (เฉพาะกลิ่นชื่อตรง) · ใช้งาน {activeCount} · ทั้งหมด {products.length}</p>
     </div>
   );
 }
