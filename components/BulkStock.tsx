@@ -10,11 +10,16 @@ import { Plus, Search, FileDown, AlertTriangle, ChevronDown, ChevronRight, Stick
 
 // เรียงกลุ่มตาม Grade: EDP → EDP+ → PARFUM → EDT → อื่นๆ
 const GRADE_ORDER = ["EDP", "EDP+", "PARFUM", "EDT"];
+const normKey = (s: string) => (s || "").toLowerCase().replace(/[^a-z0-9ก-๙]/g, "");
 const gradeRank = (g: string | null) => { const i = GRADE_ORDER.indexOf((g || "").toUpperCase()); return i < 0 ? GRADE_ORDER.length : i; };
 const descOf = (r: BulkRow): ItemDesc => ({ category: "bulk", refKey: bulkRef(r.scent, r.brand), scent: r.scent, brand: r.brand, grade: r.grade, label: r.scent, unit: "ml" });
 
-export default function BulkStock({ rows, canEdit }: { rows: BulkRow[]; canEdit: boolean }) {
+export default function BulkStock({ rows, canEdit, fdaKeys = [] }: { rows: BulkRow[]; canEdit: boolean; fdaKeys?: string[] }) {
   const router = useRouter();
+  const fdaSet = useMemo(() => new Set(fdaKeys), [fdaKeys]);
+  const hasFdaData = fdaKeys.length > 0;                              // มีข้อมูล อย. ให้เทียบไหม
+  const noFda = (n: string) => hasFdaData && !fdaSet.has(normKey(n)); // กลิ่นนี้ยังไม่มีในทะเบียน อย.
+  const noFdaCount = useMemo(() => rows.filter((r) => noFda(r.scent)).length, [rows, fdaSet, hasFdaData]);
   const [search, setSearch] = useState("");
   const [grade, setGrade] = useState("");
   const [lowOnly, setLowOnly] = useState(false);
@@ -77,6 +82,13 @@ export default function BulkStock({ rows, canEdit }: { rows: BulkRow[]; canEdit:
         </form>
       )}
 
+      {noFdaCount > 0 && (
+        <div className="alert-warn flex items-center gap-2">
+          <AlertTriangle size={15} className="shrink-0" />
+          <span>มี <b>{noFdaCount}</b> กลิ่นที่ยังไม่มีในทะเบียน อย. — ควรจดแจ้ง/ตรวจชื่อให้ตรงก่อนบรรจุขาย (ดูป้าย <span className="chip-warn">⚠ ไม่มีใน อย.</span> ท้ายชื่อกลิ่น)</span>
+        </div>
+      )}
+
       <SummaryBar total={rows.length} unit="กลิ่น" lowCount={lowCount} lowOnly={lowOnly} setLowOnly={setLowOnly} onExport={exportCsv}>
         <div className="relative min-w-[180px] flex-1">
           <Search size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-faint" />
@@ -112,6 +124,7 @@ export default function BulkStock({ rows, canEdit }: { rows: BulkRow[]; canEdit:
                     <div key={r.brand + "|" + r.scent} className="group flex items-center justify-between gap-3 px-4 py-2 sm:pl-6">
                       <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-2 gap-y-1">
                         <span className="font-medium text-ink">{r.scent}</span>
+                        {noFda(r.scent) && <span className="chip-warn" title="ยังไม่มีในทะเบียน อย. — ควรจดแจ้ง/ตรวจชื่อให้ตรงก่อนบรรจุขาย">⚠ ไม่มีใน อย.</span>}
                         {grp.oem && <span className="chip bg-purple-50 text-purple-700">{r.brand}</span>}
                         {grp.oem && r.grade && <span className="text-xs text-muted">{r.grade}</span>}
                         <NoteInline row={r} canEdit={canEdit} />

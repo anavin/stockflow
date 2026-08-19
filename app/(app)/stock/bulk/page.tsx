@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { requireStock } from "@/lib/auth/require-user";
 import { can } from "@/lib/auth/roles";
-import { listBulkStock } from "@/lib/queries";
+import { listBulkStock, getFdaScentKeys } from "@/lib/queries";
 import BulkStock from "@/components/BulkStock";
 import { History } from "lucide-react";
 
@@ -9,7 +9,7 @@ export const dynamic = "force-dynamic";
 
 export default async function BulkPage() {
   const me = await requireStock();
-  const rows = await listBulkStock();
+  const [rows, fdaKeys] = await Promise.all([listBulkStock(), getFdaScentKeys()]);
   return (
     <div className="mx-auto max-w-6xl px-4 py-6 md:px-8">
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
@@ -19,7 +19,7 @@ export default async function BulkPage() {
         </div>
         <Link href="/stock/materials/moves?cat=bulk" className="btn-ghost"><History size={16} /> ประวัติ</Link>
       </div>
-      <BulkStock rows={rows} canEdit={can.manageStock(me.role)} />
+      <BulkStock rows={rows} canEdit={can.manageStock(me.role)} fdaKeys={fdaKeys} />
     </div>
   );
 }

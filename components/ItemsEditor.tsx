@@ -110,7 +110,7 @@ export default function ItemsEditor({
     const it = items[i];
     if (isBagProduct(it.product)) { update(i, { is_free: true }); return; }   // ถุงกระดาษ = ฟรีเสมอ (ปลดไม่ได้)
     const patch: Partial<ItemDraft> = { is_free: checked };
-    if (checked && !isAllowedFreeSize(it.size)) patch.size = ""; // ล้างไซต์ใหญ่ที่เป็นของแถมไม่ได้
+    if (checked && !isAllowedFreeSize(it.size, it.product)) patch.size = ""; // ล้างไซต์ใหญ่ที่เป็นของแถมไม่ได้
     update(i, patch);
   }
   // เปลี่ยนกลิ่น → ถ้าเป็นถุงกระดาษ ให้ติ๊กฟรีอัตโนมัติ
@@ -125,7 +125,7 @@ export default function ItemsEditor({
   // (ถ้าติ๊ก Free ไว้แล้ว ไม่ปิด เพื่อให้ยกเลิกได้)
   const freeDisabled = (it: ItemDraft) =>
     isBagProduct(it.product) ||   // ถุงกระดาษ = ฟรีเสมอ (ล็อก ปลดไม่ได้)
-    (!it.is_free && (it.qty > FREE_MAX_QTY || (!!it.size.trim() && !isAllowedFreeSize(it.size))));
+    (!it.is_free && (it.qty > FREE_MAX_QTY || (!!it.size.trim() && !isAllowedFreeSize(it.size, it.product))));
   const freeReason = (it: ItemDraft) =>
     isBagProduct(it.product) ? "ถุงกระดาษเป็นของแถม (ฟรี) เสมอ"
       : it.qty > FREE_MAX_QTY ? "จำนวนเกิน 30 เป็นของแถมไม่ได้"

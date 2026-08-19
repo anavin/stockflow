@@ -36,8 +36,12 @@ export function isStockTracked(size?: string | null): boolean {
 
 /** ของแถม (Free) ให้ได้เฉพาะขนาดเล็กเท่านั้น — ไซต์ใหญ่ห้ามเป็นของแถม */
 export const FREE_ALLOWED_SIZES = ["1.2 ml", "4 ml", "10 ml"];
-export function isAllowedFreeSize(size?: string | null): boolean {
+/** ถุงกระดาษ (ของแถมพิเศษ) = แถมได้เฉพาะ Size S / Size M */
+export const BAG_SIZES = ["Size S", "Size M"];
+export function isBagProduct(product?: string | null): boolean { return /ถุง/.test(product || ""); }
+export function isAllowedFreeSize(size?: string | null, product?: string | null): boolean {
   const t = (size || "").trim();
   if (!t) return true; // ยังไม่เลือกขนาด = ยังไม่ผิด
+  if (isBagProduct(product) && BAG_SIZES.includes(t)) return true; // ถุงกระดาษ แถมได้ Size S/M
   return FREE_ALLOWED_SIZES.includes(t);
 }

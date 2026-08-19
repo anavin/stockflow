@@ -74,9 +74,9 @@ export async function saveOrder(input: OrderInput): Promise<SaveResult> {
   const o = parsed.data;
 
   // ของแถม (Free) ได้เฉพาะขนาดเล็ก — ไซต์ใหญ่ห้ามเป็นของแถม
-  const badFree = o.items.find((it) => it.is_free && !isAllowedFreeSize(it.size));
+  const badFree = o.items.find((it) => it.is_free && !isAllowedFreeSize(it.size, it.product));
   if (badFree) {
-    return { ok: false, error: `ของแถม "${badFree.product}" ขนาด ${badFree.size} ไม่ได้ — ของแถมได้เฉพาะ ${FREE_ALLOWED_SIZES.join(" / ")}` };
+    return { ok: false, error: `ของแถม "${badFree.product}" ขนาด ${badFree.size} ไม่ได้ — ของแถมได้เฉพาะ ${FREE_ALLOWED_SIZES.join(" / ")} (ถุงกระดาษ: Size S / Size M)` };
   }
   // ของแถมจำนวนต้องไม่เกิน 30 (บังคับฝั่ง server ด้วย ไม่ใช่แค่ disable ปุ่มบนฟอร์ม/นำเข้า)
   const bigFree = o.items.find((it) => it.is_free && Number(it.qty) > 30);
