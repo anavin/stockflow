@@ -248,7 +248,7 @@ export async function bulkPurgeOrders(orderNos: string[]): Promise<{ ok: boolean
 export type PastItem = { product: string; size: string | null; is_free: boolean; qty: number };
 export type CustomerSuggestion = {
   username: string | null; receiver: string | null; phone: string | null;
-  province: string | null; district: string | null; postcode: string | null; address: string | null;
+  province: string | null; district: string | null; subdistrict: string | null; postcode: string | null; address: string | null;
   total_orders: number;
   return_count?: number;           // จำนวนออเดอร์ที่ลูกค้ารายนี้เคยส่งคืน (เตือน "คืนบ่อย")
   past_items: PastItem[] | null;   // รายการที่เคยซื้อ (ล่าสุดก่อน) — ใช้ autofill
@@ -267,7 +267,7 @@ export async function searchCustomers(term: string): Promise<CustomerSuggestion[
     or (nullif(o.phone,'') is null and nullif(o.username,'') is not null and x.username = o.username)
   )`;
   const rows = await q<CustomerSuggestion>(
-    `select o.username, o.receiver, o.phone, o.province, o.district, o.postcode, o.address,
+    `select o.username, o.receiver, o.phone, o.province, o.district, o.subdistrict, o.postcode, o.address,
             (select count(distinct x.order_no) from orders x where x.deleted_at is null and ${sameCustomer})::int as total_orders,
             (select json_agg(row_to_json(t)) from (
                select i.product, i.size, i.is_free, max(i.qty)::float8 as qty, max(x.doc_date) d
@@ -280,7 +280,7 @@ export async function searchCustomers(term: string): Promise<CustomerSuggestion[
      where o.deleted_at is null
        and (o.username ilike $1 or o.phone ilike $1 or o.receiver ilike $1
             or exists (select 1 from order_items oi where oi.order_no = o.order_no and oi.product ilike $1))
-     group by o.username, o.receiver, o.phone, o.province, o.district, o.postcode, o.address
+     group by o.username, o.receiver, o.phone, o.province, o.district, o.subdistrict, o.postcode, o.address
      order by max(o.doc_date) desc nulls last
      limit 8`,
     [like],
@@ -322,12 +322,12 @@ export async function lookupPostcode(code: string): Promise<PostcodeHit[]> {
 export type PastOrderItem = { product: string; size: string; is_free: boolean; qty: number };
 export type PastOrder = {
   order_no: string; doc_no: string | null; doc_date: string | null;
-  province: string | null; district: string | null; postcode: string | null; address: string | null;
+  province: string | null; district: string | null; subdistrict: string | null; postcode: string | null; address: string | null;
   items: PastOrderItem[];
 };
 export type CustomerHistory = {
   total_orders: number;
-  profile: { receiver: string | null; phone: string | null; province: string | null; district: string | null; postcode: string | null; address: string | null } | null;
+  profile: { receiver: string | null; phone: string | null; province: string | null; district: string | null; subdistrict: string | null; postcode: string | null; address: string | null } | null;
   orders: PastOrder[];   // ล่าสุดก่อน
 };
 
@@ -358,9 +358,9 @@ export async function customerHistory(
   let excl = "";
   if (exclude) { params.push(exclude); excl = "and o.order_no <> $2"; }
 
-  const rows = await q<{ order_no: string; doc_no: string | null; doc_date: string | null; province: string | null; district: string | null; postcode: string | null; address: string | null; receiver: string | null; phone: string | null }>(
+  const rows = await q<{ order_no: string; doc_no: string | null; doc_date: string | null; province: string | null; district: string | null; subdistrict: string | null; postcode: string | null; address: string | null; receiver: string | null; phone: string | null }>(
     `select o.order_no, o.doc_no, to_char(o.doc_date,'YYYY-MM-DD') as doc_date,
-            o.province, o.district, o.postcode, o.address, o.receiver, o.phone
+            o.province, o.district, o.subdistrict, o.postcode, o.address, o.receiver, o.phone
      from orders o
      where o.deleted_at is null and nullif(o.${key.col},'') = $1 ${excl}
      order by o.doc_date desc nulls last, o.created_at desc`,
@@ -381,13 +381,13 @@ export async function customerHistory(
   }
   const orders: PastOrder[] = top.map((r) => ({
     order_no: r.order_no, doc_no: r.doc_no, doc_date: r.doc_date,
-    province: r.province, district: r.district, postcode: r.postcode, address: r.address,
+    province: r.province, district: r.district, subdistrict: r.subdistrict, postcode: r.postcode, address: r.address,
     items: byOrder.get(r.order_no) ?? [],
   }));
   const p = rows[0];
   return {
     total_orders: rows.length,
-    profile: { receiver: p.receiver, phone: p.phone, province: p.province, district: p.district, postcode: p.postcode, address: p.address },
+    profile: { receiver: p.receiver, phone: p.phone, province: p.province, district: p.district, subdistrict: p.subdistrict, postcode: p.postcode, address: p.address },
     orders,
   };
 }

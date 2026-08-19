@@ -202,10 +202,11 @@ function Panel({ order, copyLabel }: { order: OrderWithItems; copyLabel: string 
       <View style={s.grid}>
         <Field label="ชื่อผู้ใช้" value={order.username} />
         <Field label="ผู้รับ" value={order.receiver} />
-        {/* ซ่อนเบอร์โทรไว้ก่อน: <Field label="เบอร์โทร" value={order.phone} /> */}
+        {/* เบอร์โทร: แสดงเฉพาะเมื่อมีข้อมูล (ไฟล์ Shopee ที่มีคอลัมน์เบอร์ หรือกรอกเอง) */}
+        {order.phone && String(order.phone).trim() ? <Field label="เบอร์โทร" value={order.phone} full /> : null}
         <View style={{ width: "100%", flexDirection: "row" }}>
           <Field label="ลูกค้า" value={order.customer_type} />
-          <Field label="ซื้อครั้งที่" value={order.purchase_count} />
+          <Field label="ซื้อครั้งที่" value={order.purchase_count ?? (order.customer_type === "ลูกค้าใหม่" ? 1 : null)} />
         </View>
         <Field label="ที่อยู่" value={addr} full />
         <Field label="แคมเปญ" value={order.campaign} />

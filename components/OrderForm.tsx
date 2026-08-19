@@ -102,8 +102,11 @@ export default function OrderForm({ products, sizes, provinces, postcodes, initi
     if (itemErrors.length) setItemErrors([]);
   }
 
-  // เลือกลูกค้าเดิม → เติมตัวตน (ชื่อ/เบอร์) + ตั้ง "ลูกค้าเก่า"/นับครั้ง อัตโนมัติ
-  // ส่วนที่อยู่ + รายการสินค้า = ให้ดูจากการ์ดประวัติแล้วกดเติมเอง (กันลอกผิดครั้ง)
+  // ดึง "ตำบล/แขวง" จาก address blob — ข้อมูล Shopee เก่าเก็บตำบลรวมในที่อยู่ ไม่แยกคอลัมน์ (เช่น "…แขวงออเงิน เขตสายไหม…")
+  const subFromAddr = (addr?: string | null) => { const m = (addr || "").match(/(แขวง|ตำบล)\s*([^\s,]+)/); return m ? m[1] + m[2] : ""; };
+
+  // เลือกลูกค้าเดิม → เติมตัวตน (ชื่อ/เบอร์) + ที่อยู่ล่าสุด + ตั้ง "ลูกค้าเก่า"/นับครั้ง อัตโนมัติ
+  // (รายการสินค้ายังให้ดูจากการ์ดประวัติแล้วกดเติมเอง กันลอกผิดล็อต)
   function fillFromCustomer(c: CustomerSuggestion) {
     setDirty(true);
     setF((prev) => ({
@@ -111,6 +114,12 @@ export default function OrderForm({ products, sizes, provinces, postcodes, initi
       receiver: c.receiver ?? prev.receiver,
       phone: c.phone ?? prev.phone,
       username: c.username ?? prev.username,
+      // เติมที่อยู่จากออเดอร์ล่าสุดของลูกค้า (เฉพาะช่องที่มีค่า ไม่ทับด้วยค่าว่าง)
+      province: c.province ?? prev.province,
+      district: c.district ?? prev.district,
+      subdistrict: c.subdistrict || subFromAddr(c.address) || prev.subdistrict,
+      postcode: c.postcode ?? prev.postcode,
+      address: c.address ?? prev.address,
       customer_type: "ลูกค้าเก่า",
       purchase_count: String((c.total_orders || 0) + 1),
     }));
@@ -150,7 +159,7 @@ export default function OrderForm({ products, sizes, provinces, postcodes, initi
   function useHistoryAddress() {
     if (!hist?.profile) return;
     const p = hist.profile;
-    set({ province: p.province ?? "", district: p.district ?? "", postcode: p.postcode ?? "", address: p.address ?? "" });
+    set({ province: p.province ?? "", district: p.district ?? "", subdistrict: p.subdistrict || subFromAddr(p.address), postcode: p.postcode ?? "", address: p.address ?? "" });
   }
 
   // เติมรายการจากออร์เดอร์ครั้งก่อน (ถ้าตารางว่าง = แทนที่, ถ้ามีของแล้ว = ต่อท้าย)
@@ -234,7 +243,8 @@ export default function OrderForm({ products, sizes, provinces, postcodes, initi
     setBusy(true);
     const payload: OrderInput = {
       ...f,
-      purchase_count: f.purchase_count ? Number(f.purchase_count) : null,
+      // ลูกค้าใหม่ = ครั้งที่ 1 เสมอ (ช่องถูก disable โชว์ "1" — state อาจว่าง เลยบังคับ 1 กัน PDF ไม่ขึ้น)
+      purchase_count: f.customer_type === "ลูกค้าใหม่" ? 1 : (f.purchase_count ? Number(f.purchase_count) : null),
       items: items.map((it) => ({
         product: it.product, size: it.size, is_free: it.is_free, qty: it.qty, unit: it.unit, sku: it.sku || null,
       })),
