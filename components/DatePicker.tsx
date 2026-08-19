@@ -4,10 +4,16 @@ import { createPortal } from "react-dom";
 import { Calendar, ChevronLeft, ChevronRight } from "lucide-react";
 
 /**
- * Large custom date picker (Thai months + พ.ศ. year). Value is an ISO
- * "YYYY-MM-DD" string (Gregorian). The popup renders in a portal with fixed
- * positioning so it's never clipped and the calendar cells are big & tappable.
+ * Large custom date picker (Thai months, ค.ศ. year — ให้ตรงกับทั้งแอปที่แสดง
+ * ค.ศ.). Value is an ISO "YYYY-MM-DD" string (Gregorian). The popup renders in a
+ * portal with fixed positioning so it's never clipped and cells are big/tappable.
+ * ตั้ง quickPick เพื่อโชว์ชิปลัด วันนี้/เมื่อวาน/2 วันก่อน ใต้ช่อง.
  */
+const QUICK = [{ days: 0, label: "วันนี้" }, { days: -1, label: "เมื่อวาน" }, { days: -2, label: "2 วันก่อน" }];
+function offsetISO(n: number): string {
+  const d = new Date(); d.setDate(d.getDate() + n);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
 const TH_MONTHS = ["มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน", "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม"];
 const TH_DOW = ["อา", "จ", "อ", "พ", "พฤ", "ศ", "ส"];
 
@@ -31,11 +37,13 @@ export default function DatePicker({
   onChange,
   placeholder = "เลือกวันที่",
   className = "",
+  quickPick = false,
 }: {
   value?: string | null;
   onChange: (v: string) => void;
   placeholder?: string;
   className?: string;
+  quickPick?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
@@ -104,7 +112,7 @@ export default function DatePicker({
         <button type="button" className="rounded-lg p-2 text-muted hover:bg-soft" onClick={() => setView(new Date(y, m - 1, 1))}>
           <ChevronLeft size={18} />
         </button>
-        <div className="text-sm font-semibold text-ink">{TH_MONTHS[m]} {y + 543}</div>
+        <div className="text-sm font-semibold text-ink">{TH_MONTHS[m]} {y}</div>
         <button type="button" className="rounded-lg p-2 text-muted hover:bg-soft" onClick={() => setView(new Date(y, m + 1, 1))}>
           <ChevronRight size={18} />
         </button>
@@ -154,6 +162,20 @@ export default function DatePicker({
         <span className={value ? "text-ink" : "text-faint"}>{fmtDisplay(value) || placeholder}</span>
         <Calendar size={16} className="shrink-0 text-faint" />
       </button>
+      {quickPick && (
+        <div className="mt-1.5 flex flex-wrap gap-1">
+          {QUICK.map((q) => {
+            const iso = offsetISO(q.days);
+            const active = value === iso;
+            return (
+              <button key={q.days} type="button" onClick={() => onChange(iso)}
+                className={`rounded-full px-2.5 py-1 text-xs font-medium transition-colors ${active ? "bg-brand text-white" : "bg-soft text-muted hover:bg-brand-50 hover:text-brand-600"}`}>
+                {q.label}
+              </button>
+            );
+          })}
+        </div>
+      )}
       {mounted && popup ? createPortal(popup, document.body) : null}
     </div>
   );

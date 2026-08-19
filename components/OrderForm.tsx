@@ -400,7 +400,7 @@ export default function OrderForm({ products, sizes, provinces, postcodes, initi
           </div>
           <div>
             <label className="label">วันที่ทำการสั่งซื้อ</label>
-            <DatePicker value={f.order_date} onChange={(v) => set({ order_date: v })} />
+            <DatePicker value={f.order_date} onChange={(v) => set({ order_date: v })} quickPick />
           </div>
           <div className="md:col-span-3">
             <div className="mb-2 flex flex-wrap items-center gap-2">
