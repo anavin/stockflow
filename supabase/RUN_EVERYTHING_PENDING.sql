@@ -509,11 +509,14 @@ on conflict (alias_key) do nothing;
 
 
 -- ═══════════════════════════════════════════════════════════════════════
--- ▼▼▼ เปิดแพลตฟอร์ม Lazada + TikTok (ให้ตาราง platforms มีครบ — กัน FK พังตอน import) ▼▼▼
+-- ▼▼▼ เปิดแพลตฟอร์มที่เหลือ (ให้ตาราง platforms มีครบ — กัน FK พังตอนสร้าง/นำเข้าใบเบิก) ▼▼▼
 -- ═══════════════════════════════════════════════════════════════════════
 insert into platforms (code, name, prefix, sort) values
   ('Lazada', 'Lazada', 'LZ', 2),
-  ('Tiktok', 'TikTok', 'TT', 3)
+  ('Tiktok', 'TikTok', 'TT', 3),
+  ('Line', 'Line', 'LN', 4),
+  ('Website', 'Website', 'WEB', 5),
+  ('Office', 'Office', 'OFF', 6)
 on conflict (code) do nothing;
 
 

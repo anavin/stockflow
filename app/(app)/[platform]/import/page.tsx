@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { resolvePlatform, platformBase } from "@/lib/config";
+import { resolvePlatform, platformBase, canImportPlatform } from "@/lib/config";
 import ImportWizard from "@/components/ImportWizard";
 import { ChevronLeft } from "lucide-react";
 import { requireCreator } from "@/lib/auth/require-user";
@@ -9,6 +9,8 @@ export default async function ImportPage({ params }: { params: Promise<{ platfor
   await requireCreator();
   const pf = resolvePlatform((await params).platform);
   if (!pf) notFound();
+  // แพลตฟอร์มที่ยังไม่มี parser (Line/Website/Office) — ยังไม่เปิดนำเข้า เข้ามาตรง ๆ ให้ 404
+  if (!canImportPlatform(pf.code)) notFound();
   const base = platformBase(pf.code);
   return (
     <div className="mx-auto max-w-6xl px-4 py-6 md:px-8">

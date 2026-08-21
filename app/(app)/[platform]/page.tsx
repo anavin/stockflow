@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { listOrders, getMonths, countOrders } from "@/lib/queries";
-import { resolvePlatform, platformBase } from "@/lib/config";
+import { resolvePlatform, platformBase, canImportPlatform } from "@/lib/config";
 import OrdersTable from "@/components/OrdersTable";
 import ShopeeFilters from "@/components/ShopeeFilters";
 import { PlusCircle, Upload, ChevronLeft, ChevronRight, FileDown, FileBarChart, Trash2 } from "lucide-react";
@@ -63,7 +63,7 @@ export default async function OrdersPage({ params, searchParams }: {
           <a href={reportHref} target="_blank" rel="noopener" className="btn-ghost" title="สรุปกลิ่น×ขนาด ตามตัวกรอง (พิมพ์/PDF)"><FileBarChart size={16} /> สรุป</a>
           <a href={exportHref} className="btn-ghost"><FileDown size={16} /> Export</a>
           <Link href={`${base}/trash`} className="btn-ghost" title="ถังขยะ"><Trash2 size={16} /></Link>
-          <Link href={`${base}/import`} className="btn-ghost"><Upload size={16} /> นำเข้า</Link>
+          {canImportPlatform(pf.code) && <Link href={`${base}/import`} className="btn-ghost"><Upload size={16} /> นำเข้า</Link>}
           <Link href={`${base}/new`} className="btn-primary"><PlusCircle size={16} /> สร้างใบเบิก</Link>
         </div>
       </div>

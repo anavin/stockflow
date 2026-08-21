@@ -9,18 +9,24 @@ export const COMPANY_NAME_EN = "Touch Divergence Co., Ltd.";
 
 export type PlatformCode = "Shopee" | "Lazada" | "Tiktok" | "Line" | "Website" | "Office";
 
-/** Platforms — Shopee is implemented; the rest are scaffolded for later. */
-export const PLATFORMS: { code: PlatformCode; name: string; prefix: string; enabled: boolean }[] = [
-  { code: "Shopee", name: "Shopee", prefix: "SH", enabled: true },
-  { code: "Lazada", name: "Lazada", prefix: "LZ", enabled: true },
-  { code: "Tiktok", name: "TikTok", prefix: "TT", enabled: true },
-  { code: "Line", name: "Line", prefix: "LN", enabled: false },
-  { code: "Website", name: "Website", prefix: "WEB", enabled: false },
-  { code: "Office", name: "Office", prefix: "OFF", enabled: false },
+/**
+ * Platforms — `enabled` = โผล่ในเมนู/สร้างใบเบิกได้; `canImport` = มี parser ไฟล์ export เฉพาะ
+ * (Shopee/Lazada/TikTok มีแล้ว). แพลตฟอร์มที่ยังไม่มี parser (Line/Website/Office) เปิดให้กรอกเอง
+ * แต่ซ่อนปุ่มนำเข้าไว้ก่อน จนกว่าจะได้ไฟล์จริงมาทำ parser (กัน parser ผิดอ่านไฟล์ผิดฟอร์แมต).
+ */
+export const PLATFORMS: { code: PlatformCode; name: string; prefix: string; enabled: boolean; canImport: boolean }[] = [
+  { code: "Shopee", name: "Shopee", prefix: "SH", enabled: true, canImport: true },
+  { code: "Lazada", name: "Lazada", prefix: "LZ", enabled: true, canImport: true },
+  { code: "Tiktok", name: "TikTok", prefix: "TT", enabled: true, canImport: true },
+  { code: "Line", name: "Line", prefix: "LN", enabled: true, canImport: false },
+  { code: "Website", name: "Website", prefix: "WEB", enabled: true, canImport: false },
+  { code: "Office", name: "Office", prefix: "OFF", enabled: true, canImport: false },
 ];
 
 export type Platform = (typeof PLATFORMS)[number];
 export const enabledPlatforms = () => PLATFORMS.filter((p) => p.enabled);
+/** แพลตฟอร์มรองรับนำเข้าไฟล์ export หรือไม่ (มี parser เฉพาะ) */
+export const canImportPlatform = (code?: string) => !!PLATFORMS.find((p) => p.code === code)?.canImport;
 /** map พารามิเตอร์ URL (เช่น "shopee"/"lazada") → แพลตฟอร์มที่เปิดใช้ (case-insensitive) หรือ null */
 export function resolvePlatform(param?: string): Platform | null {
   const p = (param || "").toLowerCase();

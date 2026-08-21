@@ -7,6 +7,7 @@ import { rowsToOrders as parseLazada } from "@/lib/import/parse-lazada";
 import { rowsToOrders as parseTiktok } from "@/lib/import/parse-tiktok";
 import { readXlsxRaw } from "@/lib/import/read-xlsx";
 import { getProducts, getScentAliases } from "@/lib/queries";
+import { canImportPlatform } from "@/lib/config";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -21,6 +22,7 @@ export async function POST(req: Request) {
   const file = form.get("file");
   if (!(file instanceof File)) return NextResponse.json({ ok: false, error: "ไม่พบไฟล์" }, { status: 400 });
   const platform = String(form.get("platform") || "Shopee");
+  if (!canImportPlatform(platform)) return NextResponse.json({ ok: false, error: `ยังไม่รองรับนำเข้าไฟล์ของ ${platform} (ยังไม่มีตัวอ่านไฟล์)` }, { status: 400 });
 
   const buf = Buffer.from(await file.arrayBuffer());
   const isCsv = /\.csv$/i.test(file.name);
