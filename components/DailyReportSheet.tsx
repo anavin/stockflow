@@ -7,8 +7,6 @@ import type { DayOrderRow } from "@/lib/queries";
 
 const nf = (n: number) => Math.round(n || 0).toLocaleString("en-US");
 const sizeMl = (s: string) => { const m = (s || "").match(/[\d.]+/); return m ? parseFloat(m[0]) : 9999; }; // เรียงขนาดน้อย→มาก (Size S/M ไปท้าย)
-const thaiDate = (iso: string) =>
-  new Date(iso + "T00:00:00").toLocaleDateString("th-TH", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
 const statusText = (r: DayOrderRow) => (r.shipped ? "ส่งแล้ว" : r.issued ? "ตัดสต๊อกแล้ว" : "รอตัดสต๊อก");
 const returnText = (s: string | null) => (s === "full" ? "คืนแล้ว" : s === "partial" ? "คืนบางส่วน" : "");
 
@@ -16,8 +14,8 @@ const SecTitle = ({ children }: { children: React.ReactNode }) => (
   <div className="text-[11px] font-bold uppercase tracking-wide text-neutral-500 border-b border-black pb-1 mb-2">{children}</div>
 );
 
-export function DailyReportSheet({ date, rows, showDetail = true, generatedAt }: {
-  date: string; rows: DayOrderRow[]; showDetail?: boolean; generatedAt: string;
+export function DailyReportSheet({ rangeLabel, note, rows, showDetail = true, generatedAt }: {
+  rangeLabel: string; note?: string; rows: DayOrderRow[]; showDetail?: boolean; generatedAt: string;
 }) {
   const ready = rows.length > 0;
   const orders = rows.length;
@@ -43,19 +41,20 @@ export function DailyReportSheet({ date, rows, showDetail = true, generatedAt }:
       <div className="flex items-start justify-between gap-6 border-b-2 border-black pb-3 mb-5">
         <div>
           <div className="text-[22px] font-extrabold tracking-tight leading-none">Lab Parfumo</div>
-          <div className="text-[13px] text-neutral-600 mt-1.5">รายงานสรุปประจำวัน · Shopee</div>
+          <div className="text-[13px] text-neutral-600 mt-1.5">รายงานสรุปยอดเบิก · Shopee</div>
+          {note && <div className="text-[12px] text-neutral-500 mt-0.5">{note}</div>}
           {creators.length > 0 && (
             <div className="text-[13px] text-neutral-700 mt-1">ผู้ทำใบเบิก: <span className="font-semibold">{creators.join(" · ")}</span></div>
           )}
         </div>
         <div className="text-right shrink-0">
-          <div className="text-[15px] font-bold leading-tight">{thaiDate(date)}</div>
+          <div className="text-[15px] font-bold leading-tight">{rangeLabel}</div>
           <div className="text-[11px] text-neutral-500 mt-1">ออกรายงานเมื่อ {generatedAt} น.</div>
         </div>
       </div>
 
       {!ready ? (
-        <div className="py-12 text-center text-sm text-neutral-500">ยังไม่มีใบเบิกของวันนี้</div>
+        <div className="py-12 text-center text-sm text-neutral-500">ไม่พบใบเบิกตามที่กรอง</div>
       ) : (
         <>
           {/* ตารางไขว้ กลิ่น × ขนาด (packing list) */}

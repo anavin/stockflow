@@ -369,27 +369,38 @@ export type DayOrderRow = {
   issued: boolean; shipped: boolean; return_status: string | null;
   qty: number; items: DayOrderItem[] | null;
 };
-/** ออเดอร์ + รายการ ของวันหนึ่ง (ตาม order_date ถ้าไม่มีใช้ doc_date) — สำหรับรายงานประจำวัน */
-export async function shopeeDailyRows(date: string, platform = "Shopee"): Promise<DayOrderRow[]> {
+/** ออเดอร์ + รายการ ตามฟิลเตอร์ (เดียวกับหน้า /shopee: เดือน/ช่วงวันที่/สถานะ/ค้นหา) — สำหรับรายงานสรุป */
+export async function shopeeReportRows(opts: { platform?: string; search?: string; month?: string; from?: string; to?: string; issued?: "yes" | "no"; shipped?: "yes" | "no" } = {}): Promise<DayOrderRow[]> {
   try {
+    const where: string[] = ["o.deleted_at is null"];
+    const params: any[] = [];
+    params.push(opts.platform ?? "Shopee"); where.push(`o.platform = $${params.length}`);
+    if (opts.month) { params.push(opts.month); where.push(`o.month_label = $${params.length}`); }
+    if (opts.from) { params.push(opts.from); where.push(`coalesce(o.order_date, o.doc_date) >= $${params.length}`); }
+    if (opts.to) { params.push(opts.to); where.push(`coalesce(o.order_date, o.doc_date) <= $${params.length}`); }
+    if (opts.issued === "yes") where.push(`o.stock_issued_at is not null`);
+    else if (opts.issued === "no") where.push(`o.stock_issued_at is null`);
+    if (opts.shipped === "yes") where.push(`o.shipped_at is not null`);
+    else if (opts.shipped === "no") where.push(`o.shipped_at is null`);
+    if (opts.search) {
+      params.push(`%${opts.search}%`); const p = `$${params.length}`;
+      where.push(`(o.order_no ilike ${p} or o.doc_no ilike ${p} or o.receiver ilike ${p} or o.username ilike ${p} or o.shop_name ilike ${p} or o.province ilike ${p})`);
+    }
     return await q<DayOrderRow>(
       `select o.order_no, o.doc_no, coalesce(o.receiver, o.username) as receiver, o.username, o.province,
               coalesce(nullif(btrim(u.full_name), ''), u.username) as created_by_name,
-              (o.stock_issued_at is not null) as issued,
-              (o.shipped_at is not null) as shipped,
-              o.return_status,
+              (o.stock_issued_at is not null) as issued, (o.shipped_at is not null) as shipped, o.return_status,
               coalesce(sum(i.qty) filter (where coalesce(i.product,'') <> ''), 0)::float8 as qty,
               coalesce(json_agg(json_build_object('product', i.product, 'size', i.size, 'qty', i.qty, 'is_free', i.is_free)
                        order by i.line_no) filter (where coalesce(i.product,'') <> ''), '[]'::json) as items
        from orders o
        left join order_items i on i.order_no = o.order_no
        left join users u on u.id = o.created_by
-       where o.deleted_at is null and o.platform = $2
-         and to_char(coalesce(o.order_date, o.doc_date), 'YYYY-MM-DD') = $1
+       where ${where.join(" and ")}
        group by o.order_no, o.doc_no, o.receiver, o.username, o.province, u.full_name, u.username,
-                o.stock_issued_at, o.shipped_at, o.return_status, o.created_at
-       order by o.doc_no nulls last, o.created_at`,
-      [date, platform],
+                o.stock_issued_at, o.shipped_at, o.return_status, o.doc_date, o.created_at
+       order by o.doc_date desc nulls last, o.created_at desc`,
+      params,
     );
   } catch { return []; }
 }

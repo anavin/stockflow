@@ -2,7 +2,7 @@ import Link from "next/link";
 import { listOrders, getMonths, countOrders } from "@/lib/queries";
 import OrdersTable from "@/components/OrdersTable";
 import ShopeeFilters from "@/components/ShopeeFilters";
-import { PlusCircle, Upload, ChevronLeft, ChevronRight, FileDown } from "lucide-react";
+import { PlusCircle, Upload, ChevronLeft, ChevronRight, FileDown, FileBarChart } from "lucide-react";
 import { requireCreator } from "@/lib/auth/require-user";
 
 export const dynamic = "force-dynamic";
@@ -39,6 +39,7 @@ export default async function ShopeePage({ searchParams }: { searchParams: Promi
   };
   const qs = (p: number) => { const s = buildQs(p > 1 ? { page: String(p) } : {}); return `/shopee${s ? "?" + s : ""}`; };
   const exportHref = (() => { const s = buildQs(); return `/api/export/orders${s ? "?" + s : ""}`; })();
+  const reportHref = (() => { const s = buildQs(); return `/print/daily-report${s ? "?" + s : ""}`; })();
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-6 md:px-8">
@@ -51,6 +52,7 @@ export default async function ShopeePage({ searchParams }: { searchParams: Promi
           </p>
         </div>
         <div className="flex gap-2">
+          <a href={reportHref} target="_blank" rel="noopener" className="btn-ghost" title="สรุปกลิ่น×ขนาด ตามตัวกรอง (พิมพ์/PDF)"><FileBarChart size={16} /> สรุป</a>
           <a href={exportHref} className="btn-ghost"><FileDown size={16} /> Export</a>
           <Link href="/shopee/import" className="btn-ghost"><Upload size={16} /> นำเข้า</Link>
           <Link href="/shopee/new" className="btn-primary"><PlusCircle size={16} /> สร้างใบเบิก</Link>

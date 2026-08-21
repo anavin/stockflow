@@ -28,6 +28,18 @@ export default function ShopeeFilters({ q, month, from, to, issued, shipped, mon
     router.push(`/shopee${s ? "?" + s : ""}`);
   }
 
+  // ── ช่วงวันที่: ปุ่มลัด + กำหนดเอง (เวลาไทย) ──
+  const addDays = (iso: string, n: number) => { const d = new Date(iso + "T00:00:00Z"); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };
+  const today = new Date(Date.now() + 7 * 3600 * 1000).toISOString().slice(0, 10);
+  const presets = [
+    { key: "today", label: "วันนี้", from: today, to: today },
+    { key: "yst", label: "เมื่อวาน", from: addDays(today, -1), to: addDays(today, -1) },
+    { key: "7d", label: "7 วัน", from: addDays(today, -6), to: today },
+    { key: "month", label: "เดือนนี้", from: today.slice(0, 8) + "01", to: today },
+  ];
+  const activePreset = presets.find((p) => p.from === df && p.to === dt)?.key ?? "";
+  const applyRange = (f: string, t: string) => { setDf(f); setDt(t); go({ from: f, to: t, month: "" }); };
+
   const hasFilter = !!(search || month || df || dt || issued || shipped);
 
   return (
@@ -57,14 +69,24 @@ export default function ShopeeFilters({ q, month, from, to, issued, shipped, mon
         <option value="yes">🚚 ส่งแล้ว</option>
       </select>
 
-      {/* ช่วงวันที่ (ตามวันที่ใบเบิก) — เลือกแล้วกรองทันที */}
-      <div className="flex items-center gap-1 rounded-lg border border-line bg-white px-2 py-1">
-        <CalendarDays size={15} className="shrink-0 text-faint" />
-        <input type="date" className="w-[132px] bg-transparent text-sm text-ink outline-none" value={df} max={dt || undefined}
-          onChange={(e) => { setDf(e.target.value); go({ from: e.target.value }); }} title="จากวันที่" />
-        <span className="text-faint">–</span>
-        <input type="date" className="w-[132px] bg-transparent text-sm text-ink outline-none" value={dt} min={df || undefined}
-          onChange={(e) => { setDt(e.target.value); go({ to: e.target.value }); }} title="ถึงวันที่" />
+      {/* ช่วงวันที่ — ปุ่มลัด + กำหนดเอง (ตามวันที่ใบเบิก · เลือกแล้วกรองทันที) */}
+      <div className="flex flex-wrap items-center gap-1.5">
+        <div className="flex items-center overflow-hidden rounded-lg border border-line">
+          {presets.map((p, i) => (
+            <button key={p.key} type="button" onClick={() => applyRange(p.from, p.to)}
+              className={`px-2.5 py-2 text-xs font-medium transition-colors ${i > 0 ? "border-l border-line" : ""} ${activePreset === p.key ? "bg-brand text-white" : "bg-white text-muted hover:bg-soft"}`}>
+              {p.label}
+            </button>
+          ))}
+        </div>
+        <div className={`flex items-center gap-1 rounded-lg border bg-white px-2 py-1 ${(df || dt) && !activePreset ? "border-brand-300 ring-1 ring-brand-100" : "border-line"}`}>
+          <CalendarDays size={15} className="shrink-0 text-faint" />
+          <input type="date" className="w-[130px] bg-transparent text-sm text-ink outline-none" value={df} max={dt || undefined}
+            onChange={(e) => { setDf(e.target.value); go({ from: e.target.value, month: "" }); }} title="จากวันที่" />
+          <span className="text-faint">–</span>
+          <input type="date" className="w-[130px] bg-transparent text-sm text-ink outline-none" value={dt} min={df || undefined}
+            onChange={(e) => { setDt(e.target.value); go({ to: e.target.value, month: "" }); }} title="ถึงวันที่" />
+        </div>
       </div>
 
       <button className="btn-ghost">ค้นหา</button>
