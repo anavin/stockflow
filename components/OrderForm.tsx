@@ -20,6 +20,7 @@ const cleanPhone = (v: string) => v.replace(/[^0-9\-+ ]/g, "");
 const cleanOrderNo = (v: string) => v.replace(/\s+/g, "").toUpperCase();
 
 type Props = {
+  platform?: string;
   products: string[];
   sizes: string[];
   provinces: string[];
@@ -35,15 +36,16 @@ function todayStr() {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
-export default function OrderForm({ products, sizes, provinces, postcodes, initial, productCodes, productTypes, discontinued }: Props) {
+export default function OrderForm({ platform = "Shopee", products, sizes, provinces, postcodes, initial, productCodes, productTypes, discontinued }: Props) {
   const router = useRouter();
+  const base = `/${platform.toLowerCase()}`;   // path ฐานของแพลตฟอร์ม (กลับหน้ารายการ)
   const editing = !!initial;
 
   const [f, setF] = useState({
     order_no: initial?.order_no ?? "",
     doc_no: initial?.doc_no ?? "",
     doc_date: initial?.doc_date ?? todayStr(),
-    channel: initial?.channel ?? "Shopee",
+    channel: initial?.channel ?? platform,
     shop_name: initial?.shop_name ?? "",
     username: initial?.username ?? "",
     receiver: initial?.receiver ?? "",
@@ -243,6 +245,7 @@ export default function OrderForm({ products, sizes, provinces, postcodes, initi
     setBusy(true);
     const payload: OrderInput = {
       ...f,
+      platform: initial?.platform || platform,
       // ลูกค้าใหม่ = ครั้งที่ 1 เสมอ (ช่องถูก disable โชว์ "1" — state อาจว่าง เลยบังคับ 1 กัน PDF ไม่ขึ้น)
       purchase_count: f.customer_type === "ลูกค้าใหม่" ? 1 : (f.purchase_count ? Number(f.purchase_count) : null),
       items: items.map((it) => ({
@@ -262,7 +265,7 @@ export default function OrderForm({ products, sizes, provinces, postcodes, initi
       router.refresh();   // แก้ไข → อยู่หน้าเดิม (รีเฟรชข้อมูลอย่างเดียว ไม่เด้งกลับ)
       setBusy(false);
     } else {
-      setTimeout(() => { router.push("/shopee"); router.refresh(); }, 700);   // สร้างใหม่ → กลับหน้ารายการ
+      setTimeout(() => { router.push(base); router.refresh(); }, 700);   // สร้างใหม่ → กลับหน้ารายการ
     }
   }
 
@@ -437,7 +440,7 @@ export default function OrderForm({ products, sizes, provinces, postcodes, initi
           <Printer size={16} /> บันทึก & พิมพ์
         </button>
         <button className="btn-ghost ml-auto" disabled={busy}
-          onClick={() => { if (!dirty || window.confirm("ยังไม่ได้บันทึก — ต้องการออกจากหน้านี้?")) router.push("/shopee"); }}>ยกเลิก</button>
+          onClick={() => { if (!dirty || window.confirm("ยังไม่ได้บันทึก — ต้องการออกจากหน้านี้?")) router.push(base); }}>ยกเลิก</button>
       </div>
     </div>
   );

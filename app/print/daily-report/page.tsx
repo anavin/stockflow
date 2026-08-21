@@ -1,4 +1,5 @@
 import { requireDashboard } from "@/lib/auth/require-user";
+import { resolvePlatform } from "@/lib/config";
 import { shopeeReportRows } from "@/lib/queries";
 import { DailyReportSheet } from "@/components/DailyReportSheet";
 import PrintNow from "@/components/PrintNow";
@@ -12,7 +13,7 @@ const dOK = (s?: string) => (s || "").match(/^\d{4}-\d{2}-\d{2}$/)?.[0];
 const thaiFull = (iso: string) => new Date(iso + "T00:00:00").toLocaleDateString("th-TH", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
 const thaiShort = (iso: string) => new Date(iso + "T00:00:00").toLocaleDateString("th-TH", { day: "numeric", month: "short", year: "numeric" });
 
-type SP = { q?: string; month?: string; from?: string; to?: string; issued?: string; shipped?: string; date?: string; detail?: string };
+type SP = { platform?: string; q?: string; month?: string; from?: string; to?: string; issued?: string; shipped?: string; date?: string; detail?: string };
 
 export async function generateMetadata({ searchParams }: { searchParams: Promise<SP> }) {
   const sp = await searchParams;
@@ -36,7 +37,8 @@ export default async function ShopeeReportPage({ searchParams }: { searchParams:
   // ไม่ระบุช่วง/เดือนเลย → วันนี้ (กันดึงทั้งหมดโดยไม่ตั้งใจ)
   if (!from && !to && !month) { from = bkkToday(); to = from; }
 
-  const rows = await shopeeReportRows({ search: q, month, from, to, issued: iss, shipped: shp });
+  const platform = resolvePlatform(sp.platform)?.code ?? "Shopee";
+  const rows = await shopeeReportRows({ platform, search: q, month, from, to, issued: iss, shipped: shp });
 
   const rangeLabel = from && to ? (from === to ? thaiFull(from) : `${thaiShort(from)} – ${thaiShort(to)}`)
     : from ? `ตั้งแต่ ${thaiShort(from)}` : to ? `ถึง ${thaiShort(to)}` : month ? `เดือน ${month}` : "ทั้งหมด";
@@ -68,7 +70,7 @@ export default async function ShopeeReportPage({ searchParams }: { searchParams:
 ` }} />
       <div className="mx-auto w-full max-w-[820px] px-4 py-4">
         <div className="mb-4"><PrintNow title={`Shopee-Report-${from || to || month || bkkToday()}`} /></div>
-        <DailyReportSheet rangeLabel={rangeLabel} note={note} rows={rows} showDetail={showDetail} generatedAt={generatedAt} />
+        <DailyReportSheet platform={platform} rangeLabel={rangeLabel} note={note} rows={rows} showDetail={showDetail} generatedAt={generatedAt} />
       </div>
     </div>
   );

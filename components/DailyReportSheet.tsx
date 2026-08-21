@@ -14,8 +14,8 @@ const SecTitle = ({ children }: { children: React.ReactNode }) => (
   <div className="text-[11px] font-bold uppercase tracking-wide text-neutral-500 border-b border-black pb-1 mb-2">{children}</div>
 );
 
-export function DailyReportSheet({ rangeLabel, note, rows, showDetail = true, generatedAt }: {
-  rangeLabel: string; note?: string; rows: DayOrderRow[]; showDetail?: boolean; generatedAt: string;
+export function DailyReportSheet({ platform = "Shopee", rangeLabel, note, rows, showDetail = true, generatedAt }: {
+  platform?: string; rangeLabel: string; note?: string; rows: DayOrderRow[]; showDetail?: boolean; generatedAt: string;
 }) {
   const ready = rows.length > 0;
   const orders = rows.length;
@@ -41,7 +41,7 @@ export function DailyReportSheet({ rangeLabel, note, rows, showDetail = true, ge
       <div className="flex items-start justify-between gap-6 border-b-2 border-black pb-3 mb-5">
         <div>
           <div className="text-[22px] font-extrabold tracking-tight leading-none">Lab Parfumo</div>
-          <div className="text-[13px] text-neutral-600 mt-1.5">รายงานสรุปยอดเบิก · Shopee</div>
+          <div className="text-[13px] text-neutral-600 mt-1.5">รายงานสรุปยอดเบิก · {platform}</div>
           {note && <div className="text-[12px] text-neutral-500 mt-0.5">{note}</div>}
           {creators.length > 0 && (
             <div className="text-[13px] text-neutral-700 mt-1">ผู้ทำใบเบิก: <span className="font-semibold">{creators.join(" · ")}</span></div>

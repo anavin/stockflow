@@ -21,7 +21,8 @@ function StatusChip({ order }: { order: OrderRow }) {
   return <span className="inline-flex flex-wrap items-center gap-1">{base}{retChip}</span>;
 }
 
-export default function OrdersTable({ orders }: { orders: OrderRow[] }) {
+export default function OrdersTable({ orders, platform = "Shopee" }: { orders: OrderRow[]; platform?: string }) {
+  const base = `/${platform.toLowerCase()}`;
   const router = useRouter();
   const [busy, setBusy] = useState<string | null>(null);
   const [sel, setSel] = useState<Set<string>>(new Set());   // Order No. ที่ติ๊กไว้
@@ -77,7 +78,7 @@ export default function OrdersTable({ orders }: { orders: OrderRow[] }) {
       <div className="card flex flex-col items-center gap-3 py-16 text-center">
         <PackageOpen size={40} className="text-faint" />
         <div className="text-sm text-muted">ยังไม่มีใบเบิก — สร้างใหม่หรือ นำเข้าจาก Excel/CSV</div>
-        <Link href="/shopee/new" className="btn-primary">สร้างใบเบิกแรก</Link>
+        <Link href={`${base}/new`} className="btn-primary">สร้างใบเบิกแรก</Link>
       </div>
     );
   }
@@ -158,7 +159,7 @@ export default function OrdersTable({ orders }: { orders: OrderRow[] }) {
                           className="rounded-md p-1.5 text-muted hover:bg-brand-50 hover:text-brand-600" title="พิมพ์">
                           <Printer size={16} />
                         </a>
-                        <Link href={`/shopee/${encodeURIComponent(o.order_no)}`}
+                        <Link href={`${base}/${encodeURIComponent(o.order_no)}`}
                           className="rounded-md p-1.5 text-muted hover:bg-soft hover:text-ink" title="แก้ไข">
                           <Pencil size={16} />
                         </Link>

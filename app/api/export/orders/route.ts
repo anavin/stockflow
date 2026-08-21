@@ -3,6 +3,7 @@ import ExcelJS from "exceljs";
 import { getCurrentUser } from "@/lib/auth/session";
 import { can } from "@/lib/auth/roles";
 import { q } from "@/lib/db";
+import { resolvePlatform } from "@/lib/config";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -21,12 +22,13 @@ export async function GET(req: Request) {
   if (!user) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   if (!can.createOrders(user.role)) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   const url = new URL(req.url);
+  const platform = resolvePlatform(url.searchParams.get("platform") || "")?.code || "Shopee";
   const search = url.searchParams.get("q") || undefined;
   const month = url.searchParams.get("month") || undefined;
   const from = url.searchParams.get("from") || undefined;
   const to = url.searchParams.get("to") || undefined;
 
-  const params: any[] = ["Shopee"];
+  const params: any[] = [platform];
   const where = ["o.deleted_at is null", "o.platform = $1"];
   if (month) { params.push(month); where.push(`o.month_label = $${params.length}`); }
   if (from) { params.push(from); where.push(`o.doc_date >= $${params.length}`); }
@@ -47,7 +49,7 @@ export async function GET(req: Request) {
   );
 
   const wb = new ExcelJS.Workbook();
-  const ws = wb.addWorksheet("Shopee");
+  const ws = wb.addWorksheet(platform);
   ws.columns = [
     { header: "เลขที่ใบเบิก", key: "doc_no", width: 18 },
     { header: "Order No.", key: "order_no", width: 18 },
@@ -82,7 +84,7 @@ export async function GET(req: Request) {
   }
 
   const buf = await wb.xlsx.writeBuffer();
-  const fn = `ใบเบิก-Shopee-${new Date().toISOString().slice(0, 10)}.xlsx`;
+  const fn = `ใบเบิก-${platform}-${new Date().toISOString().slice(0, 10)}.xlsx`;
   return new NextResponse(buf as any, {
     headers: {
       "content-type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",

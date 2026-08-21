@@ -2,7 +2,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
-import { PLATFORMS } from "@/lib/config";
+import { PLATFORMS, enabledPlatforms, platformBase } from "@/lib/config";
 import { can, ROLE_LABELS, roleList } from "@/lib/auth/roles";
 import { Package, PlusCircle, Upload, List, LogOut, Menu, X, Trash2, Users, ScanLine, Boxes, LayoutDashboard, FlaskConical, ScanBarcode, ShieldCheck, Truck, Droplets, Sticker, PackageOpen, History, ScrollText, ClipboardCheck, Undo2, PackageX } from "lucide-react";
 
@@ -25,13 +25,9 @@ export default function Sidebar({ user }: { user: { full_name: string; username:
   const dashNav = can.viewDashboard(role)
     ? [{ href: "/", label: "หน้าหลัก", icon: LayoutDashboard, exact: true }]
     : [];
+  // 1 ลิงก์/แพลตฟอร์มที่เปิดใช้ → หน้ารายการใบเบิก (สร้าง/นำเข้า/ถังขยะ อยู่ในหน้านั้น)
   const orderNav = can.createOrders(role)
-    ? [
-        { href: "/shopee", label: "ใบเบิก Shopee", icon: List, exact: true },
-        { href: "/shopee/new", label: "สร้างใบเบิกใหม่", icon: PlusCircle },
-        { href: "/shopee/import", label: "นำเข้า Excel/CSV", icon: Upload },
-        { href: "/shopee/trash", label: "ถังขยะ", icon: Trash2 },
-      ]
+    ? enabledPlatforms().map((p) => ({ href: platformBase(p.code), label: `ใบเบิก ${p.name}`, icon: List, exact: true }))
     : [];
   // กลุ่ม "สินค้าสำเร็จรูป" — ตัดสต๊อก/จัดส่ง/ดูสต๊อก/SKU
   const finishedNav = [

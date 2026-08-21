@@ -19,6 +19,16 @@ export const PLATFORMS: { code: PlatformCode; name: string; prefix: string; enab
   { code: "Office", name: "Office", prefix: "OFF", enabled: false },
 ];
 
+export type Platform = (typeof PLATFORMS)[number];
+export const enabledPlatforms = () => PLATFORMS.filter((p) => p.enabled);
+/** map พารามิเตอร์ URL (เช่น "shopee"/"lazada") → แพลตฟอร์มที่เปิดใช้ (case-insensitive) หรือ null */
+export function resolvePlatform(param?: string): Platform | null {
+  const p = (param || "").toLowerCase();
+  return PLATFORMS.find((x) => x.enabled && x.code.toLowerCase() === p) ?? null;
+}
+/** path ฐานของแพลตฟอร์ม เช่น "Shopee" → "/shopee" */
+export const platformBase = (code: string) => `/${code.toLowerCase()}`;
+
 export const DEFAULT_UNIT = "ขวด";
 export const CUSTOMER_TYPES = ["ลูกค้าใหม่", "ลูกค้าเก่า"] as const;
 

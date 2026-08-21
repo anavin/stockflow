@@ -3,8 +3,9 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Search, X, CalendarDays } from "lucide-react";
 
-export default function ShopeeFilters({ q, month, from, to, issued, shipped, months }: { q?: string; month?: string; from?: string; to?: string; issued?: string; shipped?: string; months: string[] }) {
+export default function ShopeeFilters({ platform = "Shopee", q, month, from, to, issued, shipped, months }: { platform?: string; q?: string; month?: string; from?: string; to?: string; issued?: string; shipped?: string; months: string[] }) {
   const router = useRouter();
+  const base = `/${platform.toLowerCase()}`;
   const [search, setSearch] = useState(q ?? "");
   const [df, setDf] = useState(from ?? "");   // จากวันที่
   const [dt, setDt] = useState(to ?? "");     // ถึงวันที่
@@ -25,7 +26,7 @@ export default function ShopeeFilters({ q, month, from, to, issued, shipped, mon
     if (vi) sp.set("issued", vi);
     if (vs) sp.set("shipped", vs);
     const s = sp.toString();
-    router.push(`/shopee${s ? "?" + s : ""}`);
+    router.push(`${base}${s ? "?" + s : ""}`);
   }
 
   // ── ช่วงวันที่: ปุ่มลัด + กำหนดเอง (เวลาไทย) ──
@@ -92,7 +93,7 @@ export default function ShopeeFilters({ q, month, from, to, issued, shipped, mon
       <button className="btn-ghost">ค้นหา</button>
       {hasFilter && (
         <button type="button" className="btn-ghost text-muted"
-          onClick={() => { setSearch(""); setDf(""); setDt(""); router.push("/shopee"); }}>
+          onClick={() => { setSearch(""); setDf(""); setDt(""); router.push(base); }}>
           <X size={14} /> ล้างตัวกรอง
         </button>
       )}

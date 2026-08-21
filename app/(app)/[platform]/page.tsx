@@ -1,16 +1,24 @@
 import Link from "next/link";
+import { notFound } from "next/navigation";
 import { listOrders, getMonths, countOrders } from "@/lib/queries";
+import { resolvePlatform, platformBase } from "@/lib/config";
 import OrdersTable from "@/components/OrdersTable";
 import ShopeeFilters from "@/components/ShopeeFilters";
-import { PlusCircle, Upload, ChevronLeft, ChevronRight, FileDown, FileBarChart } from "lucide-react";
+import { PlusCircle, Upload, ChevronLeft, ChevronRight, FileDown, FileBarChart, Trash2 } from "lucide-react";
 import { requireCreator } from "@/lib/auth/require-user";
 
 export const dynamic = "force-dynamic";
 
 const PAGE_SIZE = 50;
 
-export default async function ShopeePage({ searchParams }: { searchParams: Promise<{ q?: string; month?: string; from?: string; to?: string; issued?: string; shipped?: string; page?: string }> }) {
+export default async function OrdersPage({ params, searchParams }: {
+  params: Promise<{ platform: string }>;
+  searchParams: Promise<{ q?: string; month?: string; from?: string; to?: string; issued?: string; shipped?: string; page?: string }>;
+}) {
   await requireCreator();
+  const pf = resolvePlatform((await params).platform);
+  if (!pf) notFound();
+  const base = platformBase(pf.code);
   const { q, month, from, to, issued, shipped, page } = await searchParams;
   const iss = issued === "yes" || issued === "no" ? issued : undefined;
   const shp = shipped === "yes" || shipped === "no" ? shipped : undefined;
@@ -18,9 +26,9 @@ export default async function ShopeePage({ searchParams }: { searchParams: Promi
   const offset = (pageNum - 1) * PAGE_SIZE;
 
   const [orders, months, total] = await Promise.all([
-    listOrders({ platform: "Shopee", search: q, month, from, to, issued: iss, shipped: shp, limit: PAGE_SIZE, offset }),
-    getMonths("Shopee"),
-    countOrders({ platform: "Shopee", search: q, month, from, to, issued: iss, shipped: shp }),
+    listOrders({ platform: pf.code, search: q, month, from, to, issued: iss, shipped: shp, limit: PAGE_SIZE, offset }),
+    getMonths(pf.code),
+    countOrders({ platform: pf.code, search: q, month, from, to, issued: iss, shipped: shp }),
   ]);
 
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
@@ -37,15 +45,15 @@ export default async function ShopeePage({ searchParams }: { searchParams: Promi
     for (const [k, v] of Object.entries(extra ?? {})) if (v) sp.set(k, v);
     return sp.toString();
   };
-  const qs = (p: number) => { const s = buildQs(p > 1 ? { page: String(p) } : {}); return `/shopee${s ? "?" + s : ""}`; };
-  const exportHref = (() => { const s = buildQs(); return `/api/export/orders${s ? "?" + s : ""}`; })();
-  const reportHref = (() => { const s = buildQs(); return `/print/daily-report${s ? "?" + s : ""}`; })();
+  const qs = (p: number) => { const s = buildQs(p > 1 ? { page: String(p) } : {}); return `${base}${s ? "?" + s : ""}`; };
+  const exportHref = (() => { const s = buildQs({ platform: pf.code }); return `/api/export/orders?${s}`; })();
+  const reportHref = (() => { const s = buildQs({ platform: pf.code }); return `/print/daily-report?${s}`; })();
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-6 md:px-8">
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-xl font-bold text-ink">ใบเบิกสินค้า Shopee</h1>
+          <h1 className="text-xl font-bold text-ink">ใบเบิกสินค้า {pf.name}</h1>
           <p className="text-sm text-muted">
             ทั้งหมด {total.toLocaleString()} ออร์เดอร์
             {total > 0 && <span className="text-faint"> · แสดง {rowFrom.toLocaleString()}–{rowTo.toLocaleString()}</span>}
@@ -54,14 +62,15 @@ export default async function ShopeePage({ searchParams }: { searchParams: Promi
         <div className="flex gap-2">
           <a href={reportHref} target="_blank" rel="noopener" className="btn-ghost" title="สรุปกลิ่น×ขนาด ตามตัวกรอง (พิมพ์/PDF)"><FileBarChart size={16} /> สรุป</a>
           <a href={exportHref} className="btn-ghost"><FileDown size={16} /> Export</a>
-          <Link href="/shopee/import" className="btn-ghost"><Upload size={16} /> นำเข้า</Link>
-          <Link href="/shopee/new" className="btn-primary"><PlusCircle size={16} /> สร้างใบเบิก</Link>
+          <Link href={`${base}/trash`} className="btn-ghost" title="ถังขยะ"><Trash2 size={16} /></Link>
+          <Link href={`${base}/import`} className="btn-ghost"><Upload size={16} /> นำเข้า</Link>
+          <Link href={`${base}/new`} className="btn-primary"><PlusCircle size={16} /> สร้างใบเบิก</Link>
         </div>
       </div>
 
-      <ShopeeFilters q={q} month={month} from={from} to={to} issued={iss} shipped={shp} months={months} />
+      <ShopeeFilters platform={pf.code} q={q} month={month} from={from} to={to} issued={iss} shipped={shp} months={months} />
 
-      <OrdersTable orders={orders} />
+      <OrdersTable orders={orders} platform={pf.code} />
 
       {totalPages > 1 && (
         <div className="mt-4 flex items-center justify-between text-sm">

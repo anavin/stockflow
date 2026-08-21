@@ -17,8 +17,9 @@ type Preview = {
   unmatchedItems: number;
 };
 
-export default function ImportWizard() {
+export default function ImportWizard({ platform = "Shopee" }: { platform?: string }) {
   const router = useRouter();
+  const base = `/${platform.toLowerCase()}`;
   const inputRef = useRef<HTMLInputElement>(null);
   const [fileName, setFileName] = useState("");
   const [preview, setPreview] = useState<Preview | null>(null);
@@ -43,6 +44,7 @@ export default function ImportWizard() {
     setBusy(true);
     const fd = new FormData();
     fd.append("file", file);
+    fd.append("platform", platform);
     try {
       const res = await fetch("/api/import", { method: "POST", body: fd });
       const data = await res.json();
@@ -74,7 +76,7 @@ export default function ImportWizard() {
     setBusy(false);
     if (!res.ok) { setError(`${res.error} (บันทึกสำเร็จ ${res.saved} ออร์เดอร์ก่อนหยุด)`); return; }
     setSavedMsg(`นำเข้าสำเร็จ ${res.saved} ออร์เดอร์`);
-    setTimeout(() => { router.push("/shopee"); router.refresh(); }, 900);
+    setTimeout(() => { router.push(base); router.refresh(); }, 900);
   }
 
   return (
@@ -88,7 +90,7 @@ export default function ImportWizard() {
       >
         <UploadCloud size={36} className="text-brand" />
         <div className="text-sm font-medium text-ink">คลิกเพื่อเลือกไฟล์ หรือ ลากไฟล์มาวาง</div>
-        <div className="text-xs text-muted">รองรับไฟล์ Shopee “Order.toship / Orders” (.xlsx, .xls, .csv) — ระบบเดากลิ่น/ขนาดให้อัตโนมัติ</div>
+        <div className="text-xs text-muted">รองรับไฟล์ {platform} (.xlsx, .xls, .csv) — ระบบเดากลิ่น/ขนาดให้อัตโนมัติ</div>
         {fileName && <div className="mt-1 inline-flex items-center gap-1 text-xs text-muted"><FileSpreadsheet size={14} /> {fileName}</div>}
         <input ref={inputRef} type="file" accept=".xlsx,.xls,.csv" className="hidden"
           onChange={(e) => { const f = e.target.files?.[0]; if (f) onFile(f); }} />
@@ -112,9 +114,9 @@ export default function ImportWizard() {
               <div className="flex items-start gap-2">
                 <CheckCircle2 size={16} className="mt-0.5 shrink-0" />
                 <div>
-                  ระบบเดา <b>กลิ่น + ขนาด</b> จากชื่อสินค้า/SKU ของ Shopee ให้อัตโนมัติ และเติมจังหวัด/อำเภอ/ไปรษณีย์แล้ว
+                  ระบบเดา <b>กลิ่น + ขนาด</b> จากชื่อสินค้า/SKU ของ {platform} ให้อัตโนมัติ และเติมจังหวัด/อำเภอ/ไปรษณีย์แล้ว
                   <div className="mt-1 text-xs text-blue-700">
-                    หลังนำเข้า ให้เปิดแต่ละใบเพื่อ<b>เติมชื่อผู้รับ / เบอร์ / ที่อยู่</b> (Shopee ปิดบังไว้)
+                    หลังนำเข้า ให้เปิดแต่ละใบเพื่อ<b>เติมชื่อผู้รับ / เบอร์ / ที่อยู่</b> (หากแพลตฟอร์มปิดบังข้อมูลไว้)
                     {preview.unmatchedItems > 0 && <> และ<b>ตรวจกลิ่น {preview.unmatchedItems} รายการ</b>ที่เดาไม่ตรง (แสดงเป็นชื่อยาวผิดปกติในตารางด้านล่าง)</>}
                   </div>
                 </div>
