@@ -197,7 +197,7 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
             <h2 className="flex items-center gap-2 text-xs font-semibold text-ink"><CalendarCheck size={14} className="text-brand" /> ออร์เดอร์รายวัน · ตัดสต๊อกแล้วกี่ใบ</h2>
             <span className="text-[11px] text-muted">5 วันล่าสุด (ตามวันที่สั่งซื้อ)</span>
           </div>
-          <DailyIssueTable data={daily} />
+          <DailyIssueTable data={daily} base={base} />
         </section>
 
         {/* low stock (ย่อเล็ก) */}
@@ -336,7 +336,7 @@ function StockStat({ label, n, total, tone, href }: { label: string; n: number; 
   return href ? <Link href={href} className="block">{inner}</Link> : inner;
 }
 
-function DailyIssueTable({ data }: { data: { day: string; orders: number; issued: number; pending: number }[] }) {
+function DailyIssueTable({ data, base }: { data: { day: string; orders: number; issued: number; pending: number }[]; base: string }) {
   if (data.length === 0) return <p className="text-sm text-muted">ยังไม่มีข้อมูล</p>;
   const fmt = (d: string) => new Date(d + "T00:00:00").toLocaleDateString("th-TH", { day: "numeric", month: "short" });
   return (
