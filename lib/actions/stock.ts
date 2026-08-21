@@ -126,7 +126,7 @@ export type IssueItemPreview = {
 };
 export type IssueLookup = {
   ok: boolean; error?: string; alreadyIssued?: boolean;
-  order_no?: string; doc_no?: string | null; note?: string | null; items?: IssueItemPreview[];
+  order_no?: string; doc_no?: string | null; platform?: string | null; note?: string | null; items?: IssueItemPreview[];
 };
 
 /** สแกน/กรอก Order No. → ดึงรายการทั้งหมดของใบเบิกมาให้ตรวจ (ยังไม่ตัดสต๊อก). */
@@ -137,11 +137,11 @@ export async function lookupOrderForIssue(orderNo: string): Promise<IssueLookup>
   const on = (orderNo || "").trim();
   if (!on) return { ok: false, error: "กรอก/สแกน Order No." };
 
-  const [order] = await q<{ order_no: string; doc_no: string | null; note: string | null; deleted_at: string | null; stock_issued_at: string | null }>(
-    `select order_no, doc_no, note, deleted_at, stock_issued_at from orders where order_no = $1`, [on]);
+  const [order] = await q<{ order_no: string; doc_no: string | null; platform: string | null; note: string | null; deleted_at: string | null; stock_issued_at: string | null }>(
+    `select order_no, doc_no, platform, note, deleted_at, stock_issued_at from orders where order_no = $1`, [on]);
   if (!order) return { ok: false, error: `ไม่พบใบเบิก Order No. ${on}` };
   if (order.deleted_at) return { ok: false, error: "ใบเบิกนี้อยู่ในถังขยะ" };
-  if (order.stock_issued_at) return { ok: false, alreadyIssued: true, order_no: on, doc_no: order.doc_no, error: "ใบเบิกนี้ตัดสต๊อกไปแล้ว" };
+  if (order.stock_issued_at) return { ok: false, alreadyIssued: true, order_no: on, doc_no: order.doc_no, platform: order.platform, error: "ใบเบิกนี้ตัดสต๊อกไปแล้ว" };
 
   const items = await q<{ line_no: number; product: string; size: string; qty: number; unit: string; is_free: boolean; sku: string | null; spec: string | null; grade: string | null }>(
     `select line_no, product, size, qty::float8 as qty, unit, is_free, sku, spec,
@@ -173,7 +173,7 @@ export async function lookupOrderForIssue(orderNo: string): Promise<IssueLookup>
     const ctw_barcode = (bcMap[it.product.toLowerCase().replace(/[^a-z0-9ก-๙]/g, "")] || []).find((b) => normSize(b.size) === szKey)?.barcode ?? null;
     withStock.push({ ...it, spec, stock: stockByLine.get(it.line_no) ?? 0, tracked: isStockTracked(it.size), is_bag: bag, ctw_barcode });
   }
-  return { ok: true, order_no: on, doc_no: order.doc_no, note: order.note, items: withStock };
+  return { ok: true, order_no: on, doc_no: order.doc_no, platform: order.platform, note: order.note, items: withStock };
 }
 
 /** บันทึก SKU + Spec ที่พนักงานสแกน/กรอก แล้วตัดสต๊อก (ยืนยัน). */

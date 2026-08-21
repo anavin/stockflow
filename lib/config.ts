@@ -40,6 +40,8 @@ export const PLATFORM_COLORS: Record<string, string> = {
 export const platformColor = (code?: string) => PLATFORM_COLORS[code || ""] || "#94a0b1";
 /** สีจาง (tint) สำหรับพื้นป้าย/พื้น active — สี + alpha (hex 8 หลัก) */
 export const platformTint = (code?: string, alpha = "1a") => platformColor(code) + alpha;
+/** ชื่อแสดงผลของแพลตฟอร์มจาก code (เช่น "Tiktok" → "TikTok") */
+export const platformName = (code?: string) => PLATFORMS.find((p) => p.code === code)?.name || code || "";
 /** แพลตฟอร์มรองรับนำเข้าไฟล์ export หรือไม่ (มี parser เฉพาะ) */
 export const canImportPlatform = (code?: string) => !!PLATFORMS.find((p) => p.code === code)?.canImport;
 /** map พารามิเตอร์ URL (เช่น "shopee"/"lazada") → แพลตฟอร์มที่เปิดใช้ (case-insensitive) หรือ null */

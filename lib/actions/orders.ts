@@ -539,7 +539,7 @@ export type ShipResult = {
   already?: boolean;                 // สแกนซ้ำ (ส่งไปแล้ว)
   at?: string | null;                // เวลาที่ส่ง
   issued?: boolean;                  // ตัดสต๊อกแล้วหรือยัง
-  order?: { order_no: string; receiver: string | null; province: string | null; item_count: number };
+  order?: { order_no: string; platform: string | null; receiver: string | null; province: string | null; item_count: number };
 };
 
 /** บันทึกว่าออเดอร์ถูกส่งแล้ว (สแกน Order No.) — กันสแกนซ้ำ, ไม่ทับเวลาเดิม
@@ -550,14 +550,14 @@ export async function markShipped(orderNo: string, dateStr?: string): Promise<Sh
   const code = (orderNo || "").trim();
   if (!code) return { ok: false, error: "ไม่มี Order No." };
   const backdate = /^\d{4}-\d{2}-\d{2}$/.test(dateStr || "");
-  const [o] = await q<{ order_no: string; receiver: string | null; username: string | null; province: string | null; shipped_at: string | null; stock_issued_at: string | null; item_count: number }>(
-    `select o.order_no, o.receiver, o.username, o.province, o.shipped_at, o.stock_issued_at,
+  const [o] = await q<{ order_no: string; platform: string | null; receiver: string | null; username: string | null; province: string | null; shipped_at: string | null; stock_issued_at: string | null; item_count: number }>(
+    `select o.order_no, o.platform, o.receiver, o.username, o.province, o.shipped_at, o.stock_issued_at,
             (select count(*)::int from order_items i where i.order_no = o.order_no) as item_count
      from orders o
      where o.deleted_at is null and upper(btrim(o.order_no)) = upper(btrim($1))
      limit 1`, [code]);
   if (!o) return { ok: false, error: `ไม่พบออเดอร์ ${code}` };
-  const info = { order_no: o.order_no, receiver: o.receiver || o.username, province: o.province, item_count: o.item_count };
+  const info = { order_no: o.order_no, platform: o.platform, receiver: o.receiver || o.username, province: o.province, item_count: o.item_count };
   if (o.shipped_at) return { ok: true, already: true, at: o.shipped_at, issued: !!o.stock_issued_at, order: info };
   // เคลมแบบ atomic — set เฉพาะตอน shipped_at ยัง null → สแกนซ้ำ/แข่งกันรัวๆ อีก request จะได้ 0 แถว
   // (order_no เป็น PK มีแถวเดียว จึงไม่มีทางบันทึกส่งซ้ำ/นับซ้ำ)

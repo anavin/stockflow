@@ -2,11 +2,12 @@
 import { useEffect, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import { lookupOrderForIssue, confirmIssueByOrder, reverseIssue, type IssueResult, type IssueLookup } from "@/lib/actions/stock";
+import { PlatformBadge } from "./PlatformBadge";
 import { ScanLine, CheckCircle2, AlertTriangle, XCircle, Undo2, Camera, PackageCheck, X, Printer, StickyNote, ClipboardList } from "lucide-react";
 
 const CameraScan = dynamic(() => import("./CameraScan"), { ssr: false });
 
-type Entry = { at: string; res: IssueResult; input: string; reversed?: boolean };
+type Entry = { at: string; res: IssueResult; input: string; reversed?: boolean; platform?: string | null };
 
 const now = () => new Date().toLocaleTimeString("th-TH");
 
@@ -39,7 +40,7 @@ export default function StockIssue({ isAdmin, initialOrder, specOptions = [] }: 
     finally { setBusy(false); }
     setValue("");
     if (!res.ok) {
-      setLog((l) => [{ at: now(), res: res as IssueResult, input: on }, ...l].slice(0, 30));
+      setLog((l) => [{ at: now(), res: res as IssueResult, input: on, platform: res.platform }, ...l].slice(0, 30));
       inputRef.current?.focus();
       return;
     }
@@ -60,7 +61,7 @@ export default function StockIssue({ isAdmin, initialOrder, specOptions = [] }: 
     try { res = await confirmIssueByOrder(preview.order_no, entries); }
     catch { res = { ok: false, error: "ตัดสต๊อกไม่สำเร็จ (ระบบขัดข้อง ลองใหม่)" }; }
     finally { setBusy(false); }
-    setLog((l) => [{ at: now(), res, input: preview.order_no! }, ...l].slice(0, 30));
+    setLog((l) => [{ at: now(), res, input: preview.order_no!, platform: preview.platform }, ...l].slice(0, 30));
     setPreview(null); setForm({});
     inputRef.current?.focus();
   }
@@ -101,7 +102,10 @@ export default function StockIssue({ isAdmin, initialOrder, specOptions = [] }: 
         <div className="card p-5">
           <div className="mb-3 flex items-center justify-between gap-2">
             <div>
-              <h3 className="flex items-center gap-2 text-sm font-semibold text-ink"><PackageCheck size={16} className="text-brand" /> ตรวจรายการก่อนตัดสต๊อก</h3>
+              <h3 className="flex items-center gap-2 text-sm font-semibold text-ink">
+                <PackageCheck size={16} className="text-brand" /> ตรวจรายการก่อนตัดสต๊อก
+                <PlatformBadge platform={preview.platform} />
+              </h3>
               <p className="text-xs text-muted">Order No. <span className="font-mono text-ink">{preview.order_no}</span> · {preview.doc_no || "-"} · {preview.items!.length} รายการ</p>
             </div>
             <button onClick={() => { setPreview(null); setForm({}); inputRef.current?.focus(); }} className="btn-ghost shrink-0"><X size={14} /> ยกเลิก</button>
@@ -175,13 +179,13 @@ export default function StockIssue({ isAdmin, initialOrder, specOptions = [] }: 
 }
 
 function ResultCard({ entry, idx, isAdmin, onReverse }: { entry: Entry; idx: number; isAdmin: boolean; onReverse: (o: string, i: number) => void }) {
-  const { res, input, at, reversed } = entry;
+  const { res, input, at, reversed, platform } = entry;
 
   if (!res.ok && res.alreadyIssued) {
     return (
       <div className="card border-amber-200 p-4">
         <div className="flex items-center gap-2 text-sm font-semibold text-amber-700">
-          <AlertTriangle size={16} /> {input} — ตัดสต๊อกไปแล้ว (ไม่ตัดซ้ำ)
+          <AlertTriangle size={16} /> {input} — ตัดสต๊อกไปแล้ว (ไม่ตัดซ้ำ) <PlatformBadge platform={platform} />
         </div>
         <div className="mt-0.5 text-xs text-muted">เลขที่ใบเบิก {res.doc_no || "-"} · {at}</div>
       </div>
@@ -202,7 +206,7 @@ function ResultCard({ entry, idx, isAdmin, onReverse }: { entry: Entry; idx: num
     <div className={`card p-4 ${reversed ? "border-line opacity-70" : hasNeg ? "border-amber-200" : "border-green-200"}`}>
       <div className="flex items-center justify-between">
         <div className={`flex items-center gap-2 text-sm font-semibold ${reversed ? "text-muted" : hasNeg ? "text-amber-700" : "text-green-700"}`}>
-          {reversed ? <Undo2 size={16} /> : <CheckCircle2 size={16} />} {reversed ? "ยกเลิกแล้ว (คืนสต๊อก)" : "ตัดสต๊อกสำเร็จ"} — {res.order_no}
+          {reversed ? <Undo2 size={16} /> : <CheckCircle2 size={16} />} {reversed ? "ยกเลิกแล้ว (คืนสต๊อก)" : "ตัดสต๊อกสำเร็จ"} — {res.order_no} <PlatformBadge platform={platform} />
         </div>
         <div className="flex items-center gap-2">
           <span className="text-xs text-muted">{res.doc_no} · {at}</span>

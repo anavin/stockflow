@@ -349,20 +349,35 @@ export async function shipSummary(platform?: string): Promise<{ shippedToday: nu
   } catch { return { shippedToday: 0, pending: 0 }; }
 }
 
-export type ShipRow = { order_no: string; doc_no: string | null; receiver: string | null; province: string | null; item_count: number; shipped_at: string; shipped_by_name: string | null };
-/** รายการที่ส่งในวันหนึ่ง (default = วันนี้ เวลาไทย) เรียงล่าสุดก่อน */
-export async function listShippedByDay(dateStr?: string): Promise<ShipRow[]> {
+export type ShipRow = { order_no: string; doc_no: string | null; platform: string | null; receiver: string | null; province: string | null; item_count: number; shipped_at: string; shipped_by_name: string | null };
+/** รายการที่ส่งในวันหนึ่ง (default = วันนี้ เวลาไทย) เรียงล่าสุดก่อน · กรองแพลตฟอร์มได้ */
+export async function listShippedByDay(dateStr?: string, platform?: string): Promise<ShipRow[]> {
   try {
     const params: any[] = [];
     let cond = `(o.shipped_at at time zone 'Asia/Bangkok')::date = (now() at time zone 'Asia/Bangkok')::date`;
-    if (dateStr) { params.push(dateStr); cond = `(o.shipped_at at time zone 'Asia/Bangkok')::date = $1::date`; }
+    if (dateStr) { params.push(dateStr); cond = `(o.shipped_at at time zone 'Asia/Bangkok')::date = $${params.length}::date`; }
+    const pc = platform ? (params.push(platform), ` and o.platform = $${params.length}`) : "";
     return await q<ShipRow>(
-      `select o.order_no, o.doc_no, coalesce(o.receiver, o.username) as receiver, o.province,
+      `select o.order_no, o.doc_no, o.platform, coalesce(o.receiver, o.username) as receiver, o.province,
               (select count(*)::int from order_items i where i.order_no = o.order_no) as item_count,
               o.shipped_at, coalesce(nullif(btrim(u.full_name), ''), u.username) as shipped_by_name
        from orders o left join users u on u.id = o.shipped_by
-       where o.deleted_at is null and o.shipped_at is not null and ${cond}
+       where o.deleted_at is null and o.shipped_at is not null and ${cond}${pc}
        order by o.shipped_at desc`, params);
+  } catch { return []; }
+}
+
+export type PlatformCount = { platform: string; count: number };
+/** จำนวนที่ส่งในวันหนึ่ง แยกตามแพลตฟอร์ม (สำหรับแถบสรุป) */
+export async function shippedCountsByPlatform(dateStr?: string): Promise<PlatformCount[]> {
+  try {
+    const params: any[] = [];
+    let cond = `(shipped_at at time zone 'Asia/Bangkok')::date = (now() at time zone 'Asia/Bangkok')::date`;
+    if (dateStr) { params.push(dateStr); cond = `(shipped_at at time zone 'Asia/Bangkok')::date = $1::date`; }
+    return await q<PlatformCount>(
+      `select coalesce(platform,'Shopee') as platform, count(*)::int as count
+       from orders where deleted_at is null and shipped_at is not null and ${cond}
+       group by 1 order by count desc`, params);
   } catch { return []; }
 }
 
@@ -606,8 +621,8 @@ export async function getOrderWithStock(orderNo: string): Promise<(OrderWithItem
   return { ...order, stock_issued_at: meta?.stock_issued_at ?? null, itemsStock };
 }
 
-export type IssuedOrderRow = { order_no: string; doc_no: string | null; receiver: string | null; province: string | null; item_count: number; total_qty: number; stock_issued_at: string; issued_by: string | null };
-export async function listIssuedOrders(opts: { search?: string; limit?: number } = {}): Promise<IssuedOrderRow[]> {
+export type IssuedOrderRow = { order_no: string; doc_no: string | null; platform: string | null; receiver: string | null; province: string | null; item_count: number; total_qty: number; stock_issued_at: string; issued_by: string | null };
+export async function listIssuedOrders(opts: { search?: string; platform?: string; limit?: number } = {}): Promise<IssuedOrderRow[]> {
   const params: any[] = [];
   const where: string[] = ["o.stock_issued_at is not null"];
   if (opts.search) {
@@ -615,16 +630,17 @@ export async function listIssuedOrders(opts: { search?: string; limit?: number }
     const p = `$${params.length}`;
     where.push(`(o.order_no ilike ${p} or o.doc_no ilike ${p} or o.receiver ilike ${p})`);
   }
+  if (opts.platform) { params.push(opts.platform); where.push(`o.platform = $${params.length}`); }
   const limit = Math.min(opts.limit ?? 100, 500);
   return q<IssuedOrderRow>(
-    `select o.order_no, o.doc_no, o.receiver, o.province, o.stock_issued_at,
+    `select o.order_no, o.doc_no, o.platform, o.receiver, o.province, o.stock_issued_at,
             coalesce(count(i.id),0)::int as item_count, coalesce(sum(i.qty),0)::float8 as total_qty,
             coalesce(nullif(u.full_name,''), u.username) as issued_by
      from orders o
      left join order_items i on i.order_no = o.order_no
      left join users u on u.id = o.stock_issued_by
      where ${where.join(" and ")}
-     group by o.order_no, u.full_name, u.username
+     group by o.order_no, o.platform, u.full_name, u.username
      order by o.stock_issued_at desc
      limit ${limit}`,
     params,
@@ -820,27 +836,54 @@ export async function listDamaged(): Promise<DamagedRow[]> {
 }
 
 export type ReturnRow = {
-  id: number; order_no: string; username: string | null; receiver: string | null; product: string; size: string; qty: number;
+  id: number; order_no: string; platform: string | null; username: string | null; receiver: string | null; product: string; size: string; qty: number;
   disposition: string; reason: string | null; note: string | null; voided_at: string | null;
   created_at: string; by_name: string | null;
 };
-/** ประวัติการคืน (ล่าสุดก่อน) */
-export async function listReturns(limit = 200): Promise<ReturnRow[]> {
+/** ประวัติการคืน (ล่าสุดก่อน) · กรองแพลตฟอร์มได้ */
+export async function listReturns(limit = 200, platform?: string): Promise<ReturnRow[]> {
   try {
+    const params: any[] = [limit];
+    const pc = platform ? (params.push(platform), ` and o.platform = $${params.length}`) : "";
     return await q<ReturnRow>(
-      `select r.id, r.order_no, o.username, o.receiver, r.product, r.size, r.qty::float8 as qty, r.disposition, r.reason, r.note, r.voided_at,
+      `select r.id, r.order_no, o.platform, o.username, o.receiver, r.product, r.size, r.qty::float8 as qty, r.disposition, r.reason, r.note, r.voided_at,
               r.created_at, u.full_name as by_name
        from order_returns r
        left join users u on u.id = r.created_by
        left join orders o on o.order_no = r.order_no
-       order by r.created_at desc limit $1`, [limit]);
+       where true${pc}
+       order by r.created_at desc limit $1`, params);
+  } catch { return []; }
+}
+
+export type ReturnPlatformStat = { platform: string; shipped: number; returned_orders: number; qty: number; rate: number };
+/** อัตราการคืนต่อแพลตฟอร์ม = จำนวนออเดอร์ที่มีการคืน ÷ ออเดอร์ที่ส่งแล้ว (%) */
+export async function returnStatsByPlatform(): Promise<ReturnPlatformStat[]> {
+  try {
+    return await q<ReturnPlatformStat>(
+      `with shipped as (
+         select coalesce(platform,'Shopee') as platform, count(*)::int as shipped
+         from orders where deleted_at is null and shipped_at is not null group by 1
+       ), ret as (
+         select coalesce(o.platform,'Shopee') as platform,
+                count(distinct r.order_no)::int as returned_orders, sum(r.qty)::float8 as qty
+         from order_returns r join orders o on o.order_no = r.order_no
+         where r.voided_at is null group by 1
+       )
+       select s.platform, s.shipped,
+              coalesce(rt.returned_orders,0) as returned_orders, coalesce(rt.qty,0) as qty,
+              round(100.0 * coalesce(rt.returned_orders,0) / nullif(s.shipped,0), 1)::float8 as rate
+       from shipped s left join ret rt on rt.platform = s.platform
+       order by rate desc nulls last, s.shipped desc`);
   } catch { return []; }
 }
 
 export type ReturnCustomerStat = { username: string; receiver: string | null; times: number; qty: number; damaged: number; last_at: string };
 /** รายงานลูกค้าที่คืนบ่อย — นับจำนวนครั้ง (ออเดอร์ที่มีการคืน) ต่อผู้ใช้ Shopee */
-export async function returnStatsByCustomer(): Promise<ReturnCustomerStat[]> {
+export async function returnStatsByCustomer(platform?: string): Promise<ReturnCustomerStat[]> {
   try {
+    const params: any[] = [];
+    const pc = platform ? (params.push(platform), ` and o.platform = $${params.length}`) : "";
     return await q<ReturnCustomerStat>(
       `select coalesce(nullif(btrim(o.username), ''), '(ไม่ระบุผู้ใช้)') as username,
               max(o.receiver) as receiver,
@@ -849,15 +892,25 @@ export async function returnStatsByCustomer(): Promise<ReturnCustomerStat[]> {
               sum(case when r.disposition='damaged' then r.qty else 0 end)::float8 as damaged,
               max(r.created_at) as last_at
        from order_returns r left join orders o on o.order_no = r.order_no
-       where r.voided_at is null
-       group by 1 order by times desc, qty desc limit 50`);
+       where r.voided_at is null${pc}
+       group by 1 order by times desc, qty desc limit 50`, params);
   } catch { return []; }
 }
 
 export type ReturnStat = { product: string; returned: number; damaged: number; times: number };
 /** รายงานอัตราคืนต่อกลิ่น (นับเฉพาะที่ไม่ถูกยกเลิก) */
-export async function returnStatsByScent(): Promise<ReturnStat[]> {
+export async function returnStatsByScent(platform?: string): Promise<ReturnStat[]> {
   try {
+    if (platform) {
+      return await q<ReturnStat>(
+        `select r.product,
+                sum(r.qty)::float8 as returned,
+                sum(case when r.disposition='damaged' then r.qty else 0 end)::float8 as damaged,
+                count(distinct r.order_no)::int as times
+         from order_returns r join orders o on o.order_no = r.order_no
+         where r.voided_at is null and coalesce(r.product,'') <> '' and o.platform = $1
+         group by r.product order by returned desc limit 50`, [platform]);
+    }
     return await q<ReturnStat>(
       `select product,
               sum(qty)::float8 as returned,

@@ -2,6 +2,7 @@
 import { useEffect, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import { lookupOrderForReturn, confirmReturn, type ReturnLookup, type ReturnItemPreview } from "@/lib/actions/returns";
+import { PlatformBadge } from "./PlatformBadge";
 import { ScanLine, Camera, Undo2, PackageCheck, X, CheckCircle2, RotateCcw, Trash2, ClipboardList } from "lucide-react";
 
 const CameraScan = dynamic(() => import("./CameraScan"), { ssr: false });
@@ -10,7 +11,7 @@ const REASONS = ["ลูกค้าตีกลับ (ไม่รับพั
 
 type Disp = "restock" | "damaged" | "none";
 type Form = Record<number, { qty: number; disp: Disp }>;
-type Done = { order_no: string; restocked: number; damaged: number; skipped: number; at: number };
+type Done = { order_no: string; platform?: string | null; restocked: number; damaged: number; skipped: number; at: number };
 
 export default function ReturnScanner() {
   const [value, setValue] = useState("");
@@ -67,7 +68,7 @@ export default function ReturnScanner() {
     const res = await confirmReturn(preview.order_no, entries, reason, note);
     setBusy(false);
     if (!res.ok) { setErr(res.error || "รับคืนไม่สำเร็จ"); return; }
-    setLog((l) => [{ order_no: res.order_no!, restocked: res.restocked || 0, damaged: res.damaged || 0, skipped: res.skipped || 0, at: Date.now() }, ...l]);
+    setLog((l) => [{ order_no: res.order_no!, platform: preview.platform, restocked: res.restocked || 0, damaged: res.damaged || 0, skipped: res.skipped || 0, at: Date.now() }, ...l]);
     setPreview(null); setForm({}); setNote("");
     setTimeout(() => inputRef.current?.focus(), 0);
   }
@@ -97,7 +98,7 @@ export default function ReturnScanner() {
           <div className="card p-5">
             <div className="mb-3 flex items-center justify-between gap-2">
               <div>
-                <h3 className="flex items-center gap-2 text-sm font-semibold text-ink"><PackageCheck size={16} className="text-brand" /> รับคืน — ตรวจก่อนบันทึก</h3>
+                <h3 className="flex items-center gap-2 text-sm font-semibold text-ink"><PackageCheck size={16} className="text-brand" /> รับคืน — ตรวจก่อนบันทึก <PlatformBadge platform={preview.platform} /></h3>
                 <p className="text-xs text-muted">Order No. <span className="font-mono text-ink">{preview.order_no}</span> · ผู้รับ {preview.receiver || "-"} · {preview.items!.length} รายการ{!preview.issued && " · ⚠️ ยังไม่ตัดสต๊อก (คืนเข้าสต๊อกไม่ได้)"}</p>
               </div>
               <button onClick={() => { setPreview(null); setForm({}); inputRef.current?.focus(); }} className="btn-ghost shrink-0"><X size={14} /> ยกเลิก</button>
@@ -166,7 +167,7 @@ export default function ReturnScanner() {
         <h3 className="flex items-center gap-2 text-sm font-semibold text-ink"><ClipboardList size={15} className="text-brand" /> รับคืนล่าสุด</h3>
         {log.length > 0 ? log.map((e) => (
           <div key={e.at} className="card p-4">
-            <div className="flex items-center gap-2 text-sm font-semibold text-green-700"><CheckCircle2 size={16} /> รับคืนแล้ว · <span className="font-mono text-ink">{e.order_no}</span></div>
+            <div className="flex items-center gap-2 text-sm font-semibold text-green-700"><CheckCircle2 size={16} /> รับคืนแล้ว · <span className="font-mono text-ink">{e.order_no}</span> <PlatformBadge platform={e.platform} /></div>
             <div className="mt-1 flex gap-2 text-xs">
               {e.restocked > 0 && <span className="chip-ok"><RotateCcw size={12} /> คืนสต๊อก {e.restocked}</span>}
               {e.damaged > 0 && <span className="chip-danger"><Trash2 size={12} /> ชำรุด {e.damaged}</span>}

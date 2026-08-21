@@ -24,7 +24,7 @@ export type ReturnItemPreview = {
 };
 export type ReturnLookup = {
   ok: boolean; error?: string;
-  order_no?: string; doc_no?: string | null; receiver?: string | null; shipped_at?: string | null;
+  order_no?: string; doc_no?: string | null; platform?: string | null; receiver?: string | null; shipped_at?: string | null;
   issued?: boolean;                 // ตัดสต๊อกแล้วหรือยัง (ถ้ายัง → คืน "เข้าสต๊อก" ไม่ได้)
   items?: ReturnItemPreview[];
 };
@@ -36,8 +36,8 @@ export async function lookupOrderForReturn(orderNo: string): Promise<ReturnLooku
   const on = (orderNo || "").trim();
   if (!on) return { ok: false, error: "กรอก/สแกน Order No." };
 
-  const [o] = await q<{ order_no: string; doc_no: string | null; receiver: string | null; username: string | null; deleted_at: string | null; shipped_at: string | null; stock_issued_at: string | null }>(
-    `select order_no, doc_no, receiver, username, deleted_at, shipped_at, stock_issued_at from orders where order_no = $1`, [on]);
+  const [o] = await q<{ order_no: string; doc_no: string | null; platform: string | null; receiver: string | null; username: string | null; deleted_at: string | null; shipped_at: string | null; stock_issued_at: string | null }>(
+    `select order_no, doc_no, platform, receiver, username, deleted_at, shipped_at, stock_issued_at from orders where order_no = $1`, [on]);
   if (!o) return { ok: false, error: `ไม่พบออเดอร์ ${on}` };
   if (o.deleted_at) return { ok: false, error: "ออเดอร์นี้อยู่ในถังขยะ" };
   if (!o.shipped_at) return { ok: false, error: "รับคืนได้เฉพาะออเดอร์ที่ส่งแล้ว — ยังไม่ส่ง ให้ยกเลิกออเดอร์/ยกเลิกการตัดแทน" };
@@ -60,7 +60,7 @@ export async function lookupOrderForReturn(orderNo: string): Promise<ReturnLooku
       remaining: Math.max(0, Number(it.qty) - returned),
     };
   });
-  return { ok: true, order_no: o.order_no, doc_no: o.doc_no, receiver: o.receiver || o.username, shipped_at: o.shipped_at, issued: !!o.stock_issued_at, items: out };
+  return { ok: true, order_no: o.order_no, doc_no: o.doc_no, platform: o.platform, receiver: o.receiver || o.username, shipped_at: o.shipped_at, issued: !!o.stock_issued_at, items: out };
 }
 
 // ── ยืนยันรับคืน ──────────────────────────────────────────────────────────

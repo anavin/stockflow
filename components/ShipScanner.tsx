@@ -4,13 +4,15 @@ import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
 import { markShipped, unshipOrder } from "@/lib/actions/orders";
 import type { ShipRow } from "@/lib/queries";
+import { PlatformDot, PlatformBadge } from "./PlatformBadge";
+import { platformName, platformColor } from "@/lib/config";
 import { ScanLine, Camera, CheckCircle2, AlertTriangle, XCircle, PackageCheck, Truck, Undo2, Calendar } from "lucide-react";
 
 const CameraScan = dynamic(() => import("./CameraScan"), { ssr: false });
 import type { ScanFeedback } from "./CameraScan";
 
 type Row = ShipRow & { _new?: boolean };
-type Banner = { kind: "ok" | "already" | "error"; text: string; sub?: string } | null;
+type Banner = { kind: "ok" | "already" | "error"; text: string; sub?: string; platform?: string | null } | null;
 const timeOf = (v?: string | null) => (v ? new Date(v).toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit" }) : "—");
 
 // เสียง/สั่น ยืนยันการสแกน (ok=สูง, already=กลาง, error=ต่ำคู่)
@@ -39,6 +41,14 @@ export default function ShipScanner({ date, isToday, rows: initialRows, pending,
   const total = rows.length;                            // = รายการของวันที่เลือก (initial + ที่เพิ่งสแกน) ไม่นับซ้ำ
   const left = Math.max(0, pending - addedIssued);
   const seen = useMemo(() => new Set(rows.map((r) => r.order_no.toUpperCase())), [rows]);
+  const [pfFilter, setPfFilter] = useState<string>("");   // "" = ทุกแพลตฟอร์ม (กรองฝั่ง client จาก rows ที่โหลดมาแล้ว)
+  // สรุปแยกแพลตฟอร์ม + รายการที่แสดงตามตัวกรอง
+  const byPlatform = useMemo(() => {
+    const m = new Map<string, number>();
+    for (const r of rows) { const p = r.platform || "Shopee"; m.set(p, (m.get(p) || 0) + 1); }
+    return [...m.entries()].sort((a, b) => b[1] - a[1]);
+  }, [rows]);
+  const shown = pfFilter ? rows.filter((r) => (r.platform || "Shopee") === pfFilter) : rows;
 
   // คืน ScanFeedback ให้กล้องแจ้งผลรายชิ้น (ถ้าสแกนจากกล้อง) — พร้อมตั้ง banner ให้ฝั่งพิมพ์/เครื่องสแกนด้วย
   async function scan(codeArg?: string): Promise<ScanFeedback | void> {
@@ -66,8 +76,8 @@ export default function ShipScanner({ date, isToday, rows: initialRows, pending,
       return { status: "dup", title: "สแกนซ้ำ", detail: `บันทึกส่งไปแล้วเมื่อ ${timeOf(res.at)}` };
     }
     feedback("ok");
-    setBanner({ kind: "ok", text: `บันทึกส่งแล้ว · ${o.order_no}`, sub: `${o.receiver || "-"} · ${o.province || "-"} · ${o.item_count} รายการ${res.issued ? "" : " · ⚠️ ยังไม่ได้ตัดสต๊อก"}` });
-    setRows((r) => [{ order_no: o.order_no, doc_no: null, receiver: o.receiver, province: o.province, item_count: o.item_count, shipped_at: res.at || new Date().toISOString(), shipped_by_name: "เพิ่งสแกน", _new: true }, ...r]);
+    setBanner({ kind: "ok", text: `บันทึกส่งแล้ว · ${o.order_no}`, sub: `${o.receiver || "-"} · ${o.province || "-"} · ${o.item_count} รายการ${res.issued ? "" : " · ⚠️ ยังไม่ได้ตัดสต๊อก"}`, platform: o.platform });
+    setRows((r) => [{ order_no: o.order_no, doc_no: null, platform: o.platform, receiver: o.receiver, province: o.province, item_count: o.item_count, shipped_at: res.at || new Date().toISOString(), shipped_by_name: "เพิ่งสแกน", _new: true }, ...r]);
     if (res.issued) setAddedIssued((n) => n + 1);
     return { status: "ok", title: "บันทึกส่งแล้ว", detail: `${o.receiver || "-"} · ${o.item_count} รายการ${res.issued ? "" : " · ⚠️ ยังไม่ตัดสต๊อก"}` };
   }
@@ -132,7 +142,10 @@ export default function ShipScanner({ date, isToday, rows: initialRows, pending,
             {banner && (
               <div className={`mt-3 flex items-start gap-2 text-sm ${bannerCls}`}>
                 <BannerIcon size={18} className="mt-0.5 shrink-0" />
-                <div><div className="font-semibold">{banner.text}</div>{banner.sub && <div className="text-xs opacity-80">{banner.sub}</div>}</div>
+                <div>
+                  <div className="flex items-center gap-2 font-semibold">{banner.text} {banner.platform && <PlatformBadge platform={banner.platform} />}</div>
+                  {banner.sub && <div className="text-xs opacity-80">{banner.sub}</div>}
+                </div>
               </div>
             )}
             <p className="mt-2 flex items-center gap-1 text-[11px] text-faint"><Camera size={12} /> เปิดกล้องแล้วเล็งใบปะหน้าทีละกล่องได้ต่อเนื่อง — บันทึกอัตโนมัติทุกครั้งที่อ่านได้</p>
@@ -142,10 +155,26 @@ export default function ShipScanner({ date, isToday, rows: initialRows, pending,
         {/* รายการที่ส่ง */}
         <div className="card overflow-hidden lg:col-span-3">
           <div className="flex items-center gap-2 border-b border-line px-4 py-3 text-sm font-semibold text-ink">
-            <Truck size={16} /> {isToday ? "รายการที่ส่งวันนี้" : `รายการที่ส่ง ${date}`} <span className="text-muted">({rows.length})</span>
+            <Truck size={16} /> {isToday ? "รายการที่ส่งวันนี้" : `รายการที่ส่ง ${date}`} <span className="text-muted">({shown.length}{pfFilter ? `/${rows.length}` : ""})</span>
           </div>
-          {rows.length === 0 ? (
-            <p className="px-4 py-16 text-center text-sm text-muted">ยังไม่มีรายการ — สแกนใบปะหน้าเพื่อเริ่มบันทึก</p>
+          {/* สรุป + ตัวกรองแยกแพลตฟอร์ม */}
+          {byPlatform.length > 0 && (
+            <div className="flex flex-wrap items-center gap-1.5 border-b border-line px-4 py-2">
+              <button type="button" onClick={() => setPfFilter("")}
+                className={`rounded-full px-2.5 py-1 text-xs font-medium ${pfFilter === "" ? "bg-ink text-white" : "bg-soft text-muted hover:text-ink"}`}>
+                ทั้งหมด {rows.length}
+              </button>
+              {byPlatform.map(([code, n]) => (
+                <button key={code} type="button" onClick={() => setPfFilter(pfFilter === code ? "" : code)}
+                  className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium ${pfFilter === code ? "text-white" : "bg-soft text-ink hover:opacity-80"}`}
+                  style={pfFilter === code ? { backgroundColor: platformColor(code) } : undefined}>
+                  {pfFilter === code ? <span className="h-2 w-2 rounded-full bg-white" /> : <PlatformDot platform={code} />} {platformName(code)} {n}
+                </button>
+              ))}
+            </div>
+          )}
+          {shown.length === 0 ? (
+            <p className="px-4 py-16 text-center text-sm text-muted">{rows.length === 0 ? "ยังไม่มีรายการ — สแกนใบปะหน้าเพื่อเริ่มบันทึก" : "ไม่มีรายการของแพลตฟอร์มนี้"}</p>
           ) : (
             <>
               {/* คอม: ตาราง */}
@@ -160,10 +189,10 @@ export default function ShipScanner({ date, isToday, rows: initialRows, pending,
                     </tr>
                   </thead>
                   <tbody>
-                    {rows.map((r) => (
+                    {shown.map((r) => (
                       <tr key={r.order_no} className={`border-t border-line ${r._new ? "bg-green-50/40" : "hover:bg-soft/40"}`}>
                         <td className="px-4 py-2.5 text-xs tabular-nums text-muted">{timeOf(r.shipped_at)}</td>
-                        <td className="px-3 py-2.5 font-mono text-xs text-ink">{r.order_no}</td>
+                        <td className="px-3 py-2.5 font-mono text-xs text-ink"><span className="inline-flex items-center gap-1.5"><PlatformDot platform={r.platform} /> {r.order_no}</span></td>
                         <td className="px-3 py-2.5 text-ink">{r.receiver || "-"}</td>
                         <td className="px-3 py-2.5 text-muted">{r.province || "-"}</td>
                         <td className="px-3 py-2.5 text-center tabular-nums text-muted">{r.item_count}</td>
@@ -180,11 +209,11 @@ export default function ShipScanner({ date, isToday, rows: initialRows, pending,
               </div>
               {/* มือถือ: การ์ดแถว */}
               <div className="divide-y divide-line md:hidden">
-                {rows.map((r) => (
+                {shown.map((r) => (
                   <div key={r.order_no} className={`flex items-center gap-3 px-4 py-2.5 ${r._new ? "bg-green-50/40" : ""}`}>
                     <div className="w-12 shrink-0 text-xs tabular-nums text-muted">{timeOf(r.shipped_at)}</div>
                     <div className="min-w-0 flex-1">
-                      <div className="truncate font-mono text-xs text-ink">{r.order_no}</div>
+                      <div className="flex items-center gap-1.5 truncate font-mono text-xs text-ink"><PlatformDot platform={r.platform} /> {r.order_no}</div>
                       <div className="truncate text-xs text-muted">{r.receiver || "-"} · {r.province || "-"} · {r.item_count} รายการ</div>
                     </div>
                     <PackageCheck size={16} className="shrink-0 text-green-600" />
