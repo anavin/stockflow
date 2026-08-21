@@ -47,10 +47,10 @@ export default function ReturnsHistory({ rows, stats, customers = [], canReverse
       {/* รายงานลูกค้าที่คืนบ่อย */}
       {customers.length > 0 && (
         <div className="overflow-hidden rounded-xl border border-line bg-white">
-          <div className="flex items-center gap-2 border-b border-line px-4 py-3 text-sm font-semibold text-ink"><UserRound size={16} className="text-brand" /> ลูกค้าที่คืนบ่อย (ตามผู้ใช้ Shopee)</div>
+          <div className="flex items-center gap-2 border-b border-line px-4 py-3 text-sm font-semibold text-ink"><UserRound size={16} className="text-brand" /> ลูกค้าที่คืนบ่อย (ตามชื่อผู้ใช้)</div>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
-              <thead className="bg-soft text-left text-xs text-muted"><tr><th className="px-4 py-2">ผู้ใช้ Shopee</th><th className="px-4 py-2">ผู้รับ</th><th className="px-4 py-2 text-right">จำนวนครั้งที่คืน</th><th className="px-4 py-2 text-right">ชิ้นรวม</th><th className="px-4 py-2 text-right">ชำรุด</th><th className="px-4 py-2 text-right">คืนล่าสุด</th></tr></thead>
+              <thead className="bg-soft text-left text-xs text-muted"><tr><th className="px-4 py-2">ชื่อผู้ใช้</th><th className="px-4 py-2">ผู้รับ</th><th className="px-4 py-2 text-right">จำนวนครั้งที่คืน</th><th className="px-4 py-2 text-right">ชิ้นรวม</th><th className="px-4 py-2 text-right">ชำรุด</th><th className="px-4 py-2 text-right">คืนล่าสุด</th></tr></thead>
               <tbody>
                 {customers.map((c) => {
                   const hot = c.times >= 3, warn = c.times === 2;
@@ -78,7 +78,7 @@ export default function ReturnsHistory({ rows, stats, customers = [], canReverse
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead className="bg-soft text-left text-xs text-muted">
-                <tr><th className="px-4 py-2">เวลา</th><th className="px-4 py-2">Order No.</th><th className="px-4 py-2">ผู้ใช้ Shopee</th><th className="px-4 py-2">รายการ</th><th className="px-4 py-2 text-right">จำนวน</th><th className="px-4 py-2">ปลายทาง</th><th className="px-4 py-2">เหตุผล</th><th className="px-4 py-2">โดย</th>{canReverse && <th className="px-4 py-2"></th>}</tr>
+                <tr><th className="px-4 py-2">เวลา</th><th className="px-4 py-2">Order No.</th><th className="px-4 py-2">ชื่อผู้ใช้</th><th className="px-4 py-2">รายการ</th><th className="px-4 py-2 text-right">จำนวน</th><th className="px-4 py-2">ปลายทาง</th><th className="px-4 py-2">เหตุผล</th><th className="px-4 py-2">โดย</th>{canReverse && <th className="px-4 py-2"></th>}</tr>
               </thead>
               <tbody>
                 {rows.map((r) => {

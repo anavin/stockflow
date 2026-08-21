@@ -89,10 +89,8 @@ export default function Sidebar({ user }: { user: { full_name: string; username:
 
       {orderNav.length > 0 && (
         <div className="px-3">
-          {/* แพลตฟอร์มที่ใช้งาน — โชว์ด้วยสีเอกลักษณ์ของแพลตฟอร์ม (Shopee = ส้ม) */}
-          <div className="flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-semibold"
-            style={{ backgroundColor: "rgb(238 77 45 / 0.10)", color: "#c2410c" }}>
-            <Package size={14} /> Shopee
+          <div className="flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-semibold text-muted">
+            <Package size={14} /> ใบเบิกสินค้า
           </div>
         </div>
       )}

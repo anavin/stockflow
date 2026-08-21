@@ -290,7 +290,7 @@ export default function OrderForm({ platform = "Shopee", products, sizes, provin
             <DatePicker value={f.doc_date} onChange={(v) => set({ doc_date: v })} />
           </div>
           <div>
-            <label className="label">ชื่อผู้ใช้ (Shopee)</label>
+            <label className="label">ชื่อผู้ใช้ ({platform})</label>
             <CustomerSuggest value={f.username} onChange={(v) => { set({ username: v }); setReturnWarn(0); }} onPick={fillFromCustomer} placeholder="พิมพ์ชื่อผู้ใช้ / ชื่อ / กลิ่นที่เคยซื้อ" />
           </div>
         </div>
