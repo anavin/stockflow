@@ -633,19 +633,21 @@ export async function listIssuedOrders(opts: { search?: string; platform?: strin
   }
   if (opts.platform) { params.push(opts.platform); where.push(`o.platform = $${params.length}`); }
   const limit = Math.min(opts.limit ?? 100, 500);
-  return q<IssuedOrderRow>(
-    `select o.order_no, o.doc_no, o.platform, o.receiver, o.province, o.stock_issued_at,
-            coalesce(count(i.id),0)::int as item_count, coalesce(sum(i.qty),0)::float8 as total_qty,
-            coalesce(nullif(u.full_name,''), u.username) as issued_by
-     from orders o
-     left join order_items i on i.order_no = o.order_no
-     left join users u on u.id = o.stock_issued_by
-     where ${where.join(" and ")}
-     group by o.order_no, o.platform, u.full_name, u.username
-     order by o.stock_issued_at desc
-     limit ${limit}`,
-    params,
-  );
+  try {
+    return await q<IssuedOrderRow>(
+      `select o.order_no, o.doc_no, o.platform, o.receiver, o.province, o.stock_issued_at,
+              coalesce(count(i.id),0)::int as item_count, coalesce(sum(i.qty),0)::float8 as total_qty,
+              coalesce(nullif(u.full_name,''), u.username) as issued_by
+       from orders o
+       left join order_items i on i.order_no = o.order_no
+       left join users u on u.id = o.stock_issued_by
+       where ${where.join(" and ")}
+       group by o.order_no, o.platform, u.full_name, u.username
+       order by o.stock_issued_at desc
+       limit ${limit}`,
+      params,
+    );
+  } catch { return []; }
 }
 
 export type DashStats = {
@@ -869,7 +871,7 @@ export async function returnStatsByPlatform(): Promise<ReturnPlatformStat[]> {
          select coalesce(o.platform,'Shopee') as platform,
                 count(distinct r.order_no)::int as returned_orders, sum(r.qty)::float8 as qty
          from order_returns r join orders o on o.order_no = r.order_no
-         where r.voided_at is null group by 1
+         where r.voided_at is null and o.deleted_at is null and o.shipped_at is not null group by 1
        )
        select s.platform, s.shipped,
               coalesce(rt.returned_orders,0) as returned_orders, coalesce(rt.qty,0) as qty,

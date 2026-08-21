@@ -105,7 +105,7 @@ export default function Sidebar({ user }: { user: { full_name: string; username:
         {section("คลังวัตถุดิบ", materialNav)}
         {section("ตั้งค่า & ข้อมูล", settingsNav)}
 
-        {orderNav.length > 0 && (
+        {orderNav.length > 0 && PLATFORMS.some((p) => !p.enabled) && (
           <>
             <div className="px-3 pb-1 pt-4 text-[11px] font-semibold uppercase tracking-wide text-faint">แพลตฟอร์มอื่น</div>
             {PLATFORMS.filter((p) => !p.enabled).map((p) => (

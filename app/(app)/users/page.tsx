@@ -11,7 +11,7 @@ export default async function UsersPage() {
   const users = await listUsers();
   return (
     <div className="mx-auto max-w-6xl px-4 py-6 md:px-8">
-      <Link href="/shopee" className="mb-4 inline-flex items-center gap-1 text-sm text-muted hover:text-ink">
+      <Link href="/" className="mb-4 inline-flex items-center gap-1 text-sm text-muted hover:text-ink">
         <ChevronLeft size={16} /> กลับ
       </Link>
       <h1 className="mb-1 text-xl font-bold text-ink">จัดการผู้ใช้</h1>

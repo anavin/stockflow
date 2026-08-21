@@ -48,7 +48,8 @@ export default function ShipScanner({ date, isToday, rows: initialRows, pending,
     for (const r of rows) { const p = r.platform || "Shopee"; m.set(p, (m.get(p) || 0) + 1); }
     return [...m.entries()].sort((a, b) => b[1] - a[1]);
   }, [rows]);
-  const shown = pfFilter ? rows.filter((r) => (r.platform || "Shopee") === pfFilter) : rows;
+  // กรองตามแพลตฟอร์ม แต่แถวที่เพิ่งสแกน (_new) โชว์เสมอ ไม่ให้ตัวกรองซ่อนของที่เพิ่งบันทึก
+  const shown = pfFilter ? rows.filter((r) => r._new || (r.platform || "Shopee") === pfFilter) : rows;
 
   // คืน ScanFeedback ให้กล้องแจ้งผลรายชิ้น (ถ้าสแกนจากกล้อง) — พร้อมตั้ง banner ให้ฝั่งพิมพ์/เครื่องสแกนด้วย
   async function scan(codeArg?: string): Promise<ScanFeedback | void> {
