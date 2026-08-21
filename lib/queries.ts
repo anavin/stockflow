@@ -1,4 +1,5 @@
 import "server-only";
+import { unstable_cache } from "next/cache";
 import { q } from "./db";
 import type { Order, OrderItem, OrderRow, OrderWithItems } from "./types";
 import { LABEL_COMPONENTS, gradeToLabelKey, labelSpecFor, bulkRef, labelRef, mnorm } from "./materials";
@@ -455,14 +456,15 @@ export async function getSizes(): Promise<string[]> {
 }
 
 export type PostcodeRow = { province: string; district: string; postcode: string };
-export async function getPostcodes(): Promise<PostcodeRow[]> {
-  return q<PostcodeRow>(`select province, district, postcode from postcodes order by province, district`);
-}
-
-export async function getProvinces(): Promise<string[]> {
-  const rows = await q<{ province: string }>(`select distinct province from postcodes order by province`);
-  return rows.map((r) => r.province);
-}
+// postcodes/provinces = ข้อมูล seed ที่แอปไม่เคยแก้ → cache ข้ามรีเควสต์ (เดิมอ่าน DB ทุกครั้งที่เปิดฟอร์มใบเบิก)
+export const getPostcodes = unstable_cache(
+  async (): Promise<PostcodeRow[]> => q<PostcodeRow>(`select province, district, postcode from postcodes order by province, district`),
+  ["ref:postcodes"], { revalidate: 86400 },
+);
+export const getProvinces = unstable_cache(
+  async (): Promise<string[]> => (await q<{ province: string }>(`select distinct province from postcodes order by province`)).map((r) => r.province),
+  ["ref:provinces"], { revalidate: 86400 },
+);
 
 // ---- orders ----------------------------------------------------------------
 export async function listOrders(opts: { platform?: string; search?: string; month?: string; from?: string; to?: string; issued?: "yes" | "no"; shipped?: "yes" | "no"; limit?: number; offset?: number } = {}): Promise<OrderRow[]> {
