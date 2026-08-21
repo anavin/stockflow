@@ -881,6 +881,38 @@ export async function returnStatsByPlatform(): Promise<ReturnPlatformStat[]> {
   } catch { return []; }
 }
 
+export type PlatformOverviewRow = {
+  platform: string; orders: number; month: number; issued: number; shipped: number; pending: number; returned: number;
+};
+/** สรุปเทียบทุกแพลตฟอร์มในช็อตเดียว (สำหรับ dashboard ภาพรวม) — ออร์เดอร์/ตัด/ส่ง/ค้างส่ง/คืน */
+export async function platformOverview(): Promise<PlatformOverviewRow[]> {
+  try {
+    return await q<PlatformOverviewRow>(
+      `select coalesce(platform,'Shopee') as platform,
+              count(*)::int as orders,
+              count(*) filter (where date_trunc('month', coalesce(order_date, doc_date)) = date_trunc('month', (now() at time zone 'Asia/Bangkok')))::int as month,
+              count(*) filter (where stock_issued_at is not null)::int as issued,
+              count(*) filter (where shipped_at is not null)::int as shipped,
+              count(*) filter (where stock_issued_at is not null and shipped_at is null)::int as pending,
+              count(*) filter (where coalesce(return_status,'none') <> 'none')::int as returned
+       from orders where deleted_at is null
+       group by 1 order by orders desc`);
+  } catch {
+    // เผื่อ prod ยังไม่มีคอลัมน์ return_status → ลองใหม่แบบไม่รวมคืน
+    try {
+      const rows = await q<Omit<PlatformOverviewRow, "returned">>(
+        `select coalesce(platform,'Shopee') as platform,
+                count(*)::int as orders,
+                count(*) filter (where date_trunc('month', coalesce(order_date, doc_date)) = date_trunc('month', (now() at time zone 'Asia/Bangkok')))::int as month,
+                count(*) filter (where stock_issued_at is not null)::int as issued,
+                count(*) filter (where shipped_at is not null)::int as shipped,
+                count(*) filter (where stock_issued_at is not null and shipped_at is null)::int as pending
+         from orders where deleted_at is null group by 1 order by orders desc`);
+      return rows.map((r) => ({ ...r, returned: 0 }));
+    } catch { return []; }
+  }
+}
+
 export type ReturnCustomerStat = { username: string; receiver: string | null; times: number; qty: number; damaged: number; last_at: string };
 /** รายงานลูกค้าที่คืนบ่อย — นับจำนวนครั้ง (ออเดอร์ที่มีการคืน) ต่อผู้ใช้ Shopee */
 export async function returnStatsByCustomer(platform?: string): Promise<ReturnCustomerStat[]> {

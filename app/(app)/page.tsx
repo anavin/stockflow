@@ -1,8 +1,9 @@
 import Link from "next/link";
 import { requireDashboard } from "@/lib/auth/require-user";
 import { resolvePlatform, platformBase, enabledPlatforms, platformColor } from "@/lib/config";
-import { dashboardStats, listStock, listOrders, topProducts, ordersTrend, dailyIssueStatus, fdaExpirySummary, shipSummary } from "@/lib/queries";
+import { dashboardStats, listStock, listOrders, topProducts, ordersTrend, dailyIssueStatus, fdaExpirySummary, shipSummary, platformOverview } from "@/lib/queries";
 import CreateOrderMenu from "@/components/CreateOrderMenu";
+import PlatformCompare from "@/components/PlatformCompare";
 import {
   ScanLine, Boxes, AlertTriangle, PackageCheck, ClipboardList,
   ArrowRight, ShoppingBag, TrendingUp, Sparkles, Clock, CalendarCheck, ShieldAlert, Truck,
@@ -26,6 +27,8 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
     shipSummary(pf),
   ]);
   const platforms = enabledPlatforms();
+  // ตารางเทียบแพลตฟอร์ม — เฉพาะหน้าภาพรวม "ทั้งหมด" ที่มีหลายแพลตฟอร์ม
+  const overview = !pf && platforms.length > 1 ? await platformOverview() : [];
   const fdaAlert = fda.expired + fda.d10 + fda.d15 + fda.d30;
 
   const fulfill = s.ordersTotal > 0 ? s.issuedTotal / s.ordersTotal : 0;
@@ -121,6 +124,13 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
           sub={<>ค้างส่ง <b className="text-ink">{ship.pending.toLocaleString()}</b></>}
         />
       </div>
+
+      {/* ── เทียบแพลตฟอร์ม (เฉพาะภาพรวมรวม) ── */}
+      {overview.length > 0 && (
+        <div className="mt-4">
+          <PlatformCompare rows={overview} />
+        </div>
+      )}
 
       {/* ── highlights: fulfillment · stock health · trend ── */}
       <div className="mt-4 grid grid-cols-1 items-stretch gap-4 md:grid-cols-3">
