@@ -64,6 +64,11 @@ export default function ReturnScanner() {
       .map(([line, v]) => ({ line_no: Number(line), qty: v.qty, disposition: v.disp }))
       .filter((e) => e.qty > 0);
     if (!entries.length) { setErr("ยังไม่ได้เลือกจำนวนที่จะคืน"); return; }
+    // ยืนยันก่อนบันทึก — โดยเฉพาะ "คืนสต๊อก" (default) ที่ดันของกลับเป็นของขายได้ ย้อนยาก
+    const restockN = entries.filter((e) => e.disposition === "restock").reduce((a, e) => a + e.qty, 0);
+    const damagedN = entries.filter((e) => e.disposition === "damaged").reduce((a, e) => a + e.qty, 0);
+    const summary = [restockN > 0 ? `คืนเข้าสต๊อกขาย ${restockN}` : "", damagedN > 0 ? `ชำรุด ${damagedN}` : ""].filter(Boolean).join(" · ");
+    if (!confirm(`ยืนยันรับคืน ${preview.order_no}?\n${summary}\n\n${restockN > 0 ? "⚠ ของที่ 'คืนสต๊อก' จะกลับไปเป็นสินค้าขายได้ทันที — ถ้าชำรุดให้เลือก 'ชำรุด'" : ""}`)) return;
     setBusy(true); setErr(null);
     const res = await confirmReturn(preview.order_no, entries, reason, note);
     setBusy(false);

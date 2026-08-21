@@ -13,7 +13,9 @@ export default function DamagedStock({ rows, canManage }: { rows: DamagedRow[]; 
 
   async function act(r: DamagedRow, action: "repair" | "claim" | "writeoff", qty: number) {
     const key = `${r.product}|${r.size}`;
-    if (action === "writeoff" && !confirm(`ทำลาย (ตัดทิ้ง) ${r.product} ${r.size} จำนวน ${qty}? — ย้อนไม่ได้`)) return;
+    // ทุก disposition ย้อนกลับไม่ได้ → ยืนยันก่อนทุกครั้ง (เดิม confirm เฉพาะ "ทำลาย")
+    const label = action === "writeoff" ? "ทำลาย (ตัดทิ้ง)" : action === "claim" ? "เคลมขนส่ง (ตัดออกจากคลังชำรุด)" : "ซ่อม → คืนเข้าสต๊อกขาย";
+    if (!confirm(`${label}\n${r.product} ${r.size} จำนวน ${qty}?\n\n⚠ การทำรายการนี้ย้อนกลับไม่ได้`)) return;
     setBusy(key); setErr(null);
     const res = await disposeDamaged(r.product, r.size, qty, action);
     setBusy("");

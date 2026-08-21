@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import type { ActivityRow } from "@/lib/queries";
 import { ROLE_LABELS, roleList } from "@/lib/auth/roles";
 import { downloadCsv } from "@/lib/csv";
-import { Search, FileDown, LogIn, LogOut, FileText, Trash2, ScanLine, Undo2, Truck, PackagePlus, PackageMinus, SlidersHorizontal, FlaskConical, Users, Upload, RotateCcw, Boxes, ClipboardCheck } from "lucide-react";
+import { Search, FileDown, LogIn, LogOut, FileText, Trash2, ScanLine, Undo2, Truck, PackagePlus, PackageMinus, SlidersHorizontal, FlaskConical, Users, Upload, RotateCcw, Boxes, ClipboardCheck, ShieldCheck } from "lucide-react";
 
 export const ACTIONS: Record<string, { label: string; icon: any; cls: string }> = {
   login: { label: "เข้าสู่ระบบ", icon: LogIn, cls: "bg-green-50 text-green-700" },
@@ -28,6 +28,7 @@ export const ACTIONS: Record<string, { label: string; icon: any; cls: string }> 
   "material.issue": { label: "เบิกวัตถุดิบ", icon: PackageMinus, cls: "bg-orange-50 text-orange-700" },
   "material.adjust": { label: "ปรับยอดวัตถุดิบ", icon: SlidersHorizontal, cls: "bg-slate-100 text-slate-600" },
   "scent.manage": { label: "จัดการกลิ่น", icon: FlaskConical, cls: "bg-purple-50 text-purple-700" },
+  "fda.manage": { label: "จัดการ อย.", icon: ShieldCheck, cls: "bg-teal-50 text-teal-700" },
   "user.manage": { label: "จัดการผู้ใช้", icon: Users, cls: "bg-brand-50 text-brand-600" },
 };
 

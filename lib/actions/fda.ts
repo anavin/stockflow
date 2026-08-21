@@ -3,6 +3,7 @@ import { revalidatePath } from "next/cache";
 import { q, tx } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth/session";
 import { isAdmin } from "@/lib/auth/roles";
+import { logActivity } from "@/lib/activity";
 
 async function gate() {
   const user = await getCurrentUser();
@@ -29,6 +30,7 @@ export async function updateFda(id: number, p: FdaPatch): Promise<{ ok: boolean;
          fda_status = $7, prod_status = $8, name_th = $9, name_en = $10, updated_at = now()
        where id = $1`,
       [id, s(p.product), s(p.grade), s(p.reg_no), d(p.issue_date), d(p.expiry_date), s(p.fda_status), s(p.prod_status), s(p.name_th), s(p.name_en)]);
+    await logActivity("fda.manage", `แก้ไข อย. ${s(p.product) || `#${id}`}`);
     revalidatePath("/fda");
     return { ok: true };
   } catch (e: any) {
@@ -50,6 +52,7 @@ export async function addFda(p: FdaPatch): Promise<{ ok: boolean; error?: string
          expiry_date=excluded.expiry_date, fda_status=excluded.fda_status, prod_status=excluded.prod_status,
          name_th=excluded.name_th, name_en=excluded.name_en, updated_at=now()`,
       [p.product.trim(), s(p.grade), s(p.reg_no), d(p.issue_date), d(p.expiry_date), s(p.fda_status), s(p.prod_status), s(p.name_th), s(p.name_en)]);
+    await logActivity("fda.manage", `เพิ่ม/แก้ อย. ${p.product.trim()}`);
     revalidatePath("/fda");
     return { ok: true };
   } catch (e: any) { return { ok: false, error: e?.message || "เพิ่มไม่สำเร็จ" }; }
@@ -77,6 +80,7 @@ export async function renewFda(id: number, years = 3): Promise<{ ok: boolean; er
       await run(`insert into fda_renewals (fda_id, reg_no, old_expiry, new_expiry, renewed_by) values ($1,$2,$3,$4,$5)`,
         [id, f.reg_no, f.old_expiry, f.new_expiry, g.user.id]);
     });
+    await logActivity("fda.manage", `ต่ออายุ อย. #${id} +${y} ปี → ${newExpiry}`);
     revalidatePath("/fda");
     return { ok: true, new_expiry: newExpiry };
   } catch (e: any) { return { ok: false, error: e?.message || "ต่ออายุไม่สำเร็จ" }; }
@@ -85,7 +89,9 @@ export async function renewFda(id: number, years = 3): Promise<{ ok: boolean; er
 export async function deleteFda(id: number): Promise<{ ok: boolean; error?: string }> {
   const g = await gate(); if ("error" in g) return { ok: false, error: g.error };
   try {
+    const [row] = await q<{ product: string | null }>(`select product from fda_registrations where id = $1`, [id]);
     await q(`delete from fda_registrations where id = $1`, [id]);
+    await logActivity("fda.manage", `ลบ อย. ${row?.product || `#${id}`}`);
     revalidatePath("/fda");
     return { ok: true };
   } catch (e: any) { return { ok: false, error: e?.message || "ลบไม่สำเร็จ" }; }

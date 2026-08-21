@@ -3,6 +3,7 @@ import ExcelJS from "exceljs";
 import { getCurrentUser } from "@/lib/auth/session";
 import { isAdmin } from "@/lib/auth/roles";
 import { tx } from "@/lib/db";
+import { logActivity } from "@/lib/activity";
 import { revalidatePath } from "next/cache";
 
 export const runtime = "nodejs";
@@ -107,6 +108,7 @@ export async function POST(req: Request) {
         saved++;
       }
     });
+    await logActivity("fda.manage", `นำเข้า อย. ${saved} รายการ (ชีต ${(ws as ExcelJS.Worksheet).name})`);
     revalidatePath("/fda");
     return NextResponse.json({ ok: true, saved, sheet: (ws as ExcelJS.Worksheet).name });
   } catch (e: any) {

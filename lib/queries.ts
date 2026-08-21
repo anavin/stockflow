@@ -63,8 +63,10 @@ export type ProductAdminRow = { id: number; name: string; code: string | null; b
 export async function listProductsAdmin(): Promise<ProductAdminRow[]> {
   return q<ProductAdminRow>(
     `select p.id, p.name, p.code, p.barcode, p.ptype, p.active, p.sort,
-            (select count(*)::int from order_items i where i.product = p.name) as used
-     from products p order by p.active desc, p.sort, p.name`,
+            coalesce(u.used, 0)::int as used
+     from products p
+     left join (select product, count(*)::int as used from order_items group by product) u on u.product = p.name
+     order by p.active desc, p.sort, p.name`,
   );
 }
 
@@ -440,7 +442,8 @@ export async function reportRows(opts: { platform?: string; search?: string; mon
        where ${where.join(" and ")}
        group by o.order_no, o.doc_no, o.receiver, o.username, o.province, u.full_name, u.username,
                 o.stock_issued_at, o.shipped_at, o.return_status, o.doc_date, o.created_at
-       order by o.doc_date desc nulls last, o.created_at desc`,
+       order by o.doc_date desc nulls last, o.created_at desc
+       limit 5000`,
       params,
     );
   } catch { return []; }
@@ -608,17 +611,22 @@ export async function getOrderWithStock(orderNo: string): Promise<(OrderWithItem
   const order = await getOrder(orderNo);
   if (!order) return null;
   const [meta] = await q<{ stock_issued_at: string | null }>(`select stock_issued_at from orders where order_no = $1`, [orderNo]);
-  const itemsStock = await Promise.all(order.items.map(async (it) => {
-    // จับคู่แบบ normalize (keep อักษรไทย) ให้ตรงกับตอนตัดสต๊อกจริง (matchStockProduct)
-    // ไม่งั้น preview โชว์ 0 ทั้งที่ตัดจริงไปเจอ SKU ที่สะกดต่างเล็กน้อย
-    const [s] = await q<{ qty: number }>(
-      `select qty::float8 as qty from stock
-       where size = $2 and regexp_replace(lower(product),'[^a-z0-9ก-๙]','','g') = regexp_replace(lower($1),'[^a-z0-9ก-๙]','','g')
-       order by (product = $1) desc limit 1`,
-      [it.product, it.size],
-    );
-    return { ...it, stock: s?.qty ?? 0 };
-  }));
+  // ยอดคงเหลือทุกบรรทัดในครั้งเดียว (เดิม N+1 = 1 query/บรรทัด) — unnest + lateral join stock
+  // จับคู่แบบ normalize (keep อักษรไทย) ให้ตรงกับตอนตัดสต๊อกจริง — ไม่งั้น preview โชว์ 0 ทั้งที่ตัดจริงเจอ
+  const prods = order.items.map((it) => it.product);
+  const sizes = order.items.map((it) => it.size);
+  const sr = await q<{ idx: number; qty: number }>(
+    `select t.idx::int as idx, coalesce(s.qty,0)::float8 as qty
+     from unnest($1::text[], $2::text[]) with ordinality as t(product, size, idx)
+     left join lateral (
+       select qty from stock
+       where size = t.size and regexp_replace(lower(product),'[^a-z0-9ก-๙]','','g') = regexp_replace(lower(t.product),'[^a-z0-9ก-๙]','','g')
+       order by (product = t.product) desc limit 1
+     ) s on true`,
+    [prods, sizes],
+  );
+  const stockByIdx = new Map(sr.map((r) => [Number(r.idx), Number(r.qty)]));
+  const itemsStock = order.items.map((it, i) => ({ ...it, stock: stockByIdx.get(i + 1) ?? 0 }));
   return { ...order, stock_issued_at: meta?.stock_issued_at ?? null, itemsStock };
 }
 
@@ -724,10 +732,12 @@ export async function ordersTrend(months = 6, platform?: string): Promise<MonthP
 }
 
 export async function stockSummary(): Promise<{ skus: number; low: number; issuedOrders: number }> {
-  const [a] = await q<{ n: number }>(`select count(*)::int n from (select distinct oi.product, oi.size from order_items oi join orders o on o.order_no=oi.order_no where o.deleted_at is null and coalesce(oi.product,'')<>'' union select product,size from stock) t`);
-  const [b] = await q<{ n: number }>(`select count(*)::int n from stock where qty <= 10`);
-  const [c] = await q<{ n: number }>(`select count(*)::int n from orders where deleted_at is null and stock_issued_at is not null`);
-  return { skus: a?.n ?? 0, low: b?.n ?? 0, issuedOrders: c?.n ?? 0 };
+  try {
+    const [a] = await q<{ n: number }>(`select count(*)::int n from (select distinct oi.product, oi.size from order_items oi join orders o on o.order_no=oi.order_no where o.deleted_at is null and coalesce(oi.product,'')<>'' union select product,size from stock) t`);
+    const [b] = await q<{ n: number }>(`select count(*)::int n from stock where qty <= 10`);
+    const [c] = await q<{ n: number }>(`select count(*)::int n from orders where deleted_at is null and stock_issued_at is not null`);
+    return { skus: a?.n ?? 0, low: b?.n ?? 0, issuedOrders: c?.n ?? 0 };
+  } catch { return { skus: 0, low: 0, issuedOrders: 0 }; }
 }
 
 export type UserRow = { id: number; username: string; full_name: string; role: string; is_active: boolean; last_login_at: string | null; created_at: string };
