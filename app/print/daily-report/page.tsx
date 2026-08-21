@@ -20,7 +20,8 @@ export async function generateMetadata({ searchParams }: { searchParams: Promise
   const from = dOK(sp.date) || dOK(sp.from);
   const to = dOK(sp.date) || dOK(sp.to);
   const tag = from && to ? (from === to ? from : `${from}_${to}`) : from || to || sp.month || bkkToday();
-  return { title: `Shopee-Report-${tag}` };
+  const pf = resolvePlatform(sp.platform)?.code || "Shopee";
+  return { title: `${pf}-Report-${tag}` };
 }
 
 export default async function ShopeeReportPage({ searchParams }: { searchParams: Promise<SP> }) {
@@ -69,7 +70,7 @@ export default async function ShopeeReportPage({ searchParams }: { searchParams:
 }
 ` }} />
       <div className="mx-auto w-full max-w-[820px] px-4 py-4">
-        <div className="mb-4"><PrintNow title={`Shopee-Report-${from || to || month || bkkToday()}`} /></div>
+        <div className="mb-4"><PrintNow title={`${platform}-Report-${from || to || month || bkkToday()}`} /></div>
         <DailyReportSheet platform={platform} rangeLabel={rangeLabel} note={note} rows={rows} showDetail={showDetail} generatedAt={generatedAt} />
       </div>
     </div>

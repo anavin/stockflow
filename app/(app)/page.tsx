@@ -35,7 +35,7 @@ export default async function Dashboard() {
           <h1 className="text-xl font-bold tracking-tight text-ink">ภาพรวม</h1>
           <p className="mt-0.5 text-sm text-muted">
             {name ? <>สวัสดี <span className="font-medium text-ink">{name}</span> · </> : null}
-            ระบบเบิกสินค้า Shopee + สต๊อกกลาง
+            ระบบเบิกสินค้าหลายแพลตฟอร์ม + สต๊อกกลาง
           </p>
         </div>
         <div className="flex gap-2">

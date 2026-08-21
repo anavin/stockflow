@@ -4,7 +4,7 @@ import { APP_TITLE } from "@/lib/config";
 
 export const metadata: Metadata = {
   title: APP_TITLE,
-  description: "ระบบเบิกสินค้าแต่ละแพลตฟอร์ม — Shopee",
+  description: "ระบบเบิกสินค้าแต่ละแพลตฟอร์ม",
 };
 
 export const viewport: Viewport = { themeColor: "#ee4d2d" };
