@@ -61,11 +61,11 @@ export function DailyReportSheet({ date, rows, showDetail = true, generatedAt }:
           {/* ตารางไขว้ กลิ่น × ขนาด (packing list) */}
           <div className="mb-6">
             <SecTitle>สรุปกลิ่น × ขนาด ({scentRows.length} กลิ่น · {nf(totalQty)} ชิ้น)</SecTitle>
-            <table className="w-full text-[11px] border-collapse">
+            <table className="w-full table-fixed text-[11px] border-collapse">
               <thead>
                 <tr className="text-neutral-600 text-[10px]">
-                  <th className="border border-neutral-300 px-2 py-1 text-left font-semibold">กลิ่น</th>
-                  {sizeCols.map((s) => <th key={s} className="border border-neutral-300 px-1 py-1 text-center font-semibold whitespace-nowrap">{s.replace(/\.$/, "")}</th>)}
+                  <th className="w-[24%] border border-neutral-300 px-2 py-1 text-left font-semibold">กลิ่น</th>
+                  {sizeCols.map((s) => <th key={s} className="border border-neutral-300 px-1 py-1 text-center font-semibold">{s === "—" ? "ถุงกระดาษ" : s.replace(/\.$/, "")}</th>)}
                   <th className="border border-neutral-300 bg-neutral-100 px-1 py-1 text-center font-semibold">รวม</th>
                 </tr>
               </thead>
