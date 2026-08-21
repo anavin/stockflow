@@ -12,19 +12,8 @@ const thaiDate = (iso: string) =>
 const statusText = (r: DayOrderRow) => (r.shipped ? "ส่งแล้ว" : r.issued ? "ตัดสต๊อกแล้ว" : "รอตัดสต๊อก");
 const returnText = (s: string | null) => (s === "full" ? "คืนแล้ว" : s === "partial" ? "คืนบางส่วน" : "");
 
-const Kpi = ({ label, value, primary = false }: { label: string; value: string; primary?: boolean }) => (
-  <div className={`border rounded-lg px-3 py-2.5 ${primary ? "border-black border-2" : "border-neutral-400"}`}>
-    <div className="text-[10px] uppercase tracking-wide text-neutral-500">{label}</div>
-    <div className={`tabular-nums font-bold leading-tight ${primary ? "text-[22px]" : "text-lg"}`}>{value}</div>
-  </div>
-);
 const SecTitle = ({ children }: { children: React.ReactNode }) => (
   <div className="text-[11px] font-bold uppercase tracking-wide text-neutral-500 border-b border-black pb-1 mb-2">{children}</div>
-);
-const KV = ({ k, v }: { k: string; v: string }) => (
-  <div className="flex justify-between items-baseline py-1 border-b border-dashed border-neutral-300 text-[13px]">
-    <span>{k}</span><span className="font-semibold tabular-nums">{v}</span>
-  </div>
 );
 
 export function DailyReportSheet({ date, rows, showDetail = true, generatedAt }: {
@@ -33,11 +22,6 @@ export function DailyReportSheet({ date, rows, showDetail = true, generatedAt }:
   const ready = rows.length > 0;
   const orders = rows.length;
   const totalQty = rows.reduce((s, r) => s + (r.qty || 0), 0);
-  const issued = rows.filter((r) => r.issued).length;
-  const shipped = rows.filter((r) => r.shipped).length;
-  const pending = rows.filter((r) => !r.issued).length;
-  const returned = rows.filter((r) => r.return_status && r.return_status !== "none").length;
-  const freeQty = rows.reduce((s, r) => s + (r.items || []).filter((i) => i.is_free).reduce((x, i) => x + (i.qty || 0), 0), 0);
 
   // ── ตารางไขว้ กลิ่น × ขนาด (pivot) — แถว=กลิ่น คอลัมน์=ขนาด ช่อง=จำนวน ─────────
   const cell = new Map<string, Map<string, number>>();   // กลิ่น → ขนาด → จำนวน
@@ -74,24 +58,6 @@ export function DailyReportSheet({ date, rows, showDetail = true, generatedAt }:
         <div className="py-12 text-center text-sm text-neutral-500">ยังไม่มีใบเบิกของวันนี้</div>
       ) : (
         <>
-          <div className="grid grid-cols-4 gap-3 mb-6">
-            <Kpi label="ออเดอร์" value={`${orders}`} primary />
-            <Kpi label="ชิ้นรวม" value={`${nf(totalQty)}`} />
-            <Kpi label="ตัดสต๊อกแล้ว" value={`${issued}/${orders}`} />
-            <Kpi label="ส่งแล้ว" value={`${shipped}/${orders}`} />
-          </div>
-
-          <div className="mb-6">
-            <SecTitle>สถานะการทำงาน</SecTitle>
-            <div className="grid grid-cols-2 gap-x-10">
-              <KV k="รอตัดสต๊อก" v={`${pending} ใบ`} />
-              <KV k="ตัดสต๊อกแล้ว" v={`${issued} ใบ`} />
-              <KV k="ส่งแล้ว" v={`${shipped} ใบ`} />
-              {returned > 0 && <KV k="มีการคืน" v={`${returned} ใบ`} />}
-              {freeQty > 0 && <KV k="ของแถม (ชิ้น)" v={`${nf(freeQty)}`} />}
-            </div>
-          </div>
-
           {/* ตารางไขว้ กลิ่น × ขนาด (packing list) */}
           <div className="mb-6">
             <SecTitle>สรุปกลิ่น × ขนาด ({scentRows.length} กลิ่น · {nf(totalQty)} ชิ้น)</SecTitle>
