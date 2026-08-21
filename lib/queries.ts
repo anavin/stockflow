@@ -370,19 +370,21 @@ export type DailyIssue = { day: string; orders: number; issued: number; pending:
 /** รายวัน: ออร์เดอร์ที่เข้ามา (ตามวันที่ใบเบิก) เทียบกับที่ตัดสต๊อกแล้ว */
 export async function dailyIssueStatus(platform?: string, days = 14): Promise<DailyIssue[]> {
   // ใช้ "วันที่สั่งซื้อจริง" (order_date) เป็นหลัก ถ้าไม่มีค่อยใช้วันที่ใบเบิก · platform undefined = ทุกแพลตฟอร์ม
-  const params: any[] = [days];
-  const pc = platform ? (params.push(platform), ` and platform = $${params.length}`) : "";
-  const rows = await q<{ day: string; orders: number; issued: number }>(
-    `select to_char(coalesce(order_date, doc_date),'YYYY-MM-DD') as day,
-            count(*)::int as orders,
-            count(stock_issued_at)::int as issued
-     from orders
-     where deleted_at is null and coalesce(order_date, doc_date) is not null${pc}
-     group by to_char(coalesce(order_date, doc_date),'YYYY-MM-DD')
-     order by day desc limit $1`,
-    params,
-  );
-  return rows.map((r) => ({ day: r.day, orders: Number(r.orders), issued: Number(r.issued), pending: Number(r.orders) - Number(r.issued) }));
+  try {
+    const params: any[] = [days];
+    const pc = platform ? (params.push(platform), ` and platform = $${params.length}`) : "";
+    const rows = await q<{ day: string; orders: number; issued: number }>(
+      `select to_char(coalesce(order_date, doc_date),'YYYY-MM-DD') as day,
+              count(*)::int as orders,
+              count(stock_issued_at)::int as issued
+       from orders
+       where deleted_at is null and coalesce(order_date, doc_date) is not null${pc}
+       group by to_char(coalesce(order_date, doc_date),'YYYY-MM-DD')
+       order by day desc limit $1`,
+      params,
+    );
+    return rows.map((r) => ({ day: r.day, orders: Number(r.orders), issued: Number(r.issued), pending: Number(r.orders) - Number(r.issued) }));
+  } catch { return []; }
 }
 
 export type DayOrderItem = { product: string; size: string | null; qty: number; is_free: boolean };
@@ -563,7 +565,7 @@ export async function listStock(opts: { search?: string; lowOnly?: boolean; thre
     ${lowHaving}
     order by sum(n.qty) asc, product, max(n.size)
     limit ${limit}`;
-  return q<StockRow>(sql, params);
+  try { return await q<StockRow>(sql, params); } catch { return []; }
 }
 
 export type StockMoveRow = { id: number; product: string; size: string; qty_change: number; balance: number | null; reason: string; order_no: string | null; note: string | null; created_at: string; by_name: string | null };
@@ -638,61 +640,68 @@ export async function dashboardStats(platform?: string): Promise<DashStats> {
   // ทำเป็น query เดียว (scalar subqueries) แทน 8 query ขนาน — ลดจำนวน connection
   // ที่เปิดพร้อมกันบน Workers/Hyperdrive (เปิดหลาย connection พร้อมกันเคยทำให้ค้าง).
   // สุขภาพสต๊อก อิงเฉพาะ SKU ที่ track จริง (ตาราง stock): ปกติ(>10)+ต้องเติม(0..10)+ติดลบ(<0)=skus
-  const params: any[] = [];
-  const pc = platform ? (params.push(platform), " and platform = $1") : "";
-  const [r] = await q<DashStats & { pendingIssue?: number }>(
-    `select
-       (select count(*)::int from orders where deleted_at is null${pc}) as "ordersTotal",
-       (select count(*)::int from orders where deleted_at is null${pc} and doc_date = current_date) as "ordersToday",
-       (select count(*)::int from orders where deleted_at is null${pc} and to_char(doc_date,'YYYY-MM') = to_char(current_date,'YYYY-MM')) as "ordersMonth",
-       (select count(*)::int from orders where deleted_at is null${pc} and stock_issued_at is not null) as "issuedTotal",
-       (select count(*)::int from orders where deleted_at is null${pc} and stock_issued_at::date = current_date) as "issuedToday",
-       (select count(*)::int from stock) as skus,
-       (select count(*)::int from stock where qty >= 0 and qty <= 10) as low,
-       (select count(*)::int from stock where qty < 0) as negative`,
-    params,
-  );
-  const s = r ?? ({} as DashStats);
-  const ordersTotal = s.ordersTotal ?? 0, issuedTotal = s.issuedTotal ?? 0;
-  return {
-    ordersTotal, ordersToday: s.ordersToday ?? 0, ordersMonth: s.ordersMonth ?? 0,
-    issuedTotal, issuedToday: s.issuedToday ?? 0, pendingIssue: ordersTotal - issuedTotal,
-    skus: s.skus ?? 0, low: s.low ?? 0, negative: s.negative ?? 0,
-  };
+  const empty: DashStats = { ordersTotal: 0, ordersToday: 0, ordersMonth: 0, issuedTotal: 0, issuedToday: 0, pendingIssue: 0, skus: 0, low: 0, negative: 0 };
+  try {
+    const params: any[] = [];
+    const pc = platform ? (params.push(platform), " and platform = $1") : "";
+    const [r] = await q<DashStats & { pendingIssue?: number }>(
+      `select
+         (select count(*)::int from orders where deleted_at is null${pc}) as "ordersTotal",
+         (select count(*)::int from orders where deleted_at is null${pc} and doc_date = current_date) as "ordersToday",
+         (select count(*)::int from orders where deleted_at is null${pc} and to_char(doc_date,'YYYY-MM') = to_char(current_date,'YYYY-MM')) as "ordersMonth",
+         (select count(*)::int from orders where deleted_at is null${pc} and stock_issued_at is not null) as "issuedTotal",
+         (select count(*)::int from orders where deleted_at is null${pc} and stock_issued_at::date = current_date) as "issuedToday",
+         (select count(*)::int from stock) as skus,
+         (select count(*)::int from stock where qty >= 0 and qty <= 10) as low,
+         (select count(*)::int from stock where qty < 0) as negative`,
+      params,
+    );
+    const s = r ?? ({} as DashStats);
+    const ordersTotal = s.ordersTotal ?? 0, issuedTotal = s.issuedTotal ?? 0;
+    return {
+      ordersTotal, ordersToday: s.ordersToday ?? 0, ordersMonth: s.ordersMonth ?? 0,
+      issuedTotal, issuedToday: s.issuedToday ?? 0, pendingIssue: ordersTotal - issuedTotal,
+      skus: s.skus ?? 0, low: s.low ?? 0, negative: s.negative ?? 0,
+    };
+  } catch (e) { console.error("[dashboardStats]", (e as any)?.message); return empty; }
 }
 
 /** กลิ่นที่เบิกมากสุด (ผลรวมจำนวนจากใบเบิกที่ยังไม่ลบ) — สำหรับกราฟบนหน้าภาพรวม */
 export type TopProduct = { product: string; qty: number };
 export async function topProducts(limit = 6): Promise<TopProduct[]> {
   const lim = Math.min(Math.max(1, limit), 500);
-  return q<TopProduct>(
-    `select oi.product, sum(oi.qty)::float8 as qty
-     from order_items oi join orders o on o.order_no = oi.order_no
-     where o.deleted_at is null and coalesce(oi.product,'') <> ''
-     group by oi.product order by qty desc limit ${lim}`,
-  );
+  try {
+    return await q<TopProduct>(
+      `select oi.product, sum(oi.qty)::float8 as qty
+       from order_items oi join orders o on o.order_no = oi.order_no
+       where o.deleted_at is null and coalesce(oi.product,'') <> ''
+       group by oi.product order by qty desc limit ${lim}`,
+    );
+  } catch { return []; }
 }
 
 /** จำนวนใบเบิกต่อเดือน (ล่าสุด N เดือน) — สำหรับ mini bar chart หน้าภาพรวม */
 export type MonthPoint = { ym: string; label: string; n: number };
 export async function ordersTrend(months = 6, platform?: string): Promise<MonthPoint[]> {
   const m = Math.min(Math.max(1, months), 24);
-  const params: any[] = [];
-  const pc = platform ? (params.push(platform), " and platform = $1") : "";
-  const rows = await q<{ ym: string; n: number }>(
-    `select to_char(date_trunc('month', doc_date),'YYYY-MM') as ym, count(*)::int as n
-     from orders where deleted_at is null and doc_date is not null${pc}
-     group by 1 order by 1 desc limit ${m}`,
-    params,
-  );
-  const TH = ["ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.", "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."];
-  return rows
-    .map((r) => {
-      const mm = Number((r.ym || "").slice(5, 7));
-      const yy = (r.ym || "").slice(2, 4);
-      return { ym: r.ym, label: `${TH[mm - 1] ?? r.ym}${yy}`, n: r.n };
-    })
-    .reverse(); // เก่า→ใหม่ สำหรับวาดกราฟ
+  try {
+    const params: any[] = [];
+    const pc = platform ? (params.push(platform), " and platform = $1") : "";
+    const rows = await q<{ ym: string; n: number }>(
+      `select to_char(date_trunc('month', doc_date),'YYYY-MM') as ym, count(*)::int as n
+       from orders where deleted_at is null and doc_date is not null${pc}
+       group by 1 order by 1 desc limit ${m}`,
+      params,
+    );
+    const TH = ["ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.", "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."];
+    return rows
+      .map((r) => {
+        const mm = Number((r.ym || "").slice(5, 7));
+        const yy = (r.ym || "").slice(2, 4);
+        return { ym: r.ym, label: `${TH[mm - 1] ?? r.ym}${yy}`, n: r.n };
+      })
+      .reverse(); // เก่า→ใหม่ สำหรับวาดกราฟ
+  } catch { return []; }
 }
 
 export async function stockSummary(): Promise<{ skus: number; low: number; issuedOrders: number }> {
