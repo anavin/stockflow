@@ -19,6 +19,7 @@ type Preview = {
   unmatchedItems: number;
   unmatched?: UnmatchedItem[];
   products?: string[];
+  warnings?: string[];
 };
 
 export default function ImportWizard({ platform = "Shopee" }: { platform?: string }) {
@@ -127,6 +128,15 @@ export default function ImportWizard({ platform = "Shopee" }: { platform?: strin
 
       {preview && (
         <div className="space-y-4">
+          {(preview.warnings?.length ?? 0) > 0 && (
+            <div className="rounded-xl border-2 border-amber-400 bg-amber-50 p-4">
+              {preview.warnings!.map((w, i) => (
+                <div key={i} className="flex items-start gap-2 text-sm font-medium text-amber-800">
+                  <AlertTriangle size={18} className="mt-0.5 shrink-0" /> {w}
+                </div>
+              ))}
+            </div>
+          )}
           <div className="flex flex-wrap gap-3">
             <Stat label="ออร์เดอร์" value={preview.orders.length} />
             <Stat label="รายการสินค้า" value={preview.itemCount} />

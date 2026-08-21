@@ -89,7 +89,18 @@ export async function POST(req: Request) {
       e.count += 1; unmap.set(it.product, e);
     }
     const unmatched = [...unmap.values()].map((u) => ({ ...u, suggestions: suggestScents(u.name, products) }));
-    return NextResponse.json({ ok: true, ...result, unmatched, products });
+
+    // เตือนไฟล์ถูกปิดบัง: บาง export (เช่น TikTok "จัดส่งแล้ว") mask ผู้รับ/เบอร์/ที่อยู่เป็น *** → ควรใช้ไฟล์ "คำสั่งซื้อ"
+    const maskRe = /\*{2,}/;
+    let maskedOrders = 0;
+    for (const o of result.orders) {
+      if (maskRe.test(o.receiver || "") || maskRe.test(o.phone || "") || maskRe.test(o.address || "") || maskRe.test(o.postcode || "")) maskedOrders += 1;
+    }
+    const warnings: string[] = [];
+    if (result.orders.length > 0 && (maskedOrders >= 2 || maskedOrders / result.orders.length >= 0.3)) {
+      warnings.push(`พบข้อมูลผู้รับ/เบอร์/ที่อยู่ถูกปิดบัง (***) ${maskedOrders} จาก ${result.orders.length} ออร์เดอร์ — น่าจะเป็นไฟล์ "จัดส่งแล้ว" ควรใช้ไฟล์ "คำสั่งซื้อ" ที่ไม่ปิดบังข้อมูลแทน (มิฉะนั้นต้องกรอกที่อยู่เองทุกใบ)`);
+    }
+    return NextResponse.json({ ok: true, ...result, unmatched, products, warnings });
   } catch (e: any) {
     return NextResponse.json({ ok: false, error: e?.message || "อ่านไฟล์ไม่สำเร็จ" }, { status: 400 });
   }
