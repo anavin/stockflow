@@ -82,8 +82,9 @@ export default function FdaManager({ rows, summary, canEdit }: { rows: FdaRow[];
   }
 
   const isDisc = (r: FdaRow) => /เลิก/.test(r.prod_status || "");
-  const isExpired = (r: FdaRow) => (r.days_left != null && r.days_left < 0) || /สิ้นอาย/.test(r.fda_status || "");   // หมดอายุตามวันที่ หรือ สถานะ อย.=สิ้นอายุ
-  const toBottom = (r: FdaRow) => (isDisc(r) || isExpired(r) ? 1 : 0);   // เลิกผลิต + สิ้นอายุ → ล่างสุด
+  const isExpired = (r: FdaRow) => (r.days_left != null && r.days_left < 0) || /สิ้นอาย|ยกเลิก/.test(r.fda_status || "");   // หมดอายุตามวันที่ หรือ สถานะ อย.=สิ้นอายุ/ยกเลิก
+  // เรียง 3 ระดับ: ปกติ(0) → เลิกผลิต แต่ อย. ยังคงอยู่(1) → สิ้นอายุ/หมดอายุ(2 ล่างสุดจริง)
+  const rank = (r: FdaRow) => (isExpired(r) ? 2 : isDisc(r) ? 1 : 0);
   const filtered = useMemo(() => {
     const t = search.trim().toLowerCase();
     return rows.filter((r) => {
@@ -91,7 +92,7 @@ export default function FdaManager({ rows, summary, canEdit }: { rows: FdaRow[];
       if (statusF && (r.fda_status || "") !== statusF) return false;
       if (t && !(`${r.product} ${r.name_th ?? ""} ${r.name_en ?? ""} ${r.reg_no ?? ""}`.toLowerCase().includes(t))) return false;
       return true;
-    }).sort((a, b) => toBottom(a) - toBottom(b));
+    }).sort((a, b) => rank(a) - rank(b));
   }, [rows, search, tierF, statusF]);
 
   const statuses = useMemo(() => [...new Set(rows.map((r) => r.fda_status).filter(Boolean))] as string[], [rows]);
