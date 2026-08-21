@@ -28,6 +28,19 @@ export default async function ShopeeDailyReportPage({ searchParams }: { searchPa
 
   return (
     <div className="min-h-screen bg-white text-black" style={{ fontFamily: "'Sarabun','Noto Sans Thai','IBM Plex Sans Thai',system-ui,sans-serif" }}>
+      {/* ตั้งค่าพิมพ์ A4 แนวตั้ง (override @page landscape ของใบเบิกในหน้านี้เท่านั้น) + กันหน้าเปล่า (แนว CTW) */}
+      <style dangerouslySetInnerHTML={{ __html: `
+@media print {
+  @page { size: A4 portrait; margin: 14mm; }
+  html, body { background: #fff !important; margin: 0 !important; padding: 0 !important; }
+  .no-print { display: none !important; }
+  .daily-sheet { max-width: none !important; padding: 0 !important; border: none !important; border-radius: 0 !important; box-shadow: none !important; margin: 0 !important; }
+  .daily-sheet table { page-break-inside: auto; }
+  .daily-sheet tr { page-break-inside: avoid; }
+  .daily-sheet thead { display: table-header-group; }
+  * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+}
+` }} />
       <div className="mx-auto w-full max-w-[820px] px-4 py-4">
         <div className="mb-4"><PrintNow title={`Shopee-Daily-Report-${date}`} /></div>
         <DailyReportSheet date={date} rows={rows} showDetail={showDetail} generatedAt={generatedAt} />

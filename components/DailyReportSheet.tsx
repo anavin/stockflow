@@ -6,6 +6,7 @@
 import type { DayOrderRow } from "@/lib/queries";
 
 const nf = (n: number) => Math.round(n || 0).toLocaleString("en-US");
+const sizeMl = (s: string) => { const m = (s || "").match(/[\d.]+/); return m ? parseFloat(m[0]) : 9999; }; // เรียงขนาดน้อย→มาก (Size S/M ไปท้าย)
 const thaiDate = (iso: string) =>
   new Date(iso + "T00:00:00").toLocaleDateString("th-TH", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
 const statusText = (r: DayOrderRow) => (r.shipped ? "ส่งแล้ว" : r.issued ? "ตัดสต๊อกแล้ว" : "รอตัดสต๊อก");
@@ -26,6 +27,40 @@ const KV = ({ k, v }: { k: string; v: string }) => (
   </div>
 );
 
+type SumRow = { key: string; sold: number; free: number; total: number };
+const SumTable = ({ label, rows, twoCol = false }: { label: string; rows: SumRow[]; twoCol?: boolean }) => {
+  const One = ({ data }: { data: SumRow[] }) => (
+    <table className="w-full text-[12px] border-collapse">
+      <thead>
+        <tr className="text-left text-neutral-500 text-[10px] uppercase tracking-wide">
+          <th className="pb-1 pr-2 font-semibold">{label}</th>
+          <th className="pb-1 pr-2 w-10 text-right font-semibold">ขาย</th>
+          <th className="pb-1 pr-2 w-10 text-right font-semibold">แถม</th>
+          <th className="pb-1 w-10 text-right font-semibold">รวม</th>
+        </tr>
+      </thead>
+      <tbody>
+        {data.map((r) => (
+          <tr key={r.key} className="border-t border-neutral-200">
+            <td className="py-1 pr-2">{r.key}</td>
+            <td className="py-1 pr-2 text-right tabular-nums">{r.sold ? nf(r.sold) : "-"}</td>
+            <td className="py-1 pr-2 text-right tabular-nums text-neutral-500">{r.free ? nf(r.free) : "-"}</td>
+            <td className="py-1 text-right font-semibold tabular-nums">{nf(r.total)}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  );
+  if (!twoCol || rows.length <= 10) return <One data={rows} />;
+  const half = Math.ceil(rows.length / 2);
+  return (
+    <div className="grid grid-cols-2 gap-x-8 items-start">
+      <One data={rows.slice(0, half)} />
+      <One data={rows.slice(half)} />
+    </div>
+  );
+};
+
 export function DailyReportSheet({ date, rows, showDetail = true, generatedAt }: {
   date: string; rows: DayOrderRow[]; showDetail?: boolean; generatedAt: string;
 }) {
@@ -38,12 +73,18 @@ export function DailyReportSheet({ date, rows, showDetail = true, generatedAt }:
   const returned = rows.filter((r) => r.return_status && r.return_status !== "none").length;
   const freeQty = rows.reduce((s, r) => s + (r.items || []).filter((i) => i.is_free).reduce((x, i) => x + (i.qty || 0), 0), 0);
 
-  // กลิ่นที่เบิกมากสุด (นับเฉพาะที่ขาย ไม่รวมของแถม)
-  const top = (() => {
-    const m = new Map<string, number>();
-    for (const r of rows) for (const i of r.items || []) if (!i.is_free) m.set(i.product, (m.get(i.product) || 0) + (i.qty || 0));
-    return [...m.entries()].map(([product, qty]) => ({ product, qty })).sort((a, b) => b.qty - a.qty).slice(0, 5);
-  })();
+  // สรุปตามคีย์ (กลิ่น / ขนาด) → {ขาย, แถม, รวม}
+  const aggBy = (keyOf: (i: { product: string; size: string | null }) => string) => {
+    const m = new Map<string, { sold: number; free: number }>();
+    for (const r of rows) for (const i of r.items || []) {
+      const k = keyOf(i); const c = m.get(k) ?? { sold: 0, free: 0 };
+      if (i.is_free) c.free += i.qty || 0; else c.sold += i.qty || 0;
+      m.set(k, c);
+    }
+    return [...m.entries()].map(([key, v]) => ({ key, ...v, total: v.sold + v.free }));
+  };
+  const byScent = aggBy((i) => i.product).sort((a, b) => b.total - a.total || a.key.localeCompare(b.key, "en"));
+  const bySize = aggBy((i) => i.size || "—").sort((a, b) => sizeMl(a.key) - sizeMl(b.key));
   const creators = [...new Set(rows.map((r) => r.created_by_name).filter(Boolean))] as string[];
 
   return (
@@ -83,9 +124,14 @@ export function DailyReportSheet({ date, rows, showDetail = true, generatedAt }:
               {freeQty > 0 && <KV k="ของแถม (ชิ้น)" v={`${nf(freeQty)}`} />}
             </div>
             <div>
-              <SecTitle>กลิ่นที่เบิกมากสุด (Top {top.length})</SecTitle>
-              {top.map((t) => <KV key={t.product} k={t.product} v={`${nf(t.qty)} ชิ้น`} />)}
+              <SecTitle>สรุปรายขนาด</SecTitle>
+              <SumTable label="ขนาด" rows={bySize} />
             </div>
+          </div>
+
+          <div className="mb-6">
+            <SecTitle>สรุปรายกลิ่น ({byScent.length} กลิ่น)</SecTitle>
+            <SumTable label="กลิ่น" rows={byScent} twoCol />
           </div>
 
           {showDetail && (
