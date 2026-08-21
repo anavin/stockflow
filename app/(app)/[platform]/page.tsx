@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { listOrders, getMonths, countOrders } from "@/lib/queries";
 import { resolvePlatform, platformBase, canImportPlatform, platformColor, platformTint } from "@/lib/config";
 import OrdersTable from "@/components/OrdersTable";
-import ShopeeFilters from "@/components/ShopeeFilters";
+import OrderFilters from "@/components/OrderFilters";
 import { PlusCircle, Upload, ChevronLeft, ChevronRight, FileDown, FileBarChart, Trash2 } from "lucide-react";
 import { requireCreator } from "@/lib/auth/require-user";
 
@@ -77,7 +77,7 @@ export default async function OrdersPage({ params, searchParams }: {
         </div>
       </div>
 
-      <ShopeeFilters platform={pf.code} q={q} month={month} from={from} to={to} issued={iss} shipped={shp} months={months} />
+      <OrderFilters platform={pf.code} q={q} month={month} from={from} to={to} issued={iss} shipped={shp} months={months} />
 
       <OrdersTable orders={orders} platform={pf.code} />
 

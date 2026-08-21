@@ -4,6 +4,10 @@ import { q, tx } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth/session";
 import { can } from "@/lib/auth/roles";
 import { logActivity } from "@/lib/activity";
+import { enabledPlatforms, platformBase } from "@/lib/config";
+
+/** revalidate ฟอร์มสร้างใบเบิกทุกแพลตฟอร์ม (dropdown กลิ่นเปลี่ยน → ต้องรีเฟรชทุก /[platform]/new) */
+const revalidateNewForms = () => { for (const p of enabledPlatforms()) revalidatePath(`${platformBase(p.code)}/new`); };
 
 // จัดการรายชื่อกลิ่น (master products) — admin + ฝ่ายคลัง (stock)
 async function gate() {
@@ -85,7 +89,7 @@ export async function setDiscontinued(scent: string, size: string, disc: boolean
   } catch { return { ok: false, error: "ยังไม่มีตาราง discontinued_sku (รัน SQL 0021 บน prod ก่อน)" }; }
   await logActivity("scent.manage", `${disc ? "ตั้งเลิกผลิต" : "ยกเลิกเลิกผลิต"} ${sc} ${sz}`);
   revalidatePath("/products");
-  revalidatePath("/shopee/new");
+  revalidateNewForms();
   return { ok: true };
 }
 
@@ -168,7 +172,7 @@ export async function renameProduct(id: number, name: string): Promise<{ ok: boo
   await logActivity("scent.manage", `เปลี่ยนชื่อกลิ่น "${oldName}" → "${n}"`);
   revalidatePath("/products");
   revalidatePath("/stock");
-  revalidatePath("/shopee/new");
+  revalidateNewForms();
   return { ok: true };
 }
 
@@ -204,7 +208,7 @@ export async function deleteProduct(id: number): Promise<{ ok: boolean; error?: 
     ]) { try { await q(stmt, [p.name]); } catch { /* ตารางอาจไม่มีบน prod */ } }
   } catch (e: any) { return { ok: false, error: e?.message || "ลบไม่สำเร็จ" }; }
   await logActivity("scent.manage", `ลบกลิ่น "${p.name}"`);
-  revalidatePath("/products"); revalidatePath("/stock"); revalidatePath("/shopee/new");
+  revalidatePath("/products"); revalidatePath("/stock"); revalidateNewForms();
   return { ok: true };
 }
 
@@ -223,7 +227,7 @@ export async function setSkuSold(scent: string, size: string, sold: boolean): Pr
   } catch { return { ok: false, error: "ยังไม่มีตาราง closed_sku (รัน SQL 0026 บน prod ก่อน)" }; }
   await logActivity("scent.manage", `${sold ? "เปิดขาย" : "ปิดขาย"} ${sc} ${sz}`);
   revalidatePath("/stock");
-  revalidatePath("/shopee/new");
+  revalidateNewForms();
   return { ok: true };
 }
 

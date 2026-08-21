@@ -36,6 +36,17 @@ export function rowsToOrders(rows: Record<string, any>[], products: string[] = [
   const errors: { row: number; message: string }[] = [];
   let itemCount = 0, unmatchedItems = 0;
 
+  // guard: กันหัวคอลัมน์เพี้ยน (TikTok เปลี่ยนชื่อหัว / อัปโหลดผิดไฟล์) — ถ้าไม่มีคอลัมน์หลัก แจ้งชัดแทนที่จะได้ 0 เงียบ ๆ
+  if (rows.length > 0) {
+    const keys = new Set(Object.keys(rows[0]));
+    const need = ["Order ID", "Product Name", "Variation", "Quantity"].filter((k) => !keys.has(k));
+    if (need.includes("Order ID") || need.length >= 3) {
+      return { orders: [], totalRows: rows.length, itemCount: 0,
+        errors: [{ row: 1, message: `ไม่พบคอลัมน์หลักของ TikTok (${need.join(", ")}) — ตรวจว่าเป็นไฟล์ export ออเดอร์ของ TikTok Shop และหัวคอลัมน์อยู่แถวแรก` }],
+        noItemOrders: 0, orderNos: [], unmatchedItems: 0 };
+    }
+  }
+
   rows.forEach((raw, idx) => {
     const rowNo = idx + 2;
     const g = (k: string) => raw[k];

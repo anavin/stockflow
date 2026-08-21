@@ -4,7 +4,10 @@ import { q, tx } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth/session";
 import { can } from "@/lib/auth/roles";
 import { logActivity } from "@/lib/activity";
-import { isStockTracked } from "@/lib/config";
+import { isStockTracked, enabledPlatforms, platformBase } from "@/lib/config";
+
+/** revalidate หน้ารายการใบเบิกทุกแพลตฟอร์ม (ป้ายสถานะคืนโชว์บนรายการ) */
+const revalidateAllOrderLists = () => { for (const p of enabledPlatforms()) revalidatePath(platformBase(p.code)); };
 
 // ── จับคู่ SKU สต๊อกจริงแบบ normalize (ลอกจาก stock.ts — ให้คืน/ตัด ตรงแถวเดียวกัน) ──
 type Run = <R = any>(sql: string, p?: any[]) => Promise<R[]>;
@@ -139,7 +142,7 @@ export async function confirmReturn(orderNo: string, entries: ReturnEntry[], rea
       return { ok: true, order_no: on, restocked, damaged, skipped };
     });
     await logActivity("return", `${on} · คืนสต๊อก ${out.restocked} · ชำรุด ${out.damaged}${out.skipped ? ` · ไม่นับ ${out.skipped}` : ""}`);
-    revalidatePath("/returns"); revalidatePath("/stock"); revalidatePath("/stock/damaged"); revalidatePath("/shopee"); revalidatePath("/ship/daily");
+    revalidatePath("/returns"); revalidatePath("/stock"); revalidatePath("/stock/damaged"); revalidateAllOrderLists(); revalidatePath("/ship/daily");
     return out;
   } catch (e: any) {
     return { ok: false, error: e?.message || "รับคืนไม่สำเร็จ" };
@@ -187,7 +190,7 @@ export async function reverseReturn(returnId: number): Promise<{ ok: boolean; er
       await run(`update orders set return_status = $2, returned_at = case when $2='none' then null else returned_at end where order_no = $1`, [r.order_no, status]);
     });
     await logActivity("return.reverse", orderNo);
-    revalidatePath("/returns"); revalidatePath("/stock"); revalidatePath("/stock/damaged"); revalidatePath("/shopee");
+    revalidatePath("/returns"); revalidatePath("/stock"); revalidatePath("/stock/damaged"); revalidateAllOrderLists();
     return { ok: true };
   } catch (e: any) {
     return { ok: false, error: e?.message || "ยกเลิกการคืนไม่สำเร็จ" };

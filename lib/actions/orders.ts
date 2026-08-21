@@ -7,7 +7,15 @@ import { can } from "@/lib/auth/roles";
 import { logActivity } from "@/lib/activity";
 import { buildProductLabel, type OrderWithItems } from "@/lib/types";
 import { formatDocNo, monthLabel, ymdKey } from "@/lib/docno";
-import { isAllowedFreeSize, FREE_ALLOWED_SIZES } from "@/lib/config";
+import { isAllowedFreeSize, FREE_ALLOWED_SIZES, enabledPlatforms, platformBase } from "@/lib/config";
+
+/** revalidate หน้ารายการ+ถังขยะใบเบิกของทุกแพลตฟอร์ม (route เป็น /[platform] — hardcode /shopee ครอบไม่ครบ) */
+function revalidateOrderLists() {
+  for (const p of enabledPlatforms()) {
+    revalidatePath(platformBase(p.code));
+    revalidatePath(`${platformBase(p.code)}/trash`);
+  }
+}
 
 const itemSchema = z.object({
   product: z.string().trim().min(1, "เลือกสินค้า"),
@@ -139,9 +147,9 @@ export async function saveOrder(input: OrderInput): Promise<SaveResult> {
       return docNo;
     });
 
-    revalidatePath("/shopee");
-    revalidatePath(`/shopee/${encodeURIComponent(o.order_no)}`);
-    await logActivity("order.create", `${o.order_no}${outDoc ? " · " + outDoc : ""}`);
+    revalidateOrderLists();
+    revalidatePath(`${platformBase(o.platform)}/${encodeURIComponent(o.order_no)}`);
+    await logActivity("order.create", `${o.order_no} · ${o.platform}${outDoc ? " · " + outDoc : ""}`);
     return { ok: true, order_no: o.order_no, doc_no: outDoc };
   } catch (e: any) {
     return { ok: false, error: e?.message || "บันทึกไม่สำเร็จ" };
@@ -167,8 +175,8 @@ export async function deleteOrder(orderNo: string): Promise<{ ok: boolean; error
   try {
     await q(`update orders set deleted_at = now(), deleted_by = $2 where order_no = $1`, [orderNo, user.id]);
     await logActivity("order.delete", orderNo);
-    revalidatePath("/shopee");
-    revalidatePath("/shopee/trash");
+    revalidateOrderLists();
+    revalidateOrderLists();
     return { ok: true };
   } catch (e: any) {
     return { ok: false, error: e?.message || "ลบไม่สำเร็จ" };
@@ -188,8 +196,8 @@ export async function bulkDeleteOrders(orderNos: string[]): Promise<{ ok: boolea
       [list, user.id],
     );
     await logActivity("order.delete", `${rows.length} ใบ (เลือกหลายรายการ)`);
-    revalidatePath("/shopee");
-    revalidatePath("/shopee/trash");
+    revalidateOrderLists();
+    revalidateOrderLists();
     return { ok: true, deleted: rows.length };
   } catch (e: any) {
     return { ok: false, deleted: 0, error: e?.message || "ลบไม่สำเร็จ" };
@@ -204,8 +212,8 @@ export async function restoreOrder(orderNo: string): Promise<{ ok: boolean; erro
   try {
     await q(`update orders set deleted_at = null, deleted_by = null where order_no = $1`, [orderNo]);
     await logActivity("order.restore", orderNo);
-    revalidatePath("/shopee");
-    revalidatePath("/shopee/trash");
+    revalidateOrderLists();
+    revalidateOrderLists();
     return { ok: true };
   } catch (e: any) {
     return { ok: false, error: e?.message || "กู้คืนไม่สำเร็จ" };
@@ -220,7 +228,7 @@ export async function purgeOrder(orderNo: string): Promise<{ ok: boolean; error?
   try {
     await q(`delete from orders where order_no = $1 and deleted_at is not null`, [orderNo]);
     await logActivity("order.purge", `${orderNo} (ลบถาวร)`);
-    revalidatePath("/shopee/trash");
+    revalidateOrderLists();
     return { ok: true };
   } catch (e: any) {
     return { ok: false, error: e?.message || "ลบถาวรไม่สำเร็จ" };
@@ -238,7 +246,7 @@ export async function bulkRestoreOrders(orderNos: string[]): Promise<{ ok: boole
     const rows = await q<{ order_no: string }>(
       `update orders set deleted_at = null, deleted_by = null where order_no = any($1) and deleted_at is not null returning order_no`, [list]);
     await logActivity("order.restore", `${rows.length} ใบ`);
-    revalidatePath("/shopee"); revalidatePath("/shopee/trash");
+    revalidateOrderLists(); revalidateOrderLists();
     return { ok: true, done: rows.length };
   } catch (e: any) { return { ok: false, done: 0, error: e?.message || "กู้คืนไม่สำเร็จ" }; }
 }
@@ -254,7 +262,7 @@ export async function bulkPurgeOrders(orderNos: string[]): Promise<{ ok: boolean
     const rows = await q<{ order_no: string }>(
       `delete from orders where order_no = any($1) and deleted_at is not null returning order_no`, [list]);
     await logActivity("order.purge", `${rows.length} ใบ (ลบถาวร)`);
-    revalidatePath("/shopee/trash");
+    revalidateOrderLists();
     return { ok: true, done: rows.length };
   } catch (e: any) { return { ok: false, done: 0, error: e?.message || "ลบถาวรไม่สำเร็จ" }; }
 }
@@ -525,7 +533,7 @@ export async function bulkSaveOrders(orders: OrderWithItems[]): Promise<{ ok: bo
     for (const r of results) { if (r.ok) saved += 1; else errors.push(r.err); }
   }
   await logActivity("order.import", `นำเข้า ${saved} ใบ${errors.length ? ` · ล้มเหลว ${errors.length}` : ""}`);
-  revalidatePath("/shopee");
+  revalidateOrderLists();
   if (errors.length) {
     const preview = errors.slice(0, 5).join("; ");
     return { ok: false, saved, failed: errors.length, error: `บันทึกสำเร็จ ${saved}, ล้มเหลว ${errors.length} — ${preview}${errors.length > 5 ? " …" : ""}` };
@@ -575,8 +583,8 @@ export async function markShipped(orderNo: string, dateStr?: string): Promise<Sh
     const [again] = await q<{ shipped_at: string | null }>(`select shipped_at from orders where order_no = $1`, [o.order_no]);
     return { ok: true, already: true, at: again?.shipped_at ?? null, issued: !!o.stock_issued_at, order: info };
   }
-  await logActivity("ship", `${o.order_no}${backdate ? " · ย้อนหลัง " + dateStr : ""}`);
-  revalidatePath("/shopee");
+  await logActivity("ship", `${o.order_no} · ${o.platform || "Shopee"}${backdate ? " · ย้อนหลัง " + dateStr : ""}`);
+  revalidateOrderLists();
   return { ok: true, already: false, at: u.shipped_at, issued: !!o.stock_issued_at, order: info };
 }
 
@@ -586,6 +594,6 @@ export async function unshipOrder(orderNo: string): Promise<{ ok: boolean; error
   if (!user || !can.manageStock(user.role)) return { ok: false, error: "เฉพาะผู้ดูแล / ฝ่ายคลัง" };
   await q(`update orders set shipped_at = null, shipped_by = null where order_no = $1`, [(orderNo || "").trim()]);
   await logActivity("unship", (orderNo || "").trim());
-  revalidatePath("/ship/daily"); revalidatePath("/shopee");
+  revalidatePath("/ship/daily"); revalidateOrderLists();
   return { ok: true };
 }

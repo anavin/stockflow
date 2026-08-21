@@ -411,7 +411,7 @@ export type DayOrderRow = {
   qty: number; items: DayOrderItem[] | null;
 };
 /** ออเดอร์ + รายการ ตามฟิลเตอร์ (เดียวกับหน้า /shopee: เดือน/ช่วงวันที่/สถานะ/ค้นหา) — สำหรับรายงานสรุป */
-export async function shopeeReportRows(opts: { platform?: string; search?: string; month?: string; from?: string; to?: string; issued?: "yes" | "no"; shipped?: "yes" | "no" } = {}): Promise<DayOrderRow[]> {
+export async function reportRows(opts: { platform?: string; search?: string; month?: string; from?: string; to?: string; issued?: "yes" | "no"; shipped?: "yes" | "no" } = {}): Promise<DayOrderRow[]> {
   try {
     const where: string[] = ["o.deleted_at is null"];
     const params: any[] = [];

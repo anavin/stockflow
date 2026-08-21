@@ -1,6 +1,6 @@
 import { requireDashboard } from "@/lib/auth/require-user";
 import { resolvePlatform } from "@/lib/config";
-import { shopeeReportRows } from "@/lib/queries";
+import { reportRows } from "@/lib/queries";
 import { DailyReportSheet } from "@/components/DailyReportSheet";
 import PrintNow from "@/components/PrintNow";
 
@@ -39,7 +39,7 @@ export default async function ShopeeReportPage({ searchParams }: { searchParams:
   if (!from && !to && !month) { from = bkkToday(); to = from; }
 
   const platform = resolvePlatform(sp.platform)?.code ?? "Shopee";
-  const rows = await shopeeReportRows({ platform, search: q, month, from, to, issued: iss, shipped: shp });
+  const rows = await reportRows({ platform, search: q, month, from, to, issued: iss, shipped: shp });
 
   const rangeLabel = from && to ? (from === to ? thaiFull(from) : `${thaiShort(from)} – ${thaiShort(to)}`)
     : from ? `ตั้งแต่ ${thaiShort(from)}` : to ? `ถึง ${thaiShort(to)}` : month ? `เดือน ${month}` : "ทั้งหมด";

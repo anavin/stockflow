@@ -3,7 +3,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Search, X, CalendarDays } from "lucide-react";
 
-export default function ShopeeFilters({ platform = "Shopee", q, month, from, to, issued, shipped, months }: { platform?: string; q?: string; month?: string; from?: string; to?: string; issued?: string; shipped?: string; months: string[] }) {
+export default function OrderFilters({ platform = "Shopee", q, month, from, to, issued, shipped, months }: { platform?: string; q?: string; month?: string; from?: string; to?: string; issued?: string; shipped?: string; months: string[] }) {
   const router = useRouter();
   const base = `/${platform.toLowerCase()}`;
   const [search, setSearch] = useState(q ?? "");
