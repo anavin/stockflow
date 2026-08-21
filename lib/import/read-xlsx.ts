@@ -56,6 +56,7 @@ export function readXlsxRaw(buf: Buffer | Uint8Array): SheetRows {
   // grid[row][col] = ค่า string
   const grid = new Map<number, Map<number, string>>();
   let headerRowNo = Infinity;
+  let maxCol = 0;
   const cellRe = /<c\s+r="([A-Z]+)(\d+)"([^>]*?)(?:\/>|>([\s\S]*?)<\/c>)/g;
   for (const m of sheetXml.matchAll(cellRe)) {
     const col = colToIdx(m[1]);
@@ -79,12 +80,12 @@ export function readXlsxRaw(buf: Buffer | Uint8Array): SheetRows {
     if (!r) { r = new Map(); grid.set(row, r); }
     r.set(col, val);
     if (row < headerRowNo) headerRowNo = row;
+    if (col > maxCol) maxCol = col;
   }
   if (!grid.size) return { headers: [], rows: [] };
 
   // header = แถวแรกที่มีข้อมูล
   const headerMap = grid.get(headerRowNo)!;
-  const maxCol = Math.max(...[...grid.values()].flatMap((r) => [...r.keys()]));
   const headers: string[] = [];
   for (let c = 1; c <= maxCol; c++) headers[c] = (headerMap.get(c) || "").trim();
 
