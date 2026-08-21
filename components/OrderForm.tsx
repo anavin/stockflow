@@ -10,7 +10,7 @@ import type { PostcodeHit } from "@/lib/actions/orders";
 import ItemsEditor, { emptyItem, itemErrorOf, hasItemError, type ItemDraft, type ItemError } from "./ItemsEditor";
 import type { CustomerSuggestion, CustomerHistory, PastOrder } from "@/lib/actions/orders";
 import { saveOrder, orderExists, customerHistory, type OrderInput } from "@/lib/actions/orders";
-import { CUSTOMER_TYPES } from "@/lib/config";
+import { CUSTOMER_TYPES, platformColor } from "@/lib/config";
 import type { OrderWithItems } from "@/lib/types";
 import type { PostcodeRow } from "@/lib/queries";
 import { Save, Printer, CheckCircle2, AlertTriangle, History, Check } from "lucide-react";
@@ -290,7 +290,9 @@ export default function OrderForm({ platform = "Shopee", products, sizes, provin
             <DatePicker value={f.doc_date} onChange={(v) => set({ doc_date: v })} />
           </div>
           <div>
-            <label className="label">ชื่อผู้ใช้ ({platform})</label>
+            <label className="label inline-flex items-center gap-1.5">
+              <span className="h-2 w-2 rounded-full" style={{ backgroundColor: platformColor(platform) }} /> ชื่อผู้ใช้ ({platform})
+            </label>
             <CustomerSuggest value={f.username} onChange={(v) => { set({ username: v }); setReturnWarn(0); }} onPick={fillFromCustomer} placeholder="พิมพ์ชื่อผู้ใช้ / ชื่อ / กลิ่นที่เคยซื้อ" />
           </div>
         </div>
