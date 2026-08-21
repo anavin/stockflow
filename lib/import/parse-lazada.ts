@@ -88,8 +88,9 @@ export function rowsToOrders(rows: Record<string, any>[], products: string[] = [
     const key = `${d.product}|${d.size}|${isFree ? 1 : 0}`;
     const bucket = agg.get(orderNo)!;
     const ex = bucket.get(key);
+    // ไม่เก็บ SKU ให้อัตโนมัติ — user เติมเองตอนตัดสต๊อก (แต่ยังใช้ sellerSku ช่วยแมตช์กลิ่นด้านบน)
     if (ex) ex.qty += 1;
-    else bucket.set(key, { product: d.product, size: d.size, is_free: isFree, sku: sku || null, label: itemName || buildProductLabel(d.product, d.size, isFree), qty: 1 });
+    else bucket.set(key, { product: d.product, size: d.size, is_free: isFree, sku: null, label: itemName || buildProductLabel(d.product, d.size, isFree), qty: 1 });
     itemCount += 1;
   });
 
