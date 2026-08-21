@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { requireDashboard } from "@/lib/auth/require-user";
+import { resolvePlatform, platformBase, enabledPlatforms } from "@/lib/config";
 import { dashboardStats, listStock, listOrders, topProducts, ordersTrend, dailyIssueStatus, fdaExpirySummary, shipSummary } from "@/lib/queries";
 import {
   PlusCircle, ScanLine, Boxes, AlertTriangle, PackageCheck, ClipboardList,
@@ -8,19 +9,22 @@ import {
 
 export const dynamic = "force-dynamic";
 
-export default async function Dashboard() {
+export default async function Dashboard({ searchParams }: { searchParams: Promise<{ platform?: string }> }) {
   const user = await requireDashboard();
+  const pf = resolvePlatform((await searchParams).platform)?.code;   // undefined = ทุกแพลตฟอร์ม
+  const base = pf ? platformBase(pf) : "/shopee";                    // ลิงก์ "ดูทั้งหมด"/สร้างใบเบิก
   // ยิงขนานผ่าน pool (เร็ว) — บน Vercel/Node connection pool รองรับ concurrent query ปกติ
   const [s, lowStock, recent, top, trend, daily, fda, ship] = await Promise.all([
-    dashboardStats(),
+    dashboardStats(pf),
     listStock({ lowOnly: true, limit: 6 }),
-    listOrders({ platform: "Shopee", limit: 20 }),
+    listOrders({ platform: pf, limit: 20 }),
     topProducts(10),
-    ordersTrend(6),
-    dailyIssueStatus("Shopee", 5),
+    ordersTrend(6, pf),
+    dailyIssueStatus(pf, 5),
     fdaExpirySummary(),
-    shipSummary(),
+    shipSummary(pf),
   ]);
+  const platforms = enabledPlatforms();
   const fdaAlert = fda.expired + fda.d10 + fda.d15 + fda.d30;
 
   const fulfill = s.ordersTotal > 0 ? s.issuedTotal / s.ordersTotal : 0;
@@ -39,10 +43,23 @@ export default async function Dashboard() {
           </p>
         </div>
         <div className="flex gap-2">
-          <Link href="/shopee/new" className="btn-primary"><PlusCircle size={16} /> สร้างใบเบิก</Link>
+          <Link href={`${base}/new`} className="btn-primary"><PlusCircle size={16} /> สร้างใบเบิก</Link>
           <Link href="/stock/issue" className="btn-ghost"><ScanLine size={16} /> ตัดสต๊อก</Link>
         </div>
       </div>
+
+      {/* ── ตัวสลับแพลตฟอร์ม (ภาพรวมรวม/แยกแพลตฟอร์ม) ── */}
+      {platforms.length > 1 && (
+        <div className="mb-5 flex w-fit items-center overflow-hidden rounded-lg border border-line text-sm">
+          <Link href="/" className={`px-3 py-1.5 font-medium transition-colors ${!pf ? "bg-brand text-white" : "bg-white text-muted hover:bg-soft"}`}>ทั้งหมด</Link>
+          {platforms.map((p) => (
+            <Link key={p.code} href={`/?platform=${p.code}`}
+              className={`border-l border-line px-3 py-1.5 font-medium transition-colors ${pf === p.code ? "bg-brand text-white" : "bg-white text-muted hover:bg-soft"}`}>
+              {p.name}
+            </Link>
+          ))}
+        </div>
+      )}
 
       {/* ── alert: สต๊อกติดลบ / ใกล้หมด / อย.ใกล้หมดอายุ ── */}
       {(s.negative > 0 || s.low > 0 || fdaAlert > 0) && (
@@ -77,7 +94,7 @@ export default async function Dashboard() {
       {/* ── KPI tiles ── */}
       <div className="grid grid-cols-2 gap-3 md:grid-cols-5">
         <Kpi
-          label="ออร์เดอร์ทั้งหมด" value={s.ordersTotal} href="/shopee"
+          label="ออร์เดอร์ทั้งหมด" value={s.ordersTotal} href={base}
           icon={<ShoppingBag size={18} />} tone="brand"
           sub={<><b className="text-ink">{s.ordersMonth.toLocaleString()}</b> เดือนนี้ · {s.ordersToday.toLocaleString()} วันนี้</>}
         />
@@ -165,7 +182,7 @@ export default async function Dashboard() {
           <div className="flex flex-1 flex-col justify-center">
             <TrendBars data={trend} />
           </div>
-          <Link href="/shopee"
+          <Link href={base}
             className="mt-4 inline-flex items-center justify-center gap-1 rounded-lg border border-line px-3 py-2 text-xs font-medium text-ink transition-colors hover:bg-soft">
             <ClipboardList size={13} /> ดูใบเบิกทั้งหมด
           </Link>
@@ -219,14 +236,14 @@ export default async function Dashboard() {
         <section className="card p-5">
           <div className="mb-3 flex items-center justify-between">
             <h2 className="flex items-center gap-2 text-sm font-semibold text-ink"><Clock size={15} /> ออร์เดอร์ล่าสุด</h2>
-            <Link href="/shopee" className="inline-flex items-center gap-1 text-xs font-medium text-brand-600">ทั้งหมด <ArrowRight size={12} /></Link>
+            <Link href={base} className="inline-flex items-center gap-1 text-xs font-medium text-brand-600">ทั้งหมด <ArrowRight size={12} /></Link>
           </div>
           {recent.length === 0 ? (
             <p className="py-8 text-center text-sm text-muted">ยังไม่มีออร์เดอร์</p>
           ) : (
             <div className="grid grid-cols-1 gap-x-6 sm:grid-cols-2 xl:grid-cols-3">
               {recent.map((o) => (
-                <Link key={o.order_no} href={`/shopee/${encodeURIComponent(o.order_no)}`} className="-mx-2 flex items-center justify-between gap-2 rounded-lg border-b border-line/70 px-2 py-2 hover:bg-soft">
+                <Link key={o.order_no} href={`/${(o.platform || "Shopee").toLowerCase()}/${encodeURIComponent(o.order_no)}`} className="-mx-2 flex items-center justify-between gap-2 rounded-lg border-b border-line/70 px-2 py-2 hover:bg-soft">
                   <div className="min-w-0">
                     <div className="font-mono text-xs text-ink">{o.order_no}</div>
                     <div className="truncate text-xs text-muted">{o.receiver || o.username || "—"}{o.province ? ` · ${o.province}` : ""}</div>
@@ -340,17 +357,17 @@ function DailyIssueTable({ data }: { data: { day: string; orders: number; issued
             return (
               <tr key={d.day} className={`border-t border-line ${d.pending > 0 ? "bg-amber-50/40" : ""}`}>
                 <td className="whitespace-nowrap py-1.5 pr-3">
-                  <Link href={`/shopee?from=${d.day}&to=${d.day}`} className="font-medium text-ink hover:text-brand-600 hover:underline">{fmt(d.day)}</Link>
+                  <Link href={`${base}?from=${d.day}&to=${d.day}`} className="font-medium text-ink hover:text-brand-600 hover:underline">{fmt(d.day)}</Link>
                 </td>
                 <td className="py-1.5 pr-3 text-right font-medium text-ink">
-                  <Link href={`/shopee?from=${d.day}&to=${d.day}`} className="hover:underline">{d.orders.toLocaleString()}</Link>
+                  <Link href={`${base}?from=${d.day}&to=${d.day}`} className="hover:underline">{d.orders.toLocaleString()}</Link>
                 </td>
                 <td className="py-1.5 pr-3 text-right text-green-600">
-                  <Link href={`/shopee?from=${d.day}&to=${d.day}&issued=yes`} className="hover:underline">{d.issued.toLocaleString()}</Link>
+                  <Link href={`${base}?from=${d.day}&to=${d.day}&issued=yes`} className="hover:underline">{d.issued.toLocaleString()}</Link>
                 </td>
                 <td className={`py-1.5 pr-3 text-right ${d.pending > 0 ? "font-semibold text-amber-600" : "text-faint"}`}>
                   {d.pending > 0
-                    ? <Link href={`/shopee?from=${d.day}&to=${d.day}&issued=no`} className="hover:underline">{d.pending.toLocaleString()}</Link>
+                    ? <Link href={`${base}?from=${d.day}&to=${d.day}&issued=no`} className="hover:underline">{d.pending.toLocaleString()}</Link>
                     : "—"}
                 </td>
                 <td className="hidden py-1.5 sm:table-cell">

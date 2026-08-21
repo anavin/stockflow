@@ -336,13 +336,15 @@ export async function getBlockedSizesForOrder(): Promise<Record<string, string[]
 }
 
 /** สรุปการจัดส่ง: ส่งแล้ววันนี้ (เวลาไทย) + ค้างส่ง (ตัดสต๊อกแล้วแต่ยังไม่ส่ง) */
-export async function shipSummary(): Promise<{ shippedToday: number; pending: number }> {
+export async function shipSummary(platform?: string): Promise<{ shippedToday: number; pending: number }> {
   try {
+    const params: any[] = [];
+    const pc = platform ? (params.push(platform), " and platform = $1") : "";
     const [r] = await q<{ shipped_today: number; pending: number }>(
       `select
          count(*) filter (where (shipped_at at time zone 'Asia/Bangkok')::date = (now() at time zone 'Asia/Bangkok')::date)::int as shipped_today,
          count(*) filter (where stock_issued_at is not null and shipped_at is null)::int as pending
-       from orders where deleted_at is null`);
+       from orders where deleted_at is null${pc}`, params);
     return { shippedToday: r?.shipped_today ?? 0, pending: r?.pending ?? 0 };
   } catch { return { shippedToday: 0, pending: 0 }; }
 }
@@ -366,17 +368,19 @@ export async function listShippedByDay(dateStr?: string): Promise<ShipRow[]> {
 
 export type DailyIssue = { day: string; orders: number; issued: number; pending: number };
 /** รายวัน: ออร์เดอร์ที่เข้ามา (ตามวันที่ใบเบิก) เทียบกับที่ตัดสต๊อกแล้ว */
-export async function dailyIssueStatus(platform = "Shopee", days = 14): Promise<DailyIssue[]> {
-  // ใช้ "วันที่สั่งซื้อจริง" (order_date) เป็นหลัก ถ้าไม่มีค่อยใช้วันที่ใบเบิก
+export async function dailyIssueStatus(platform?: string, days = 14): Promise<DailyIssue[]> {
+  // ใช้ "วันที่สั่งซื้อจริง" (order_date) เป็นหลัก ถ้าไม่มีค่อยใช้วันที่ใบเบิก · platform undefined = ทุกแพลตฟอร์ม
+  const params: any[] = [days];
+  const pc = platform ? (params.push(platform), ` and platform = $${params.length}`) : "";
   const rows = await q<{ day: string; orders: number; issued: number }>(
     `select to_char(coalesce(order_date, doc_date),'YYYY-MM-DD') as day,
             count(*)::int as orders,
             count(stock_issued_at)::int as issued
      from orders
-     where deleted_at is null and platform = $1 and coalesce(order_date, doc_date) is not null
+     where deleted_at is null and coalesce(order_date, doc_date) is not null${pc}
      group by to_char(coalesce(order_date, doc_date),'YYYY-MM-DD')
-     order by day desc limit $2`,
-    [platform, days],
+     order by day desc limit $1`,
+    params,
   );
   return rows.map((r) => ({ day: r.day, orders: Number(r.orders), issued: Number(r.issued), pending: Number(r.orders) - Number(r.issued) }));
 }
@@ -630,20 +634,23 @@ export type DashStats = {
   issuedTotal: number; issuedToday: number; pendingIssue: number;
   skus: number; low: number; negative: number;
 };
-export async function dashboardStats(): Promise<DashStats> {
+export async function dashboardStats(platform?: string): Promise<DashStats> {
   // ทำเป็น query เดียว (scalar subqueries) แทน 8 query ขนาน — ลดจำนวน connection
   // ที่เปิดพร้อมกันบน Workers/Hyperdrive (เปิดหลาย connection พร้อมกันเคยทำให้ค้าง).
   // สุขภาพสต๊อก อิงเฉพาะ SKU ที่ track จริง (ตาราง stock): ปกติ(>10)+ต้องเติม(0..10)+ติดลบ(<0)=skus
+  const params: any[] = [];
+  const pc = platform ? (params.push(platform), " and platform = $1") : "";
   const [r] = await q<DashStats & { pendingIssue?: number }>(
     `select
-       (select count(*)::int from orders where deleted_at is null) as "ordersTotal",
-       (select count(*)::int from orders where deleted_at is null and doc_date = current_date) as "ordersToday",
-       (select count(*)::int from orders where deleted_at is null and to_char(doc_date,'YYYY-MM') = to_char(current_date,'YYYY-MM')) as "ordersMonth",
-       (select count(*)::int from orders where deleted_at is null and stock_issued_at is not null) as "issuedTotal",
-       (select count(*)::int from orders where deleted_at is null and stock_issued_at::date = current_date) as "issuedToday",
+       (select count(*)::int from orders where deleted_at is null${pc}) as "ordersTotal",
+       (select count(*)::int from orders where deleted_at is null${pc} and doc_date = current_date) as "ordersToday",
+       (select count(*)::int from orders where deleted_at is null${pc} and to_char(doc_date,'YYYY-MM') = to_char(current_date,'YYYY-MM')) as "ordersMonth",
+       (select count(*)::int from orders where deleted_at is null${pc} and stock_issued_at is not null) as "issuedTotal",
+       (select count(*)::int from orders where deleted_at is null${pc} and stock_issued_at::date = current_date) as "issuedToday",
        (select count(*)::int from stock) as skus,
        (select count(*)::int from stock where qty >= 0 and qty <= 10) as low,
        (select count(*)::int from stock where qty < 0) as negative`,
+    params,
   );
   const s = r ?? ({} as DashStats);
   const ordersTotal = s.ordersTotal ?? 0, issuedTotal = s.issuedTotal ?? 0;
@@ -668,12 +675,15 @@ export async function topProducts(limit = 6): Promise<TopProduct[]> {
 
 /** จำนวนใบเบิกต่อเดือน (ล่าสุด N เดือน) — สำหรับ mini bar chart หน้าภาพรวม */
 export type MonthPoint = { ym: string; label: string; n: number };
-export async function ordersTrend(months = 6): Promise<MonthPoint[]> {
+export async function ordersTrend(months = 6, platform?: string): Promise<MonthPoint[]> {
   const m = Math.min(Math.max(1, months), 24);
+  const params: any[] = [];
+  const pc = platform ? (params.push(platform), " and platform = $1") : "";
   const rows = await q<{ ym: string; n: number }>(
     `select to_char(date_trunc('month', doc_date),'YYYY-MM') as ym, count(*)::int as n
-     from orders where deleted_at is null and doc_date is not null
+     from orders where deleted_at is null and doc_date is not null${pc}
      group by 1 order by 1 desc limit ${m}`,
+    params,
   );
   const TH = ["ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.", "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."];
   return rows
