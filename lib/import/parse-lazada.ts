@@ -8,6 +8,8 @@ import { toDateStr, deriveProductSize, type ParseResult } from "./parse-shopee";
  */
 const str = (v: any) => (v == null ? "" : String(v).trim());
 const num = (v: any) => { const n = Number(String(v ?? "").replace(/[^\d.-]/g, "")); return isNaN(n) ? 0 : n; };
+// ค่าที่อยู่ Lazada เป็นรูปแบบ "ไทย/ English" (เช่น "กรุงเทพมหานคร/ Bangkok") → เอาเฉพาะภาษาไทยหน้า "/"
+const th = (v: any) => str(v).split("/")[0].trim();
 
 type ItemAgg = { product: string; size: string; is_free: boolean; sku: string | null; label: string; qty: number };
 
@@ -26,10 +28,16 @@ export function rowsToOrders(rows: Record<string, any>[], products: string[] = [
     const hasItem = !!(itemName || sku);
     if (!orderNo) { if (hasItem) errors.push({ row: rowNo, message: "ไม่มี orderNumber" }); return; }
 
+    // ที่อยู่ Lazada: shippingAddress=ถนน · Address3=จังหวัด · Address4=อำเภอ/เขต · Address5/PostCode=รหัส
+    // (shippingRegion มักว่าง · shippingCity=อำเภอซ้ำ) · ตำบลบางทีต่อท้าย street หลัง "·"
+    const street = [str(g("shippingAddress")), str(g("shippingAddress2"))].filter(Boolean).join(" ");
+    const province = th(g("shippingAddress3")) || th(g("shippingRegion"));
+    const district = th(g("shippingAddress4")) || th(g("shippingCity"));
+    const postcode = str(g("shippingPostCode")) || str(g("shippingAddress5"));
+    const subdistrict = street.includes("·") ? th(street.split("·").pop()) : "";
+
     let ord = map.get(orderNo);
     if (!ord) {
-      const addr = ["shippingAddress", "shippingAddress2", "shippingAddress3", "shippingAddress4", "shippingAddress5"]
-        .map((k) => str(g(k))).filter(Boolean).join(" ");
       ord = {
         order_no: orderNo,
         platform: "Lazada",
@@ -43,11 +51,11 @@ export function rowsToOrders(rows: Record<string, any>[], products: string[] = [
         phone: str(g("shippingPhone")) || str(g("shippingPhone2")) || null,
         customer_type: null,
         purchase_count: null,
-        district: str(g("shippingCity")) || null,
-        subdistrict: null,
-        province: str(g("shippingRegion")) || null,
-        postcode: str(g("shippingPostCode")) || null,
-        address: addr || null,
+        district: district || null,
+        subdistrict: subdistrict || null,
+        province: province || null,
+        postcode: postcode || null,
+        address: street || null,
         campaign: null,
         note: str(g("sellerNote")) || null,
         box_scent: null,
@@ -61,18 +69,21 @@ export function rowsToOrders(rows: Record<string, any>[], products: string[] = [
       const fill = (k: keyof OrderWithItems, v: string) => { if (!(ord as any)[k] && v) (ord as any)[k] = v; };
       fill("receiver", str(g("shippingName")));
       fill("phone", str(g("shippingPhone")) || str(g("shippingPhone2")));
-      fill("province", str(g("shippingRegion")));
-      fill("district", str(g("shippingCity")));
-      fill("postcode", str(g("shippingPostCode")));
+      fill("province", province);
+      fill("district", district);
+      fill("postcode", postcode);
+      fill("address", street);
     }
 
     if (!hasItem) return;
-    const variation = str(g("variation"));
+    // variation ของ Lazada = "ATTRIBUTE:VALUE" เช่น "กลิ่นหอม:Vivid ดอกไม้ขาว" / "ปริมาตรของสินค้า:10 ml"
+    // → ตัด prefix ออก เหลือเฉพาะค่า (ทั้งช่วยแมตช์กลิ่น + fallback ไม่ติดคำว่า "กลิ่นหอม:")
+    const rawVar = str(g("variation"));
+    const variation = rawVar.includes(":") ? rawVar.slice(rawVar.indexOf(":") + 1).trim() : rawVar;
     const d = deriveProductSize(itemName, sku, variation, products);
     if (!d.matched) unmatchedItems += 1;
-    // ราคา 0 = ของแถม (เฉพาะเมื่อมีข้อมูลราคา ไม่งั้นเทมเพลตว่างจะกลายเป็นแถมทั้งหมด)
-    const priced = str(g("unitPrice")) || str(g("paidPrice"));
-    const isFree = priced !== "" && num(g("unitPrice")) === 0 && num(g("paidPrice")) === 0;
+    // ราคาสินค้า (unitPrice) = 0 → ของแถม (เฉพาะเมื่อมีค่า ไม่งั้นเทมเพลตว่างจะกลายเป็นแถมทั้งหมด)
+    const isFree = str(g("unitPrice")) !== "" && num(g("unitPrice")) === 0;
     // รวมจำนวน: Lazada 1 แถว = 1 ชิ้น → รวมแถวที่ กลิ่น|ขนาด|แถม เหมือนกัน
     const key = `${d.product}|${d.size}|${isFree ? 1 : 0}`;
     const bucket = agg.get(orderNo)!;
