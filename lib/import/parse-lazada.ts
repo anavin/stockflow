@@ -13,7 +13,7 @@ const th = (v: any) => str(v).split("/")[0].trim();
 
 type ItemAgg = { product: string; size: string; is_free: boolean; sku: string | null; label: string; qty: number };
 
-export function rowsToOrders(rows: Record<string, any>[], products: string[] = []): ParseResult {
+export function rowsToOrders(rows: Record<string, any>[], products: string[] = [], aliases: Record<string, string> = {}): ParseResult {
   const map = new Map<string, OrderWithItems>();
   const agg = new Map<string, Map<string, ItemAgg>>();   // orderNo → key(product|size|free) → รวมจำนวน
   const errors: { row: number; message: string }[] = [];
@@ -80,7 +80,7 @@ export function rowsToOrders(rows: Record<string, any>[], products: string[] = [
     // → ตัด prefix ออก เหลือเฉพาะค่า (ทั้งช่วยแมตช์กลิ่น + fallback ไม่ติดคำว่า "กลิ่นหอม:")
     const rawVar = str(g("variation"));
     const variation = rawVar.includes(":") ? rawVar.slice(rawVar.indexOf(":") + 1).trim() : rawVar;
-    const d = deriveProductSize(itemName, sku, variation, products);
+    const d = deriveProductSize(itemName, sku, variation, products, aliases);
     if (!d.matched) unmatchedItems += 1;
     // ราคาสินค้า (unitPrice) = 0 → ของแถม (เฉพาะเมื่อมีค่า ไม่งั้นเทมเพลตว่างจะกลายเป็นแถมทั้งหมด)
     const isFree = str(g("unitPrice")) !== "" && num(g("unitPrice")) === 0;

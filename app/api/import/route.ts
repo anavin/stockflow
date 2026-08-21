@@ -2,9 +2,9 @@ import { NextResponse } from "next/server";
 import ExcelJS from "exceljs";
 import { getCurrentUser } from "@/lib/auth/session";
 import { can } from "@/lib/auth/roles";
-import { rowsToOrders as parseShopee } from "@/lib/import/parse-shopee";
+import { rowsToOrders as parseShopee, SCENT_ALIASES, suggestScents } from "@/lib/import/parse-shopee";
 import { rowsToOrders as parseLazada } from "@/lib/import/parse-lazada";
-import { getProducts } from "@/lib/queries";
+import { getProducts, getScentAliases } from "@/lib/queries";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -62,11 +62,22 @@ export async function POST(req: Request) {
       if (hasData) rows.push(obj);
     });
 
-    // ส่งรายชื่อกลิ่นในระบบไปช่วยเดา "กลิ่น" จากชื่อสินค้า/SKU/ตัวเลือก (Shopee) หรือ itemName (Lazada)
-    const products = await getProducts();
+    // ส่งรายชื่อกลิ่น + ชื่อพ้อง (alias จาก DB) ไปช่วยเดา "กลิ่น" จากชื่อสินค้า/SKU/ตัวเลือก/itemName
+    const [products, dbAliases] = await Promise.all([getProducts(), getScentAliases()]);
+    const aliases = { ...SCENT_ALIASES, ...dbAliases };
     const parse = platform === "Lazada" ? parseLazada : parseShopee;
-    const result = parse(rows, products);
-    return NextResponse.json({ ok: true, ...result });
+    const result = parse(rows, products, aliases);
+
+    // รายการที่จับกลิ่นไม่ตรง (product ไม่อยู่ใน master) → รวม + แนะนำกลิ่นใกล้เคียงให้เลือก/จำเป็น alias
+    const known = new Set(products);
+    const unmap = new Map<string, { name: string; sample: string; size: string; count: number }>();
+    for (const o of result.orders) for (const it of o.items) {
+      if (!it.product || known.has(it.product)) continue;
+      const e = unmap.get(it.product) ?? { name: it.product, sample: it.product_label || it.product, size: it.size, count: 0 };
+      e.count += 1; unmap.set(it.product, e);
+    }
+    const unmatched = [...unmap.values()].map((u) => ({ ...u, suggestions: suggestScents(u.name, products) }));
+    return NextResponse.json({ ok: true, ...result, unmatched, products });
   } catch (e: any) {
     return NextResponse.json({ ok: false, error: e?.message || "อ่านไฟล์ไม่สำเร็จ" }, { status: 400 });
   }

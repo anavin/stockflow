@@ -24,6 +24,22 @@ export async function getProducts(): Promise<string[]> {
   return rows.map((r) => r.name);
 }
 
+/** ชื่อพ้องกลิ่น (alias) → Record<alias_key(normalize), ชื่อกลิ่นจริง> สำหรับ parser จับกลิ่น */
+export async function getScentAliases(): Promise<Record<string, string>> {
+  try {
+    const rows = await q<{ alias_key: string; product: string }>(`select alias_key, product from scent_aliases`);
+    const m: Record<string, string> = {};
+    for (const r of rows) m[r.alias_key] = r.product;
+    return m;
+  } catch { return {}; }
+}
+export type ScentAliasRow = { id: number; alias_key: string; alias_text: string; product: string };
+/** รายการ alias ทั้งหมด (สำหรับหน้าจัดการ) */
+export async function listScentAliases(): Promise<ScentAliasRow[]> {
+  try { return await q<ScentAliasRow>(`select id, alias_key, alias_text, product from scent_aliases order by product, alias_text`); }
+  catch { return []; }
+}
+
 /** map ชื่อกลิ่น → รหัส (เฉพาะกลิ่นที่มีรหัส) — ใช้โชว์/ค้นหาในช่องเลือกกลิ่น */
 export async function getProductCodes(): Promise<Record<string, string>> {
   const rows = await q<{ name: string; code: string | null }>(

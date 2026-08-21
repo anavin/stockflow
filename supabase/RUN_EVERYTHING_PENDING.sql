@@ -491,4 +491,21 @@ update orders o
    and (o.purchase_count is null or coalesce(btrim(o.customer_type), '') = '');
 
 
+-- ═══════════════════════════════════════════════════════════════════════
+-- ▼▼▼ ชื่อพ้องกลิ่น (alias) — Lazada/Shopee เขียนชื่อไม่ตรง ▼▼▼ (migration 0034)
+-- ═══════════════════════════════════════════════════════════════════════
+create table if not exists scent_aliases (
+  id serial primary key,
+  alias_key text not null unique,
+  alias_text text not null,
+  product text not null,
+  created_by integer,
+  created_at timestamptz not null default now()
+);
+create index if not exists idx_scent_aliases_product on scent_aliases (product);
+insert into scent_aliases (alias_key, alias_text, product) values
+  ('shadowdebacci', 'Shadow de bacci', 'Shadow de Bacci Light')
+on conflict (alias_key) do nothing;
+
+
 commit;

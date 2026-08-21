@@ -95,24 +95,40 @@ export const SCENT_ALIASES: Record<string, string> = {
   shadowdebacci: "Shadow de Bacci Light",   // Lazada vial ใช้ชื่อสั้น "Shadow de bacci"
 };
 
-/** หา "กลิ่น" ที่ตรงกับรายการสินค้าในระบบ โดยดูว่าชื่อ master ตัวไหนโผล่ในข้อความ (ยาวสุดชนะ) + alias */
-function matchMasterScent(hay: string, products: string[]): string {
+/** หา "กลิ่น" ที่ตรงกับรายการสินค้าในระบบ โดยดูว่าชื่อ master ตัวไหนโผล่ในข้อความ (ยาวสุดชนะ) + alias
+ *  aliases = ชื่อพ้องจาก DB (รวม seed ในโค้ด) */
+function matchMasterScent(hay: string, products: string[], aliases: Record<string, string> = SCENT_ALIASES): string {
   const H = normLoose(hay);
   if (!H) return "";
   let best = "", bestLen = 0;
   const consider = (key: string, product: string) => { if (key.length >= 2 && H.includes(key) && key.length > bestLen) { best = product; bestLen = key.length; } };
   for (const p of products) consider(scentKey(p), p);
-  for (const [alias, canonical] of Object.entries(SCENT_ALIASES)) if (products.includes(canonical)) consider(alias, canonical);
+  for (const [alias, canonical] of Object.entries(aliases)) if (products.includes(canonical)) consider(alias, canonical);
   return best;
+}
+
+/** เดากลิ่นใกล้เคียง (สำหรับแนะนำตอน import ที่จับไม่ตรง) — คืน top N เรียงคะแนน */
+export function suggestScents(name: string, products: string[], topN = 4): { product: string; score: number }[] {
+  const g = normLoose(name);
+  if (g.length < 2) return [];
+  const grams = (s: string) => { const set = new Set<string>(); for (let i = 0; i + 3 <= s.length; i++) set.add(s.slice(i, i + 3)); return set; };
+  const G = grams(g);
+  return products.map((p) => {
+    const P = normLoose(p);
+    let score: number;
+    if (P.includes(g) || g.includes(P)) score = Math.min(g.length, P.length) / Math.max(g.length, P.length);
+    else { const B = grams(P); let inter = 0; for (const x of G) if (B.has(x)) inter += 1; score = inter / (G.size + B.size - inter || 1); }
+    return { product: p, score };
+  }).filter((x) => x.score >= 0.18).sort((a, b) => b.score - a.score).slice(0, topN);
 }
 
 /** เดา product(กลิ่น)+size จาก Shopee export เมื่อไม่มีคอลัมน์กลิ่นชัดเจน
  *  - ขวดปกติ: ขนาดอยู่ "ชื่อตัวเลือก", กลิ่นอยู่ใน SKU/ชื่อสินค้า
  *  - ตัวอย่าง 4ml: "ชื่อตัวเลือก" = กลิ่น, ขนาดอยู่ในชื่อสินค้า/SKU
  *  จึงรวมทุกช่องเป็น haystack แล้ว match กับ master */
-export function deriveProductSize(title: string, sku: string, variation: string, products: string[]): { product: string; size: string; matched: boolean } {
+export function deriveProductSize(title: string, sku: string, variation: string, products: string[], aliases: Record<string, string> = SCENT_ALIASES): { product: string; size: string; matched: boolean } {
   const size = extractMl(variation, sku, title);
-  const matched = matchMasterScent(`${variation} ${sku} ${title}`, products);
+  const matched = matchMasterScent(`${variation} ${sku} ${title}`, products, aliases);
   if (matched) return { product: matched, size, matched: true };
   // fallback: ชื่อตัวเลือกที่ไม่ใช่ขนาด = น่าจะเป็นกลิ่น; ไม่งั้นถอดขนาด/รหัสออกจาก SKU
   let guess = "";
@@ -142,7 +158,7 @@ export type ParseResult = {
  * Convert flat rows (array of {header: value}) into grouped orders keyed by
  * Order No. Order-level fields come from the first row that carries them.
  */
-export function rowsToOrders(rows: Record<string, any>[], products: string[] = []): ParseResult {
+export function rowsToOrders(rows: Record<string, any>[], products: string[] = [], aliases: Record<string, string> = SCENT_ALIASES): ParseResult {
   const map = new Map<string, OrderWithItems>();
   const errors: { row: number; message: string }[] = [];
   let itemCount = 0;
@@ -213,7 +229,7 @@ export function rowsToOrders(rows: Record<string, any>[], products: string[] = [
       let product = str(r.product);
       let size = str(r.size);
       if (!product) {
-        const d = deriveProductSize(title, skuRaw, size, products);
+        const d = deriveProductSize(title, skuRaw, size, products, aliases);
         product = d.product;
         size = d.size;
         if (!d.matched) unmatchedItems += 1;

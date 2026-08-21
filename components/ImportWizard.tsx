@@ -2,10 +2,12 @@
 import { Fragment, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { bulkSaveOrders, matchOrders, customersSummary, customerHistory, type MatchResult, type CustomerHistory } from "@/lib/actions/orders";
+import { addScentAlias } from "@/lib/actions/products";
 import type { OrderWithItems } from "@/lib/types";
-import { UploadCloud, FileSpreadsheet, CheckCircle2, AlertTriangle, Printer, Link2, History, ChevronDown } from "lucide-react";
+import { UploadCloud, FileSpreadsheet, CheckCircle2, AlertTriangle, Printer, Link2, History, ChevronDown, Wand2 } from "lucide-react";
 
 type CustSummary = { total_orders: number; last_address: string | null; last_date: string | null };
+type UnmatchedItem = { name: string; sample: string; size: string; count: number; suggestions: { product: string; score: number }[] };
 
 type Preview = {
   orders: OrderWithItems[];
@@ -15,6 +17,8 @@ type Preview = {
   noItemOrders: number;
   orderNos: string[];
   unmatchedItems: number;
+  unmatched?: UnmatchedItem[];
+  products?: string[];
 };
 
 export default function ImportWizard({ platform = "Shopee" }: { platform?: string }) {
@@ -29,6 +33,24 @@ export default function ImportWizard({ platform = "Shopee" }: { platform?: strin
   const [savedMsg, setSavedMsg] = useState("");
   const [cust, setCust] = useState<CustSummary[] | null>(null);              // สรุปลูกค้าเก่า/ใหม่ ต่อออร์เดอร์
   const [expanded, setExpanded] = useState<Record<number, CustomerHistory | "loading">>({});  // ประวัติที่กางดู
+  const [aliasChoice, setAliasChoice] = useState<Record<string, string>>({});  // กลิ่นที่จับไม่ตรง → กลิ่นจริงที่เลือก
+  const [aliasBusy, setAliasBusy] = useState<string | null>(null);
+
+  // บันทึกชื่อพ้อง + แก้กลิ่นในตัวอย่างทันที (ไม่ต้องอัปโหลดใหม่)
+  async function applyAlias(u: UnmatchedItem) {
+    const chosen = aliasChoice[u.name];
+    if (!chosen || !preview) return;
+    setAliasBusy(u.name);
+    const res = await addScentAlias(u.name, chosen);
+    setAliasBusy(null);
+    if (!res.ok) { setError(res.error || "บันทึกชื่อพ้องไม่สำเร็จ"); return; }
+    setPreview((p) => {
+      if (!p) return p;
+      const orders = p.orders.map((o) => ({ ...o, items: o.items.map((it) => it.product === u.name ? { ...it, product: chosen } : it) }));
+      const unmatched = (p.unmatched || []).filter((x) => x.name !== u.name);
+      return { ...p, orders, unmatched, unmatchedItems: Math.max(0, p.unmatchedItems - u.count) };
+    });
+  }
 
   async function runMatch() {
     if (!preview) return;
@@ -50,6 +72,9 @@ export default function ImportWizard({ platform = "Shopee" }: { platform?: strin
       const data = await res.json();
       if (!data.ok) { setError(data.error || "อ่านไฟล์ไม่สำเร็จ"); setBusy(false); return; }
       setPreview(data);
+      const init: Record<string, string> = {};
+      for (const u of (data.unmatched || []) as UnmatchedItem[]) if (u.suggestions?.[0]) init[u.name] = u.suggestions[0].product;
+      setAliasChoice(init);
       // ตรวจว่าออร์เดอร์ไหนเป็นลูกค้าเก่า (จับจากเบอร์/username/ชื่อ)
       if (data.orders?.length) {
         customersSummary(data.orders.map((o: OrderWithItems) => ({ phone: o.phone, username: o.username, receiver: o.receiver })))
@@ -121,6 +146,37 @@ export default function ImportWizard({ platform = "Shopee" }: { platform?: strin
                   </div>
                 </div>
               </div>
+            </div>
+          )}
+
+          {/* กลิ่นที่จับไม่ตรง — เลือกกลิ่นจริง + จำเป็นชื่อพ้อง (ครั้งหน้า import ตรงเอง) */}
+          {(preview.unmatched?.length ?? 0) > 0 && (
+            <div className="rounded-xl border border-amber-300 bg-amber-50/60 p-4">
+              <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-amber-800">
+                <Wand2 size={16} /> กลิ่นที่จับไม่ตรง ({preview.unmatched!.length}) — เลือกกลิ่นจริงแล้วกด "จำไว้"
+              </div>
+              <div className="space-y-2">
+                {preview.unmatched!.map((u) => (
+                  <div key={u.name} className="flex flex-wrap items-center gap-2 rounded-lg border border-amber-200 bg-white px-3 py-2 text-sm">
+                    <div className="min-w-[160px] flex-1">
+                      <div className="font-medium text-ink">{u.name}</div>
+                      <div className="text-[11px] text-muted">{u.sample}{u.size ? ` · ${u.size}` : ""} · {u.count} รายการ</div>
+                    </div>
+                    <span className="text-muted">→</span>
+                    <select className="input h-9 w-52" value={aliasChoice[u.name] ?? ""} onChange={(e) => setAliasChoice((c) => ({ ...c, [u.name]: e.target.value }))}>
+                      <option value="">— เลือกกลิ่น —</option>
+                      {(preview.products ?? []).map((p) => (
+                        <option key={p} value={p}>{p}{u.suggestions.some((s) => s.product === p) ? " ⭐" : ""}</option>
+                      ))}
+                    </select>
+                    <button type="button" onClick={() => applyAlias(u)} disabled={!aliasChoice[u.name] || aliasBusy === u.name}
+                      className="btn-primary px-3 py-1.5 text-xs">
+                      {aliasBusy === u.name ? "กำลังบันทึก…" : "จำไว้"}
+                    </button>
+                  </div>
+                ))}
+              </div>
+              <div className="mt-2 text-[11px] text-amber-700">⭐ = กลิ่นที่ระบบแนะนำ (ใกล้เคียงสุด) · กด "จำไว้" แล้วครั้งหน้าจะจับตรงอัตโนมัติ</div>
             </div>
           )}
 

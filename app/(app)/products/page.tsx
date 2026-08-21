@@ -3,7 +3,7 @@ import { requireScents } from "@/lib/auth/require-user";
 import { can } from "@/lib/auth/roles";
 import { listProductsAdmin, getScentBarcodes, getDiscontinued, getSizes, getFdaScentKeys } from "@/lib/queries";
 import ProductsManager from "@/components/ProductsManager";
-import { ChevronLeft, Tags } from "lucide-react";
+import { ChevronLeft, Tags, Wand2 } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
@@ -20,6 +20,7 @@ export default async function ProductsPage() {
           <h1 className="mb-1 text-xl font-bold text-ink">จัดการกลิ่น</h1>
           <p className="text-sm text-muted">เพิ่ม / แก้ชื่อ / รหัส / บาร์โค้ด / Grade / ขนาด — ที่เดียวจบ · มีผลกับ dropdown ตอนสร้างใบเบิก และการจับกลิ่นตอน import</p>
         </div>
+        <Link href="/products/aliases" className="btn-ghost shrink-0" title="ชื่อพ้องกลิ่น (Shopee/Lazada เขียนไม่ตรง)"><Wand2 size={16} /> ชื่อพ้อง</Link>
         {can.issueStock(me.role) && <Link href="/stock/specs" className="btn-ghost shrink-0"><Tags size={16} /> จัดการสเป็ก</Link>}
       </div>
       <ProductsManager products={products} sizesByScent={sizesByScent} discontinued={discontinued} sizes={sizes} fdaKeys={fdaKeys} isAdmin={can.manageUsers(me.role)} />

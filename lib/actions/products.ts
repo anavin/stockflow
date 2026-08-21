@@ -226,3 +226,39 @@ export async function setSkuSold(scent: string, size: string, sold: boolean): Pr
   revalidatePath("/shopee/new");
   return { ok: true };
 }
+
+// ── ชื่อพ้องกลิ่น (alias) — ผู้นำเข้า (creator) หรือฝ่ายคลัง (manageScents) จัดการได้ ──
+const normAlias = (s: string) => (s || "").toLowerCase().replace(/[^a-z0-9ก-๙]/g, "");
+async function aliasGate() {
+  const user = await getCurrentUser();
+  if (!user) return { error: "กรุณาเข้าสู่ระบบ" as const };
+  if (!(can.createOrders(user.role) || can.manageScents(user.role))) return { error: "ไม่มีสิทธิ์จัดการชื่อพ้อง" as const };
+  return { user };
+}
+
+export async function addScentAlias(aliasText: string, product: string): Promise<{ ok: boolean; error?: string }> {
+  const g = await aliasGate(); if ("error" in g) return { ok: false, error: g.error };
+  const text = (aliasText || "").trim();
+  const prod = (product || "").trim();
+  const key = normAlias(text);
+  if (!key) return { ok: false, error: "กรอกชื่อที่ต้องการจับคู่" };
+  if (!prod) return { ok: false, error: "เลือกกลิ่นปลายทาง" };
+  try {
+    await q(
+      `insert into scent_aliases (alias_key, alias_text, product, created_by) values ($1,$2,$3,$4)
+       on conflict (alias_key) do update set product = excluded.product, alias_text = excluded.alias_text`,
+      [key, text, prod, g.user.id],
+    );
+  } catch { return { ok: false, error: "ยังไม่มีตาราง scent_aliases (รัน migration 0034 บน prod ก่อน)" }; }
+  await logActivity("scent.alias", `${text} → ${prod}`);
+  revalidatePath("/products/aliases");
+  return { ok: true };
+}
+
+export async function deleteScentAlias(id: number): Promise<{ ok: boolean; error?: string }> {
+  const g = await aliasGate(); if ("error" in g) return { ok: false, error: g.error };
+  try { await q(`delete from scent_aliases where id = $1`, [id]); }
+  catch { return { ok: false, error: "ลบไม่สำเร็จ" }; }
+  revalidatePath("/products/aliases");
+  return { ok: true };
+}
