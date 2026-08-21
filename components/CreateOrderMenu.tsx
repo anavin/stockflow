@@ -2,6 +2,7 @@
 import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import { PlusCircle, ChevronDown } from "lucide-react";
+import { platformColor } from "@/lib/config";
 
 /** ปุ่มสร้างใบเบิกบนหน้าหลัก — มีแพลตฟอร์มเดียว=ปุ่มตรง · หลายแพลตฟอร์ม=เลือกแพลตฟอร์มก่อน */
 export default function CreateOrderMenu({ platforms }: { platforms: { code: string; name: string }[] }) {
@@ -32,8 +33,8 @@ export default function CreateOrderMenu({ platforms }: { platforms: { code: stri
           <div className="px-4 py-1.5 text-[11px] font-medium uppercase tracking-wide text-faint">เลือกแพลตฟอร์ม</div>
           {platforms.map((p) => (
             <Link key={p.code} href={`/${p.code.toLowerCase()}/new`} onClick={() => setOpen(false)}
-              className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-ink hover:bg-soft">
-              <PlusCircle size={14} className="text-brand" /> {p.name}
+              className="flex items-center gap-2.5 px-4 py-2.5 text-sm font-medium text-ink hover:bg-soft">
+              <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: platformColor(p.code) }} /> {p.name}
             </Link>
           ))}
         </div>

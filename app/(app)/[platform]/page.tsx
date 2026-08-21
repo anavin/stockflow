@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { listOrders, getMonths, countOrders } from "@/lib/queries";
-import { resolvePlatform, platformBase, canImportPlatform } from "@/lib/config";
+import { resolvePlatform, platformBase, canImportPlatform, platformColor, platformTint } from "@/lib/config";
 import OrdersTable from "@/components/OrdersTable";
 import ShopeeFilters from "@/components/ShopeeFilters";
 import { PlusCircle, Upload, ChevronLeft, ChevronRight, FileDown, FileBarChart, Trash2 } from "lucide-react";
@@ -49,11 +49,20 @@ export default async function OrdersPage({ params, searchParams }: {
   const exportHref = (() => { const s = buildQs({ platform: pf.code }); return `/api/export/orders?${s}`; })();
   const reportHref = (() => { const s = buildQs({ platform: pf.code }); return `/print/daily-report?${s}`; })();
 
+  const pfColor = platformColor(pf.code);
   return (
     <div className="mx-auto max-w-6xl px-4 py-6 md:px-8">
+      {/* แถบสีประจำแพลตฟอร์ม — บอก context ทันทีว่าอยู่แพลตฟอร์มไหน */}
+      <div className="mb-5 h-1 w-full rounded-full" style={{ backgroundColor: pfColor }} />
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-xl font-bold text-ink">ใบเบิกสินค้า {pf.name}</h1>
+          <div className="flex items-center gap-2">
+            <h1 className="text-xl font-bold text-ink">ใบเบิกสินค้า</h1>
+            <span className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-semibold"
+              style={{ color: pfColor, backgroundColor: platformTint(pf.code) }}>
+              <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: pfColor }} /> {pf.name}
+            </span>
+          </div>
           <p className="text-sm text-muted">
             ทั้งหมด {total.toLocaleString()} ออร์เดอร์
             {total > 0 && <span className="text-faint"> · แสดง {rowFrom.toLocaleString()}–{rowTo.toLocaleString()}</span>}

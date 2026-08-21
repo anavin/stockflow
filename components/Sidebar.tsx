@@ -2,19 +2,9 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
-import { PLATFORMS, enabledPlatforms, platformBase } from "@/lib/config";
+import { PLATFORMS, enabledPlatforms, platformBase, platformColor, platformTint } from "@/lib/config";
 import { can, ROLE_LABELS, roleList } from "@/lib/auth/roles";
 import { Package, PlusCircle, Upload, List, LogOut, Menu, X, Trash2, Users, ScanLine, Boxes, LayoutDashboard, FlaskConical, ScanBarcode, ShieldCheck, Truck, Droplets, Sticker, PackageOpen, History, ScrollText, ClipboardCheck, Undo2, PackageX } from "lucide-react";
-
-// สีเอกลักษณ์ของแต่ละแพลตฟอร์ม (ใช้เป็นจุดสีในเมนู)
-const PLATFORM_COLORS: Record<string, string> = {
-  Shopee: "#ee4d2d",   // ส้ม
-  Lazada: "#0f146e",   // น้ำเงินเข้ม
-  Tiktok: "#141416",   // ดำ
-  Line: "#06c755",     // เขียว
-  Website: "#2563eb",  // ฟ้า
-  Office: "#475569",   // เทา
-};
 
 export default function Sidebar({ user }: { user: { full_name: string; username: string; role: string } }) {
   const pathname = usePathname();
@@ -27,7 +17,7 @@ export default function Sidebar({ user }: { user: { full_name: string; username:
     : [];
   // 1 ลิงก์/แพลตฟอร์มที่เปิดใช้ → หน้ารายการใบเบิก (สร้าง/นำเข้า/ถังขยะ อยู่ในหน้านั้น)
   const orderNav = can.createOrders(role)
-    ? enabledPlatforms().map((p) => ({ href: platformBase(p.code), label: `ใบเบิก ${p.name}`, icon: List, exact: true }))
+    ? enabledPlatforms().map((p) => ({ href: platformBase(p.code), code: p.code, label: `ใบเบิก ${p.name}`, exact: true }))
     : [];
   // กลุ่ม "สินค้าสำเร็จรูป" — ตัดสต๊อก/จัดส่ง/ดูสต๊อก/SKU
   const finishedNav = [
@@ -70,6 +60,19 @@ export default function Sidebar({ user }: { user: { full_name: string; username:
       </Link>
     );
   });
+  // เมนูใบเบิกต่อแพลตฟอร์ม — จุดสีแบรนด์เสมอ + แถบสีซ้าย+พื้นจางตอน active
+  const platformNav = (items: { href: string; code: string; label: string; exact?: boolean }[]) => items.map((n) => {
+    const active = isActive(n.href, n.exact);
+    const color = platformColor(n.code);
+    return (
+      <Link key={n.href} href={n.href} onClick={() => setOpen(false)}
+        className={`relative flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors ${active ? "font-medium text-ink" : "text-muted hover:bg-soft hover:text-ink"}`}
+        style={active ? { backgroundColor: platformTint(n.code, "14") } : undefined}>
+        {active && <span className="absolute bottom-1.5 left-0 top-1.5 w-[3px] rounded-full" style={{ backgroundColor: color }} />}
+        <span className="inline-block h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: color }} /> {n.label}
+      </Link>
+    );
+  });
   const section = (title: string, items: NavItem[]) => items.length > 0 && (
     <>
       <div className="px-3 pb-1 pt-4 text-[11px] font-semibold uppercase tracking-wide text-faint">{title}</div>
@@ -97,7 +100,7 @@ export default function Sidebar({ user }: { user: { full_name: string; username:
 
       <nav className="mt-2 flex-1 space-y-0.5 overflow-y-auto px-3">
         {navItems(dashNav)}
-        {navItems(orderNav)}
+        {platformNav(orderNav)}
         {section("สินค้าสำเร็จรูป", finishedNav)}
         {section("คลังวัตถุดิบ", materialNav)}
         {section("ตั้งค่า & ข้อมูล", settingsNav)}
@@ -107,7 +110,7 @@ export default function Sidebar({ user }: { user: { full_name: string; username:
             <div className="px-3 pb-1 pt-4 text-[11px] font-semibold uppercase tracking-wide text-faint">แพลตฟอร์มอื่น</div>
             {PLATFORMS.filter((p) => !p.enabled).map((p) => (
               <div key={p.code} className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-muted">
-                <span className="inline-block h-2.5 w-2.5 rounded-full" style={{ backgroundColor: PLATFORM_COLORS[p.code] || "#94a0b1" }} /> {p.name}
+                <span className="inline-block h-2.5 w-2.5 rounded-full" style={{ backgroundColor: platformColor(p.code) }} /> {p.name}
                 <span className="ml-auto text-[10px] text-faint">เร็วๆ นี้</span>
               </div>
             ))}

@@ -25,6 +25,21 @@ export const PLATFORMS: { code: PlatformCode; name: string; prefix: string; enab
 
 export type Platform = (typeof PLATFORMS)[number];
 export const enabledPlatforms = () => PLATFORMS.filter((p) => p.enabled);
+
+/** สีประจำแพลตฟอร์ม (สีแบรนด์จริง) — ใช้เป็นจุดเน้นนำทาง (แถบหัว/เมนู/ป้าย/แท็บ) ไม่ใช่ธีมทั้งหน้า.
+ *  โทนหลักของแอปยังเป็น teal (--brand). สีคงที่ทั้ง light/dark. */
+export const PLATFORM_COLORS: Record<string, string> = {
+  Shopee: "#ee4d2d",   // ส้ม
+  Lazada: "#0f146e",   // น้ำเงินเข้ม
+  Tiktok: "#141416",   // ดำ
+  Line: "#06c755",     // เขียว
+  Website: "#2563eb",  // ฟ้า
+  Office: "#475569",   // เทา
+};
+/** สีเดี่ยวของแพลตฟอร์ม (fallback เทากลางถ้าไม่รู้จัก) — ใช้กับแถบ/จุด/พื้นแท็บ */
+export const platformColor = (code?: string) => PLATFORM_COLORS[code || ""] || "#94a0b1";
+/** สีจาง (tint) สำหรับพื้นป้าย/พื้น active — สี + alpha (hex 8 หลัก) */
+export const platformTint = (code?: string, alpha = "1a") => platformColor(code) + alpha;
 /** แพลตฟอร์มรองรับนำเข้าไฟล์ export หรือไม่ (มี parser เฉพาะ) */
 export const canImportPlatform = (code?: string) => !!PLATFORMS.find((p) => p.code === code)?.canImport;
 /** map พารามิเตอร์ URL (เช่น "shopee"/"lazada") → แพลตฟอร์มที่เปิดใช้ (case-insensitive) หรือ null */

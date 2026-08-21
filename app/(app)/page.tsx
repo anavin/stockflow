@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { requireDashboard } from "@/lib/auth/require-user";
-import { resolvePlatform, platformBase, enabledPlatforms } from "@/lib/config";
+import { resolvePlatform, platformBase, enabledPlatforms, platformColor } from "@/lib/config";
 import { dashboardStats, listStock, listOrders, topProducts, ordersTrend, dailyIssueStatus, fdaExpirySummary, shipSummary } from "@/lib/queries";
 import CreateOrderMenu from "@/components/CreateOrderMenu";
 import {
@@ -55,8 +55,9 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
           <Link href="/" className={`px-3 py-1.5 font-medium transition-colors ${!pf ? "bg-brand text-white" : "bg-white text-muted hover:bg-soft"}`}>ทั้งหมด</Link>
           {platforms.map((p) => (
             <Link key={p.code} href={`/?platform=${p.code}`}
-              className={`border-l border-line px-3 py-1.5 font-medium transition-colors ${pf === p.code ? "bg-brand text-white" : "bg-white text-muted hover:bg-soft"}`}>
-              {p.name}
+              className={`flex items-center gap-1.5 border-l border-line px-3 py-1.5 font-medium transition-colors ${pf === p.code ? "text-white" : "bg-white text-muted hover:bg-soft"}`}
+              style={pf === p.code ? { backgroundColor: platformColor(p.code) } : undefined}>
+              <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: pf === p.code ? "#ffffff" : platformColor(p.code) }} /> {p.name}
             </Link>
           ))}
         </div>
@@ -246,7 +247,10 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
               {recent.map((o) => (
                 <Link key={o.order_no} href={`/${(o.platform || "Shopee").toLowerCase()}/${encodeURIComponent(o.order_no)}`} className="-mx-2 flex items-center justify-between gap-2 rounded-lg border-b border-line/70 px-2 py-2 hover:bg-soft">
                   <div className="min-w-0">
-                    <div className="font-mono text-xs text-ink">{o.order_no}</div>
+                    <div className="flex items-center gap-1.5">
+                      <span className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: platformColor(o.platform) }} title={o.platform || ""} />
+                      <span className="font-mono text-xs text-ink">{o.order_no}</span>
+                    </div>
                     <div className="truncate text-xs text-muted">{o.receiver || o.username || "—"}{o.province ? ` · ${o.province}` : ""}</div>
                   </div>
                   <div className="flex shrink-0 items-center gap-2">
