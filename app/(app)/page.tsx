@@ -2,8 +2,9 @@ import Link from "next/link";
 import { requireDashboard } from "@/lib/auth/require-user";
 import { resolvePlatform, platformBase, enabledPlatforms } from "@/lib/config";
 import { dashboardStats, listStock, listOrders, topProducts, ordersTrend, dailyIssueStatus, fdaExpirySummary, shipSummary } from "@/lib/queries";
+import CreateOrderMenu from "@/components/CreateOrderMenu";
 import {
-  PlusCircle, ScanLine, Boxes, AlertTriangle, PackageCheck, ClipboardList,
+  ScanLine, Boxes, AlertTriangle, PackageCheck, ClipboardList,
   ArrowRight, ShoppingBag, TrendingUp, Sparkles, Clock, CalendarCheck, ShieldAlert, Truck,
 } from "lucide-react";
 
@@ -43,7 +44,7 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
           </p>
         </div>
         <div className="flex gap-2">
-          <Link href={`${base}/new`} className="btn-primary"><PlusCircle size={16} /> สร้างใบเบิก</Link>
+          <CreateOrderMenu platforms={platforms} />
           <Link href="/stock/issue" className="btn-ghost"><ScanLine size={16} /> ตัดสต๊อก</Link>
         </div>
       </div>
