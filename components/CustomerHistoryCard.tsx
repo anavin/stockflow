@@ -1,5 +1,6 @@
 "use client";
 import type { CustomerHistory, PastOrder } from "@/lib/actions/orders";
+import { PlatformDot } from "./PlatformBadge";
 import { History, MapPin, Copy, Plus, X } from "lucide-react";
 
 /** การ์ดประวัติลูกค้าเก่า — โชว์ที่อยู่เดิม + ประวัติการซื้อรายออร์เดอร์ ให้กดคัดลอกเอง */
@@ -45,7 +46,7 @@ export default function CustomerHistoryCard({
         {hist.orders.map((o) => (
           <div key={o.order_no} className="flex items-center gap-3 rounded-lg border border-line bg-white px-3 py-2">
             <div className="shrink-0 text-xs text-muted" style={{ minWidth: 64 }}>
-              <div className="font-medium text-ink">{o.doc_date || "-"}</div>
+              <div className="flex items-center gap-1.5 font-medium text-ink"><PlatformDot platform={o.platform} size={7} /> {o.doc_date || "-"}</div>
               <div className="font-mono text-[10px]">{o.doc_no || o.order_no}</div>
             </div>
             <div className="flex-1 text-xs text-ink">{itemsText(o) || "—"}</div>

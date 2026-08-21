@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { bulkSaveOrders, matchOrders, customersSummary, customerHistory, type MatchResult, type CustomerHistory } from "@/lib/actions/orders";
 import { addScentAlias } from "@/lib/actions/products";
 import type { OrderWithItems } from "@/lib/types";
+import { PlatformDot } from "./PlatformBadge";
 import { UploadCloud, FileSpreadsheet, CheckCircle2, AlertTriangle, Printer, Link2, History, ChevronDown, Wand2 } from "lucide-react";
 
 type CustSummary = { total_orders: number; last_address: string | null; last_date: string | null };
@@ -308,8 +309,9 @@ export default function ImportWizard({ platform = "Shopee" }: { platform?: strin
                                     <div className="text-xs text-muted">ที่อยู่เดิม · {[exp.profile.address, [exp.profile.district, exp.profile.province].filter(Boolean).join(" "), exp.profile.postcode].filter(Boolean).join(" ")}</div>
                                   )}
                                   {exp.orders.map((po) => (
-                                    <div key={po.order_no} className="text-xs text-ink">
-                                      <span className="mr-2 font-medium text-muted">{po.doc_date || "-"}</span>
+                                    <div key={po.order_no} className="flex items-center gap-1.5 text-xs text-ink">
+                                      <PlatformDot platform={po.platform} size={7} />
+                                      <span className="mr-1 font-medium text-muted">{po.doc_date || "-"}</span>
                                       {po.items.map((it) => `${it.product}${it.size ? ` ${it.size}` : ""} ×${it.qty}`).join(", ")}
                                     </div>
                                   ))}

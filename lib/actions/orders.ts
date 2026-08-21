@@ -343,7 +343,7 @@ export async function lookupPostcode(code: string): Promise<PostcodeHit[]> {
 // --- ประวัติการซื้อรายออร์เดอร์ (ให้ดูเทียบ ก่อนตัดสินใจเติม) ---
 export type PastOrderItem = { product: string; size: string; is_free: boolean; qty: number };
 export type PastOrder = {
-  order_no: string; doc_no: string | null; doc_date: string | null;
+  order_no: string; doc_no: string | null; doc_date: string | null; platform: string | null;
   province: string | null; district: string | null; subdistrict: string | null; postcode: string | null; address: string | null;
   items: PastOrderItem[];
 };
@@ -380,8 +380,8 @@ export async function customerHistory(
   let excl = "";
   if (exclude) { params.push(exclude); excl = "and o.order_no <> $2"; }
 
-  const rows = await q<{ order_no: string; doc_no: string | null; doc_date: string | null; province: string | null; district: string | null; subdistrict: string | null; postcode: string | null; address: string | null; receiver: string | null; phone: string | null }>(
-    `select o.order_no, o.doc_no, to_char(o.doc_date,'YYYY-MM-DD') as doc_date,
+  const rows = await q<{ order_no: string; doc_no: string | null; doc_date: string | null; platform: string | null; province: string | null; district: string | null; subdistrict: string | null; postcode: string | null; address: string | null; receiver: string | null; phone: string | null }>(
+    `select o.order_no, o.doc_no, to_char(o.doc_date,'YYYY-MM-DD') as doc_date, o.platform,
             o.province, o.district, o.subdistrict, o.postcode, o.address, o.receiver, o.phone
      from orders o
      where o.deleted_at is null and nullif(o.${key.col},'') = $1 ${excl}
@@ -402,7 +402,7 @@ export async function customerHistory(
     byOrder.set(it.order_no, arr);
   }
   const orders: PastOrder[] = top.map((r) => ({
-    order_no: r.order_no, doc_no: r.doc_no, doc_date: r.doc_date,
+    order_no: r.order_no, doc_no: r.doc_no, doc_date: r.doc_date, platform: r.platform,
     province: r.province, district: r.district, subdistrict: r.subdistrict, postcode: r.postcode, address: r.address,
     items: byOrder.get(r.order_no) ?? [],
   }));
