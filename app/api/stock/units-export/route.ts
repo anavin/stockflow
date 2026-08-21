@@ -3,6 +3,7 @@ import ExcelJS from "exceljs";
 import { getCurrentUser } from "@/lib/auth/session";
 import { can } from "@/lib/auth/roles";
 import { listUnits } from "@/lib/queries";
+import { platformName } from "@/lib/config";
 
 export const runtime = "nodejs";
 
@@ -15,7 +16,8 @@ export async function GET(req: Request) {
   const sp = new URL(req.url).searchParams;
   const units = await listUnits({
     search: sp.get("q") || undefined, status: sp.get("status") || undefined,
-    product: sp.get("product") || undefined, size: sp.get("size") || undefined, limit: 10000,
+    product: sp.get("product") || undefined, size: sp.get("size") || undefined,
+    platform: sp.get("platform") || undefined, limit: 10000,
   });
 
   const wb = new ExcelJS.Workbook();
@@ -29,6 +31,7 @@ export async function GET(req: Request) {
     { header: "Grade", key: "grade", width: 10 },
     { header: "วันที่รับเข้า", key: "received", width: 14 },
     { header: "สถานะ", key: "status", width: 12 },
+    { header: "ช่องทาง", key: "platform", width: 12 },
     { header: "Order No.", key: "order", width: 20 },
     { header: "ผู้ซื้อ", key: "buyer", width: 22 },
     { header: "ผู้รับ", key: "receiver", width: 22 },
@@ -47,7 +50,7 @@ export async function GET(req: Request) {
   for (const u of units) {
     ws.addRow({
       barcode: u.barcode || "", sku: u.sku, product: u.product, size: u.size, grade: u.grade || "",
-      received: d(u.received_at), status: stLabel(u.status), order: u.order_no || "",
+      received: d(u.received_at), status: stLabel(u.status), platform: platformName(u.platform || undefined), order: u.order_no || "",
       buyer: u.buyer || "", receiver: u.receiver || "", phone: u.phone || "",
       issued: d(u.issued_at), source: u.source === "order" ? "จากใบเบิก" : "รับเข้า",
     });

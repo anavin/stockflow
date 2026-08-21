@@ -118,7 +118,7 @@ export async function getActiveSpecRules(): Promise<{ sizes: string; grades: str
 
 export type UnitRow = {
   sku: string; product: string; size: string; grade: string | null; barcode: string | null;
-  status: string; order_no: string | null; buyer: string | null; receiver: string | null; phone: string | null;
+  status: string; order_no: string | null; platform: string | null; buyer: string | null; receiver: string | null; phone: string | null;
   received_at: string | null; issued_at: string | null; shipped_at: string | null;
   source: "unit" | "order";   // unit = รับเข้าผ่าน stock_unit · order = SKU ที่สแกนตอนตัดยอด (order_items)
 };
@@ -143,17 +143,18 @@ const UNITS_UNION = `
      and not exists (select 1 from stock_unit s where btrim(s.sku) = btrim(oi.sku))`;
 
 /** ติดตาม SKU รายชิ้น — ค้นด้วย SKU/กลิ่น/order + สถานะ; join orders เพื่อรู้ผู้ซื้อ */
-export async function listUnits(opts: { search?: string; status?: string; product?: string; size?: string; limit?: number } = {}): Promise<UnitRow[]> {
+export async function listUnits(opts: { search?: string; status?: string; product?: string; size?: string; platform?: string; limit?: number } = {}): Promise<UnitRow[]> {
   const params: any[] = [];
   const where: string[] = [];
   if (opts.search) { params.push(`%${opts.search}%`); const i = params.length; where.push(`(u.sku ilike $${i} or u.product ilike $${i} or coalesce(u.order_no,'') ilike $${i})`); }
   if (opts.product) { params.push(opts.product); where.push(`lower(btrim(u.product)) = lower(btrim($${params.length}))`); }
   if (opts.size) { params.push(opts.size); where.push(`regexp_replace(lower(u.size),'[^0-9a-z]','','g') = regexp_replace(lower($${params.length}),'[^0-9a-z]','','g')`); }
   if (opts.status) { params.push(opts.status); where.push(`u.status = $${params.length}`); }
+  if (opts.platform) { params.push(opts.platform); where.push(`o.platform = $${params.length}`); }
   const limit = Math.min(opts.limit ?? 500, 2000);
   try {
     return await q<UnitRow>(
-      `select u.sku, u.product, u.size, u.grade, u.barcode, u.status, u.order_no,
+      `select u.sku, u.product, u.size, u.grade, u.barcode, u.status, u.order_no, o.platform,
               o.shop_name as buyer, o.receiver, o.phone, u.received_at, u.issued_at, o.shipped_at, u.source
        from (${UNITS_UNION}) u left join orders o on o.order_no = u.order_no
        ${where.length ? "where " + where.join(" and ") : ""}
@@ -170,14 +171,14 @@ export async function unitCounts(): Promise<{ in_stock: number; issued: number }
   } catch { return { in_stock: 0, issued: 0 }; }
 }
 
-export type OrderBrief = { order_no: string; doc_no: string | null; receiver: string | null; province: string | null; stock_issued_at: boolean; shipped_at: string | null; item_count: number };
+export type OrderBrief = { order_no: string; doc_no: string | null; platform: string | null; receiver: string | null; province: string | null; stock_issued_at: boolean; shipped_at: string | null; item_count: number };
 /** สรุปออเดอร์ (สำหรับหน้าติดตาม SKU: ค้น Order No. ที่ยังไม่มี SKU รายชิ้น → โชว์สถานะตัด/ส่ง) */
 export async function getOrderBrief(orderNo: string): Promise<OrderBrief | null> {
   const code = (orderNo || "").trim();
   if (!code) return null;
   try {
     const [o] = await q<OrderBrief>(
-      `select o.order_no, o.doc_no, coalesce(o.receiver, o.username) as receiver, o.province,
+      `select o.order_no, o.doc_no, o.platform, coalesce(o.receiver, o.username) as receiver, o.province,
               (o.stock_issued_at is not null) as stock_issued_at,
               to_char(o.shipped_at at time zone 'Asia/Bangkok', 'YYYY-MM-DD') as shipped_at,
               (select count(*)::int from order_items i where i.order_no = o.order_no) as item_count
