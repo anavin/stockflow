@@ -508,4 +508,12 @@ insert into scent_aliases (alias_key, alias_text, product) values
 on conflict (alias_key) do nothing;
 
 
+-- ═══════════════════════════════════════════════════════════════════════
+-- ▼▼▼ เปิดแพลตฟอร์ม Lazada (ให้ตาราง platforms มี Lazada — กัน FK พังตอน import) ▼▼▼
+-- ═══════════════════════════════════════════════════════════════════════
+insert into platforms (code, name, prefix, sort) values
+  ('Lazada', 'Lazada', 'LZ', 2)
+on conflict (code) do nothing;
+
+
 commit;
