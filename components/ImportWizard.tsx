@@ -101,7 +101,16 @@ export default function ImportWizard({ platform = "Shopee" }: { platform?: strin
     setBusy(true); setError("");
     const res = await bulkSaveOrders(preview.orders);
     setBusy(false);
-    if (!res.ok) { setError(`${res.error} (บันทึกสำเร็จ ${res.saved} ออร์เดอร์ก่อนหยุด)`); return; }
+    if (!res.ok) {
+      // บันทึกได้บางส่วน → เหลือเฉพาะใบที่ล้มในตาราง ให้แก้/กดยืนยันซ้ำเพื่อลองใหม่เฉพาะที่ล้ม
+      const failedSet = new Set(res.failedOrders || []);
+      if (failedSet.size > 0) {
+        setPreview((p) => (p ? { ...p, orders: p.orders.filter((o) => failedSet.has(o.order_no)) } : p));
+        setCust(null); setExpanded({});
+      }
+      setError(`บันทึกสำเร็จ ${res.saved} ออร์เดอร์ · ล้มเหลว ${res.failed} — เหลือเฉพาะใบที่ล้มด้านล่าง กด "ยืนยันนำเข้า" อีกครั้งเพื่อลองใหม่เฉพาะที่ล้ม (${res.error})`);
+      return;
+    }
     setSavedMsg(`นำเข้าสำเร็จ ${res.saved} ออร์เดอร์`);
     setTimeout(() => { router.push(base); router.refresh(); }, 900);
   }

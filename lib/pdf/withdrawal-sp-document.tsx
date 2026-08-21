@@ -151,8 +151,13 @@ function Panel({ order, copyLabel }: { order: OrderWithItems; copyLabel: string 
   // Density: shrink rows/fonts for big orders so it all fits ONE landscape page.
   // เพิ่มระดับย่อสำหรับใบใหญ่มาก (40–50 รายการ) กันตกขอบเงียบๆ.
   const n = items.length;
-  const rowH = n > 40 ? 6.3 : n > 31 ? 7.4 : n > 22 ? 9.5 : n > 14 ? 11 : 14;
-  const cfs = n > 40 ? 5.4 : n > 31 ? 6 : n > 22 ? 6.6 : n > 14 ? 7 : 7.5;
+  // density ย่อตามจำนวนรายการ กันล้นกล่องสูงคงที่ (552) — เพิ่ม tier แน่นสำหรับใบใหญ่ (>55, >70)
+  const rowH = n > 70 ? 4.7 : n > 55 ? 5.4 : n > 40 ? 6.3 : n > 31 ? 7.4 : n > 22 ? 9.5 : n > 14 ? 11 : 14;
+  const cfs = n > 70 ? 4.7 : n > 55 ? 5.0 : n > 40 ? 5.4 : n > 31 ? 6 : n > 22 ? 6.6 : n > 14 ? 7 : 7.5;
+  // เพดานกันตกขอบเงียบ ๆ: ถ้าเกิน CAP บรรทัด แสดงเท่าที่พอดี + แถวเตือน (ยอดรวมยังนับครบทุกชิ้น)
+  const CAP = 78;
+  const shownItems = n > CAP ? items.slice(0, CAP - 1) : items;
+  const truncated = n - shownItems.length;
   const pv = n > 31 ? 0.8 : n > 14 ? 1.3 : 2.5;
   const signGap = n > 31 ? 3 : n > 14 ? 6 : 14;
   const bcH = n > 31 ? 22 : n > 14 ? 26 : 34;   // barcode เล็กลงเมื่อออร์เดอร์ใหญ่ กันล้น
@@ -229,7 +234,7 @@ function Panel({ order, copyLabel }: { order: OrderWithItems; copyLabel: string 
             <Text key={i} style={[s.cell, s.hCell, { width: COL[i], textAlign: i === 4 ? "right" : "left" }]}>{T(h)}</Text>
           ))}
         </View>
-        {items.map((it, i) => (
+        {shownItems.map((it, i) => (
           <View key={i} style={[s.tr, rowStyle]} wrap={false}>
             <Text style={[s.cell, cStyle, { width: COL[0], color: C.faint }]}>{i + 1}</Text>
             <Text style={[s.cell, cStyle, { width: COL[1], color: C.faint }]}>{T(it.ptype)}</Text>
@@ -241,6 +246,13 @@ function Panel({ order, copyLabel }: { order: OrderWithItems; copyLabel: string 
             <Text style={[s.cell, cStyle, { width: COL[7], fontSize: cfs - 0.8 }]}>{it.sku || ""}</Text>
           </View>
         ))}
+        {truncated > 0 && (
+          <View style={[s.tr, rowStyle]} wrap={false}>
+            <Text style={[s.cell, cStyle, { width: COL.reduce((a, w) => a + w, 0), color: C.brand, fontWeight: "bold" }]}>
+              {`⚠ และอีก ${truncated} รายการ — พิมพ์ไม่ครบใน 1 ใบ (ยอดรวมนับครบ · ควรแบ่งใบ)`}
+            </Text>
+          </View>
+        )}
         <View style={s.foot}>
           <Text style={[s.cell, cStyle, { width: COL[0] + COL[1] + COL[2] + COL[3], textAlign: "right", fontWeight: "bold" }]}>{T("รวมทั้งสิ้น")}</Text>
           <Text style={[s.cell, cStyle, { width: COL[4], textAlign: "right", fontWeight: "bold" }]}>{total}</Text>

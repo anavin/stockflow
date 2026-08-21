@@ -520,14 +520,14 @@ export async function countOrders(opts: { platform?: string; search?: string; mo
   return r?.n ?? 0;
 }
 
-export async function listDeletedOrders(platform = "Shopee", limit = 200): Promise<OrderRow[]> {
+export async function listDeletedOrders(platform = "Shopee", limit = 200, offset = 0): Promise<OrderRow[]> {
   const rows = await q<OrderRow>(
     `select o.*, coalesce(count(i.id),0)::int as item_count, coalesce(sum(i.qty),0)::float8 as total_qty
      from orders o left join order_items i on i.order_no = o.order_no
      where o.platform = $1 and o.deleted_at is not null
      group by o.order_no
      order by o.deleted_at desc
-     limit ${Math.min(limit, 500)}`,
+     limit ${Math.min(limit, 500)} offset ${Math.max(0, offset)}`,
     [platform],
   );
   return rows.map(normOrder);

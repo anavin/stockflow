@@ -472,7 +472,7 @@ export async function matchOrders(orderNos: string[]): Promise<{ ok: boolean; er
 }
 
 /** Bulk upsert from the import wizard. Returns count of orders saved. */
-export async function bulkSaveOrders(orders: OrderWithItems[]): Promise<{ ok: boolean; saved: number; failed?: number; error?: string }> {
+export async function bulkSaveOrders(orders: OrderWithItems[]): Promise<{ ok: boolean; saved: number; failed?: number; failedOrders?: string[]; error?: string }> {
   const user = await getCurrentUser();
   if (!user) return { ok: false, saved: 0, error: "กรุณาเข้าสู่ระบบ" };
   if (!can.createOrders(user.role)) return { ok: false, saved: 0, error: "ไม่มีสิทธิ์นำเข้าใบเบิก (เฉพาะฝ่ายสร้างใบเบิก)" };
@@ -515,6 +515,7 @@ export async function bulkSaveOrders(orders: OrderWithItems[]): Promise<{ ok: bo
   // พยายามบันทึกทุกออร์เดอร์ (แต่ละอันเป็น tx ของตัวเอง) — ไม่หยุดกลางคันเมื่อเจอแถวเสีย
   // บันทึกทีละชุด (chunk) ขนานกัน → เร็วกว่า loop ทีละใบมาก (round-trip ข้ามทวีป) ·
   //   ปลอดภัย: doc_no ใช้ counter atomic, แต่ละใบ order_no ต่างกันจึงไม่ชนกัน · จำกัดไม่ให้ล้น pool (max 10)
+  const failedOrders: string[] = [];
   const CHUNK = 6;
   for (let i = 0; i < orders.length; i += CHUNK) {
     const results = await Promise.all(orders.slice(i, i + CHUNK).map(async (ord) => {
@@ -525,20 +526,20 @@ export async function bulkSaveOrders(orders: OrderWithItems[]): Promise<{ ok: bo
             product: it.product, size: it.size, is_free: it.is_free, qty: it.qty, unit: it.unit, sku: it.sku ?? null,
           })),
         } as OrderInput);
-        return res.ok ? { ok: true as const } : { ok: false as const, err: `${ord.order_no}: ${res.error}` };
+        return res.ok ? { ok: true as const } : { ok: false as const, order_no: ord.order_no, err: `${ord.order_no}: ${res.error}` };
       } catch (e: any) {
-        return { ok: false as const, err: `${ord.order_no}: ${e?.message || "บันทึกไม่สำเร็จ"}` };
+        return { ok: false as const, order_no: ord.order_no, err: `${ord.order_no}: ${e?.message || "บันทึกไม่สำเร็จ"}` };
       }
     }));
-    for (const r of results) { if (r.ok) saved += 1; else errors.push(r.err); }
+    for (const r of results) { if (r.ok) saved += 1; else { errors.push(r.err); failedOrders.push(r.order_no); } }
   }
   await logActivity("order.import", `นำเข้า ${saved} ใบ${errors.length ? ` · ล้มเหลว ${errors.length}` : ""}`);
   revalidateOrderLists();
   if (errors.length) {
     const preview = errors.slice(0, 5).join("; ");
-    return { ok: false, saved, failed: errors.length, error: `บันทึกสำเร็จ ${saved}, ล้มเหลว ${errors.length} — ${preview}${errors.length > 5 ? " …" : ""}` };
+    return { ok: false, saved, failed: errors.length, failedOrders, error: `บันทึกสำเร็จ ${saved}, ล้มเหลว ${errors.length} — ${preview}${errors.length > 5 ? " …" : ""}` };
   }
-  return { ok: true, saved, failed: 0 };
+  return { ok: true, saved, failed: 0, failedOrders: [] };
 }
 
 // ─── จัดส่งสินค้า: สแกน Order No. จากใบปะหน้าเพื่อบันทึกว่าส่งแล้ว ───
