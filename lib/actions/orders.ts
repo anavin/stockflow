@@ -588,12 +588,29 @@ export async function markShipped(orderNo: string, dateStr?: string): Promise<Sh
   return { ok: true, already: false, at: u.shipped_at, issued: !!o.stock_issued_at, order: info };
 }
 
-/** ยกเลิกการส่ง (สแกนผิด) — เฉพาะแอดมิน/ฝ่ายคลัง */
+/** ยกเลิกการส่ง (สแกนผิด) — admin/คลัง ยกเลิกได้ทุกใบ · picker ยกเลิกเฉพาะที่ตัวเองสแกนภายใน 24 ชม. */
 export async function unshipOrder(orderNo: string): Promise<{ ok: boolean; error?: string }> {
   const user = await getCurrentUser();
-  if (!user || !can.manageStock(user.role)) return { ok: false, error: "เฉพาะผู้ดูแล / ฝ่ายคลัง" };
-  await q(`update orders set shipped_at = null, shipped_by = null where order_no = $1`, [(orderNo || "").trim()]);
-  await logActivity("unship", (orderNo || "").trim());
-  revalidatePath("/ship/daily"); revalidateOrderLists();
-  return { ok: true };
+  if (!user || !can.viewStock(user.role)) return { ok: false, error: "ไม่มีสิทธิ์ยกเลิกการส่ง" };
+  const on = (orderNo || "").trim();
+  if (!on) return { ok: false, error: "ไม่มี Order No." };
+  try {
+    const [o] = await q<{ shipped_at: string | null; shipped_by: number | null; return_status: string | null; recent: boolean }>(
+      `select shipped_at, shipped_by, return_status, (shipped_at > now() - interval '24 hours') as recent
+       from orders where order_no = $1`, [on]);
+    if (!o) return { ok: false, error: `ไม่พบออเดอร์ ${on}` };
+    if (!o.shipped_at) return { ok: false, error: "ออเดอร์นี้ยังไม่ได้บันทึกส่ง" };
+    // มีการรับคืนแล้ว → ยกเลิกส่งจะทำให้สถานะคืนค้าง (ต้องยกเลิกการคืนก่อน) — มิเรอร์ความปลอดภัยของ reverseIssue
+    if (o.return_status && o.return_status !== "none") return { ok: false, error: "ออเดอร์นี้มีการรับคืนแล้ว — ต้องยกเลิกการคืนก่อนจึงจะยกเลิกการส่งได้" };
+    // picker (ไม่ใช่ admin/คลัง): เฉพาะที่ตัวเองสแกน + ภายใน 24 ชม.
+    if (!can.manageStock(user.role) && !(o.shipped_by === user.id && o.recent)) {
+      return { ok: false, error: "ยกเลิกได้เฉพาะรายการที่คุณสแกนเองภายใน 24 ชม. — นอกเหนือจากนี้แจ้งผู้ดูแล/ฝ่ายคลัง" };
+    }
+    // เคลม atomic — กันยกเลิกซ้ำ/แข่งกัน
+    const [u] = await q<{ order_no: string }>(`update orders set shipped_at = null, shipped_by = null where order_no = $1 and shipped_at is not null returning order_no`, [on]);
+    if (!u) return { ok: false, error: "ยกเลิกไม่สำเร็จ (อาจถูกยกเลิกไปแล้ว)" };
+    await logActivity("unship", `${on}${can.manageStock(user.role) ? "" : " · self"}`);
+    revalidatePath("/ship/daily"); revalidateOrderLists();
+    return { ok: true };
+  } catch (e: any) { return { ok: false, error: e?.message || "ยกเลิกไม่สำเร็จ" }; }
 }

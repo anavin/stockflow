@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import { lookupOrderForReturn, confirmReturn, type ReturnLookup, type ReturnItemPreview } from "@/lib/actions/returns";
 import { PlatformBadge } from "./PlatformBadge";
+import { scanBeep } from "@/lib/scan-feedback";
 import { ScanLine, Camera, Undo2, PackageCheck, X, CheckCircle2, RotateCcw, Trash2, ClipboardList } from "lucide-react";
 
 const CameraScan = dynamic(() => import("./CameraScan"), { ssr: false });
@@ -42,7 +43,8 @@ export default function ReturnScanner() {
     let res: ReturnLookup;
     try { res = await lookupOrderForReturn(code); } catch { res = { ok: false, error: "ดึงรายการไม่สำเร็จ" }; }
     setBusy(false);
-    if (!res.ok) { setErr(res.error || "ไม่พบ"); setPreview(null); return; }
+    if (!res.ok) { scanBeep("error"); setErr(res.error || "ไม่พบ"); setPreview(null); return; }
+    scanBeep(res.issued ? "ok" : "warn");   // warn = ยังไม่ตัดสต๊อก คืนเข้าสต๊อกไม่ได้
     setValue(""); setPreview(res); setForm(initForm(res.items || [], !!res.issued));
   }
 

@@ -90,6 +90,26 @@ export default function OrderForm({ platform = "Shopee", products, sizes, provin
     return () => window.removeEventListener("beforeunload", h);
   }, [dirty]);
 
+  // เตือนตอนคลิกลิงก์ในแอป (เมนูซ้าย ฯลฯ) ระหว่างยังไม่บันทึก — Next App Router ไม่มี route-guard ในตัว
+  // จับคลิก <a> ภายในเว็บ (ไม่ใช่แท็บใหม่/ดาวน์โหลด) แล้ว confirm ก่อนปล่อยให้ไป
+  useEffect(() => {
+    if (!dirty) return;
+    const onClick = (e: MouseEvent) => {
+      if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+      const a = (e.target as HTMLElement)?.closest?.("a[href]") as HTMLAnchorElement | null;
+      if (!a) return;
+      const href = a.getAttribute("href") || "";
+      if (!href || href.startsWith("#") || a.target === "_blank" || a.hasAttribute("download")) return;
+      if (a.origin !== window.location.origin) return;                 // ลิงก์นอกเว็บ = beforeunload จัดการ
+      if (a.pathname === window.location.pathname) return;             // อยู่หน้าเดิม
+      if (!window.confirm("ยังไม่ได้บันทึกใบเบิก — ออกจากหน้านี้เลยไหม? ข้อมูลที่กรอกจะหาย")) {
+        e.preventDefault(); e.stopPropagation();
+      }
+    };
+    document.addEventListener("click", onClick, true);                // capture: ดักก่อน Next Link
+    return () => document.removeEventListener("click", onClick, true);
+  }, [dirty]);
+
   // ตรวจ Order No. ซ้ำ (เฉพาะตอนสร้างใหม่)
   async function checkDup(v: string) {
     if (editing || !v.trim()) { setDupWarn(""); return; }

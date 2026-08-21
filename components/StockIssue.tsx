@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import { lookupOrderForIssue, confirmIssueByOrder, reverseIssue, type IssueResult, type IssueLookup } from "@/lib/actions/stock";
 import { PlatformBadge } from "./PlatformBadge";
+import { scanBeep } from "@/lib/scan-feedback";
 import { ScanLine, CheckCircle2, AlertTriangle, XCircle, Undo2, Camera, PackageCheck, X, Printer, StickyNote, ClipboardList } from "lucide-react";
 
 const CameraScan = dynamic(() => import("./CameraScan"), { ssr: false });
@@ -40,10 +41,14 @@ export default function StockIssue({ isAdmin, initialOrder, specOptions = [] }: 
     finally { setBusy(false); }
     setValue("");
     if (!res.ok) {
+      scanBeep("error");
       setLog((l) => [{ at: now(), res: res as IssueResult, input: on, platform: res.platform }, ...l].slice(0, 30));
       inputRef.current?.focus();
       return;
     }
+    // เตือน (เสียง warn) ถ้ามีบรรทัดที่สต๊อกไม่พอ — ไม่งั้น ok
+    const short = res.items!.some((it) => it.tracked && it.qty > (it.stock ?? 0));
+    scanBeep(short ? "warn" : "ok");
     const init: Record<number, { sku: string; spec: string }> = {};
     for (const it of res.items!) init[it.line_no] = { sku: it.sku || "", spec: it.spec || "" };
     setForm(init);
@@ -55,12 +60,19 @@ export default function StockIssue({ isAdmin, initialOrder, specOptions = [] }: 
     if (!preview?.order_no || busy) return;
     const missing = preview.items!.some((it) => it.tracked && !(form[it.line_no]?.sku || "").trim());
     if (missing && !window.confirm("บางรายการยังไม่ได้ใส่ SKU — ยืนยันตัดสต๊อกเลยไหม?")) return;
+    // เตือนก่อนตัดถ้าสต๊อกไม่พอ (จะทำให้ติดลบ) — ระบุกลิ่นที่ขาด
+    const shortLines = preview.items!.filter((it) => it.tracked && it.qty > (it.stock ?? 0));
+    if (shortLines.length && !window.confirm(
+      `สต๊อกไม่พอ ${shortLines.length} รายการ (จะตัดจนติดลบ):\n` +
+      shortLines.map((it) => `• ${it.product} ${it.size} — ต้องตัด ${it.qty} เหลือ ${it.stock ?? 0}`).join("\n") +
+      `\n\nยืนยันตัดสต๊อกต่อไหม?`)) return;
     setBusy(true);
     const entries = preview.items!.map((it) => ({ line_no: it.line_no, sku: form[it.line_no]?.sku, spec: form[it.line_no]?.spec }));
     let res: IssueResult;
     try { res = await confirmIssueByOrder(preview.order_no, entries); }
     catch { res = { ok: false, error: "ตัดสต๊อกไม่สำเร็จ (ระบบขัดข้อง ลองใหม่)" }; }
     finally { setBusy(false); }
+    scanBeep(res.ok ? (res.negatives?.length ? "warn" : "ok") : "error");
     setLog((l) => [{ at: now(), res, input: preview.order_no!, platform: preview.platform }, ...l].slice(0, 30));
     setPreview(null); setForm({});
     inputRef.current?.focus();

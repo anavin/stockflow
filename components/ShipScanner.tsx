@@ -28,8 +28,8 @@ function feedback(kind: "ok" | "already" | "error") {
   try { navigator.vibrate?.(kind === "error" ? [80, 60, 80] : 40); } catch { /* ไม่มี vibrate */ }
 }
 
-export default function ShipScanner({ date, isToday, rows: initialRows, pending, canUndo }:
-  { date: string; isToday: boolean; rows: ShipRow[]; pending: number; canUndo: boolean }) {
+export default function ShipScanner({ date, isToday, rows: initialRows, pending, canUndo, canUndoOwn = false }:
+  { date: string; isToday: boolean; rows: ShipRow[]; pending: number; canUndo: boolean; canUndoOwn?: boolean }) {
   const router = useRouter();
   const [value, setValue] = useState("");
   const [busy, setBusy] = useState(false);
@@ -50,6 +50,8 @@ export default function ShipScanner({ date, isToday, rows: initialRows, pending,
   }, [rows]);
   // กรองตามแพลตฟอร์ม แต่แถวที่เพิ่งสแกน (_new) โชว์เสมอ ไม่ให้ตัวกรองซ่อนของที่เพิ่งบันทึก
   const shown = pfFilter ? rows.filter((r) => r._new || (r.platform || "Shopee") === pfFilter) : rows;
+  const showUndo = (r: Row) => canUndo || (canUndoOwn && !!r._new);   // picker ยกเลิกได้เฉพาะที่เพิ่งสแกนเอง
+  const anyUndo = canUndo || canUndoOwn;
 
   // คืน ScanFeedback ให้กล้องแจ้งผลรายชิ้น (ถ้าสแกนจากกล้อง) — พร้อมตั้ง banner ให้ฝั่งพิมพ์/เครื่องสแกนด้วย
   async function scan(codeArg?: string): Promise<ScanFeedback | void> {
@@ -76,11 +78,17 @@ export default function ShipScanner({ date, isToday, rows: initialRows, pending,
       setBanner({ kind: "already", text: `สแกนไปแล้ว · ${o.order_no}`, sub: `ส่งเมื่อ ${timeOf(res.at)} · ${o.receiver || "-"}` });
       return { status: "dup", title: "สแกนซ้ำ", detail: `บันทึกส่งไปแล้วเมื่อ ${timeOf(res.at)}` };
     }
-    feedback("ok");
-    setBanner({ kind: "ok", text: `บันทึกส่งแล้ว · ${o.order_no}`, sub: `${o.receiver || "-"} · ${o.province || "-"} · ${o.item_count} รายการ${res.issued ? "" : " · ⚠️ ยังไม่ได้ตัดสต๊อก"}`, platform: o.platform });
     setRows((r) => [{ order_no: o.order_no, doc_no: null, platform: o.platform, receiver: o.receiver, province: o.province, item_count: o.item_count, shipped_at: res.at || new Date().toISOString(), shipped_by_name: "เพิ่งสแกน", _new: true }, ...r]);
     if (res.issued) setAddedIssued((n) => n + 1);
-    return { status: "ok", title: "บันทึกส่งแล้ว", detail: `${o.receiver || "-"} · ${o.item_count} รายการ${res.issued ? "" : " · ⚠️ ยังไม่ตัดสต๊อก"}` };
+    // ส่งของที่ "ยังไม่ตัดสต๊อก" (deferred behavior) — เตือนเด่น: เสียง warn + แบนเนอร์เหลือง + ค้างนานขึ้น (status dup)
+    if (!res.issued) {
+      feedback("already");
+      setBanner({ kind: "already", text: `⚠️ ส่งแล้วแต่ยังไม่ตัดสต๊อก · ${o.order_no}`, sub: `${o.receiver || "-"} · ${o.item_count} รายการ — อย่าลืมกลับมาตัดสต๊อกใบนี้`, platform: o.platform });
+      return { status: "dup", title: "⚠️ ยังไม่ตัดสต๊อก", detail: `${o.receiver || "-"} · ${o.item_count} รายการ — บันทึกส่งแล้ว แต่ยังไม่ได้ตัดสต๊อก` };
+    }
+    feedback("ok");
+    setBanner({ kind: "ok", text: `บันทึกส่งแล้ว · ${o.order_no}`, sub: `${o.receiver || "-"} · ${o.province || "-"} · ${o.item_count} รายการ`, platform: o.platform });
+    return { status: "ok", title: "บันทึกส่งแล้ว", detail: `${o.receiver || "-"} · ${o.item_count} รายการ` };
   }
 
   async function undo(orderNo: string) {
@@ -186,7 +194,7 @@ export default function ShipScanner({ date, isToday, rows: initialRows, pending,
                       <th className="px-4 py-2.5">เวลา</th><th className="px-3 py-2.5">Order No.</th>
                       <th className="px-3 py-2.5">ผู้รับ</th><th className="px-3 py-2.5">จังหวัด</th>
                       <th className="px-3 py-2.5 text-center">รายการ</th><th className="px-3 py-2.5 text-center">สถานะ</th>
-                      {canUndo && <th className="px-3 py-2.5"></th>}
+                      {anyUndo && <th className="px-3 py-2.5"></th>}
                     </tr>
                   </thead>
                   <tbody>
@@ -198,9 +206,9 @@ export default function ShipScanner({ date, isToday, rows: initialRows, pending,
                         <td className="px-3 py-2.5 text-muted">{r.province || "-"}</td>
                         <td className="px-3 py-2.5 text-center tabular-nums text-muted">{r.item_count}</td>
                         <td className="px-3 py-2.5 text-center"><PackageCheck size={16} className="inline text-green-600" /></td>
-                        {canUndo && (
+                        {anyUndo && (
                           <td className="px-3 py-2.5 text-right">
-                            <button onClick={() => undo(r.order_no)} className="rounded-md p-1 text-faint hover:bg-red-50 hover:text-red-500" title="ยกเลิกการส่ง"><Undo2 size={14} /></button>
+                            {showUndo(r) && <button onClick={() => undo(r.order_no)} className="rounded-md p-1 text-faint hover:bg-red-50 hover:text-red-500" title="ยกเลิกการส่ง"><Undo2 size={14} /></button>}
                           </td>
                         )}
                       </tr>
@@ -218,7 +226,7 @@ export default function ShipScanner({ date, isToday, rows: initialRows, pending,
                       <div className="truncate text-xs text-muted">{r.receiver || "-"} · {r.province || "-"} · {r.item_count} รายการ</div>
                     </div>
                     <PackageCheck size={16} className="shrink-0 text-green-600" />
-                    {canUndo && (
+                    {showUndo(r) && (
                       <button onClick={() => undo(r.order_no)} className="shrink-0 rounded-md p-1 text-faint hover:bg-red-50 hover:text-red-500" title="ยกเลิกการส่ง"><Undo2 size={14} /></button>
                     )}
                   </div>

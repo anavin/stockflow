@@ -11,7 +11,8 @@ const todayBangkok = () => new Date(Date.now() + 7 * 3600 * 1000).toISOString().
 
 export default async function ShipPage({ searchParams }: { searchParams: Promise<{ date?: string }> }) {
   const me = await requireStock();
-  const canUndo = can.manageStock(me.role);
+  const canUndo = can.manageStock(me.role);                       // admin/คลัง = ยกเลิกได้ทุกแถว
+  const canUndoOwn = !canUndo && can.viewStock(me.role);          // picker = ยกเลิกเฉพาะที่เพิ่งสแกนเอง (แถว _new)
   const { date } = await searchParams;
   const today = todayBangkok();
   const day = /^\d{4}-\d{2}-\d{2}$/.test(date || "") ? date! : today;
@@ -29,7 +30,7 @@ export default async function ShipPage({ searchParams }: { searchParams: Promise
         </div>
         <Link href="/ship/daily" className="btn-ghost"><ClipboardList size={16} /> ประวัติการส่ง</Link>
       </div>
-      <ShipScanner key={day} date={day} isToday={day === today} rows={rows} pending={sum.pending} canUndo={canUndo} />
+      <ShipScanner key={day} date={day} isToday={day === today} rows={rows} pending={sum.pending} canUndo={canUndo} canUndoOwn={canUndoOwn} />
     </div>
   );
 }
