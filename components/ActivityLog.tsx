@@ -35,16 +35,18 @@ export const ACTIONS: Record<string, { label: string; icon: any; cls: string }> 
 const dt = (v: string) => new Date(v).toLocaleString("th-TH", { day: "2-digit", month: "2-digit", year: "2-digit", hour: "2-digit", minute: "2-digit" });
 const roleTh = (r: string | null) => roleList(r).map((x) => ROLE_LABELS[x] || x).join(", ") || "—";
 
-export default function ActivityLog({ rows, user, action, date }: { rows: ActivityRow[]; user: string; action: string; date: string }) {
+export default function ActivityLog({ rows, user, action, from, to, total }: { rows: ActivityRow[]; user: string; action: string; from: string; to: string; total: number }) {
   const router = useRouter();
   const [term, setTerm] = useState(user);
-  const go = (next: { user?: string; action?: string; date?: string }) => {
-    const u = next.user ?? user, a = next.action ?? action, d = next.date ?? date;
+  const go = (next: { user?: string; action?: string; from?: string; to?: string }) => {
+    const u = next.user ?? user, a = next.action ?? action, fr = next.from ?? from, t = next.to ?? to;
     const sp = new URLSearchParams();
-    if (u) sp.set("user", u); if (a) sp.set("action", a); if (d) sp.set("date", d);
+    if (u) sp.set("user", u); if (a) sp.set("action", a); if (fr) sp.set("from", fr); if (t) sp.set("to", t);
     router.push(`/activity${sp.toString() ? "?" + sp.toString() : ""}`);
   };
   function exportCsv() {
+    // Export = เฉพาะหน้าปัจจุบัน — เตือนถ้ามีมากกว่าที่โหลด (กัน admin เข้าใจผิดว่าได้ทั้งหมด)
+    if (total > rows.length && !confirm(`Export ได้เฉพาะ ${rows.length} รายการในหน้านี้ (ทั้งหมด ${total.toLocaleString()}) — แคบช่วงวัน/เลื่อนหน้าเพื่อดึงเพิ่ม\n\nดำเนินการต่อ?`)) return;
     downloadCsv("บันทึกการใช้งาน", ["เวลา", "ผู้ใช้", "บทบาท", "การกระทำ", "รายละเอียด", "IP"],
       rows.map((r) => [dt(r.created_at), r.username || "", roleTh(r.role), ACTIONS[r.action]?.label || r.action, r.detail || "", r.ip || ""]));
   }
@@ -60,10 +62,14 @@ export default function ActivityLog({ rows, user, action, date }: { rows: Activi
           <option value="">ทุกการกระทำ</option>
           {Object.entries(ACTIONS).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
         </select>
-        <input type="date" value={date} onChange={(e) => go({ date: e.target.value })} className="input w-40" />
-        {(user || action || date) && <button onClick={() => go({ user: "", action: "", date: "" })} className="btn-ghost text-xs">ล้าง</button>}
+        <div className="flex items-center gap-1.5">
+          <input type="date" value={from} max={to || undefined} onChange={(e) => go({ from: e.target.value })} className="input w-36" title="ตั้งแต่วันที่" />
+          <span className="text-xs text-muted">ถึง</span>
+          <input type="date" value={to} min={from || undefined} onChange={(e) => go({ to: e.target.value })} className="input w-36" title="ถึงวันที่" />
+        </div>
+        {(user || action || from || to) && <button onClick={() => go({ user: "", action: "", from: "", to: "" })} className="btn-ghost text-xs">ล้าง</button>}
         <button onClick={exportCsv} className="btn-ghost text-sm"><FileDown size={14} /> Export</button>
-        <span className="ml-auto text-xs text-muted">{rows.length.toLocaleString()} รายการ</span>
+        <span className="ml-auto text-xs text-muted">แสดง {rows.length.toLocaleString()} / {total.toLocaleString()}</span>
       </div>
 
       <div className="overflow-hidden rounded-xl border border-line bg-white">

@@ -989,15 +989,32 @@ export async function listMaterialMoves(opts: { category?: string; date?: string
 
 // ---- บันทึกการใช้งาน (activity_log) — เห็นเฉพาะ admin ----------------------
 export type ActivityRow = { id: number; user_id: number | null; username: string | null; role: string | null; action: string; detail: string | null; ip: string | null; created_at: string };
-export async function listActivityLog(opts: { user?: string; action?: string; date?: string; limit?: number } = {}): Promise<ActivityRow[]> {
+type ActivityFilter = { user?: string; action?: string; from?: string; to?: string; date?: string };
+function activityWhere(opts: ActivityFilter, params: any[]): string {
+  const where: string[] = [];
+  if (opts.user) { params.push(`%${opts.user.trim()}%`); where.push(`username ilike $${params.length}`); }
+  if (opts.action) { params.push(opts.action); where.push(`action = $${params.length}`); }
+  const from = opts.from || opts.date, to = opts.to || opts.date;   // date = วันเดียว (เข้ากันได้กับของเดิม)
+  if (from) { params.push(from); where.push(`(created_at at time zone 'Asia/Bangkok')::date >= $${params.length}::date`); }
+  if (to) { params.push(to); where.push(`(created_at at time zone 'Asia/Bangkok')::date <= $${params.length}::date`); }
+  return where.length ? "where " + where.join(" and ") : "";
+}
+export async function listActivityLog(opts: ActivityFilter & { limit?: number; offset?: number } = {}): Promise<ActivityRow[]> {
   try {
-    const params: any[] = []; const where: string[] = [];
-    if (opts.user) { params.push(`%${opts.user.trim()}%`); where.push(`username ilike $${params.length}`); }
-    if (opts.action) { params.push(opts.action); where.push(`action = $${params.length}`); }
-    if (opts.date) { params.push(opts.date); where.push(`(created_at at time zone 'Asia/Bangkok')::date = $${params.length}::date`); }
-    const limit = Math.min(opts.limit ?? 400, 2000);
+    const params: any[] = [];
+    const where = activityWhere(opts, params);
+    const limit = Math.min(opts.limit ?? 100, 500);
+    const offset = Math.max(0, opts.offset ?? 0);
     return await q<ActivityRow>(
       `select id, user_id, username, role, action, detail, ip, created_at from activity_log
-       ${where.length ? "where " + where.join(" and ") : ""} order by created_at desc, id desc limit ${limit}`, params);
+       ${where} order by created_at desc, id desc limit ${limit} offset ${offset}`, params);
   } catch { return []; }
+}
+export async function countActivityLog(opts: ActivityFilter = {}): Promise<number> {
+  try {
+    const params: any[] = [];
+    const where = activityWhere(opts, params);
+    const [r] = await q<{ n: number }>(`select count(*)::int n from activity_log ${where}`, params);
+    return r?.n ?? 0;
+  } catch { return 0; }
 }

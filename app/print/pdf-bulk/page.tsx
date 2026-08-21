@@ -1,4 +1,5 @@
 import { requireUser } from "@/lib/auth/require-user";
+import { can } from "@/lib/auth/roles";
 import { getOrder } from "@/lib/queries";
 import { notFound } from "next/navigation";
 import type { OrderWithItems } from "@/lib/types";
@@ -8,7 +9,8 @@ export const dynamic = "force-dynamic";
 
 /** พิมพ์ใบเบิกหลายใบเป็น PDF เดียว (client-side) — /print/pdf-bulk?orders=A,B,C */
 export default async function PrintBulkPage({ searchParams }: { searchParams: Promise<{ orders?: string }> }) {
-  await requireUser();
+  const me = await requireUser();
+  if (!can.createOrders(me.role) && !can.issueStock(me.role)) notFound();   // PII gating เท่ากับ API
   const { orders: raw } = await searchParams;
   const nos = (raw || "").split(",").map((s) => decodeURIComponent(s.trim())).filter(Boolean).slice(0, 200);
   if (!nos.length) notFound();

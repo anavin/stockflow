@@ -176,7 +176,6 @@ export async function deleteOrder(orderNo: string): Promise<{ ok: boolean; error
     await q(`update orders set deleted_at = now(), deleted_by = $2 where order_no = $1`, [orderNo, user.id]);
     await logActivity("order.delete", orderNo);
     revalidateOrderLists();
-    revalidateOrderLists();
     return { ok: true };
   } catch (e: any) {
     return { ok: false, error: e?.message || "ลบไม่สำเร็จ" };
@@ -197,7 +196,6 @@ export async function bulkDeleteOrders(orderNos: string[]): Promise<{ ok: boolea
     );
     await logActivity("order.delete", `${rows.length} ใบ (เลือกหลายรายการ)`);
     revalidateOrderLists();
-    revalidateOrderLists();
     return { ok: true, deleted: rows.length };
   } catch (e: any) {
     return { ok: false, deleted: 0, error: e?.message || "ลบไม่สำเร็จ" };
@@ -212,7 +210,6 @@ export async function restoreOrder(orderNo: string): Promise<{ ok: boolean; erro
   try {
     await q(`update orders set deleted_at = null, deleted_by = null where order_no = $1`, [orderNo]);
     await logActivity("order.restore", orderNo);
-    revalidateOrderLists();
     revalidateOrderLists();
     return { ok: true };
   } catch (e: any) {
@@ -246,7 +243,7 @@ export async function bulkRestoreOrders(orderNos: string[]): Promise<{ ok: boole
     const rows = await q<{ order_no: string }>(
       `update orders set deleted_at = null, deleted_by = null where order_no = any($1) and deleted_at is not null returning order_no`, [list]);
     await logActivity("order.restore", `${rows.length} ใบ`);
-    revalidateOrderLists(); revalidateOrderLists();
+    revalidateOrderLists();
     return { ok: true, done: rows.length };
   } catch (e: any) { return { ok: false, done: 0, error: e?.message || "กู้คืนไม่สำเร็จ" }; }
 }

@@ -112,8 +112,14 @@ export default function StockManager({ rows, products, sizes, initialLow, isAdmi
     const k = keyOf(r);
     const v = counted[k];
     if (v === undefined || v === "" || Number(v) === r.qty) return;
+    const nv = Number(v);
+    if (!Number.isFinite(nv)) { alert("จำนวนไม่ถูกต้อง"); return; }
+    // ยืนยันเมื่อสวิงเยอะ (fat-finger 500 แทน 50) — เปลี่ยน ≥100 หรือ ≥10 เท่า หรือติดลบ
+    const delta = Math.abs(nv - r.qty);
+    const bigSwing = delta >= 100 || (r.qty > 0 && (nv / r.qty >= 10 || nv <= 0));
+    if (bigSwing && !confirm(`ตั้งยอด ${r.product} ${r.size}\nจาก ${r.qty} → ${nv} (เปลี่ยน ${nv - r.qty >= 0 ? "+" : ""}${nv - r.qty})\n\nยืนยันตั้งเป็นยอดใหม่?`)) return;
     setSavingKey(k);
-    const res = await adjustStock(r.product, r.size, Number(v));
+    const res = await adjustStock(r.product, r.size, nv);
     setSavingKey(null);
     if (!res.ok) { alert(res.error); return; }
     setCounted((c) => { const n = { ...c }; delete n[k]; return n; });
