@@ -4,6 +4,8 @@ import { getCurrentUser } from "@/lib/auth/session";
 import { can } from "@/lib/auth/roles";
 import { rowsToOrders as parseShopee, SCENT_ALIASES, suggestScents } from "@/lib/import/parse-shopee";
 import { rowsToOrders as parseLazada } from "@/lib/import/parse-lazada";
+import { rowsToOrders as parseTiktok } from "@/lib/import/parse-tiktok";
+import { readXlsxRaw } from "@/lib/import/read-xlsx";
 import { getProducts, getScentAliases } from "@/lib/queries";
 
 export const runtime = "nodejs";
@@ -24,48 +26,58 @@ export async function POST(req: Request) {
   const isCsv = /\.csv$/i.test(file.name);
 
   try {
-    const wb = new ExcelJS.Workbook();
-    if (isCsv) {
-      const { Readable } = await import("node:stream");
-      await wb.csv.read(Readable.from(buf.toString("utf8")) as any);
+    let rows: Record<string, any>[] = [];
+
+    // TikTok Shop export เขียนทุกเซลล์เป็น t="str" แบบไม่มีสูตร → ExcelJS อ่านไม่ออก
+    // ต้องอ่านด้วย reader ที่แกะ XML เอง (readXlsxRaw)
+    if (platform === "Tiktok" && !isCsv) {
+      rows = readXlsxRaw(buf).rows;
     } else {
-      await wb.xlsx.load(buf as any);
-    }
+      const wb = new ExcelJS.Workbook();
+      if (isCsv) {
+        const { Readable } = await import("node:stream");
+        await wb.csv.read(Readable.from(buf.toString("utf8")) as any);
+      } else {
+        await wb.xlsx.load(buf as any);
+      }
 
-    // Prefer a sheet named after the platform, else the first sheet with data.
-    const ws = wb.getWorksheet(platform) ?? wb.worksheets.find((w) => w.rowCount > 1) ?? wb.worksheets[0];
-    if (!ws) return NextResponse.json({ ok: false, error: "ไม่พบข้อมูลในไฟล์" }, { status: 400 });
+      // Prefer a sheet named after the platform, else the first sheet with data.
+      const ws = wb.getWorksheet(platform) ?? wb.worksheets.find((w) => w.rowCount > 1) ?? wb.worksheets[0];
+      if (!ws) return NextResponse.json({ ok: false, error: "ไม่พบข้อมูลในไฟล์" }, { status: 400 });
 
-    // header = first row; build array-of-objects
-    const headerRow = ws.getRow(1);
-    const headers: string[] = [];
-    headerRow.eachCell({ includeEmpty: true }, (cell, col) => { headers[col] = String(cell.value ?? "").trim(); });
+      // header = first row; build array-of-objects
+      const headerRow = ws.getRow(1);
+      const headers: string[] = [];
+      headerRow.eachCell({ includeEmpty: true }, (cell, col) => { headers[col] = String(cell.value ?? "").trim(); });
 
-    const rows: Record<string, any>[] = [];
-    ws.eachRow({ includeEmpty: false }, (row, rowNumber) => {
-      if (rowNumber === 1) return;
-      const obj: Record<string, any> = {};
-      let hasData = false;
-      row.eachCell({ includeEmpty: true }, (cell, col) => {
-        const h = headers[col];
-        if (!h) return;
-        let v: any = cell.value;
-        if (v && typeof v === "object") {
-          if ("text" in v) v = (v as any).text;            // rich text / hyperlink
-          else if ("result" in v) v = (v as any).result;   // formula
-        }
-        if (v != null && v !== "") hasData = true;
-        // บาง export มีหัวตารางซ้ำ (เช่น "จังหวัด"/"เขต/อำเภอ" ของที่อยู่ใบกำกับภาษี ที่มักว่าง)
-        // → เก็บค่าแรกที่ไม่ว่างไว้ อย่าให้คอลัมน์ซ้ำที่ว่างมาทับค่าจริง
-        if (obj[h] == null || obj[h] === "") obj[h] = v;
+      ws.eachRow({ includeEmpty: false }, (row, rowNumber) => {
+        if (rowNumber === 1) return;
+        const obj: Record<string, any> = {};
+        let hasData = false;
+        row.eachCell({ includeEmpty: true }, (cell, col) => {
+          const h = headers[col];
+          if (!h) return;
+          let v: any = cell.value;
+          if (v && typeof v === "object") {
+            if ("text" in v) v = (v as any).text;            // rich text / hyperlink
+            else if ("result" in v) v = (v as any).result;   // formula
+          }
+          if (v != null && v !== "") hasData = true;
+          // บาง export มีหัวตารางซ้ำ (เช่น "จังหวัด"/"เขต/อำเภอ" ของที่อยู่ใบกำกับภาษี ที่มักว่าง)
+          // → เก็บค่าแรกที่ไม่ว่างไว้ อย่าให้คอลัมน์ซ้ำที่ว่างมาทับค่าจริง
+          if (obj[h] == null || obj[h] === "") obj[h] = v;
+        });
+        if (hasData) rows.push(obj);
       });
-      if (hasData) rows.push(obj);
-    });
+
+      // fallback: บาง xlsx (เซลล์ t="str") ExcelJS อ่านได้ 0 แถว → ลอง reader ดิบ
+      if (rows.length === 0 && !isCsv) { try { rows = readXlsxRaw(buf).rows; } catch { /* keep empty */ } }
+    }
 
     // ส่งรายชื่อกลิ่น + ชื่อพ้อง (alias จาก DB) ไปช่วยเดา "กลิ่น" จากชื่อสินค้า/SKU/ตัวเลือก/itemName
     const [products, dbAliases] = await Promise.all([getProducts(), getScentAliases()]);
     const aliases = { ...SCENT_ALIASES, ...dbAliases };
-    const parse = platform === "Lazada" ? parseLazada : parseShopee;
+    const parse = platform === "Lazada" ? parseLazada : platform === "Tiktok" ? parseTiktok : parseShopee;
     const result = parse(rows, products, aliases);
 
     // รายการที่จับกลิ่นไม่ตรง (product ไม่อยู่ใน master) → รวม + แนะนำกลิ่นใกล้เคียงให้เลือก/จำเป็น alias
