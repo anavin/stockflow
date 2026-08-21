@@ -362,6 +362,38 @@ export async function dailyIssueStatus(platform = "Shopee", days = 14): Promise<
   return rows.map((r) => ({ day: r.day, orders: Number(r.orders), issued: Number(r.issued), pending: Number(r.orders) - Number(r.issued) }));
 }
 
+export type DayOrderItem = { product: string; size: string | null; qty: number; is_free: boolean };
+export type DayOrderRow = {
+  order_no: string; doc_no: string | null; receiver: string | null; username: string | null;
+  province: string | null; created_by_name: string | null;
+  issued: boolean; shipped: boolean; return_status: string | null;
+  qty: number; items: DayOrderItem[] | null;
+};
+/** ออเดอร์ + รายการ ของวันหนึ่ง (ตาม order_date ถ้าไม่มีใช้ doc_date) — สำหรับรายงานประจำวัน */
+export async function shopeeDailyRows(date: string, platform = "Shopee"): Promise<DayOrderRow[]> {
+  try {
+    return await q<DayOrderRow>(
+      `select o.order_no, o.doc_no, coalesce(o.receiver, o.username) as receiver, o.username, o.province,
+              coalesce(nullif(btrim(u.full_name), ''), u.username) as created_by_name,
+              (o.stock_issued_at is not null) as issued,
+              (o.shipped_at is not null) as shipped,
+              o.return_status,
+              coalesce(sum(i.qty) filter (where coalesce(i.product,'') <> ''), 0)::float8 as qty,
+              coalesce(json_agg(json_build_object('product', i.product, 'size', i.size, 'qty', i.qty, 'is_free', i.is_free)
+                       order by i.line_no) filter (where coalesce(i.product,'') <> ''), '[]'::json) as items
+       from orders o
+       left join order_items i on i.order_no = o.order_no
+       left join users u on u.id = o.created_by
+       where o.deleted_at is null and o.platform = $2
+         and to_char(coalesce(o.order_date, o.doc_date), 'YYYY-MM-DD') = $1
+       group by o.order_no, o.doc_no, o.receiver, o.username, o.province, u.full_name, u.username,
+                o.stock_issued_at, o.shipped_at, o.return_status, o.created_at
+       order by o.doc_no nulls last, o.created_at`,
+      [date, platform],
+    );
+  } catch { return []; }
+}
+
 export async function getSizes(): Promise<string[]> {
   const rows = await q<{ label: string }>(`select label from sizes order by sort, label`);
   return rows.map((r) => r.label);

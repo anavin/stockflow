@@ -93,10 +93,24 @@ export async function saveOrder(input: OrderInput): Promise<SaveResult> {
       let docNo = (o.doc_no || existing?.doc_no || "").trim();
       if (!docNo) docNo = await allocDocNo(run, o.platform, date);
 
+      // เติม customer_type/purchase_count อัตโนมัติถ้าฟอร์มไม่ได้ส่งมา (ลูกค้าใหม่พิมพ์เองไม่ได้เลือกจาก dropdown)
+      // นับจากจำนวนออเดอร์เดิมของ username เดียวกัน — กัน PDF ไม่ขึ้น "ลูกค้าใหม่ / ซื้อครั้งที่ 1"
+      let custType = (o.customer_type || "").trim();
+      let purchaseCount: number | null = o.purchase_count ?? null;
+      if ((!custType || purchaseCount == null) && (o.username || "").trim()) {
+        const [c] = await run<{ c: number }>(
+          `select count(*)::int as c from orders
+            where deleted_at is null and order_no <> $1 and lower(btrim(username)) = lower(btrim($2))`,
+          [o.order_no, o.username]);
+        const n = (c?.c ?? 0) + 1;
+        if (purchaseCount == null) purchaseCount = n;
+        if (!custType) custType = n > 1 ? "ลูกค้าเก่า" : "ลูกค้าใหม่";
+      }
+
       const vals = [
         o.order_no, o.platform, docNo, o.doc_date || date.toISOString().slice(0, 10), ml,
-        o.channel ?? o.platform, o.shop_name, o.username, o.receiver, o.phone, o.customer_type,
-        o.purchase_count ?? null, o.district, o.subdistrict, o.province, o.postcode, o.address, o.campaign,
+        o.channel ?? o.platform, o.shop_name, o.username, o.receiver, o.phone, custType || null,
+        purchaseCount, o.district, o.subdistrict, o.province, o.postcode, o.address, o.campaign,
         o.note, o.box_scent, o.order_date,
       ];
       const ph = ORDER_COLS.map((_, i) => `$${i + 1}`).join(",");

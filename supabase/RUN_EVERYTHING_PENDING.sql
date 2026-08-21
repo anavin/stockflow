@@ -470,4 +470,25 @@ update orders
    and address ~ '(แขวง|ตำบล)';
 
 
+-- ═══════════════════════════════════════════════════════════════════════
+-- ▼▼▼ Backfill ลูกค้าใหม่/เก่า + ซื้อครั้งที่ ให้ออเดอร์ที่ค่ายังว่าง ▼▼▼
+-- ═══════════════════════════════════════════════════════════════════════
+-- นับลำดับการซื้อจาก username (เรียงตามวันที่) → เติม purchase_count + customer_type
+-- เฉพาะแถวที่ยังว่าง (ครั้งที่ 1 = ลูกค้าใหม่) · idempotent
+with seq as (
+  select order_no,
+         row_number() over (partition by lower(btrim(username))
+                            order by doc_date nulls last, created_at, order_no) as n
+  from orders
+  where deleted_at is null and coalesce(btrim(username), '') <> ''
+)
+update orders o
+   set purchase_count = coalesce(o.purchase_count, seq.n),
+       customer_type  = coalesce(nullif(btrim(o.customer_type), ''),
+                                 case when seq.n > 1 then 'ลูกค้าเก่า' else 'ลูกค้าใหม่' end)
+  from seq
+ where seq.order_no = o.order_no
+   and (o.purchase_count is null or coalesce(btrim(o.customer_type), '') = '');
+
+
 commit;

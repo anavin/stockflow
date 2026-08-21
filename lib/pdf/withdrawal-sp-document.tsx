@@ -205,7 +205,7 @@ function Panel({ order, copyLabel }: { order: OrderWithItems; copyLabel: string 
         {/* เบอร์โทร: แสดงเฉพาะเมื่อมีข้อมูล (ไฟล์ Shopee ที่มีคอลัมน์เบอร์ หรือกรอกเอง) */}
         {order.phone && String(order.phone).trim() ? <Field label="เบอร์โทร" value={order.phone} full /> : null}
         <View style={{ width: "100%", flexDirection: "row" }}>
-          <Field label="ลูกค้า" value={order.customer_type} />
+          <Field label="ลูกค้า" value={order.customer_type || (order.purchase_count ? (Number(order.purchase_count) > 1 ? "ลูกค้าเก่า" : "ลูกค้าใหม่") : null)} />
           <Field label="ซื้อครั้งที่" value={order.purchase_count ?? (order.customer_type === "ลูกค้าใหม่" ? 1 : null)} />
         </View>
         <Field label="ที่อยู่" value={addr} full />

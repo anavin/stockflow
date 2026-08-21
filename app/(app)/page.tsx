@@ -3,7 +3,7 @@ import { requireDashboard } from "@/lib/auth/require-user";
 import { dashboardStats, listStock, listOrders, topProducts, ordersTrend, dailyIssueStatus, fdaExpirySummary, shipSummary } from "@/lib/queries";
 import {
   PlusCircle, ScanLine, Boxes, AlertTriangle, PackageCheck, ClipboardList,
-  ArrowRight, ShoppingBag, TrendingUp, Sparkles, Clock, CalendarCheck, ShieldAlert, Truck,
+  ArrowRight, ShoppingBag, TrendingUp, Sparkles, Clock, CalendarCheck, ShieldAlert, Truck, FileText,
 } from "lucide-react";
 
 export const dynamic = "force-dynamic";
@@ -41,6 +41,7 @@ export default async function Dashboard() {
         <div className="flex gap-2">
           <Link href="/shopee/new" className="btn-primary"><PlusCircle size={16} /> สร้างใบเบิก</Link>
           <Link href="/stock/issue" className="btn-ghost"><ScanLine size={16} /> ตัดสต๊อก</Link>
+          <Link href="/print/daily-report" target="_blank" className="btn-ghost" title="รายงานสรุปประจำวัน (พิมพ์/บันทึก PDF)"><FileText size={16} /> รายงานวัน</Link>
         </div>
       </div>
 
