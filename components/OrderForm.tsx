@@ -377,6 +377,11 @@ export default function OrderForm({ platform = "Shopee", products, sizes, provin
                 placeholder="เช่น 1, 25" />
             </div>
           </div>
+          {f.customer_type === "ลูกค้าใหม่" && hist && (hist.total_orders || 0) > 0 && (
+            <p className="-mt-1 flex items-center gap-1 text-xs text-amber-600">
+              <AlertTriangle size={12} /> ระบบพบประวัติซื้อ {hist.total_orders} ครั้ง — น่าจะเป็น "ลูกค้าเก่า"
+            </p>
+          )}
           <div>
             <label className="label">จังหวัด <span className="text-brand">*</span></label>
             <Combobox value={f.province} onChange={onProvince} options={provinces} placeholder="เลือกจังหวัด" invalid={fieldErrors.province} />

@@ -98,6 +98,9 @@ export default function ImportWizard({ platform = "Shopee" }: { platform?: strin
 
   async function confirmImport() {
     if (!preview) return;
+    // เตือนถ้ายังมีกลิ่นจับไม่ตรง master — จะถูกบันทึกเป็นชื่อกลิ่นแปลก ๆ (ตัดสต๊อกไม่เจอ)
+    if (preview.unmatchedItems > 0 && !window.confirm(
+      `ยังมี ${preview.unmatchedItems} รายการที่เดากลิ่นไม่ตรงระบบ — ถ้านำเข้าเลยจะบันทึกเป็นชื่อกลิ่นตามไฟล์ (อาจตัดสต๊อกไม่เจอ)\n\nแนะนำ: เลือกกลิ่นจริง + กด "จำไว้" ในกล่องสีเหลืองด้านบนก่อน\n\nนำเข้าต่อเลยไหม?`)) return;
     setBusy(true); setError("");
     const res = await bulkSaveOrders(preview.orders);
     setBusy(false);
