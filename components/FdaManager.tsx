@@ -82,8 +82,8 @@ export default function FdaManager({ rows, summary, canEdit }: { rows: FdaRow[];
   }
 
   const isDisc = (r: FdaRow) => /เลิก/.test(r.prod_status || "");
-  const isExpired = (r: FdaRow) => r.days_left != null && r.days_left < 0;
-  const toBottom = (r: FdaRow) => (isDisc(r) || isExpired(r) ? 1 : 0);   // เลิกผลิต + หมดอายุ → ล่างสุด
+  const isExpired = (r: FdaRow) => (r.days_left != null && r.days_left < 0) || /สิ้นอาย/.test(r.fda_status || "");   // หมดอายุตามวันที่ หรือ สถานะ อย.=สิ้นอายุ
+  const toBottom = (r: FdaRow) => (isDisc(r) || isExpired(r) ? 1 : 0);   // เลิกผลิต + สิ้นอายุ → ล่างสุด
   const filtered = useMemo(() => {
     const t = search.trim().toLowerCase();
     return rows.filter((r) => {
