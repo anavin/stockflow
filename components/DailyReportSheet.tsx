@@ -27,40 +27,6 @@ const KV = ({ k, v }: { k: string; v: string }) => (
   </div>
 );
 
-type SumRow = { key: string; sold: number; free: number; total: number };
-const SumTable = ({ label, rows, twoCol = false }: { label: string; rows: SumRow[]; twoCol?: boolean }) => {
-  const One = ({ data }: { data: SumRow[] }) => (
-    <table className="w-full text-[12px] border-collapse">
-      <thead>
-        <tr className="text-left text-neutral-500 text-[10px] uppercase tracking-wide">
-          <th className="pb-1 pr-2 font-semibold">{label}</th>
-          <th className="pb-1 pr-2 w-10 text-right font-semibold">ขาย</th>
-          <th className="pb-1 pr-2 w-10 text-right font-semibold">แถม</th>
-          <th className="pb-1 w-10 text-right font-semibold">รวม</th>
-        </tr>
-      </thead>
-      <tbody>
-        {data.map((r) => (
-          <tr key={r.key} className="border-t border-neutral-200">
-            <td className="py-1 pr-2">{r.key}</td>
-            <td className="py-1 pr-2 text-right tabular-nums">{r.sold ? nf(r.sold) : "-"}</td>
-            <td className="py-1 pr-2 text-right tabular-nums text-neutral-500">{r.free ? nf(r.free) : "-"}</td>
-            <td className="py-1 text-right font-semibold tabular-nums">{nf(r.total)}</td>
-          </tr>
-        ))}
-      </tbody>
-    </table>
-  );
-  if (!twoCol || rows.length <= 10) return <One data={rows} />;
-  const half = Math.ceil(rows.length / 2);
-  return (
-    <div className="grid grid-cols-2 gap-x-8 items-start">
-      <One data={rows.slice(0, half)} />
-      <One data={rows.slice(half)} />
-    </div>
-  );
-};
-
 export function DailyReportSheet({ date, rows, showDetail = true, generatedAt }: {
   date: string; rows: DayOrderRow[]; showDetail?: boolean; generatedAt: string;
 }) {
@@ -73,18 +39,19 @@ export function DailyReportSheet({ date, rows, showDetail = true, generatedAt }:
   const returned = rows.filter((r) => r.return_status && r.return_status !== "none").length;
   const freeQty = rows.reduce((s, r) => s + (r.items || []).filter((i) => i.is_free).reduce((x, i) => x + (i.qty || 0), 0), 0);
 
-  // สรุปตามคีย์ (กลิ่น / ขนาด) → {ขาย, แถม, รวม}
-  const aggBy = (keyOf: (i: { product: string; size: string | null }) => string) => {
-    const m = new Map<string, { sold: number; free: number }>();
-    for (const r of rows) for (const i of r.items || []) {
-      const k = keyOf(i); const c = m.get(k) ?? { sold: 0, free: 0 };
-      if (i.is_free) c.free += i.qty || 0; else c.sold += i.qty || 0;
-      m.set(k, c);
-    }
-    return [...m.entries()].map(([key, v]) => ({ key, ...v, total: v.sold + v.free }));
-  };
-  const byScent = aggBy((i) => i.product).sort((a, b) => b.total - a.total || a.key.localeCompare(b.key, "en"));
-  const bySize = aggBy((i) => i.size || "—").sort((a, b) => sizeMl(a.key) - sizeMl(b.key));
+  // ── ตารางไขว้ กลิ่น × ขนาด (pivot) — แถว=กลิ่น คอลัมน์=ขนาด ช่อง=จำนวน ─────────
+  const cell = new Map<string, Map<string, number>>();   // กลิ่น → ขนาด → จำนวน
+  const colTot = new Map<string, number>();
+  for (const r of rows) for (const i of r.items || []) {
+    const sc = i.product, sz = i.size || "—";
+    let inner = cell.get(sc); if (!inner) { inner = new Map(); cell.set(sc, inner); }
+    inner.set(sz, (inner.get(sz) || 0) + (i.qty || 0));
+    colTot.set(sz, (colTot.get(sz) || 0) + (i.qty || 0));
+  }
+  const srank = (s: string) => { const v = sizeMl(s); return v === 9999 ? -1 : v; };  // ml มาก→น้อย · ไม่ใช่ ml ไปท้าย
+  const sizeCols = [...colTot.keys()].sort((a, b) => srank(b) - srank(a));
+  const scentRows = [...cell.keys()].sort((a, b) => a.localeCompare(b, "en"));
+  const rowTot = (sc: string) => [...(cell.get(sc)?.values() || [])].reduce((s, q) => s + q, 0);
   const creators = [...new Set(rows.map((r) => r.created_by_name).filter(Boolean))] as string[];
 
   return (
@@ -114,24 +81,51 @@ export function DailyReportSheet({ date, rows, showDetail = true, generatedAt }:
             <Kpi label="ส่งแล้ว" value={`${shipped}/${orders}`} />
           </div>
 
-          <div className="grid grid-cols-2 gap-x-10 mb-6">
-            <div>
-              <SecTitle>สถานะการทำงาน</SecTitle>
+          <div className="mb-6">
+            <SecTitle>สถานะการทำงาน</SecTitle>
+            <div className="grid grid-cols-2 gap-x-10">
               <KV k="รอตัดสต๊อก" v={`${pending} ใบ`} />
               <KV k="ตัดสต๊อกแล้ว" v={`${issued} ใบ`} />
               <KV k="ส่งแล้ว" v={`${shipped} ใบ`} />
               {returned > 0 && <KV k="มีการคืน" v={`${returned} ใบ`} />}
               {freeQty > 0 && <KV k="ของแถม (ชิ้น)" v={`${nf(freeQty)}`} />}
             </div>
-            <div>
-              <SecTitle>สรุปรายขนาด</SecTitle>
-              <SumTable label="ขนาด" rows={bySize} />
-            </div>
           </div>
 
+          {/* ตารางไขว้ กลิ่น × ขนาด (packing list) */}
           <div className="mb-6">
-            <SecTitle>สรุปรายกลิ่น ({byScent.length} กลิ่น)</SecTitle>
-            <SumTable label="กลิ่น" rows={byScent} twoCol />
+            <SecTitle>สรุปกลิ่น × ขนาด ({scentRows.length} กลิ่น · {nf(totalQty)} ชิ้น)</SecTitle>
+            <table className="w-full text-[11px] border-collapse">
+              <thead>
+                <tr className="text-neutral-600 text-[10px]">
+                  <th className="border border-neutral-300 px-2 py-1 text-left font-semibold">กลิ่น</th>
+                  {sizeCols.map((s) => <th key={s} className="border border-neutral-300 px-1 py-1 text-center font-semibold whitespace-nowrap">{s.replace(/\.$/, "")}</th>)}
+                  <th className="border border-neutral-300 bg-neutral-100 px-1 py-1 text-center font-semibold">รวม</th>
+                </tr>
+              </thead>
+              <tbody>
+                {scentRows.map((sc) => {
+                  const inner = cell.get(sc)!;
+                  return (
+                    <tr key={sc}>
+                      <td className="border border-neutral-300 px-2 py-1 font-medium">{sc}</td>
+                      {sizeCols.map((s) => {
+                        const qv = inner.get(s) || 0;
+                        return <td key={s} className={`border border-neutral-300 px-1 py-1 text-center tabular-nums ${qv ? "" : "text-neutral-300"}`}>{qv ? nf(qv) : "·"}</td>;
+                      })}
+                      <td className="border border-neutral-300 bg-neutral-50 px-1 py-1 text-center font-bold tabular-nums">{nf(rowTot(sc))}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+              <tfoot>
+                <tr className="bg-neutral-100 font-bold">
+                  <td className="border border-neutral-300 px-2 py-1">รวม</td>
+                  {sizeCols.map((s) => <td key={s} className="border border-neutral-300 px-1 py-1 text-center tabular-nums">{nf(colTot.get(s) || 0)}</td>)}
+                  <td className="border border-neutral-300 px-1 py-1 text-center tabular-nums">{nf(totalQty)}</td>
+                </tr>
+              </tfoot>
+            </table>
           </div>
 
           {showDetail && (
