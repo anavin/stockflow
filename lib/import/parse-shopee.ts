@@ -89,15 +89,20 @@ function extractMl(...cands: string[]): string {
   return "";
 }
 
-/** หา "กลิ่น" ที่ตรงกับรายการสินค้าในระบบ โดยดูว่าชื่อ master ตัวไหนโผล่ในข้อความ (ยาวสุดชนะ) */
+/** ชื่อกลิ่นที่แพลตฟอร์ม (Lazada/Shopee) เขียนไม่ตรงกับ master ในระบบ → map เป็นชื่อจริง
+ *  key = normLoose ของชื่อที่ platform ใช้ · value = ชื่อ master ในระบบ (ต้องสะกดตรงเป๊ะ) */
+export const SCENT_ALIASES: Record<string, string> = {
+  shadowdebacci: "Shadow de Bacci Light",   // Lazada vial ใช้ชื่อสั้น "Shadow de bacci"
+};
+
+/** หา "กลิ่น" ที่ตรงกับรายการสินค้าในระบบ โดยดูว่าชื่อ master ตัวไหนโผล่ในข้อความ (ยาวสุดชนะ) + alias */
 function matchMasterScent(hay: string, products: string[]): string {
   const H = normLoose(hay);
   if (!H) return "";
   let best = "", bestLen = 0;
-  for (const p of products) {
-    const P = scentKey(p);
-    if (P.length >= 2 && H.includes(P) && P.length > bestLen) { best = p; bestLen = P.length; }
-  }
+  const consider = (key: string, product: string) => { if (key.length >= 2 && H.includes(key) && key.length > bestLen) { best = product; bestLen = key.length; } };
+  for (const p of products) consider(scentKey(p), p);
+  for (const [alias, canonical] of Object.entries(SCENT_ALIASES)) if (products.includes(canonical)) consider(alias, canonical);
   return best;
 }
 
