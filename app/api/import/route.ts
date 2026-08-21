@@ -2,7 +2,8 @@ import { NextResponse } from "next/server";
 import ExcelJS from "exceljs";
 import { getCurrentUser } from "@/lib/auth/session";
 import { can } from "@/lib/auth/roles";
-import { rowsToOrders } from "@/lib/import/parse-shopee";
+import { rowsToOrders as parseShopee } from "@/lib/import/parse-shopee";
+import { rowsToOrders as parseLazada } from "@/lib/import/parse-lazada";
 import { getProducts } from "@/lib/queries";
 
 export const runtime = "nodejs";
@@ -17,6 +18,7 @@ export async function POST(req: Request) {
   const form = await req.formData();
   const file = form.get("file");
   if (!(file instanceof File)) return NextResponse.json({ ok: false, error: "ไม่พบไฟล์" }, { status: 400 });
+  const platform = String(form.get("platform") || "Shopee");
 
   const buf = Buffer.from(await file.arrayBuffer());
   const isCsv = /\.csv$/i.test(file.name);
@@ -30,8 +32,8 @@ export async function POST(req: Request) {
       await wb.xlsx.load(buf as any);
     }
 
-    // Prefer a sheet named "Shopee", else the first sheet with data.
-    const ws = wb.getWorksheet("Shopee") ?? wb.worksheets.find((w) => w.rowCount > 1) ?? wb.worksheets[0];
+    // Prefer a sheet named after the platform, else the first sheet with data.
+    const ws = wb.getWorksheet(platform) ?? wb.worksheets.find((w) => w.rowCount > 1) ?? wb.worksheets[0];
     if (!ws) return NextResponse.json({ ok: false, error: "ไม่พบข้อมูลในไฟล์" }, { status: 400 });
 
     // header = first row; build array-of-objects
@@ -60,9 +62,10 @@ export async function POST(req: Request) {
       if (hasData) rows.push(obj);
     });
 
-    // ส่งรายชื่อกลิ่นในระบบไปช่วยเดา "กลิ่น" จาก Shopee export (ชื่อสินค้า/SKU/ชื่อตัวเลือก)
+    // ส่งรายชื่อกลิ่นในระบบไปช่วยเดา "กลิ่น" จากชื่อสินค้า/SKU/ตัวเลือก (Shopee) หรือ itemName (Lazada)
     const products = await getProducts();
-    const result = rowsToOrders(rows, products);
+    const parse = platform === "Lazada" ? parseLazada : parseShopee;
+    const result = parse(rows, products);
     return NextResponse.json({ ok: true, ...result });
   } catch (e: any) {
     return NextResponse.json({ ok: false, error: e?.message || "อ่านไฟล์ไม่สำเร็จ" }, { status: 400 });

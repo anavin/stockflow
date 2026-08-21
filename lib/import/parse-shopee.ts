@@ -105,7 +105,7 @@ function matchMasterScent(hay: string, products: string[]): string {
  *  - ขวดปกติ: ขนาดอยู่ "ชื่อตัวเลือก", กลิ่นอยู่ใน SKU/ชื่อสินค้า
  *  - ตัวอย่าง 4ml: "ชื่อตัวเลือก" = กลิ่น, ขนาดอยู่ในชื่อสินค้า/SKU
  *  จึงรวมทุกช่องเป็น haystack แล้ว match กับ master */
-function deriveProductSize(title: string, sku: string, variation: string, products: string[]): { product: string; size: string; matched: boolean } {
+export function deriveProductSize(title: string, sku: string, variation: string, products: string[]): { product: string; size: string; matched: boolean } {
   const size = extractMl(variation, sku, title);
   const matched = matchMasterScent(`${variation} ${sku} ${title}`, products);
   if (matched) return { product: matched, size, matched: true };

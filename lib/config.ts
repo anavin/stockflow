@@ -12,7 +12,7 @@ export type PlatformCode = "Shopee" | "Lazada" | "Tiktok" | "Line" | "Website" |
 /** Platforms — Shopee is implemented; the rest are scaffolded for later. */
 export const PLATFORMS: { code: PlatformCode; name: string; prefix: string; enabled: boolean }[] = [
   { code: "Shopee", name: "Shopee", prefix: "SH", enabled: true },
-  { code: "Lazada", name: "Lazada", prefix: "LZ", enabled: false },
+  { code: "Lazada", name: "Lazada", prefix: "LZ", enabled: true },
   { code: "Tiktok", name: "TikTok", prefix: "TT", enabled: false },
   { code: "Line", name: "Line", prefix: "LN", enabled: false },
   { code: "Website", name: "Website", prefix: "WEB", enabled: false },
