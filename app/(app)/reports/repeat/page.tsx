@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { requireAdmin } from "@/lib/auth/require-user";
 import { topRepeatCustomers, customerRepeat } from "@/lib/queries";
-import { ChevronLeft, Users } from "lucide-react";
+import { ReportHeader, Bar, SectionCard } from "@/components/ReportUI";
+import { Users } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
@@ -12,13 +13,14 @@ export default async function RepeatCustomersPage() {
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-6 md:px-8">
-      <Link href="/reports" className="mb-4 inline-flex items-center gap-1 text-sm text-muted hover:text-ink"><ChevronLeft size={16} /> กลับรายงาน</Link>
-      <div className="mb-4">
-        <h1 className="flex items-center gap-2 text-xl font-bold text-ink"><Users size={18} /> ลูกค้าซื้อซ้ำทั้งหมด</h1>
-        <p className="mt-0.5 text-sm text-muted">ซื้อ ≥ 2 ครั้ง · ทั้งหมด <b className="text-ink">{list.length.toLocaleString()}</b> คน (จากลูกค้า {repeat.customers.toLocaleString()} คน · ซื้อซ้ำ {repeat.repeat_pct}%)</p>
-      </div>
+      <ReportHeader
+        icon={<Users size={22} />}
+        title="ลูกค้าซื้อซ้ำทั้งหมด"
+        subtitle={<>ซื้อ ≥ 2 ครั้ง · ทั้งหมด <b className="text-ink">{list.length.toLocaleString()}</b> คน (จากลูกค้า {repeat.customers.toLocaleString()} คน · ซื้อซ้ำ {repeat.repeat_pct}%)</>}
+        back={{ href: "/reports", label: "กลับรายงาน" }}
+      />
 
-      <section className="card overflow-hidden">
+      <SectionCard title={`รายชื่อ ${list.length.toLocaleString()} คน`} icon={<Users size={16} />}>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="bg-soft text-left text-xs text-muted">
@@ -36,7 +38,7 @@ export default async function RepeatCustomersPage() {
               {list.length === 0 && <tr><td colSpan={7} className="px-5 py-10 text-center text-muted">ยังไม่มีลูกค้าซื้อซ้ำ</td></tr>}
               {list.map((c, i) => (
                 <tr key={c.username} className="border-t border-line hover:bg-soft/40">
-                  <td className="px-5 py-2 text-xs text-faint">{i + 1}</td>
+                  <td className="px-5 py-2 text-xs font-semibold text-faint">{i + 1}</td>
                   <td className="px-3 py-2">
                     <Link href={`/reports/customer?u=${encodeURIComponent(c.username)}`} className="font-medium text-brand-600 hover:underline">{c.username}</Link>
                     {c.receiver ? <span className="block text-xs text-muted">{c.receiver}</span> : null}
@@ -45,13 +47,13 @@ export default async function RepeatCustomersPage() {
                   <td className="px-3 py-2 text-right font-semibold tabular-nums text-ink">{c.orders}</td>
                   <td className="px-3 py-2 text-right tabular-nums text-muted">{c.qty.toLocaleString()}</td>
                   <td className="px-3 py-2 text-xs text-muted">{c.last_at || "—"}</td>
-                  <td className="px-3 py-2"><div className="h-2 w-full overflow-hidden rounded-full bg-soft"><div className="h-full rounded-full bg-brand" style={{ width: `${Math.round(c.orders / maxCust * 100)}%` }} /></div></td>
+                  <td className="px-3 py-2"><Bar pct={c.orders / maxCust * 100} /></td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
-      </section>
+      </SectionCard>
       <p className="mt-3 text-xs text-faint">* คลิกชื่อ → ดูประวัติซื้อทั้งหมดของลูกค้ารายนั้น</p>
     </div>
   );

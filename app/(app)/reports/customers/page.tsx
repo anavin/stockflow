@@ -2,7 +2,8 @@ import Link from "next/link";
 import { requireAdmin } from "@/lib/auth/require-user";
 import { lapsedCustomers, customerRepeat } from "@/lib/queries";
 import ReportTabs from "@/components/ReportTabs";
-import { BarChart3, UserX, Users } from "lucide-react";
+import { ReportHeader, Kpi, SectionCard } from "@/components/ReportUI";
+import { Users, UserX } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
@@ -12,17 +13,16 @@ export default async function CustomersReport() {
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-6 md:px-8">
-      <div className="mb-4"><h1 className="flex items-center gap-2 text-xl font-bold text-ink"><BarChart3 size={18} /> รายงาน & วิเคราะห์</h1></div>
+      <ReportHeader icon={<Users size={22} />} title="ลูกค้า" subtitle="ฐานลูกค้า · การซื้อซ้ำ · ลูกค้าที่ควรดึงกลับ" />
       <ReportTabs />
 
       <div className="mb-5 grid grid-cols-2 gap-3 md:grid-cols-3">
-        <div className="card p-4"><div className="flex items-center gap-1.5 text-xs text-muted"><Users size={16} /> ลูกค้าทั้งหมด</div><div className="mt-1 text-2xl font-bold text-ink">{repeat.customers.toLocaleString()}</div></div>
-        <div className="card p-4"><div className="flex items-center gap-1.5 text-xs text-muted"><Users size={16} /> ซื้อซ้ำ</div><div className="mt-1 text-2xl font-bold text-ink">{repeat.repeat_pct}%</div><div className="text-xs text-faint">{repeat.repeat_customers.toLocaleString()} คน</div></div>
-        <div className="card p-4"><div className="flex items-center gap-1.5 text-xs text-muted"><UserX size={16} /> หายไป (win-back)</div><div className="mt-1 text-2xl font-bold text-amber-600">{lapsed.length.toLocaleString()}</div><div className="text-xs text-faint">เคยซื้อ ≥2 · หาย &gt;90 วัน</div></div>
+        <Kpi label="ลูกค้าทั้งหมด" value={repeat.customers.toLocaleString()} icon={<Users size={17} />} tone="slate" />
+        <Kpi label="ซื้อซ้ำ" value={`${repeat.repeat_pct}%`} sub={`${repeat.repeat_customers.toLocaleString()} คน`} icon={<Users size={17} />} tone="brand" />
+        <Kpi label="หายไป (win-back)" value={lapsed.length.toLocaleString()} sub="เคยซื้อ ≥2 · หาย >90 วัน" icon={<UserX size={17} />} tone="amber" />
       </div>
 
-      <section className="card overflow-hidden">
-        <div className="flex items-center gap-2 border-b border-line px-5 py-3.5 text-sm font-semibold text-ink"><UserX size={16} className="text-brand" /> ลูกค้าที่หายไป — ควรดึงกลับ (เคยซื้อ ≥2 ครั้ง · หาย &gt;90 วัน)</div>
+      <SectionCard title="ลูกค้าที่หายไป — ควรดึงกลับ (เคยซื้อ ≥2 ครั้ง · หาย >90 วัน)" icon={<UserX size={16} />} tone="amber">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="bg-soft text-left text-xs text-muted">
@@ -32,7 +32,7 @@ export default async function CustomersReport() {
               {lapsed.length === 0 && <tr><td colSpan={5} className="px-5 py-10 text-center text-muted">ไม่มีลูกค้าที่หายไป 🎉</td></tr>}
               {lapsed.map((c, i) => (
                 <tr key={c.username} className="border-t border-line hover:bg-soft/40">
-                  <td className="px-5 py-2 text-xs text-faint">{i + 1}</td>
+                  <td className="px-5 py-2 text-xs font-semibold text-faint">{i + 1}</td>
                   <td className="px-3 py-2"><Link href={`/reports/customer?u=${encodeURIComponent(c.username)}`} className="font-medium text-brand-600 hover:underline">{c.username}</Link>{c.receiver ? <span className="block text-xs text-muted">{c.receiver}</span> : null}</td>
                   <td className="px-3 py-2 text-right font-semibold tabular-nums text-ink">{c.orders}</td>
                   <td className="px-3 py-2 text-xs text-muted">{c.last_at || "—"}</td>
@@ -42,7 +42,7 @@ export default async function CustomersReport() {
             </tbody>
           </table>
         </div>
-      </section>
+      </SectionCard>
       <p className="mt-3 text-xs text-faint">* คลิกชื่อ → ดูประวัติซื้อทั้งหมด · ใช้ทำแคมเปญดึงลูกค้ากลับ (ส่งโปรฯ/ทัก)</p>
     </div>
   );

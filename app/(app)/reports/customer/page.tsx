@@ -4,7 +4,8 @@ import { requireAdmin } from "@/lib/auth/require-user";
 import { customerOrders } from "@/lib/queries";
 import { platformBase } from "@/lib/config";
 import { PlatformDot } from "@/components/PlatformBadge";
-import { ChevronLeft, ShoppingBag, PackageCheck, Truck } from "lucide-react";
+import { ReportHeader } from "@/components/ReportUI";
+import { ShoppingBag, PackageCheck, Truck } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
@@ -20,16 +21,14 @@ export default async function CustomerHistoryPage({ searchParams }: { searchPara
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-6 md:px-8">
-      <Link href="/reports" className="mb-4 inline-flex items-center gap-1 text-sm text-muted hover:text-ink"><ChevronLeft size={16} /> กลับรายงาน</Link>
-      <div className="mb-5">
-        <h1 className="flex items-center gap-2 text-xl font-bold text-ink"><ShoppingBag size={18} /> {username}</h1>
-        <p className="mt-0.5 text-sm text-muted">
-          {receiver ? <>ผู้รับล่าสุด: {receiver} · </> : null}
-          ซื้อ <b className="text-ink">{totalOrders.toLocaleString()}</b> ครั้ง · <b className="text-ink">{totalQty.toLocaleString()}</b> ชิ้น · {platforms.join(", ")}
-        </p>
-      </div>
+      <ReportHeader
+        icon={<ShoppingBag size={22} />}
+        title={username}
+        subtitle={<>{receiver ? <>ผู้รับล่าสุด: {receiver} · </> : null}ซื้อ <b className="text-ink">{totalOrders.toLocaleString()}</b> ครั้ง · <b className="text-ink">{totalQty.toLocaleString()}</b> ชิ้น · {platforms.join(", ")}</>}
+        back={{ href: "/reports", label: "กลับรายงาน" }}
+      />
 
-      <div className="overflow-hidden rounded-xl border border-line bg-white">
+      <div className="card overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="bg-soft text-left text-xs text-muted">

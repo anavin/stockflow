@@ -1,11 +1,12 @@
 import { requireAdmin } from "@/lib/auth/require-user";
 import { salesByMonth, topScents, returnsByMonth, customerRepeat, topRepeatCustomers, platformOverview } from "@/lib/queries";
-import { enabledPlatforms, platformColor, platformName, resolvePlatform } from "@/lib/config";
+import { enabledPlatforms, platformName, resolvePlatform } from "@/lib/config";
 import { PlatformDot } from "@/components/PlatformBadge";
 import PlatformCompare from "@/components/PlatformCompare";
 import ReportTabs from "@/components/ReportTabs";
+import { ReportHeader, Kpi, Bar, SectionCard } from "@/components/ReportUI";
 import Link from "next/link";
-import { BarChart3, TrendingUp, FlaskConical, Undo2, Users } from "lucide-react";
+import { BarChart3, TrendingUp, FlaskConical, Undo2, Users, ArrowRight } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
@@ -30,26 +31,26 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-6 md:px-8">
-      <div className="mb-4">
-        <h1 className="flex items-center gap-2 text-xl font-bold text-ink"><BarChart3 size={18} /> รายงาน & วิเคราะห์</h1>
-        <p className="mt-0.5 text-sm text-muted">ยอดขาย · กลิ่นขายดี · การคืน · ลูกค้า — จากข้อมูลจริงทุกแพลตฟอร์ม</p>
-      </div>
+      <ReportHeader
+        icon={<BarChart3 size={22} />}
+        title="รายงาน & วิเคราะห์"
+        subtitle="ยอดขาย · กลิ่นขายดี · การคืน · ลูกค้า — จากข้อมูลจริงทุกแพลตฟอร์ม"
+      />
       <ReportTabs />
 
       {/* KPI */}
       <div className="mb-5 grid grid-cols-2 gap-3 md:grid-cols-4">
-        <Kpi label="ออร์เดอร์ทั้งหมด" value={totalOrders.toLocaleString()} icon={<TrendingUp size={16} />} />
-        <Kpi label="เดือนนี้" value={monthOrders.toLocaleString()} icon={<TrendingUp size={16} />} />
-        <Kpi label="ลูกค้าทั้งหมด" value={repeat.customers.toLocaleString()} icon={<Users size={16} />} />
-        <Kpi label="ลูกค้าซื้อซ้ำ" value={`${repeat.repeat_pct}%`} sub={`${repeat.repeat_customers.toLocaleString()} คน`} icon={<Users size={16} />} />
+        <Kpi label="ออร์เดอร์ทั้งหมด" value={totalOrders.toLocaleString()} icon={<TrendingUp size={17} />} tone="brand" />
+        <Kpi label="เดือนนี้" value={monthOrders.toLocaleString()} icon={<TrendingUp size={17} />} tone="green" />
+        <Kpi label="ลูกค้าทั้งหมด" value={repeat.customers.toLocaleString()} icon={<Users size={17} />} tone="slate" />
+        <Kpi label="ลูกค้าซื้อซ้ำ" value={`${repeat.repeat_pct}%`} sub={`${repeat.repeat_customers.toLocaleString()} คน`} icon={<Users size={17} />} tone="amber" />
       </div>
 
       {/* เทียบแพลตฟอร์ม (reuse) */}
       {overview.length > 1 && <div className="mb-5"><PlatformCompare rows={overview} /></div>}
 
       {/* ยอดออเดอร์รายเดือน × แพลตฟอร์ม */}
-      <section className="card mb-5 overflow-hidden">
-        <div className="flex items-center gap-2 border-b border-line px-5 py-3.5 text-sm font-semibold text-ink"><TrendingUp size={16} className="text-brand" /> ยอดออเดอร์รายเดือน (12 เดือนล่าสุด)</div>
+      <SectionCard title="ยอดออเดอร์รายเดือน (12 เดือนล่าสุด)" icon={<TrendingUp size={16} />} className="mb-5">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="bg-soft text-left text-xs text-muted">
@@ -69,41 +70,42 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
                     <td className="px-5 py-2 font-medium text-ink">{monthLabel(ym)}</td>
                     {platforms.map((c) => <td key={c} className="px-3 py-2 text-right tabular-nums text-muted">{cell(ym, c)?.orders?.toLocaleString() || "—"}</td>)}
                     <td className="px-3 py-2 text-right font-semibold tabular-nums text-ink">{tot.toLocaleString()}</td>
-                    <td className="px-3 py-2"><div className="h-2 w-full overflow-hidden rounded-full bg-soft"><div className="h-full rounded-full bg-brand" style={{ width: `${Math.round(tot / maxMonth * 100)}%` }} /></div></td>
+                    <td className="px-3 py-2"><Bar pct={tot / maxMonth * 100} /></td>
                   </tr>
                 );
               })}
             </tbody>
           </table>
         </div>
-      </section>
+      </SectionCard>
 
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
         {/* กลิ่นขายดี */}
-        <section className="card overflow-hidden">
-          <div className="flex flex-wrap items-center gap-2 border-b border-line px-5 py-3.5 text-sm font-semibold text-ink">
-            <FlaskConical size={16} className="text-brand" /> กลิ่นขายดี Top {scents.length}
-            <div className="ml-auto flex gap-1">
-              <Link href="/reports" className={`rounded-full px-2 py-0.5 text-xs ${!pf ? "bg-ink text-white" : "bg-soft text-muted"}`}>ทั้งหมด</Link>
-              {enabledPlatforms().map((p) => <Link key={p.code} href={`/reports?platform=${p.code}`} className={`rounded-full px-2 py-0.5 text-xs ${pf === p.code ? "bg-ink text-white" : "bg-soft text-muted"}`}>{p.name}</Link>)}
+        <SectionCard
+          title={`กลิ่นขายดี Top ${scents.length}`}
+          icon={<FlaskConical size={16} />}
+          action={
+            <div className="flex flex-wrap gap-1">
+              <Link href="/reports" className={`rounded-full px-2.5 py-0.5 text-xs font-medium transition-colors ${!pf ? "bg-ink text-white" : "bg-soft text-muted hover:text-ink"}`}>ทั้งหมด</Link>
+              {enabledPlatforms().map((p) => <Link key={p.code} href={`/reports?platform=${p.code}`} className={`rounded-full px-2.5 py-0.5 text-xs font-medium transition-colors ${pf === p.code ? "bg-ink text-white" : "bg-soft text-muted hover:text-ink"}`}>{p.name}</Link>)}
             </div>
-          </div>
+          }
+        >
           <div className="divide-y divide-line">
             {scents.length === 0 && <p className="px-5 py-10 text-center text-muted">ยังไม่มีข้อมูล</p>}
             {scents.map((s, i) => (
               <div key={s.product} className="flex items-center gap-3 px-5 py-2">
-                <span className="w-5 text-right text-xs text-faint">{i + 1}</span>
+                <span className="w-5 text-right text-xs font-semibold text-faint">{i + 1}</span>
                 <span className="w-36 shrink-0 truncate text-sm font-medium text-ink">{s.product}</span>
-                <div className="h-2.5 flex-1 overflow-hidden rounded-full bg-soft"><div className="h-full rounded-full bg-brand" style={{ width: `${Math.round(s.qty / maxScent * 100)}%` }} /></div>
+                <div className="flex-1"><Bar pct={s.qty / maxScent * 100} /></div>
                 <span className="w-16 text-right text-xs tabular-nums text-ink">{s.qty.toLocaleString()} ชิ้น</span>
               </div>
             ))}
           </div>
-        </section>
+        </SectionCard>
 
         {/* การคืนรายเดือน */}
-        <section className="card overflow-hidden">
-          <div className="flex items-center gap-2 border-b border-line px-5 py-3.5 text-sm font-semibold text-ink"><Undo2 size={16} className="text-brand" /> การคืนรายเดือน</div>
+        <SectionCard title="การคืนรายเดือน" icon={<Undo2 size={16} />} tone="red">
           {returns.length === 0 ? <p className="px-5 py-10 text-center text-muted">ยังไม่มีการคืนในช่วง 12 เดือน 🎉</p> : (
             <table className="w-full text-sm">
               <thead className="bg-soft text-left text-xs text-muted"><tr><th className="px-5 py-2.5">เดือน</th><th className="px-3 py-2.5 text-right">ออเดอร์ที่คืน</th><th className="px-3 py-2.5 text-right">ชิ้น</th></tr></thead>
@@ -114,15 +116,16 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
               </tbody>
             </table>
           )}
-        </section>
+        </SectionCard>
       </div>
 
       {/* รายชื่อลูกค้าซื้อซ้ำ */}
-      <section className="card mt-5 overflow-hidden">
-        <div className="flex items-center gap-2 border-b border-line px-5 py-3.5 text-sm font-semibold text-ink">
-          <Users size={16} className="text-brand" /> ลูกค้าซื้อซ้ำ (Top {repeatList.length}) <span className="text-xs font-normal text-muted">ซื้อ ≥ 2 ครั้ง</span>
-          <Link href="/reports/repeat" className="ml-auto rounded-full bg-soft px-3 py-1 text-xs font-medium text-brand-600 hover:bg-brand/10">ดูทั้งหมด →</Link>
-        </div>
+      <SectionCard
+        title={<>ลูกค้าซื้อซ้ำ (Top {repeatList.length}) <span className="text-xs font-normal text-muted">ซื้อ ≥ 2 ครั้ง</span></>}
+        icon={<Users size={16} />}
+        className="mt-5"
+        action={<Link href="/reports/repeat" className="inline-flex items-center gap-1 rounded-full bg-soft px-3 py-1 text-xs font-medium text-brand-600 transition-colors hover:bg-brand/10">ดูทั้งหมด <ArrowRight size={13} /></Link>}
+      >
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="bg-soft text-left text-xs text-muted">
@@ -140,7 +143,7 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
               {repeatList.length === 0 && <tr><td colSpan={7} className="px-5 py-10 text-center text-muted">ยังไม่มีลูกค้าซื้อซ้ำ</td></tr>}
               {repeatList.map((c, i) => (
                 <tr key={c.username} className="border-t border-line hover:bg-soft/40">
-                  <td className="px-5 py-2 text-xs text-faint">{i + 1}</td>
+                  <td className="px-5 py-2 text-xs font-semibold text-faint">{i + 1}</td>
                   <td className="px-3 py-2">
                     <Link href={`/reports/customer?u=${encodeURIComponent(c.username)}`} className="font-medium text-brand-600 hover:underline">{c.username}</Link>
                     {c.receiver ? <span className="block text-xs text-muted">{c.receiver}</span> : null}
@@ -149,23 +152,13 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
                   <td className="px-3 py-2 text-right font-semibold tabular-nums text-ink">{c.orders}</td>
                   <td className="px-3 py-2 text-right tabular-nums text-muted">{c.qty.toLocaleString()}</td>
                   <td className="px-3 py-2 text-xs text-muted">{c.last_at || "—"}</td>
-                  <td className="px-3 py-2"><div className="h-2 w-full overflow-hidden rounded-full bg-soft"><div className="h-full rounded-full bg-brand" style={{ width: `${Math.round(c.orders / maxCust * 100)}%` }} /></div></td>
+                  <td className="px-3 py-2"><Bar pct={c.orders / maxCust * 100} /></td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
-      </section>
-    </div>
-  );
-}
-
-function Kpi({ label, value, sub, icon }: { label: string; value: string; sub?: string; icon: React.ReactNode }) {
-  return (
-    <div className="card p-4">
-      <div className="flex items-center gap-1.5 text-xs text-muted">{icon} {label}</div>
-      <div className="mt-1 text-2xl font-bold text-ink">{value}</div>
-      {sub && <div className="text-xs text-faint">{sub}</div>}
+      </SectionCard>
     </div>
   );
 }

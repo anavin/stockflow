@@ -1,7 +1,8 @@
 import { requireAdmin } from "@/lib/auth/require-user";
 import { scentVelocity, slowMovers } from "@/lib/queries";
 import ReportTabs from "@/components/ReportTabs";
-import { BarChart3, Gauge, PackageX, AlertTriangle } from "lucide-react";
+import { ReportHeader, SectionCard } from "@/components/ReportUI";
+import { Factory, Gauge, PackageX, AlertTriangle } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
@@ -12,13 +13,16 @@ export default async function ProductionReport() {
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-6 md:px-8">
-      <div className="mb-4"><h1 className="flex items-center gap-2 text-xl font-bold text-ink"><BarChart3 size={18} /> รายงาน & วิเคราะห์</h1></div>
+      <ReportHeader icon={<Factory size={22} />} title="การผลิต / สต๊อก" subtitle="อัตราขาย · ของใกล้หมด · ของค้างสต๊อก" />
       <ReportTabs />
 
       {/* จะหมดเร็ว */}
       {soon.length > 0 && (
         <section className="card mb-5 overflow-hidden border-amber-200">
-          <div className="flex items-center gap-2 border-b border-line bg-amber-50 px-5 py-3.5 text-sm font-semibold text-amber-800"><AlertTriangle size={16} /> ใกล้หมด — ควรผลิต/เติมด่วน (สต๊อกจะหมดใน ≤ 30 วัน)</div>
+          <div className="flex items-center gap-2.5 border-b border-amber-200 bg-amber-50 px-5 py-3.5 text-sm font-semibold text-amber-800">
+            <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-amber-100 text-amber-700"><AlertTriangle size={16} /></span>
+            ใกล้หมด — ควรผลิต/เติมด่วน (สต๊อกจะหมดใน ≤ 30 วัน)
+          </div>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead className="bg-soft text-left text-xs text-muted"><tr><th className="px-5 py-2.5">กลิ่น</th><th className="px-3 py-2.5">ขนาด</th><th className="px-3 py-2.5 text-right">ขาย/90วัน</th><th className="px-3 py-2.5 text-right">คงเหลือ</th><th className="px-3 py-2.5 text-right">หมดใน</th></tr></thead>
@@ -39,8 +43,7 @@ export default async function ProductionReport() {
 
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
         {/* velocity ขายเร็วสุด */}
-        <section className="card overflow-hidden">
-          <div className="flex items-center gap-2 border-b border-line px-5 py-3.5 text-sm font-semibold text-ink"><Gauge size={16} className="text-brand" /> อัตราขายสูงสุด (90 วัน · เฉพาะขนาด ml)</div>
+        <SectionCard title="อัตราขายสูงสุด (90 วัน · เฉพาะขนาด ml)" icon={<Gauge size={16} />}>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead className="bg-soft text-left text-xs text-muted"><tr><th className="px-5 py-2.5">กลิ่น</th><th className="px-3 py-2.5">ขนาด</th><th className="px-3 py-2.5 text-right">ขาย/90วัน</th><th className="px-3 py-2.5 text-right">คงเหลือ</th><th className="px-3 py-2.5 text-right">หมดใน</th></tr></thead>
@@ -57,11 +60,10 @@ export default async function ProductionReport() {
               </tbody>
             </table>
           </div>
-        </section>
+        </SectionCard>
 
         {/* ขายช้า/ค้างสต๊อก */}
-        <section className="card overflow-hidden">
-          <div className="flex items-center gap-2 border-b border-line px-5 py-3.5 text-sm font-semibold text-ink"><PackageX size={16} className="text-brand" /> ค้างสต๊อก (สต๊อก &gt;10 · ขาย 90วัน &lt;5)</div>
+        <SectionCard title="ค้างสต๊อก (สต๊อก >10 · ขาย 90วัน <5)" icon={<PackageX size={16} />} tone="amber">
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead className="bg-soft text-left text-xs text-muted"><tr><th className="px-5 py-2.5">กลิ่น</th><th className="px-3 py-2.5">ขนาด</th><th className="px-3 py-2.5 text-right">คงเหลือ</th><th className="px-3 py-2.5 text-right">ขาย/90วัน</th></tr></thead>
@@ -77,7 +79,7 @@ export default async function ProductionReport() {
               </tbody>
             </table>
           </div>
-        </section>
+        </SectionCard>
       </div>
       <p className="mt-3 text-xs text-faint">* "หมดใน" = คงเหลือ ÷ อัตราขายเฉลี่ยต่อวัน (90 วันล่าสุด) · ขนาดตัวอย่าง 1.2ml ไม่ track สต๊อกจึงแสดงคงเหลือ 0</p>
     </div>
