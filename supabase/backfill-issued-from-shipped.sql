@@ -7,8 +7,7 @@
 --   • idempotent (รันซ้ำได้ ใบที่ตัดแล้วจะไม่ถูกแตะ)
 update orders
    set stock_issued_at = shipped_at,
-       stock_issued_by = coalesce(stock_issued_by, 'import'),
-       updated_at = now()
+       updated_at = now()   -- stock_issued_by เป็น int (id ผู้ใช้) — ปล่อยว่างไว้สำหรับ backfill ประวัติ
  where shipped_at is not null
    and stock_issued_at is null
    and deleted_at is null
