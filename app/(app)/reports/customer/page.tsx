@@ -1,0 +1,71 @@
+import Link from "next/link";
+import { notFound } from "next/navigation";
+import { requireDashboard } from "@/lib/auth/require-user";
+import { customerOrders } from "@/lib/queries";
+import { platformBase } from "@/lib/config";
+import { PlatformDot } from "@/components/PlatformBadge";
+import { ChevronLeft, ShoppingBag, PackageCheck, Truck } from "lucide-react";
+
+export const dynamic = "force-dynamic";
+
+export default async function CustomerHistoryPage({ searchParams }: { searchParams: Promise<{ u?: string }> }) {
+  await requireDashboard();
+  const username = (await searchParams).u || "";
+  if (!username.trim()) notFound();
+  const orders = await customerOrders(username);
+  const totalOrders = orders.length;
+  const totalQty = orders.reduce((a, o) => a + o.items.reduce((s, it) => s + Number(it.qty || 0), 0), 0);
+  const receiver = orders.find((o) => o.receiver)?.receiver || "";
+  const platforms = [...new Set(orders.map((o) => o.platform || "Shopee"))];
+
+  return (
+    <div className="mx-auto max-w-5xl px-4 py-6 md:px-8">
+      <Link href="/reports" className="mb-4 inline-flex items-center gap-1 text-sm text-muted hover:text-ink"><ChevronLeft size={16} /> กลับรายงาน</Link>
+      <div className="mb-5">
+        <h1 className="flex items-center gap-2 text-xl font-bold text-ink"><ShoppingBag size={18} /> {username}</h1>
+        <p className="mt-0.5 text-sm text-muted">
+          {receiver ? <>ผู้รับล่าสุด: {receiver} · </> : null}
+          ซื้อ <b className="text-ink">{totalOrders.toLocaleString()}</b> ครั้ง · <b className="text-ink">{totalQty.toLocaleString()}</b> ชิ้น · {platforms.join(", ")}
+        </p>
+      </div>
+
+      <div className="overflow-hidden rounded-xl border border-line bg-white">
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead className="bg-soft text-left text-xs text-muted">
+              <tr>
+                <th className="px-4 py-2.5">วันที่</th>
+                <th className="px-3 py-2.5">Order No.</th>
+                <th className="px-3 py-2.5">ช่องทาง</th>
+                <th className="px-3 py-2.5">รายการ</th>
+                <th className="px-3 py-2.5">จังหวัด</th>
+                <th className="px-3 py-2.5 text-center">สถานะ</th>
+              </tr>
+            </thead>
+            <tbody>
+              {orders.length === 0 && <tr><td colSpan={6} className="px-4 py-12 text-center text-muted">ไม่พบประวัติของลูกค้ารายนี้</td></tr>}
+              {orders.map((o) => (
+                <tr key={o.order_no} className="border-t border-line align-top hover:bg-soft/40">
+                  <td className="px-4 py-2.5 whitespace-nowrap text-xs text-muted">{o.date || "—"}</td>
+                  <td className="px-3 py-2.5">
+                    <Link href={`${platformBase(o.platform || "Shopee")}/${encodeURIComponent(o.order_no)}`} className="font-mono text-xs text-brand-600 hover:underline">{o.order_no}</Link>
+                  </td>
+                  <td className="px-3 py-2.5 text-xs text-muted"><span className="inline-flex items-center gap-1.5"><PlatformDot platform={o.platform} /> {o.platform || "Shopee"}</span></td>
+                  <td className="px-3 py-2.5 text-xs text-ink">{o.items.map((it, k) => <span key={k} className="mr-1 inline-block">{it.product} {it.size}{it.is_free ? " (Free)" : ""} ×{it.qty}{k < o.items.length - 1 ? "," : ""}</span>)}</td>
+                  <td className="px-3 py-2.5 text-xs text-muted">{o.province || "—"}</td>
+                  <td className="px-3 py-2.5 text-center">
+                    <div className="flex items-center justify-center gap-1">
+                      {o.issued && <PackageCheck size={14} className="text-green-600" />}
+                      {o.shipped && <Truck size={14} className="text-green-600" />}
+                      {o.return_status && o.return_status !== "none" && <span className="chip-danger">คืน</span>}
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+}

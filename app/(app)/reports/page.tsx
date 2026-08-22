@@ -138,7 +138,10 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
               {repeatList.map((c, i) => (
                 <tr key={c.username} className="border-t border-line hover:bg-soft/40">
                   <td className="px-5 py-2 text-xs text-faint">{i + 1}</td>
-                  <td className="px-3 py-2"><span className="font-medium text-ink">{c.username}</span>{c.receiver ? <span className="block text-xs text-muted">{c.receiver}</span> : null}</td>
+                  <td className="px-3 py-2">
+                    <Link href={`/reports/customer?u=${encodeURIComponent(c.username)}`} className="font-medium text-brand-600 hover:underline">{c.username}</Link>
+                    {c.receiver ? <span className="block text-xs text-muted">{c.receiver}</span> : null}
+                  </td>
                   <td className="px-3 py-2 text-xs text-muted">{c.platforms}</td>
                   <td className="px-3 py-2 text-right font-semibold tabular-nums text-ink">{c.orders}</td>
                   <td className="px-3 py-2 text-right tabular-nums text-muted">{c.qty.toLocaleString()}</td>

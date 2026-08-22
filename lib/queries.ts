@@ -960,6 +960,30 @@ export async function topRepeatCustomers(limit = 50): Promise<RepeatCustomer[]> 
   } catch { return []; }
 }
 
+export type CustomerOrderRow = {
+  order_no: string; platform: string | null; doc_no: string | null; date: string | null;
+  receiver: string | null; province: string | null; issued: boolean; shipped: boolean; return_status: string | null;
+  items: { product: string; size: string; qty: number; is_free: boolean }[];
+};
+/** ออเดอร์ทั้งหมดของลูกค้าคนหนึ่ง (ตามชื่อผู้ใช้) — สำหรับหน้าดูประวัติ */
+export async function customerOrders(username: string, limit = 500): Promise<CustomerOrderRow[]> {
+  const u = (username || "").trim();
+  if (!u) return [];
+  try {
+    return await q<CustomerOrderRow>(
+      `select o.order_no, o.platform, o.doc_no,
+              to_char(coalesce(o.order_date,o.doc_date),'YYYY-MM-DD') as date,
+              o.receiver, o.province,
+              (o.stock_issued_at is not null) as issued, (o.shipped_at is not null) as shipped, o.return_status,
+              coalesce(json_agg(json_build_object('product',i.product,'size',i.size,'qty',i.qty,'is_free',i.is_free)
+                       order by i.line_no) filter (where coalesce(i.product,'') <> ''), '[]'::json) as items
+       from orders o left join order_items i on i.order_no = o.order_no
+       where o.deleted_at is null and lower(btrim(o.username)) = lower(btrim($1))
+       group by o.order_no, o.platform, o.doc_no, o.order_date, o.doc_date, o.receiver, o.province, o.stock_issued_at, o.shipped_at, o.return_status
+       order by coalesce(o.order_date,o.doc_date) desc nulls last limit ${Math.min(limit, 1000)}`, [u]);
+  } catch { return []; }
+}
+
 export type ReturnPlatformStat = { platform: string; shipped: number; returned_orders: number; qty: number; rate: number };
 /** อัตราการคืนต่อแพลตฟอร์ม = จำนวนออเดอร์ที่มีการคืน ÷ ออเดอร์ที่ส่งแล้ว (%) */
 export async function returnStatsByPlatform(): Promise<ReturnPlatformStat[]> {
