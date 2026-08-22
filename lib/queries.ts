@@ -145,24 +145,39 @@ const UNITS_UNION = `
      and o.deleted_at is null
      and not exists (select 1 from stock_unit s where btrim(s.sku) = btrim(oi.sku))`;
 
-/** ติดตาม SKU รายชิ้น — ค้นด้วย SKU/กลิ่น/order + สถานะ; join orders เพื่อรู้ผู้ซื้อ */
-export async function listUnits(opts: { search?: string; status?: string; product?: string; size?: string; platform?: string; limit?: number } = {}): Promise<UnitRow[]> {
-  const params: any[] = [];
+type UnitsFilter = { search?: string; status?: string; product?: string; size?: string; platform?: string };
+function unitsWhere(opts: UnitsFilter, params: any[]): string {
   const where: string[] = [];
   if (opts.search) { params.push(`%${opts.search}%`); const i = params.length; where.push(`(u.sku ilike $${i} or u.product ilike $${i} or coalesce(u.order_no,'') ilike $${i})`); }
   if (opts.product) { params.push(opts.product); where.push(`lower(btrim(u.product)) = lower(btrim($${params.length}))`); }
   if (opts.size) { params.push(opts.size); where.push(`regexp_replace(lower(u.size),'[^0-9a-z]','','g') = regexp_replace(lower($${params.length}),'[^0-9a-z]','','g')`); }
   if (opts.status) { params.push(opts.status); where.push(`u.status = $${params.length}`); }
   if (opts.platform) { params.push(opts.platform); where.push(`o.platform = $${params.length}`); }
-  const limit = Math.min(opts.limit ?? 500, 2000);
+  return where.length ? "where " + where.join(" and ") : "";
+}
+/** ติดตาม SKU รายชิ้น — ค้นด้วย SKU/กลิ่น/order + สถานะ; join orders เพื่อรู้ผู้ซื้อ · แบ่งหน้า */
+export async function listUnits(opts: UnitsFilter & { limit?: number; offset?: number } = {}): Promise<UnitRow[]> {
+  const params: any[] = [];
+  const where = unitsWhere(opts, params);
+  const limit = Math.min(opts.limit ?? 200, 500);
+  const offset = Math.max(0, opts.offset ?? 0);
   try {
     return await q<UnitRow>(
       `select u.sku, u.product, u.size, u.grade, u.barcode, u.status, u.order_no, o.platform,
               o.shop_name as buyer, o.receiver, o.phone, u.received_at, u.issued_at, o.shipped_at, u.source
        from (${UNITS_UNION}) u left join orders o on o.order_no = u.order_no
-       ${where.length ? "where " + where.join(" and ") : ""}
-       order by u.ord desc limit ${limit}`, params);
+       ${where}
+       order by u.ord desc limit ${limit} offset ${offset}`, params);
   } catch { return []; }
+}
+export async function countUnits(opts: UnitsFilter = {}): Promise<number> {
+  const params: any[] = [];
+  const where = unitsWhere(opts, params);
+  try {
+    const [r] = await q<{ n: number }>(
+      `select count(*)::int n from (${UNITS_UNION}) u left join orders o on o.order_no = u.order_no ${where}`, params);
+    return r?.n ?? 0;
+  } catch { return 0; }
 }
 export async function unitCounts(): Promise<{ in_stock: number; issued: number }> {
   try {

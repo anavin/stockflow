@@ -1,24 +1,32 @@
 import Link from "next/link";
 import { requireStock } from "@/lib/auth/require-user";
 import { can } from "@/lib/auth/roles";
-import { listUnits, unitCounts, stockGapFor, getOrderBrief } from "@/lib/queries";
+import { listUnits, unitCounts, countUnits, stockGapFor, getOrderBrief } from "@/lib/queries";
 import { resolvePlatform, enabledPlatforms } from "@/lib/config";
 import { PlatformDot, PlatformBadge } from "@/components/PlatformBadge";
 import UnitsManager from "@/components/UnitsManager";
-import { ChevronLeft, ScanBarcode, Search, FileDown } from "lucide-react";
+import { ChevronLeft, ChevronRight, ScanBarcode, Search, FileDown } from "lucide-react";
 
 export const dynamic = "force-dynamic";
+const PAGE_SIZE = 200;
 
-export default async function UnitsPage({ searchParams }: { searchParams: Promise<{ q?: string; status?: string; product?: string; size?: string; platform?: string }> }) {
+export default async function UnitsPage({ searchParams }: { searchParams: Promise<{ q?: string; status?: string; product?: string; size?: string; platform?: string; page?: string }> }) {
   const me = await requireStock();
   const canEdit = can.manageStock(me.role);
-  const { q, status, product, size, platform } = await searchParams;
+  const { q, status, product, size, platform, page } = await searchParams;
   const pf = resolvePlatform(platform)?.code;
-  const [units, counts] = await Promise.all([listUnits({ search: q, status, product, size, platform: pf, limit: 1000 }), unitCounts()]);
+  const filter = { search: q, status, product, size, platform: pf };
+  const pageNum = Math.max(1, Number(page) || 1);
+  const offset = (pageNum - 1) * PAGE_SIZE;
+  const [units, counts, total] = await Promise.all([
+    listUnits({ ...filter, limit: PAGE_SIZE, offset }), unitCounts(), countUnits(filter),
+  ]);
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
   // ค้นด้วย Order No. ที่ยังไม่มี SKU รายชิ้น → ดึงสรุปออเดอร์มาโชว์ (ตัดสต๊อก/ส่งแล้ว)
   const orderBrief = q && units.length === 0 ? await getOrderBrief(q) : null;
   const exportQs = new URLSearchParams(Object.entries({ q, status, product, size, platform: pf }).filter(([, v]) => v) as [string, string][]).toString();
   const filterQs = (code?: string) => new URLSearchParams(Object.entries({ q, status, product, size, platform: code }).filter(([, v]) => v) as [string, string][]).toString();
+  const pageQs = (p: number) => { const sp = new URLSearchParams(Object.entries({ q, status, product, size, platform: pf }).filter(([, v]) => v) as [string, string][]); if (p > 1) sp.set("page", String(p)); const s = sp.toString(); return `/stock/units${s ? "?" + s : ""}`; };
   // ผูก SKU ให้ตรงยอด — เฉพาะเมื่อกรองสินค้าเดียว (กลิ่น+ขนาด) และแก้ไขได้
   const reconcile = canEdit && product && size ? { product, size, ...(await stockGapFor(product, size)) } : null;
 
@@ -88,6 +96,17 @@ export default async function UnitsPage({ searchParams }: { searchParams: Promis
         </div>
       )}
       <UnitsManager units={units} canEdit={canEdit} reconcile={reconcile} />
+      {totalPages > 1 && (
+        <div className="mt-4 flex items-center justify-between text-sm">
+          <span className="text-muted">หน้า {pageNum} / {totalPages.toLocaleString()} · ทั้งหมด {total.toLocaleString()} ชิ้น</span>
+          <div className="flex gap-2">
+            {pageNum > 1 ? <Link href={pageQs(pageNum - 1)} className="btn-ghost"><ChevronLeft size={16} /> ก่อนหน้า</Link>
+              : <span className="btn-ghost pointer-events-none opacity-40"><ChevronLeft size={16} /> ก่อนหน้า</span>}
+            {pageNum < totalPages ? <Link href={pageQs(pageNum + 1)} className="btn-ghost">ถัดไป <ChevronRight size={16} /></Link>
+              : <span className="btn-ghost pointer-events-none opacity-40">ถัดไป <ChevronRight size={16} /></span>}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
