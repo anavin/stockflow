@@ -1,5 +1,5 @@
 "use server";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { q, tx } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth/session";
 import { can } from "@/lib/auth/roles";
@@ -26,7 +26,7 @@ export async function createProduct(name: string, code?: string, ptype?: string,
   await q(`insert into products (name, code, ptype, barcode, active, sort) values ($1, $2, $3, $4, true, coalesce((select max(sort) from products),0)+1)`,
     [n, (code || "").trim() || null, (ptype || "").trim() || null, (barcode || "").trim() || null]);
   await logActivity("scent.manage", `เพิ่มกลิ่น "${n}"`);
-  revalidatePath("/products");
+  revalidatePath("/products"); revalidateTag("reference");
   return { ok: true };
 }
 
@@ -46,7 +46,7 @@ export async function bulkSetProductTypes(
     [ids, types],
   );
   await logActivity("scent.manage", `ตั้งเกรด ${rows.length} กลิ่น`);
-  revalidatePath("/products");
+  revalidatePath("/products"); revalidateTag("reference");
   revalidatePath("/products/mapping");
   return { ok: true, count: rows.length };
 }
@@ -64,13 +64,13 @@ export async function addScentBarcode(scent: string, size: string, barcode: stri
     await q(`update product_barcodes set scent = $1, size = $2, sku = coalesce($4, sku) where id = $3`,
       [sc, sz, dup.id, (sku || "").trim() || null]);   // ย้ายบาร์โค้ดมาที่กลิ่น/ขนาดใหม่
     await logActivity("scent.manage", `ย้ายบาร์โค้ด → ${sc} ${sz}`);
-    revalidatePath("/products");
+    revalidatePath("/products"); revalidateTag("reference");
     return { ok: true };
   }
   await q(`insert into product_barcodes (scent, size, barcode, sku) values ($1, $2, $3, $4)`,
     [sc, sz, bc, (sku || "").trim() || null]);
   await logActivity("scent.manage", `เพิ่มบาร์โค้ด ${sc} ${sz}`);
-  revalidatePath("/products");
+  revalidatePath("/products"); revalidateTag("reference");
   return { ok: true };
 }
 
@@ -88,7 +88,7 @@ export async function setDiscontinued(scent: string, size: string, disc: boolean
     if (disc) await q(`insert into discontinued_sku (scent, size) values ($1, $2) on conflict (scent, size) do nothing`, [sc, sz]);
   } catch { return { ok: false, error: "ยังไม่มีตาราง discontinued_sku (รัน SQL 0021 บน prod ก่อน)" }; }
   await logActivity("scent.manage", `${disc ? "ตั้งเลิกผลิต" : "ยกเลิกเลิกผลิต"} ${sc} ${sz}`);
-  revalidatePath("/products");
+  revalidatePath("/products"); revalidateTag("reference");
   revalidateNewForms();
   return { ok: true };
 }
@@ -97,7 +97,7 @@ export async function deleteScentBarcode(id: number): Promise<{ ok: boolean; err
   const g = await gate(); if ("error" in g) return { ok: false, error: g.error };
   await q(`delete from product_barcodes where id = $1`, [id]);
   await logActivity("scent.manage", `ลบบาร์โค้ด (id ${id})`);
-  revalidatePath("/products");
+  revalidatePath("/products"); revalidateTag("reference");
   return { ok: true };
 }
 
@@ -105,7 +105,7 @@ export async function setProductBarcode(id: number, barcode: string): Promise<{ 
   const g = await gate(); if ("error" in g) return { ok: false, error: g.error };
   await q(`update products set barcode = $2 where id = $1`, [id, (barcode || "").trim() || null]);
   await logActivity("scent.manage", `ตั้งบาร์โค้ดกลิ่น (id ${id})`);
-  revalidatePath("/products");
+  revalidatePath("/products"); revalidateTag("reference");
   return { ok: true };
 }
 
@@ -113,7 +113,7 @@ export async function setProductType(id: number, ptype: string): Promise<{ ok: b
   const g = await gate(); if ("error" in g) return { ok: false, error: g.error };
   await q(`update products set ptype = $2 where id = $1`, [id, (ptype || "").trim() || null]);
   await logActivity("scent.manage", `ตั้งเกรดกลิ่น (id ${id}) → ${(ptype || "").trim() || "—"}`);
-  revalidatePath("/products");
+  revalidatePath("/products"); revalidateTag("reference");
   return { ok: true };
 }
 
@@ -121,7 +121,7 @@ export async function setProductCode(id: number, code: string): Promise<{ ok: bo
   const g = await gate(); if ("error" in g) return { ok: false, error: g.error };
   await q(`update products set code = $2 where id = $1`, [id, (code || "").trim() || null]);
   await logActivity("scent.manage", `ตั้งรหัสกลิ่น (id ${id})`);
-  revalidatePath("/products");
+  revalidatePath("/products"); revalidateTag("reference");
   return { ok: true };
 }
 
@@ -170,7 +170,7 @@ export async function renameProduct(id: number, name: string): Promise<{ ok: boo
       [oldName, n]);
   } catch { /* ไม่มีตาราง = ข้าม */ }
   await logActivity("scent.manage", `เปลี่ยนชื่อกลิ่น "${oldName}" → "${n}"`);
-  revalidatePath("/products");
+  revalidatePath("/products"); revalidateTag("reference");
   revalidatePath("/stock");
   revalidateNewForms();
   return { ok: true };
@@ -180,7 +180,7 @@ export async function setProductActive(id: number, active: boolean): Promise<{ o
   const g = await gate(); if ("error" in g) return { ok: false, error: g.error };
   await q(`update products set active = $2 where id = $1`, [id, active]);
   await logActivity("scent.manage", `${active ? "เปิด" : "ปิด"}กลิ่น id ${id}`);
-  revalidatePath("/products");
+  revalidatePath("/products"); revalidateTag("reference");
   return { ok: true };
 }
 
@@ -208,7 +208,7 @@ export async function deleteProduct(id: number): Promise<{ ok: boolean; error?: 
     ]) { try { await q(stmt, [p.name]); } catch { /* ตารางอาจไม่มีบน prod */ } }
   } catch (e: any) { return { ok: false, error: e?.message || "ลบไม่สำเร็จ" }; }
   await logActivity("scent.manage", `ลบกลิ่น "${p.name}"`);
-  revalidatePath("/products"); revalidatePath("/stock"); revalidateNewForms();
+  revalidatePath("/products"); revalidateTag("reference"); revalidatePath("/stock"); revalidateNewForms();
   return { ok: true };
 }
 

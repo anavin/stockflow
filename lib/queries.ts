@@ -20,10 +20,12 @@ function normOrder<T extends Partial<Order>>(o: T): T {
 }
 
 // ---- reference data (for dropdowns) ---------------------------------------
-export async function getProducts(): Promise<string[]> {
-  const rows = await q<{ name: string }>(`select name from products where active order by sort, name`);
-  return rows.map((r) => r.name);
-}
+// รายชื่อกลิ่น/รหัส/เกรด/ขนาด = reference ที่เปลี่ยนนานๆ ที (แก้ผ่านหน้าจัดการกลิ่น) แต่ถูกอ่านทุกครั้ง
+// ที่เปิดฟอร์มใบเบิก/import → cache แบบ tag: bump ด้วย revalidateTag("reference") ตอนแก้ + self-heal 5 นาที
+export const getProducts = unstable_cache(
+  async (): Promise<string[]> => (await q<{ name: string }>(`select name from products where active order by sort, name`)).map((r) => r.name),
+  ["ref:products"], { tags: ["reference"], revalidate: 300 },
+);
 
 /** ชื่อพ้องกลิ่น (alias) → Record<alias_key(normalize), ชื่อกลิ่นจริง> สำหรับ parser จับกลิ่น */
 export async function getScentAliases(): Promise<Record<string, string>> {
@@ -42,22 +44,24 @@ export async function listScentAliases(): Promise<ScentAliasRow[]> {
 }
 
 /** map ชื่อกลิ่น → รหัส (เฉพาะกลิ่นที่มีรหัส) — ใช้โชว์/ค้นหาในช่องเลือกกลิ่น */
-export async function getProductCodes(): Promise<Record<string, string>> {
-  const rows = await q<{ name: string; code: string | null }>(
-    `select name, code from products where active and coalesce(code,'') <> ''`);
-  const m: Record<string, string> = {};
-  for (const r of rows) if (r.code) m[r.name] = r.code;
-  return m;
-}
+export const getProductCodes = unstable_cache(
+  async (): Promise<Record<string, string>> => {
+    const rows = await q<{ name: string; code: string | null }>(`select name, code from products where active and coalesce(code,'') <> ''`);
+    const m: Record<string, string> = {};
+    for (const r of rows) if (r.code) m[r.name] = r.code;
+    return m;
+  }, ["ref:product-codes"], { tags: ["reference"], revalidate: 300 },
+);
 
 /** map ชื่อกลิ่น → ประเภทน้ำหอม (โชว์ในฟอร์ม/ใบพิมพ์) */
-export async function getProductTypes(): Promise<Record<string, string>> {
-  const rows = await q<{ name: string; ptype: string | null }>(
-    `select name, ptype from products where active and coalesce(ptype,'') <> ''`);
-  const m: Record<string, string> = {};
-  for (const r of rows) if (r.ptype) m[r.name] = r.ptype;
-  return m;
-}
+export const getProductTypes = unstable_cache(
+  async (): Promise<Record<string, string>> => {
+    const rows = await q<{ name: string; ptype: string | null }>(`select name, ptype from products where active and coalesce(ptype,'') <> ''`);
+    const m: Record<string, string> = {};
+    for (const r of rows) if (r.ptype) m[r.name] = r.ptype;
+    return m;
+  }, ["ref:product-types"], { tags: ["reference"], revalidate: 300 },
+);
 
 export type ProductAdminRow = { id: number; name: string; code: string | null; barcode: string | null; ptype: string | null; active: boolean; sort: number; used: number };
 /** รายชื่อกลิ่นทั้งหมด (รวมที่ปิดไว้) + รหัส + บาร์โค้ด + ประเภท + จำนวนบรรทัดใบเบิกที่ใช้ชื่อนี้ — สำหรับหน้าจัดการ */
@@ -465,10 +469,10 @@ export async function reportRows(opts: { platform?: string; search?: string; mon
   } catch { return []; }
 }
 
-export async function getSizes(): Promise<string[]> {
-  const rows = await q<{ label: string }>(`select label from sizes order by sort, label`);
-  return rows.map((r) => r.label);
-}
+export const getSizes = unstable_cache(
+  async (): Promise<string[]> => (await q<{ label: string }>(`select label from sizes order by sort, label`)).map((r) => r.label),
+  ["ref:sizes"], { tags: ["reference"], revalidate: 300 },
+);
 
 export type PostcodeRow = { province: string; district: string; postcode: string };
 // postcodes/provinces = ข้อมูล seed ที่แอปไม่เคยแก้ → cache ข้ามรีเควสต์ (เดิมอ่าน DB ทุกครั้งที่เปิดฟอร์มใบเบิก)
