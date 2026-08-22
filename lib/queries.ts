@@ -124,7 +124,7 @@ export async function getActiveSpecRules(): Promise<{ sizes: string; grades: str
 }
 
 export type UnitRow = {
-  sku: string; product: string; size: string; grade: string | null; barcode: string | null;
+  sku: string; product: string; size: string; grade: string | null; spec: string | null; barcode: string | null;
   status: string; order_no: string | null; platform: string | null; buyer: string | null; receiver: string | null; phone: string | null;
   received_at: string | null; issued_at: string | null; shipped_at: string | null;
   source: "unit" | "order";   // unit = รับเข้าผ่าน stock_unit · order = SKU ที่สแกนตอนตัดยอด (order_items)
@@ -133,11 +133,11 @@ export type UnitRow = {
 /** SELECT รวม 2 แหล่ง: stock_unit (รับเข้า) + order_items.sku (สแกนตอนตัดยอด, ที่ไม่มีใน stock_unit)
  *  → ค้น SKU ของใบเบิกที่ตัดยอดไปแล้วเจอ แม้จะไม่เคยรับเข้าแบบ SKU */
 const UNITS_UNION = `
-  select su.sku, su.product, su.size, su.grade, su.barcode, su.status, su.order_no,
+  select su.sku, su.product, su.size, su.grade, su.spec, su.barcode, su.status, su.order_no,
          su.received_at, su.issued_at, su.id as ord, 'unit' as source
     from stock_unit su
   union all
-  select oi.sku, oi.product, oi.size, p.ptype as grade, null::text as barcode,
+  select oi.sku, oi.product, oi.size, p.ptype as grade, oi.spec, null::text as barcode,
          'issued' as status, oi.order_no,
          null::timestamptz as received_at, o.stock_issued_at as issued_at,
          -oi.id as ord, 'order' as source
@@ -167,7 +167,7 @@ export async function listUnits(opts: UnitsFilter & { limit?: number; offset?: n
   const offset = Math.max(0, opts.offset ?? 0);
   try {
     return await q<UnitRow>(
-      `select u.sku, u.product, u.size, u.grade, u.barcode, u.status, u.order_no, o.platform,
+      `select u.sku, u.product, u.size, u.grade, u.spec, u.barcode, u.status, u.order_no, o.platform,
               o.shop_name as buyer, o.receiver, o.phone, u.received_at, u.issued_at, o.shipped_at, u.source
        from (${UNITS_UNION}) u left join orders o on o.order_no = u.order_no
        ${where}

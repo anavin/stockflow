@@ -29,6 +29,7 @@ export async function GET(req: Request) {
     { header: "กลิ่น", key: "product", width: 30 },
     { header: "ขนาด", key: "size", width: 12 },
     { header: "Grade", key: "grade", width: 10 },
+    { header: "Spec", key: "spec", width: 14 },
     { header: "วันที่รับเข้า", key: "received", width: 14 },
     { header: "สถานะ", key: "status", width: 12 },
     { header: "ช่องทาง", key: "platform", width: 12 },
@@ -49,7 +50,7 @@ export async function GET(req: Request) {
   const d = (x: string | null) => (x ? String(x).slice(0, 10) : "");
   for (const u of units) {
     ws.addRow({
-      barcode: u.barcode || "", sku: u.sku, product: u.product, size: u.size, grade: u.grade || "",
+      barcode: u.barcode || "", sku: u.sku, product: u.product, size: u.size, grade: u.grade || "", spec: u.spec || "",
       received: d(u.received_at), status: stLabel(u.status), platform: platformName(u.platform || undefined), order: u.order_no || "",
       buyer: u.buyer || "", receiver: u.receiver || "", phone: u.phone || "",
       issued: d(u.issued_at), source: u.source === "order" ? "จากใบเบิก" : "รับเข้า",

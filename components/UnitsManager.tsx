@@ -47,7 +47,7 @@ export default function UnitsManager({ units, canEdit, reconcile }: { units: Uni
     router.refresh();
   }
 
-  const cols = canEdit ? 8 : 7;
+  const cols = canEdit ? 9 : 8;   // +1 = คอลัมน์ Spec
   return (
     <div className="space-y-3">
       {reconcile && reconcile.gap > 0 && (
@@ -62,6 +62,7 @@ export default function UnitsManager({ units, canEdit, reconcile }: { units: Uni
               <th className="px-3 py-3">SKU</th>
               <th className="px-3 py-3">กลิ่น</th>
               <th className="px-3 py-3">Grade</th>
+              <th className="px-3 py-3">Spec</th>
               <th className="px-3 py-3">วันที่รับเข้า</th>
               <th className="px-3 py-3">สถานะ</th>
               <th className="px-3 py-3">ออเดอร์ / ผู้ซื้อ</th>
@@ -87,6 +88,7 @@ export default function UnitsManager({ units, canEdit, reconcile }: { units: Uni
                   </td>
                   <td className="px-3 py-2.5"><span className="font-medium text-ink">{u.product}</span> <span className="text-muted">{u.size}</span></td>
                   <td className="px-3 py-2.5">{u.grade ? <span className="chip bg-brand-50 text-brand-600">{u.grade}</span> : <span className="text-faint">—</span>}</td>
+                  <td className="px-3 py-2.5 text-xs text-muted">{u.spec || "—"}</td>
                   <td className="px-3 py-2.5 text-xs text-muted">{u.received_at ? String(u.received_at).slice(0, 10) : "—"}</td>
                   <td className="px-3 py-2.5"><span className={`chip ${st.cls}`}>{st.label}</span></td>
                   <td className="px-3 py-2.5">
