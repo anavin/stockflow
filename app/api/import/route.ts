@@ -92,7 +92,8 @@ export async function POST(req: Request) {
     }
     const unmatched = [...unmap.values()].map((u) => ({ ...u, suggestions: suggestScents(u.name, products) }));
 
-    // เตือนไฟล์ถูกปิดบัง: บาง export (เช่น TikTok "จัดส่งแล้ว") mask ผู้รับ/เบอร์/ที่อยู่เป็น *** → ควรใช้ไฟล์ "คำสั่งซื้อ"
+    // เตือนไฟล์ถูกปิดบัง: TikTok ปิดบัง PII (ผู้รับ/เบอร์/ที่อยู่/ตำบล/ไปรษณีย์) ในไฟล์ export ทุกแบบ
+    // (Shopee/Lazada บางไฟล์ก็ปิด) → ต้องกรอกที่อยู่เองตอนแพ็ค (ดูจากใบปะหน้า/หน้าออเดอร์)
     const maskRe = /\*{2,}/;
     let maskedOrders = 0;
     for (const o of result.orders) {
@@ -100,7 +101,10 @@ export async function POST(req: Request) {
     }
     const warnings: string[] = [];
     if (result.orders.length > 0 && (maskedOrders >= 2 || maskedOrders / result.orders.length >= 0.3)) {
-      warnings.push(`พบข้อมูลผู้รับ/เบอร์/ที่อยู่ถูกปิดบัง (***) ${maskedOrders} จาก ${result.orders.length} ออร์เดอร์ — น่าจะเป็นไฟล์ "จัดส่งแล้ว" ควรใช้ไฟล์ "คำสั่งซื้อ" ที่ไม่ปิดบังข้อมูลแทน (มิฉะนั้นต้องกรอกที่อยู่เองทุกใบ)`);
+      const tt = platform === "Tiktok";
+      warnings.push(`ข้อมูลผู้รับ/เบอร์/ที่อยู่ถูกปิดบัง (***) ${maskedOrders} จาก ${result.orders.length} ออร์เดอร์` +
+        (tt ? ` — TikTok ปิดบังข้อมูลนี้ในไฟล์ export ทุกแบบ (แก้ที่ต้นทางไม่ได้) กลิ่น/จำนวน/จังหวัดยังใช้ได้ ส่วนผู้รับ/ที่อยู่ให้กรอกเองตอนแพ็ค (ดูจากใบปะหน้าหรือหน้าออเดอร์ TikTok)`
+           : ` — ถ้ามีไฟล์ export ที่ไม่ปิดบังให้ใช้ไฟล์นั้นแทน มิฉะนั้นต้องกรอกที่อยู่เองทุกใบ`));
     }
     return NextResponse.json({ ok: true, ...result, unmatched, products, warnings });
   } catch (e: any) {
