@@ -890,6 +890,58 @@ export async function listReturns(limit = 200, platform?: string): Promise<Retur
   } catch { return []; }
 }
 
+// ── รายงาน/วิเคราะห์ (หน้า /reports) ───────────────────────────────────────
+export type SalesMonthRow = { ym: string; platform: string; orders: number; qty: number };
+/** ยอดออเดอร์+ชิ้น รายเดือน × แพลตฟอร์ม (N เดือนล่าสุด) */
+export async function salesByMonth(months = 12): Promise<SalesMonthRow[]> {
+  try {
+    return await q<SalesMonthRow>(
+      `select to_char(coalesce(o.order_date,o.doc_date),'YYYY-MM') as ym,
+              coalesce(o.platform,'Shopee') as platform,
+              count(distinct o.order_no)::int as orders, coalesce(sum(i.qty),0)::float8 as qty
+       from orders o left join order_items i on i.order_no = o.order_no
+       where o.deleted_at is null and coalesce(o.order_date,o.doc_date) is not null
+         and coalesce(o.order_date,o.doc_date) >= (current_date - ($1 || ' months')::interval)
+       group by 1,2 order by 1`, [String(months)]);
+  } catch { return []; }
+}
+export type TopScentRow = { product: string; qty: number; orders: number };
+/** กลิ่นขายดี Top N (ตามจำนวนชิ้น) — กรองแพลตฟอร์มได้ */
+export async function topScents(limit = 20, platform?: string): Promise<TopScentRow[]> {
+  try {
+    const params: any[] = [];
+    const pc = platform ? (params.push(platform), ` and o.platform = $${params.length}`) : "";
+    return await q<TopScentRow>(
+      `select i.product, sum(i.qty)::float8 as qty, count(distinct i.order_no)::int as orders
+       from order_items i join orders o on o.order_no = i.order_no
+       where o.deleted_at is null and coalesce(i.product,'') <> ''${pc}
+       group by i.product order by qty desc limit ${Math.min(limit, 50)}`, params);
+  } catch { return []; }
+}
+export type ReturnMonthRow = { ym: string; returned: number; qty: number };
+/** จำนวนคืน รายเดือน (N เดือนล่าสุด) */
+export async function returnsByMonth(months = 12): Promise<ReturnMonthRow[]> {
+  try {
+    return await q<ReturnMonthRow>(
+      `select to_char((r.created_at at time zone 'Asia/Bangkok'),'YYYY-MM') as ym,
+              count(distinct r.order_no)::int as returned, sum(r.qty)::float8 as qty
+       from order_returns r where r.voided_at is null
+         and r.created_at >= (current_date - ($1 || ' months')::interval)
+       group by 1 order by 1`, [String(months)]);
+  } catch { return []; }
+}
+export type CustomerRepeat = { customers: number; repeat_customers: number; repeat_pct: number };
+/** ลูกค้าซื้อซ้ำ (นับตาม username) */
+export async function customerRepeat(): Promise<CustomerRepeat> {
+  try {
+    const [r] = await q<CustomerRepeat>(
+      `with c as (select coalesce(nullif(btrim(username),''),'?') u, count(*) n from orders where deleted_at is null and coalesce(username,'') <> '' group by 1)
+       select count(*)::int as customers, count(*) filter (where n>=2)::int as repeat_customers,
+              coalesce(round(100.0*count(*) filter (where n>=2)/nullif(count(*),0),1),0)::float8 as repeat_pct from c`);
+    return r ?? { customers: 0, repeat_customers: 0, repeat_pct: 0 };
+  } catch { return { customers: 0, repeat_customers: 0, repeat_pct: 0 }; }
+}
+
 export type ReturnPlatformStat = { platform: string; shipped: number; returned_orders: number; qty: number; rate: number };
 /** อัตราการคืนต่อแพลตฟอร์ม = จำนวนออเดอร์ที่มีการคืน ÷ ออเดอร์ที่ส่งแล้ว (%) */
 export async function returnStatsByPlatform(): Promise<ReturnPlatformStat[]> {
