@@ -3,6 +3,7 @@ import { unstable_cache } from "next/cache";
 import { q } from "./db";
 import type { Order, OrderItem, OrderRow, OrderWithItems } from "./types";
 import { LABEL_COMPONENTS, gradeToLabelKey, labelSpecFor, bulkRef, labelRef, mnorm } from "./materials";
+import { PERIOD_START } from "./config";
 
 /** PGlite returns `date`/`timestamptz` columns as JS Date objects while pg (with
  * our type parsers) returns strings. Normalize date-only fields to "YYYY-MM-DD"
@@ -683,25 +684,34 @@ export type DashStats = {
   ordersTotal: number; ordersToday: number; ordersMonth: number;
   issuedTotal: number; issuedToday: number; pendingIssue: number;
   skus: number; low: number; negative: number;
+  periodActive: boolean;
 };
 export async function dashboardStats(platform?: string): Promise<DashStats> {
   // ทำเป็น query เดียว (scalar subqueries) แทน 8 query ขนาน — ลดจำนวน connection
   // ที่เปิดพร้อมกันบน Workers/Hyperdrive (เปิดหลาย connection พร้อมกันเคยทำให้ค้าง).
   // สุขภาพสต๊อก อิงเฉพาะ SKU ที่ track จริง (ตาราง stock): ปกติ(>10)+ต้องเติม(0..10)+ติดลบ(<0)=skus
-  const empty: DashStats = { ordersTotal: 0, ordersToday: 0, ordersMonth: 0, issuedTotal: 0, issuedToday: 0, pendingIssue: 0, skus: 0, low: 0, negative: 0 };
+  const empty: DashStats = { ordersTotal: 0, ordersToday: 0, ordersMonth: 0, issuedTotal: 0, issuedToday: 0, pendingIssue: 0, skus: 0, low: 0, negative: 0, periodActive: false };
   try {
     const params: any[] = [];
     const pc = platform ? (params.push(platform), " and platform = $1") : "";
-    const [r] = await q<DashStats & { pendingIssue?: number }>(
+    // รอบปัจจุบัน: นับเฉพาะออเดอร์ตั้งแต่ PERIOD_START — แต่ "เฉพาะเมื่อถึงวันนั้นแล้ว"
+    // (current_date < PERIOD_START → เงื่อนไขเป็นจริงเสมอ = ยังไม่รีเซ็ต, นับสะสมเหมือนเดิม)
+    // ปิดฟีเจอร์เมื่อ PERIOD_START = "" · ค่าคงที่รูปแบบ YYYY-MM-DD ตรวจแล้วใน config → ปลอดภัยจาก inject
+    const P = PERIOD_START;
+    const period = P
+      ? ` and (current_date < date '${P}' or coalesce(doc_date, order_date) >= date '${P}')`
+      : "";
+    const [r] = await q<DashStats>(
       `select
-         (select count(*)::int from orders where deleted_at is null${pc}) as "ordersTotal",
+         (select count(*)::int from orders where deleted_at is null${pc}${period}) as "ordersTotal",
          (select count(*)::int from orders where deleted_at is null${pc} and doc_date = current_date) as "ordersToday",
          (select count(*)::int from orders where deleted_at is null${pc} and to_char(doc_date,'YYYY-MM') = to_char(current_date,'YYYY-MM')) as "ordersMonth",
-         (select count(*)::int from orders where deleted_at is null${pc} and stock_issued_at is not null) as "issuedTotal",
+         (select count(*)::int from orders where deleted_at is null${pc}${period} and stock_issued_at is not null) as "issuedTotal",
          (select count(*)::int from orders where deleted_at is null${pc} and stock_issued_at::date = current_date) as "issuedToday",
          (select count(*)::int from stock) as skus,
          (select count(*)::int from stock where qty >= 0 and qty <= 10) as low,
-         (select count(*)::int from stock where qty < 0) as negative`,
+         (select count(*)::int from stock where qty < 0) as negative,
+         ${P ? `(current_date >= date '${P}')` : "false"} as "periodActive"`,
       params,
     );
     const s = r ?? ({} as DashStats);
@@ -710,6 +720,7 @@ export async function dashboardStats(platform?: string): Promise<DashStats> {
       ordersTotal, ordersToday: s.ordersToday ?? 0, ordersMonth: s.ordersMonth ?? 0,
       issuedTotal, issuedToday: s.issuedToday ?? 0, pendingIssue: ordersTotal - issuedTotal,
       skus: s.skus ?? 0, low: s.low ?? 0, negative: s.negative ?? 0,
+      periodActive: !!s.periodActive,
     };
   } catch (e) { console.error("[dashboardStats]", (e as any)?.message); return empty; }
 }

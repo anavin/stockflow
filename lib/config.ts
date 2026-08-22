@@ -55,6 +55,14 @@ export const platformBase = (code: string) => `/${code.toLowerCase()}`;
 export const DEFAULT_UNIT = "ขวด";
 export const CUSTOMER_TYPES = ["ลูกค้าใหม่", "ลูกค้าเก่า"] as const;
 
+/** วันเริ่ม "รอบปัจจุบัน" ของแดชบอร์ด — ตัวเลขตัดสต๊อก/รอตัด/ออร์เดอร์บนหน้าหลัก
+ *  จะนับเฉพาะออเดอร์ตั้งแต่วันนี้เป็นต้นไป (ซ่อนข้อมูลเก่า/นำเข้าออกจากตัวนับ).
+ *  - มีผล "เฉพาะเมื่อถึงวันนี้แล้ว" — ก่อนถึงวันนี้ตัวเลขยังเป็นแบบสะสมเดิม (ไม่รีเซ็ตก่อนเวลา)
+ *  - เปลี่ยนรอบใหม่ทีหลัง: แก้ค่านี้ หรือ set env PERIOD_START_DATE (YYYY-MM-DD) แล้ว redeploy
+ *  - ตั้งเป็น "" เพื่อปิดฟีเจอร์ (กลับไปนับสะสมทั้งหมด) */
+const _rawPeriodStart = process.env.PERIOD_START_DATE || "2026-09-01";
+export const PERIOD_START = /^\d{4}-\d{2}-\d{2}$/.test(_rawPeriodStart) ? _rawPeriodStart : "";
+
 /** normalize ชื่อกลิ่นสำหรับจับคู่ (ตัดช่องว่าง/อักขระ/ตัวพิมพ์) — "DionysusX" == "Dionysus X" */
 export function productKey(s?: string | null): string {
   return (s || "").toLowerCase().replace(/[^a-z0-9ก-๙]/g, "");

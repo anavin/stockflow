@@ -97,9 +97,15 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
       )}
 
       {/* ── KPI tiles ── */}
+      {s.periodActive && (
+        <p className="mb-2 flex items-center gap-1.5 text-xs text-muted">
+          <CalendarCheck size={13} className="text-brand" />
+          รอบปัจจุบัน: นับตั้งแต่ <b className="text-ink">1 ก.ย. 2026</b> — ตัดสต๊อก/รอตัด/ออร์เดอร์ เริ่มนับใหม่ (ข้อมูลก่อนหน้าดูได้ในรายงาน)
+        </p>
+      )}
       <div className="grid grid-cols-2 gap-3 md:grid-cols-5">
         <Kpi
-          label="ออร์เดอร์ทั้งหมด" value={s.ordersTotal} href={base}
+          label={s.periodActive ? "ออร์เดอร์ (รอบนี้)" : "ออร์เดอร์ทั้งหมด"} value={s.ordersTotal} href={base}
           icon={<ShoppingBag size={18} />} tone="brand"
           sub={<><b className="text-ink">{s.ordersMonth.toLocaleString()}</b> เดือนนี้ · {s.ordersToday.toLocaleString()} วันนี้</>}
         />
