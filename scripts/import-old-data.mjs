@@ -36,14 +36,15 @@ if (DATABASE_URL) {
 }
 console.log(`✓ เชื่อมต่อ: ${label}\n`);
 
-const flat = (v) => { if (v == null) return ""; if (typeof v === "object") { if ("text" in v) return v.text; if ("result" in v) return v.result; if ("richText" in v) return v.richText.map((r) => r.text).join(""); } return v; };
-const str = (v) => String(flat(v) ?? "").trim();
-const num = (v) => { const n = Number(String(flat(v) ?? "").replace(/[^\d.-]/g, "")); return isNaN(n) ? 0 : n; };
-const toDate = (v) => {
-  const f = flat(v); if (f == null || f === "") return null;
-  if (f instanceof Date) return f.toISOString().slice(0, 10);
-  if (typeof f === "number") { const d = new Date(Math.round((f - 25569) * 86400 * 1000)); return isNaN(d) ? null : d.toISOString().slice(0, 10); }
-  const s = String(f).trim();
+// อ่านเซลล์ด้วย cell.text (ค่าที่คำนวณ/แสดงจริง) — คอลัมน์ที่อยู่ในไฟล์เป็นสูตร XLOOKUP ที่พัง (#REF!)
+// ถ้าอ่าน .value ตรง ๆ จะได้ object สูตร → "[object Object]". วันที่ใช้ .value (Date) เพราะ .text เป็นรูปแบบ locale
+const str = (cell) => { if (!cell) return ""; const t = cell.text; return (t == null ? "" : String(t)).trim(); };
+const num = (cell) => { if (!cell) return 0; const n = Number(String(cell.text ?? "").replace(/[^\d.-]/g, "")); return isNaN(n) ? 0 : n; };
+const toDate = (cell) => {
+  if (!cell) return null; const v = cell.value;
+  if (v instanceof Date) return v.toISOString().slice(0, 10);
+  if (typeof v === "number") { const d = new Date(Math.round((v - 25569) * 86400 * 1000)); return isNaN(d) ? null : d.toISOString().slice(0, 10); }
+  const s = (cell.text || String(v || "")).trim();
   let m = s.match(/^(\d{4})[-/](\d{1,2})[-/](\d{1,2})/); if (m) return `${m[1]}-${m[2].padStart(2, "0")}-${m[3].padStart(2, "0")}`;
   m = s.match(/^(\d{1,2})[-/](\d{1,2})[-/](\d{4})/); if (m) return `${m[3]}-${m[2].padStart(2, "0")}-${m[1].padStart(2, "0")}`;
   const d = new Date(s); return isNaN(d) ? null : d.toISOString().slice(0, 10);
@@ -58,8 +59,8 @@ for (const ws of wb.worksheets) {
   const platform = SHEET_PLATFORM[ws.name];
   if (!platform) { console.log(`▸ ${ws.name}: ข้าม (ไม่รู้จักแพลตฟอร์ม)`); continue; }
 
-  const idx = {}; ws.getRow(1).eachCell({ includeEmpty: true }, (c, col) => { idx[str(c.value)] = col; });
-  const G = (row, name) => { const c = idx[name]; return c ? row.getCell(c).value : null; };
+  const idx = {}; ws.getRow(1).eachCell({ includeEmpty: true }, (c, col) => { idx[str(c)] = col; });
+  const G = (row, name) => { const c = idx[name]; return c ? row.getCell(c) : null; };
 
   // จัดกลุ่มเป็นออเดอร์ตาม order_no
   const orders = new Map();
@@ -81,7 +82,7 @@ for (const ws of wb.worksheets) {
         receiver: str(G(row, "ชื่อผู้รับ")) || null,
         phone: str(G(row, "หมายเลขโทรศัพท์")) || null,
         customer_type: str(G(row, "ลูกค้าเก่า/ใหม่")) || null,
-        purchase_count: G(row, "ซื้อครั้งที่") != null && str(G(row, "ซื้อครั้งที่")) !== "" ? num(G(row, "ซื้อครั้งที่")) : null,
+        purchase_count: str(G(row, "ซื้อครั้งที่")) !== "" ? num(G(row, "ซื้อครั้งที่")) : null,
         district: str(G(row, "อำเภอ / เขต")) || null,
         subdistrict: null,
         province: str(G(row, "จังหวัด")) || null,
@@ -132,5 +133,11 @@ for (const ws of wb.worksheets) {
   grandOrders += list.length; grandItems += items;
 }
 
-console.log(`\n🎉 เสร็จ: ${grandOrders} ออเดอร์ · ${grandItems} รายการ`);
+// เติมจังหวัด/อำเภอ จาก postcode (ไฟล์เก่า XLOOKUP พัง แต่รหัสไปรษณีย์มีครบ)
+const bf = await run(
+  `update orders o set province=pc.province, district=coalesce(nullif(o.district,''),pc.district)
+   from (select distinct on (postcode) postcode, province, district from postcodes order by postcode) pc
+   where o.postcode=pc.postcode and coalesce(o.province,'')='' and o.platform in ('Lazada','Tiktok','Line','Website') returning 1`,
+);
+console.log(`\n🎉 เสร็จ: ${grandOrders} ออเดอร์ · ${grandItems} รายการ · เติมจังหวัดจาก postcode ${bf.length} ใบ`);
 await close();
