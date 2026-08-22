@@ -3,6 +3,7 @@ import { salesByMonth, topScents, returnsByMonth, customerRepeat, topRepeatCusto
 import { enabledPlatforms, platformColor, platformName, resolvePlatform } from "@/lib/config";
 import { PlatformDot } from "@/components/PlatformBadge";
 import PlatformCompare from "@/components/PlatformCompare";
+import ReportTabs from "@/components/ReportTabs";
 import Link from "next/link";
 import { BarChart3, TrendingUp, FlaskConical, Undo2, Users } from "lucide-react";
 
@@ -29,10 +30,11 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-6 md:px-8">
-      <div className="mb-6">
+      <div className="mb-4">
         <h1 className="flex items-center gap-2 text-xl font-bold text-ink"><BarChart3 size={18} /> รายงาน & วิเคราะห์</h1>
         <p className="mt-0.5 text-sm text-muted">ยอดขาย · กลิ่นขายดี · การคืน · ลูกค้า — จากข้อมูลจริงทุกแพลตฟอร์ม</p>
       </div>
+      <ReportTabs />
 
       {/* KPI */}
       <div className="mb-5 grid grid-cols-2 gap-3 md:grid-cols-4">

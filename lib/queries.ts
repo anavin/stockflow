@@ -984,6 +984,121 @@ export async function customerOrders(username: string, limit = 500): Promise<Cus
   } catch { return []; }
 }
 
+// ── การตลาด ────────────────────────────────────────────────────────────────
+export type SizeMixRow = { size: string; qty: number; orders: number };
+export async function sizeMix(platform?: string): Promise<SizeMixRow[]> {
+  try {
+    const params: any[] = [];
+    const pc = platform ? (params.push(platform), ` and o.platform = $${params.length}`) : "";
+    return await q<SizeMixRow>(
+      `select coalesce(nullif(btrim(i.size),''),'(ไม่ระบุ)') as size, sum(i.qty)::float8 as qty, count(distinct i.order_no)::int as orders
+       from order_items i join orders o on o.order_no = i.order_no
+       where o.deleted_at is null and coalesce(i.product,'') <> ''${pc}
+       group by 1 order by qty desc`, params);
+  } catch { return []; }
+}
+export type NewReturnMonth = { ym: string; new_c: number; repeat_c: number; unknown_c: number };
+export async function newVsReturningByMonth(months = 12): Promise<NewReturnMonth[]> {
+  try {
+    return await q<NewReturnMonth>(
+      `select to_char(coalesce(order_date,doc_date),'YYYY-MM') as ym,
+              count(*) filter (where customer_type = 'ลูกค้าใหม่')::int as new_c,
+              count(*) filter (where customer_type = 'ลูกค้าเก่า')::int as repeat_c,
+              count(*) filter (where coalesce(customer_type,'') not in ('ลูกค้าใหม่','ลูกค้าเก่า'))::int as unknown_c
+       from orders where deleted_at is null and coalesce(order_date,doc_date) is not null
+         and coalesce(order_date,doc_date) >= (current_date - ($1 || ' months')::interval)
+       group by 1 order by 1`, [String(months)]);
+  } catch { return []; }
+}
+export type ProvinceRow = { province: string; orders: number; qty: number };
+export async function topProvinces(limit = 20, platform?: string): Promise<ProvinceRow[]> {
+  try {
+    const params: any[] = [];
+    const pc = platform ? (params.push(platform), ` and o.platform = $${params.length}`) : "";
+    return await q<ProvinceRow>(
+      `select coalesce(nullif(btrim(o.province),''),'(ไม่ระบุ)') as province,
+              count(distinct o.order_no)::int as orders, coalesce(sum(i.qty),0)::float8 as qty
+       from orders o left join order_items i on i.order_no = o.order_no
+       where o.deleted_at is null${pc}
+       group by 1 order by orders desc limit ${Math.min(limit, 100)}`, params);
+  } catch { return []; }
+}
+// ── การผลิต/สต๊อก ────────────────────────────────────────────────────────────
+export type VelocityRow = { product: string; size: string; sold90: number; per_day: number; stock: number; days_left: number | null };
+/** อัตราขาย 90 วัน + สต๊อกคงเหลือ → จะหมดในกี่วัน (เฉพาะขนาดที่ track สต๊อก) */
+export async function scentVelocity(limit = 40): Promise<VelocityRow[]> {
+  try {
+    return await q<VelocityRow>(
+      `with sold as (
+         select regexp_replace(lower(i.product),'[^a-z0-9ก-๙]','','g') as pk, btrim(lower(i.size),' .') as sk,
+                max(i.product) as product, max(i.size) as size, sum(i.qty)::float8 as sold90
+         from order_items i join orders o on o.order_no = i.order_no
+         where o.deleted_at is null and coalesce(i.product,'') <> '' and i.size ~* 'ml'
+           and coalesce(o.order_date,o.doc_date) >= current_date - interval '90 days'
+         group by 1,2)
+       select sold.product, sold.size, sold.sold90,
+              round((sold.sold90/90.0)::numeric,2)::float8 as per_day,
+              coalesce(st.qty,0)::float8 as stock,
+              case when sold.sold90 > 0 then round(coalesce(st.qty,0) / (sold.sold90/90.0))::int else null end as days_left
+       from sold
+       left join stock st on regexp_replace(lower(st.product),'[^a-z0-9ก-๙]','','g') = sold.pk and btrim(lower(st.size),' .') = sold.sk
+       order by sold.sold90 desc limit ${Math.min(limit, 100)}`);
+  } catch { return []; }
+}
+export type SlowMoverRow = { product: string; size: string; stock: number; sold90: number };
+/** ของค้างสต๊อก: สต๊อกเยอะ (>10) แต่ขาย 90 วันน้อย (<5) */
+export async function slowMovers(limit = 40): Promise<SlowMoverRow[]> {
+  try {
+    return await q<SlowMoverRow>(
+      `with sold as (
+         select regexp_replace(lower(i.product),'[^a-z0-9ก-๙]','','g') as pk, btrim(lower(i.size),' .') as sk, sum(i.qty)::float8 as sold90
+         from order_items i join orders o on o.order_no = i.order_no
+         where o.deleted_at is null and coalesce(o.order_date,o.doc_date) >= current_date - interval '90 days'
+         group by 1,2)
+       select st.product, st.size, st.qty::float8 as stock, coalesce(sold.sold90,0)::float8 as sold90
+       from stock st
+       left join sold on regexp_replace(lower(st.product),'[^a-z0-9ก-๙]','','g')=sold.pk and btrim(lower(st.size),' .')=sold.sk
+       where st.qty > 10 and coalesce(sold.sold90,0) < 5
+       order by st.qty desc limit ${Math.min(limit, 100)}`);
+  } catch { return []; }
+}
+// ── ลูกค้า ────────────────────────────────────────────────────────────────────
+export type LapsedCustomer = { username: string; receiver: string | null; orders: number; last_at: string | null; days_since: number };
+/** ลูกค้าเคยซื้อบ่อย (≥2) แต่หายไป > N วัน — สำหรับ win-back */
+export async function lapsedCustomers(days = 90, limit = 50): Promise<LapsedCustomer[]> {
+  try {
+    return await q<LapsedCustomer>(
+      `select nullif(btrim(username),'') as username, max(receiver) as receiver, count(distinct order_no)::int as orders,
+              to_char(max(coalesce(order_date,doc_date)),'YYYY-MM-DD') as last_at,
+              (current_date - max(coalesce(order_date,doc_date)))::int as days_since
+       from orders where deleted_at is null and coalesce(btrim(username),'') <> ''
+       group by 1
+       having count(distinct order_no) >= 2 and max(coalesce(order_date,doc_date)) < current_date - ($1 || ' days')::interval
+       order by orders desc, days_since desc limit ${Math.min(limit, 200)}`, [String(days)]);
+  } catch { return []; }
+}
+// ── Operations ────────────────────────────────────────────────────────────────
+export type LeadTime = { avg_order_to_ship: number | null; avg_issue_to_ship: number | null; shipped_not_issued: number; shipped: number };
+export async function leadTimeStats(): Promise<LeadTime> {
+  try {
+    const [r] = await q<LeadTime>(
+      `select round(avg(extract(epoch from (shipped_at - coalesce(order_date,doc_date)::timestamptz))/86400)::numeric,1)::float8 as avg_order_to_ship,
+              round(avg(extract(epoch from (shipped_at - stock_issued_at))/86400) filter (where stock_issued_at is not null)::numeric,1)::float8 as avg_issue_to_ship,
+              count(*) filter (where stock_issued_at is null)::int as shipped_not_issued,
+              count(*)::int as shipped
+       from orders where deleted_at is null and shipped_at is not null and coalesce(order_date,doc_date) is not null`);
+    return r ?? { avg_order_to_ship: null, avg_issue_to_ship: null, shipped_not_issued: 0, shipped: 0 };
+  } catch { return { avg_order_to_ship: null, avg_issue_to_ship: null, shipped_not_issued: 0, shipped: 0 }; }
+}
+export type ReturnReasonRow = { reason: string; n: number; qty: number };
+export async function returnReasons(): Promise<ReturnReasonRow[]> {
+  try {
+    return await q<ReturnReasonRow>(
+      `select coalesce(nullif(btrim(reason),''),'(ไม่ระบุ)') as reason, count(*)::int as n, sum(qty)::float8 as qty
+       from order_returns where voided_at is null group by 1 order by n desc limit 30`);
+  } catch { return []; }
+}
+
 export type ReturnPlatformStat = { platform: string; shipped: number; returned_orders: number; qty: number; rate: number };
 /** อัตราการคืนต่อแพลตฟอร์ม = จำนวนออเดอร์ที่มีการคืน ÷ ออเดอร์ที่ส่งแล้ว (%) */
 export async function returnStatsByPlatform(): Promise<ReturnPlatformStat[]> {
