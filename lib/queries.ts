@@ -942,6 +942,24 @@ export async function customerRepeat(): Promise<CustomerRepeat> {
   } catch { return { customers: 0, repeat_customers: 0, repeat_pct: 0 }; }
 }
 
+export type RepeatCustomer = { username: string; receiver: string | null; orders: number; qty: number; last_at: string | null; platforms: string | null };
+/** รายชื่อลูกค้าซื้อซ้ำ (≥2 ครั้ง) เรียงตามจำนวนครั้ง — group ตามชื่อผู้ใช้ */
+export async function topRepeatCustomers(limit = 50): Promise<RepeatCustomer[]> {
+  try {
+    return await q<RepeatCustomer>(
+      `select nullif(btrim(o.username),'') as username,
+              max(o.receiver) as receiver,
+              count(distinct o.order_no)::int as orders,
+              coalesce(sum(i.qty),0)::float8 as qty,
+              to_char(max(coalesce(o.order_date,o.doc_date)),'YYYY-MM-DD') as last_at,
+              string_agg(distinct coalesce(o.platform,'Shopee'), ', ') as platforms
+       from orders o left join order_items i on i.order_no = o.order_no
+       where o.deleted_at is null and coalesce(btrim(o.username),'') <> ''
+       group by 1 having count(distinct o.order_no) >= 2
+       order by orders desc, qty desc limit ${Math.min(limit, 200)}`);
+  } catch { return []; }
+}
+
 export type ReturnPlatformStat = { platform: string; shipped: number; returned_orders: number; qty: number; rate: number };
 /** อัตราการคืนต่อแพลตฟอร์ม = จำนวนออเดอร์ที่มีการคืน ÷ ออเดอร์ที่ส่งแล้ว (%) */
 export async function returnStatsByPlatform(): Promise<ReturnPlatformStat[]> {

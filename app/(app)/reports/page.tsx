@@ -1,5 +1,5 @@
 import { requireDashboard } from "@/lib/auth/require-user";
-import { salesByMonth, topScents, returnsByMonth, customerRepeat, platformOverview } from "@/lib/queries";
+import { salesByMonth, topScents, returnsByMonth, customerRepeat, topRepeatCustomers, platformOverview } from "@/lib/queries";
 import { enabledPlatforms, platformColor, platformName, resolvePlatform } from "@/lib/config";
 import { PlatformDot } from "@/components/PlatformBadge";
 import PlatformCompare from "@/components/PlatformCompare";
@@ -13,9 +13,10 @@ const monthLabel = (ym: string) => { const [y, m] = ym.split("-"); return `${["�
 export default async function ReportsPage({ searchParams }: { searchParams: Promise<{ platform?: string }> }) {
   await requireDashboard();
   const pf = resolvePlatform((await searchParams).platform)?.code;
-  const [sales, scents, returns, repeat, overview] = await Promise.all([
-    salesByMonth(12), topScents(20, pf), returnsByMonth(12), customerRepeat(), platformOverview(),
+  const [sales, scents, returns, repeat, repeatList, overview] = await Promise.all([
+    salesByMonth(12), topScents(20, pf), returnsByMonth(12), customerRepeat(), topRepeatCustomers(50), platformOverview(),
   ]);
+  const maxCust = Math.max(1, ...repeatList.map((c) => c.orders));
 
   const platforms = enabledPlatforms().map((p) => p.code).filter((code) => sales.some((s) => s.platform === code));
   const months = [...new Set(sales.map((s) => s.ym))].sort().reverse();
@@ -113,6 +114,42 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
           )}
         </section>
       </div>
+
+      {/* รายชื่อลูกค้าซื้อซ้ำ */}
+      <section className="card mt-5 overflow-hidden">
+        <div className="flex items-center gap-2 border-b border-line px-5 py-3.5 text-sm font-semibold text-ink">
+          <Users size={16} className="text-brand" /> ลูกค้าซื้อซ้ำ (Top {repeatList.length}) <span className="text-xs font-normal text-muted">ซื้อ ≥ 2 ครั้ง</span>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead className="bg-soft text-left text-xs text-muted">
+              <tr>
+                <th className="px-5 py-2.5">#</th>
+                <th className="px-3 py-2.5">ชื่อผู้ใช้ / ผู้รับ</th>
+                <th className="px-3 py-2.5">แพลตฟอร์ม</th>
+                <th className="px-3 py-2.5 text-right">จำนวนครั้ง</th>
+                <th className="px-3 py-2.5 text-right">ชิ้นรวม</th>
+                <th className="px-3 py-2.5">ซื้อล่าสุด</th>
+                <th className="px-3 py-2.5" style={{ width: 120 }}></th>
+              </tr>
+            </thead>
+            <tbody>
+              {repeatList.length === 0 && <tr><td colSpan={7} className="px-5 py-10 text-center text-muted">ยังไม่มีลูกค้าซื้อซ้ำ</td></tr>}
+              {repeatList.map((c, i) => (
+                <tr key={c.username} className="border-t border-line hover:bg-soft/40">
+                  <td className="px-5 py-2 text-xs text-faint">{i + 1}</td>
+                  <td className="px-3 py-2"><span className="font-medium text-ink">{c.username}</span>{c.receiver ? <span className="block text-xs text-muted">{c.receiver}</span> : null}</td>
+                  <td className="px-3 py-2 text-xs text-muted">{c.platforms}</td>
+                  <td className="px-3 py-2 text-right font-semibold tabular-nums text-ink">{c.orders}</td>
+                  <td className="px-3 py-2 text-right tabular-nums text-muted">{c.qty.toLocaleString()}</td>
+                  <td className="px-3 py-2 text-xs text-muted">{c.last_at || "—"}</td>
+                  <td className="px-3 py-2"><div className="h-2 w-full overflow-hidden rounded-full bg-soft"><div className="h-full rounded-full bg-brand" style={{ width: `${Math.round(c.orders / maxCust * 100)}%` }} /></div></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </section>
     </div>
   );
 }
