@@ -21,7 +21,10 @@ const DATABASE_URL = process.env.DATABASE_URL;
 let run, label, close;
 if (DATABASE_URL) {
   const pg = (await import("pg")).default;
-  const client = new pg.Client({ connectionString: DATABASE_URL, ssl: { rejectUnauthorized: false } });
+  // ใส่รหัสแยกผ่าน DB_PASSWORD ได้ (กันปัญหาอักขระพิเศษใน URL เช่น @ : / # &) — override รหัสใน URL
+  const cfg = { connectionString: DATABASE_URL, ssl: { rejectUnauthorized: false } };
+  if (process.env.DB_PASSWORD) cfg.password = process.env.DB_PASSWORD;
+  const client = new pg.Client(cfg);
   await client.connect();
   run = (sql, params) => client.query(sql, params).then((r) => r.rows);
   label = "PROD (Supabase)"; close = () => client.end();
