@@ -1,4 +1,4 @@
-import { requireDashboard } from "@/lib/auth/require-user";
+import { requireAdmin } from "@/lib/auth/require-user";
 import { sizeMix, newVsReturningByMonth, topProvinces } from "@/lib/queries";
 import ReportTabs from "@/components/ReportTabs";
 import { BarChart3, Ruler, UserPlus, MapPin } from "lucide-react";
@@ -7,7 +7,7 @@ export const dynamic = "force-dynamic";
 const ML = (ym: string) => { const [y, m] = ym.split("-"); return `${["ม.ค.","ก.พ.","มี.ค.","เม.ย.","พ.ค.","มิ.ย.","ก.ค.","ส.ค.","ก.ย.","ต.ค.","พ.ย.","ธ.ค."][+m - 1] || m} ${y.slice(2)}`; };
 
 export default async function MarketingReport() {
-  await requireDashboard();
+  await requireAdmin();
   const [sizes, nvr, provinces] = await Promise.all([sizeMix(), newVsReturningByMonth(12), topProvinces(15)]);
   const maxSize = Math.max(1, ...sizes.map((s) => s.qty));
   const maxProv = Math.max(1, ...provinces.map((p) => p.orders));

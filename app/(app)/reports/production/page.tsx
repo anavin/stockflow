@@ -1,4 +1,4 @@
-import { requireDashboard } from "@/lib/auth/require-user";
+import { requireAdmin } from "@/lib/auth/require-user";
 import { scentVelocity, slowMovers } from "@/lib/queries";
 import ReportTabs from "@/components/ReportTabs";
 import { BarChart3, Gauge, PackageX, AlertTriangle } from "lucide-react";
@@ -6,7 +6,7 @@ import { BarChart3, Gauge, PackageX, AlertTriangle } from "lucide-react";
 export const dynamic = "force-dynamic";
 
 export default async function ProductionReport() {
-  await requireDashboard();
+  await requireAdmin();
   const [velocity, slow] = await Promise.all([scentVelocity(40), slowMovers(40)]);
   const soon = velocity.filter((v) => v.days_left != null && v.stock > 0 && v.days_left <= 30);
 

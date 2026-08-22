@@ -1,4 +1,4 @@
-import { requireDashboard } from "@/lib/auth/require-user";
+import { requireAdmin } from "@/lib/auth/require-user";
 import { salesByMonth, topScents, returnsByMonth, customerRepeat, topRepeatCustomers, platformOverview } from "@/lib/queries";
 import { enabledPlatforms, platformColor, platformName, resolvePlatform } from "@/lib/config";
 import { PlatformDot } from "@/components/PlatformBadge";
@@ -12,7 +12,7 @@ export const dynamic = "force-dynamic";
 const monthLabel = (ym: string) => { const [y, m] = ym.split("-"); return `${["ม.ค.","ก.พ.","มี.ค.","เม.ย.","พ.ค.","มิ.ย.","ก.ค.","ส.ค.","ก.ย.","ต.ค.","พ.ย.","ธ.ค."][+m - 1] || m} ${y.slice(2)}`; };
 
 export default async function ReportsPage({ searchParams }: { searchParams: Promise<{ platform?: string }> }) {
-  await requireDashboard();
+  await requireAdmin();
   const pf = resolvePlatform((await searchParams).platform)?.code;
   const [sales, scents, returns, repeat, repeatList, overview] = await Promise.all([
     salesByMonth(12), topScents(20, pf), returnsByMonth(12), customerRepeat(), topRepeatCustomers(50), platformOverview(),
@@ -121,6 +121,7 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
       <section className="card mt-5 overflow-hidden">
         <div className="flex items-center gap-2 border-b border-line px-5 py-3.5 text-sm font-semibold text-ink">
           <Users size={16} className="text-brand" /> ลูกค้าซื้อซ้ำ (Top {repeatList.length}) <span className="text-xs font-normal text-muted">ซื้อ ≥ 2 ครั้ง</span>
+          <Link href="/reports/repeat" className="ml-auto rounded-full bg-soft px-3 py-1 text-xs font-medium text-brand-600 hover:bg-brand/10">ดูทั้งหมด →</Link>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">

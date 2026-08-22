@@ -956,7 +956,7 @@ export async function topRepeatCustomers(limit = 50): Promise<RepeatCustomer[]> 
        from orders o left join order_items i on i.order_no = o.order_no
        where o.deleted_at is null and coalesce(btrim(o.username),'') <> ''
        group by 1 having count(distinct o.order_no) >= 2
-       order by orders desc, qty desc limit ${Math.min(limit, 200)}`);
+       order by orders desc, qty desc limit ${Math.min(limit, 5000)}`);
   } catch { return []; }
 }
 

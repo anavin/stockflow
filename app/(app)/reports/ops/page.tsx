@@ -1,4 +1,4 @@
-import { requireDashboard } from "@/lib/auth/require-user";
+import { requireAdmin } from "@/lib/auth/require-user";
 import { leadTimeStats, returnReasons, returnStatsByPlatform, returnStatsByScent } from "@/lib/queries";
 import ReportTabs from "@/components/ReportTabs";
 import { PlatformDot } from "@/components/PlatformBadge";
@@ -8,7 +8,7 @@ import { BarChart3, Timer, Undo2, Layers } from "lucide-react";
 export const dynamic = "force-dynamic";
 
 export default async function OpsReport() {
-  await requireDashboard();
+  await requireAdmin();
   const [lead, reasons, byPlatform, byScent] = await Promise.all([
     leadTimeStats(), returnReasons(), returnStatsByPlatform(), returnStatsByScent(),
   ]);

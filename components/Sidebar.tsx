@@ -3,7 +3,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { PLATFORMS, enabledPlatforms, platformBase, platformColor, platformTint } from "@/lib/config";
-import { can, ROLE_LABELS, roleList } from "@/lib/auth/roles";
+import { can, ROLE_LABELS, roleList, isAdmin } from "@/lib/auth/roles";
 import { Package, PlusCircle, Upload, List, LogOut, Menu, X, Trash2, Users, ScanLine, Boxes, LayoutDashboard, BarChart3, FlaskConical, ScanBarcode, ShieldCheck, Truck, Droplets, Sticker, PackageOpen, History, ScrollText, ClipboardCheck, Undo2, PackageX } from "lucide-react";
 
 export default function Sidebar({ user }: { user: { full_name: string; username: string; role: string } }) {
@@ -12,10 +12,10 @@ export default function Sidebar({ user }: { user: { full_name: string; username:
 
   const role = user.role;
   // เมนูขึ้นตามสิทธิ์ — สร้างใบเบิก vs จัดของ/ตัดสต๊อก แยกกัน
-  const dashNav = can.viewDashboard(role)
-    ? [{ href: "/", label: "หน้าหลัก", icon: LayoutDashboard, exact: true },
-       { href: "/reports", label: "รายงาน & วิเคราะห์", icon: BarChart3, exact: true }]
-    : [];
+  const dashNav = [
+    ...(can.viewDashboard(role) ? [{ href: "/", label: "หน้าหลัก", icon: LayoutDashboard, exact: true }] : []),
+    ...(isAdmin(role) ? [{ href: "/reports", label: "รายงาน & วิเคราะห์", icon: BarChart3, exact: true }] : []),
+  ];
   // 1 ลิงก์/แพลตฟอร์มที่เปิดใช้ → หน้ารายการใบเบิก (สร้าง/นำเข้า/ถังขยะ อยู่ในหน้านั้น)
   const orderNav = can.createOrders(role)
     ? enabledPlatforms().map((p) => ({ href: platformBase(p.code), code: p.code, label: `ใบเบิก ${p.name}`, exact: true }))
