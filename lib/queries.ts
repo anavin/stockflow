@@ -408,17 +408,19 @@ export async function shippedCountsByPlatform(dateStr?: string): Promise<Platfor
 export type DailyIssue = { day: string; orders: number; issued: number; pending: number };
 /** รายวัน: ออร์เดอร์ที่เข้ามา (ตามวันที่ใบเบิก) เทียบกับที่ตัดสต๊อกแล้ว */
 export async function dailyIssueStatus(platform?: string, days = 14): Promise<DailyIssue[]> {
-  // ใช้ "วันที่สั่งซื้อจริง" (order_date) เป็นหลัก ถ้าไม่มีค่อยใช้วันที่ใบเบิก · platform undefined = ทุกแพลตฟอร์ม
+  // ยึด "วันที่นำเข้าระบบจริง" = created_at (เวลาไทย) · ตัดข้อมูล import ออก (created_at ต่างจาก doc_date >1 วัน)
+  // platform undefined = ทุกแพลตฟอร์ม
   try {
     const params: any[] = [days];
     const pc = platform ? (params.push(platform), ` and platform = $${params.length}`) : "";
     const rows = await q<{ day: string; orders: number; issued: number }>(
-      `select to_char(coalesce(order_date, doc_date),'YYYY-MM-DD') as day,
+      `select to_char((created_at at time zone 'Asia/Bangkok')::date,'YYYY-MM-DD') as day,
               count(*)::int as orders,
               count(stock_issued_at)::int as issued
        from orders
-       where deleted_at is null and coalesce(order_date, doc_date) is not null${pc}
-       group by to_char(coalesce(order_date, doc_date),'YYYY-MM-DD')
+       where deleted_at is null${pc}
+         and abs((created_at at time zone 'Asia/Bangkok')::date - coalesce(doc_date, order_date)) <= 1
+       group by 1
        order by day desc limit $1`,
       params,
     );
@@ -704,7 +706,9 @@ export async function dashboardStats(platform?: string): Promise<DashStats> {
     const [r] = await q<DashStats>(
       `select
          (select count(*)::int from orders where deleted_at is null${pc}${period}) as "ordersTotal",
-         (select count(*)::int from orders where deleted_at is null${pc} and doc_date = current_date) as "ordersToday",
+         (select count(*)::int from orders where deleted_at is null${pc}
+            and (created_at at time zone 'Asia/Bangkok')::date = (now() at time zone 'Asia/Bangkok')::date
+            and abs((created_at at time zone 'Asia/Bangkok')::date - coalesce(doc_date, order_date)) <= 1) as "ordersToday",
          (select count(*)::int from orders where deleted_at is null${pc} and to_char(doc_date,'YYYY-MM') = to_char(current_date,'YYYY-MM')) as "ordersMonth",
          (select count(*)::int from orders where deleted_at is null${pc}${period} and stock_issued_at is not null) as "issuedTotal",
          (select count(*)::int from orders where deleted_at is null${pc} and stock_issued_at::date = current_date) as "issuedToday",
@@ -1136,17 +1140,20 @@ export type PlatformOverviewRow = {
   platform: string; orders: number; month: number; issued: number; shipped: number; pending: number; returned: number;
 };
 export type PlatformDailyRow = { ymd: string; platform: string; orders: number };
-/** ออร์เดอร์รายวันแยกแพลตฟอร์ม (N วันล่าสุด, เวลาไทย) — สำหรับตารางเทียบแพลตฟอร์มรายวันบนภาพรวม */
+/** ออร์เดอร์รายวันแยกแพลตฟอร์ม (N วันล่าสุด) — ยึด "วันที่นำเข้าระบบจริง" = created_at (เวลาไทย)
+ *  ตัดข้อมูล import ออก: นับเฉพาะที่ created_at ใกล้ doc_date (<=1 วัน) = คีย์เข้าระบบตอนนั้นจริง
+ *  (ข้อมูล import จะ backdate → created_at ต่างจาก doc_date มาก จึงไม่ถูกนับเป็นยอดรายวัน) */
 export async function platformDaily(days = 14): Promise<PlatformDailyRow[]> {
   try {
     return await q<PlatformDailyRow>(
-      `select to_char(coalesce(doc_date, order_date),'YYYY-MM-DD') as ymd,
+      `select to_char((created_at at time zone 'Asia/Bangkok')::date,'YYYY-MM-DD') as ymd,
               coalesce(platform,'Shopee') as platform,
               count(*)::int as orders
          from orders
         where deleted_at is null
-          and coalesce(doc_date, order_date) >= ((now() at time zone 'Asia/Bangkok')::date - ($1::int - 1))
-          and coalesce(doc_date, order_date) <= (now() at time zone 'Asia/Bangkok')::date
+          and (created_at at time zone 'Asia/Bangkok')::date >= ((now() at time zone 'Asia/Bangkok')::date - ($1::int - 1))
+          and (created_at at time zone 'Asia/Bangkok')::date <= (now() at time zone 'Asia/Bangkok')::date
+          and abs((created_at at time zone 'Asia/Bangkok')::date - coalesce(doc_date, order_date)) <= 1
         group by 1, 2`, [String(days)]);
   } catch { return []; }
 }
