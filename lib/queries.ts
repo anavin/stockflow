@@ -1135,6 +1135,21 @@ export async function returnStatsByPlatform(): Promise<ReturnPlatformStat[]> {
 export type PlatformOverviewRow = {
   platform: string; orders: number; month: number; issued: number; shipped: number; pending: number; returned: number;
 };
+export type PlatformDailyRow = { ymd: string; platform: string; orders: number };
+/** ออร์เดอร์รายวันแยกแพลตฟอร์ม (N วันล่าสุด, เวลาไทย) — สำหรับตารางเทียบแพลตฟอร์มรายวันบนภาพรวม */
+export async function platformDaily(days = 14): Promise<PlatformDailyRow[]> {
+  try {
+    return await q<PlatformDailyRow>(
+      `select to_char(coalesce(doc_date, order_date),'YYYY-MM-DD') as ymd,
+              coalesce(platform,'Shopee') as platform,
+              count(*)::int as orders
+         from orders
+        where deleted_at is null
+          and coalesce(doc_date, order_date) >= ((now() at time zone 'Asia/Bangkok')::date - ($1::int - 1))
+          and coalesce(doc_date, order_date) <= (now() at time zone 'Asia/Bangkok')::date
+        group by 1, 2`, [String(days)]);
+  } catch { return []; }
+}
 /** สรุปเทียบทุกแพลตฟอร์มในช็อตเดียว (สำหรับ dashboard ภาพรวม) — ออร์เดอร์/ตัด/ส่ง/ค้างส่ง/คืน */
 export async function platformOverview(): Promise<PlatformOverviewRow[]> {
   try {
