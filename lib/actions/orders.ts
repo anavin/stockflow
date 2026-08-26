@@ -92,12 +92,17 @@ export async function saveOrder(input: OrderInput): Promise<SaveResult> {
     return { ok: false, error: `ของแถม "${bigFree.product}" จำนวน ${bigFree.qty} เกิน 30 ไม่ได้` };
   }
 
-  const date = o.doc_date ? new Date(o.doc_date + "T00:00:00") : new Date();
-  const ml = monthLabel(date);
+  // ล็อก "วันที่ใบเบิก" = วันที่สร้างจริงในระบบ (เวลาไทย) — ไม่ให้ backdate จากฟอร์ม (ค่าที่ฟอร์มส่งมาไม่ถูกใช้)
+  const bangkokToday = () => new Date(Date.now() + 7 * 3600 * 1000).toISOString().slice(0, 10);
 
   try {
     const outDoc = await tx(async (run) => {
-      const [existing] = await run<{ doc_no: string | null }>(`select doc_no from orders where order_no = $1`, [o.order_no]);
+      const [existing] = await run<{ doc_no: string | null; doc_date: string | null }>(
+        `select doc_no, to_char(doc_date,'YYYY-MM-DD') as doc_date from orders where order_no = $1`, [o.order_no]);
+      // ออเดอร์ใหม่ = วันนี้ (เวลาไทย) · ออเดอร์เดิม = คงวันที่ใบเบิกเดิม (แก้ไขไม่เปลี่ยนวัน)
+      const storedDocDate = existing?.doc_date || bangkokToday();
+      const date = new Date(storedDocDate + "T00:00:00");
+      const ml = monthLabel(date);
       let docNo = (o.doc_no || existing?.doc_no || "").trim();
       if (!docNo) docNo = await allocDocNo(run, o.platform, date);
 
@@ -116,7 +121,7 @@ export async function saveOrder(input: OrderInput): Promise<SaveResult> {
       }
 
       const vals = [
-        o.order_no, o.platform, docNo, o.doc_date || date.toISOString().slice(0, 10), ml,
+        o.order_no, o.platform, docNo, storedDocDate, ml,
         o.channel ?? o.platform, o.shop_name, o.username, o.receiver, o.phone, custType || null,
         purchaseCount, o.district, o.subdistrict, o.province, o.postcode, o.address, o.campaign,
         o.note, o.box_scent, o.order_date,

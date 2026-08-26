@@ -2,8 +2,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import Combobox from "./Combobox";
-import DatePicker from "./DatePicker";
 import CustomerSuggest from "./CustomerSuggest";
+import DatePicker from "./DatePicker";
 import CustomerHistoryCard from "./CustomerHistoryCard";
 import PostcodeSearch from "./PostcodeSearch";
 import type { PostcodeHit } from "@/lib/actions/orders";
@@ -306,8 +306,11 @@ export default function OrderForm({ platform = "Shopee", products, sizes, provin
             {dupWarn && <div className="mt-1 text-[11px] text-amber-600">{dupWarn}</div>}
           </div>
           <div>
-            <label className="label">วันที่</label>
-            <DatePicker value={f.doc_date} onChange={(v) => set({ doc_date: v })} />
+            <label className="label">วันที่ใบเบิก <span className="text-faint">(ล็อกอัตโนมัติ)</span></label>
+            <div className="input flex items-center justify-between bg-soft">
+              <span className="font-medium text-ink">{f.doc_date || todayStr()}</span>
+              <span className="text-[11px] text-faint">{editing ? "วันที่สร้างเดิม" : "= วันที่สร้างวันนี้"}</span>
+            </div>
           </div>
           <div>
             <label className="label inline-flex items-center gap-1.5">
