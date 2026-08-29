@@ -1,5 +1,5 @@
 "use server";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { q, tx } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth/session";
 import { can, isAdmin } from "@/lib/auth/roles";
@@ -205,7 +205,7 @@ export async function confirmIssueByOrder(
       } catch { /* stock_unit ยังไม่พร้อม — ข้าม (traceability เสริม) */ }
     }
     if (out.ok) await logActivity("stock.issue", `${on}${out.doc_no ? " · " + out.doc_no : ""}`);
-    revalidatePath("/stock");
+    revalidatePath("/stock"); revalidateTag("dashboard");
     revalidatePath("/stock/moves");
     revalidatePath("/stock/units");
     return out;
@@ -267,7 +267,7 @@ export async function reverseIssue(orderNo: string): Promise<{ ok: boolean; erro
                where order_no = $1 and status = 'issued'`, [on]);
     } catch { /* stock_unit ยังไม่พร้อม — ข้าม */ }
     await logActivity("stock.reverse", on);
-    revalidatePath("/stock"); revalidatePath("/stock/moves"); revalidatePath("/stock/units");
+    revalidatePath("/stock"); revalidateTag("dashboard"); revalidatePath("/stock/moves"); revalidatePath("/stock/units");
     return { ok: true };
   } catch (e: any) {
     return { ok: false, error: e?.message || "ยกเลิกไม่สำเร็จ" };
@@ -311,7 +311,7 @@ export async function receiveStock(product: string, size: string, qty: number, n
       return row.qty;
     });
     await logActivity("stock.receive", `${product.trim()} ${size.trim()} +${amt}`);
-    revalidatePath("/stock"); revalidatePath("/stock/moves");
+    revalidatePath("/stock"); revalidateTag("dashboard"); revalidatePath("/stock/moves");
     return { ok: true, balance };
   } catch (e: any) {
     return { ok: false, error: e?.message || "รับเข้าไม่สำเร็จ" };
@@ -351,7 +351,7 @@ export async function receiveUnits(product: string, size: string, skus: string[]
       return { added, balance: row.qty, dupes };
     });
     await logActivity("stock.receive", `${product.trim()} ${size.trim()} +${out.added} SKU`);
-    revalidatePath("/stock"); revalidatePath("/stock/moves"); revalidatePath("/stock/units");
+    revalidatePath("/stock"); revalidateTag("dashboard"); revalidatePath("/stock/moves"); revalidatePath("/stock/units");
     return { ok: true, ...out, skus: list };
   } catch (e: any) { return { ok: false, error: e?.message || "รับเข้าไม่สำเร็จ" }; }
 }
@@ -409,7 +409,7 @@ export async function receiveUnitsBatch(
       return { added: totalAdded, dupes, perLine };
     });
     await logActivity("stock.receive", `รวม ${out.added} SKU (${out.perLine.length} รายการ)`);
-    revalidatePath("/stock"); revalidatePath("/stock/moves"); revalidatePath("/stock/units");
+    revalidatePath("/stock"); revalidateTag("dashboard"); revalidatePath("/stock/moves"); revalidatePath("/stock/units");
     return { ok: true, ...out };
   } catch (e: any) { return { ok: false, error: e?.message || "รับเข้าไม่สำเร็จ" }; }
 }
@@ -451,7 +451,7 @@ export async function assignUnitSkus(product: string, size: string, skus: string
       if (added === 0) throw new Error("SKU ที่ใส่มีอยู่ในระบบแล้วทั้งหมด");
       return { added, dupes };
     });
-    revalidatePath("/stock/units"); revalidatePath("/stock");
+    revalidatePath("/stock/units"); revalidatePath("/stock"); revalidateTag("dashboard");
     return { ok: true, ...out };
   } catch (e: any) { return { ok: false, error: e?.message || "ผูก SKU ไม่สำเร็จ" }; }
 }
@@ -492,7 +492,7 @@ export async function deleteUnit(sku: string): Promise<{ ok: boolean; error?: st
           [m.product, m.size, row.qty, `ลบ SKU`, s, user.id]);
       }
     });
-    revalidatePath("/stock/units"); revalidatePath("/stock");
+    revalidatePath("/stock/units"); revalidatePath("/stock"); revalidateTag("dashboard");
     return { ok: true };
   } catch (e: any) { return { ok: false, error: e?.message || "ลบไม่สำเร็จ" }; }
 }
@@ -518,7 +518,7 @@ export async function adjustStock(product: string, size: string, newQty: number,
                  values ($1,$2,$3,$4,'adjust',$5,$6)`, [m.product, m.size, diff, target, note || `ปรับยอดเป็น ${target}`, user.id]);
     });
     await logActivity("stock.adjust", `${product.trim()} ${size.trim()} → ${target}`);
-    revalidatePath("/stock"); revalidatePath("/stock/moves");
+    revalidatePath("/stock"); revalidateTag("dashboard"); revalidatePath("/stock/moves");
     return { ok: true };
   } catch (e: any) {
     return { ok: false, error: e?.message || "ปรับยอดไม่สำเร็จ" };

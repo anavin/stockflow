@@ -1,5 +1,5 @@
 "use server";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { z } from "zod";
 import { q, tx } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth/session";
@@ -15,6 +15,7 @@ function revalidateOrderLists() {
     revalidatePath(platformBase(p.code));
     revalidatePath(`${platformBase(p.code)}/trash`);
   }
+  revalidateTag("dashboard");   // ตัวเลขบนแดชบอร์ด (cache 30 วิ) สดทันทีหลังเขียนออเดอร์
 }
 
 const itemSchema = z.object({
@@ -97,8 +98,18 @@ export async function saveOrder(input: OrderInput): Promise<SaveResult> {
 
   try {
     const outDoc = await tx(async (run) => {
-      const [existing] = await run<{ doc_no: string | null; doc_date: string | null }>(
-        `select doc_no, to_char(doc_date,'YYYY-MM-DD') as doc_date from orders where order_no = $1`, [o.order_no]);
+      const [existing] = await run<{ doc_no: string | null; doc_date: string | null; stock_issued_at: string | null; shipped_at: string | null }>(
+        `select doc_no, to_char(doc_date,'YYYY-MM-DD') as doc_date, stock_issued_at, shipped_at from orders where order_no = $1`, [o.order_no]);
+      // กันแก้ "รายการสินค้า" หลังตัดสต๊อก/ส่งแล้ว — ทำให้ยอดรับคืน/คืนสต๊อกเพี้ยน (แก้ที่อยู่/โน้ตยังได้)
+      if (existing && (existing.stock_issued_at || existing.shipped_at)) {
+        const prev = await run<{ product: string; size: string; is_free: boolean; qty: number }>(
+          `select product, size, is_free, qty from order_items where order_no = $1`, [o.order_no]);
+        const sig = (its: { product?: string | null; size?: string | null; is_free?: boolean; qty: number | string }[]) =>
+          its.map((it) => `${(it.product || "").trim()}|${(it.size || "").trim()}|${it.is_free ? 1 : 0}|${Number(it.qty) || 0}`).sort().join(";");
+        if (sig(prev) !== sig(o.items)) {
+          throw new Error("ใบเบิกนี้ตัดสต๊อก/ส่งแล้ว — แก้รายการสินค้าไม่ได้ (ต้องยกเลิกการตัดสต๊อกก่อน)");
+        }
+      }
       // ออเดอร์ใหม่ = วันนี้ (เวลาไทย) · ออเดอร์เดิม = คงวันที่ใบเบิกเดิม (แก้ไขไม่เปลี่ยนวัน)
       const storedDocDate = existing?.doc_date || bangkokToday();
       const date = new Date(storedDocDate + "T00:00:00");
@@ -492,8 +503,10 @@ export async function bulkSaveOrders(orders: OrderWithItems[]): Promise<{ ok: bo
     const arr = groups.get(k); if (arr) arr.push(o); else groups.set(k, [o]);
   }
   const groupArr = [...groups];
-  for (let gi = 0; gi < groupArr.length; gi += 10) {   // ทีละ 10 ไม่ให้ล้น pool (max 10)
-    await Promise.all(groupArr.slice(gi, gi + 10).map(async ([k, list]) => {
+  // ความขนานต้องไม่เกินขนาด pool (default 3) ไม่งั้น tx ที่รอ connection จะ timeout → "failed" ปลอม
+  const CONC = Math.max(1, Number(process.env.PG_POOL_MAX || 3));
+  for (let gi = 0; gi < groupArr.length; gi += CONC) {
+    await Promise.all(groupArr.slice(gi, gi + CONC).map(async ([k, list]) => {
       const ons = list.map((o) => o.order_no);
       let existing = 0;
       try {
@@ -518,7 +531,7 @@ export async function bulkSaveOrders(orders: OrderWithItems[]): Promise<{ ok: bo
   // บันทึกทีละชุด (chunk) ขนานกัน → เร็วกว่า loop ทีละใบมาก (round-trip ข้ามทวีป) ·
   //   ปลอดภัย: doc_no ใช้ counter atomic, แต่ละใบ order_no ต่างกันจึงไม่ชนกัน · จำกัดไม่ให้ล้น pool (max 10)
   const failedOrders: string[] = [];
-  const CHUNK = 6;
+  const CHUNK = Math.max(1, Number(process.env.PG_POOL_MAX || 3));   // ≤ pool size กัน connection timeout
   for (let i = 0; i < orders.length; i += CHUNK) {
     const results = await Promise.all(orders.slice(i, i + CHUNK).map(async (ord) => {
       try {

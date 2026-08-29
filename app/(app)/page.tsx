@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { unstable_cache } from "next/cache";
 import { requireDashboard } from "@/lib/auth/require-user";
 import { resolvePlatform, platformBase, enabledPlatforms, platformColor } from "@/lib/config";
 import { dashboardStats, listStock, listOrders, topProducts, ordersTrend, dailyIssueStatus, fdaExpirySummary, shipSummary, platformOverview, platformDaily } from "@/lib/queries";
@@ -12,26 +13,35 @@ import {
 
 export const dynamic = "force-dynamic";
 
+// รวม query aggregate ของแดชบอร์ดทั้งหมดเป็นก้อนเดียว cache 30 วิ (tag "dashboard")
+// — เดิมยิง ~12 query เต็มตารางทุกครั้งที่โหลด (เสี่ยง egress) · การเขียนออเดอร์/สต๊อก bump tag ให้สดทันที
+const getDashboardData = unstable_cache(
+  async (pf: string | undefined) => {
+    const multi = !pf && enabledPlatforms().length > 1;
+    const [s, lowStock, recent, top, trend, daily, fda, ship, overview, daily14] = await Promise.all([
+      dashboardStats(pf),
+      listStock({ lowOnly: true, limit: 6 }),
+      listOrders({ platform: pf, limit: 20 }),
+      topProducts(10),
+      ordersTrend(6, pf),
+      dailyIssueStatus(pf, 5),
+      fdaExpirySummary(),
+      shipSummary(pf),
+      multi ? platformOverview() : Promise.resolve([] as Awaited<ReturnType<typeof platformOverview>>),
+      multi ? platformDaily(14) : Promise.resolve([] as Awaited<ReturnType<typeof platformDaily>>),
+    ]);
+    return { s, lowStock, recent, top, trend, daily, fda, ship, overview, daily14 };
+  },
+  ["dashboard-data"],
+  { revalidate: 30, tags: ["dashboard"] },
+);
+
 export default async function Dashboard({ searchParams }: { searchParams: Promise<{ platform?: string }> }) {
   const user = await requireDashboard();
   const pf = resolvePlatform((await searchParams).platform)?.code;   // undefined = ทุกแพลตฟอร์ม
   const base = pf ? platformBase(pf) : "/shopee";                    // ลิงก์ "ดูทั้งหมด"/สร้างใบเบิก
-  // ยิงขนานผ่าน pool (เร็ว) — บน Vercel/Node connection pool รองรับ concurrent query ปกติ
-  const [s, lowStock, recent, top, trend, daily, fda, ship] = await Promise.all([
-    dashboardStats(pf),
-    listStock({ lowOnly: true, limit: 6 }),
-    listOrders({ platform: pf, limit: 20 }),
-    topProducts(10),
-    ordersTrend(6, pf),
-    dailyIssueStatus(pf, 5),
-    fdaExpirySummary(),
-    shipSummary(pf),
-  ]);
+  const { s, lowStock, recent, top, trend, daily, fda, ship, overview, daily14 } = await getDashboardData(pf);
   const platforms = enabledPlatforms();
-  // ตารางเทียบแพลตฟอร์ม (รวม + รายวัน) — เฉพาะหน้าภาพรวม "ทั้งหมด" ที่มีหลายแพลตฟอร์ม
-  const [overview, daily14] = !pf && platforms.length > 1
-    ? await Promise.all([platformOverview(), platformDaily(14)])
-    : [[], []];
   const fdaAlert = fda.expired + fda.d10 + fda.d15 + fda.d30;
 
   const fulfill = s.ordersTotal > 0 ? s.issuedTotal / s.ordersTotal : 0;

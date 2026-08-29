@@ -36,6 +36,7 @@ export async function POST(req: Request) {
   const file = form.get("file");
   const mode = txt(form.get("mode")) || "preview";
   if (!(file instanceof File)) return NextResponse.json({ ok: false, error: "ไม่พบไฟล์" }, { status: 400 });
+  if (file.size > 12 * 1024 * 1024) return NextResponse.json({ ok: false, error: "ไฟล์ใหญ่เกิน 12MB" }, { status: 413 });
 
   let wb: ExcelJS.Workbook;
   try { wb = new ExcelJS.Workbook(); await wb.xlsx.load(Buffer.from(await file.arrayBuffer()) as any); }

@@ -50,6 +50,8 @@ export async function loginWithPassword(username: string, password: string): Pro
   if (!(await verifyBcrypt(password, user.password_hash))) return bad();
 
   await logAttempt(username, true);
+  // ล็อกอินสำเร็จ → ล้างตัวนับ fail (กัน 4 fail + สำเร็จ + fail อีก 1 = โดนล็อก)
+  await q(`delete from login_attempts where lower(username) = lower($1) and success = false`, [username]);
   await q(`update users set last_login_at = now() where id = $1`, [user.id]);
 
   const { password_hash, ...safe } = user;

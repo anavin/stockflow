@@ -1,5 +1,5 @@
 "use server";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { q, tx } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth/session";
 import { can } from "@/lib/auth/roles";
@@ -7,7 +7,7 @@ import { logActivity } from "@/lib/activity";
 import { isStockTracked, enabledPlatforms, platformBase } from "@/lib/config";
 
 /** revalidate หน้ารายการใบเบิกทุกแพลตฟอร์ม (ป้ายสถานะคืนโชว์บนรายการ) */
-const revalidateAllOrderLists = () => { for (const p of enabledPlatforms()) revalidatePath(platformBase(p.code)); };
+const revalidateAllOrderLists = () => { for (const p of enabledPlatforms()) revalidatePath(platformBase(p.code));  revalidateTag("dashboard"); };
 
 // ── จับคู่ SKU สต๊อกจริงแบบ normalize (ลอกจาก stock.ts — ให้คืน/ตัด ตรงแถวเดียวกัน) ──
 type Run = <R = any>(sql: string, p?: any[]) => Promise<R[]>;
@@ -82,9 +82,10 @@ export async function confirmReturn(orderNo: string, entries: ReturnEntry[], rea
   try {
     const out = await tx<ReturnResult>(async (run) => {
       // ล็อกแถว order ตลอด tx (กันรับคืน + ยกเลิกชนกัน)
-      const [o] = await run<{ shipped_at: string | null; stock_issued_at: string | null }>(
-        `select shipped_at, stock_issued_at from orders where order_no = $1 for update`, [on]);
+      const [o] = await run<{ shipped_at: string | null; stock_issued_at: string | null; deleted_at: string | null }>(
+        `select shipped_at, stock_issued_at, deleted_at from orders where order_no = $1 for update`, [on]);
       if (!o) throw new Error(`ไม่พบออเดอร์ ${on}`);
+      if (o.deleted_at) throw new Error("ออเดอร์นี้ถูกลบแล้ว รับคืนไม่ได้");
       if (!o.shipped_at) throw new Error("รับคืนได้เฉพาะออเดอร์ที่ส่งแล้ว");
 
       const items = await run<{ line_no: number; product: string; size: string; qty: number }>(

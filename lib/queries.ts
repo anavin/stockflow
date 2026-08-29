@@ -1164,7 +1164,7 @@ export async function platformOverview(): Promise<PlatformOverviewRow[]> {
     return await q<PlatformOverviewRow>(
       `select coalesce(platform,'Shopee') as platform,
               count(*)::int as orders,
-              count(*) filter (where date_trunc('month', coalesce(order_date, doc_date)) = date_trunc('month', (now() at time zone 'Asia/Bangkok')))::int as month,
+              count(*) filter (where date_trunc('month', coalesce(doc_date, order_date)) = date_trunc('month', (now() at time zone 'Asia/Bangkok')))::int as month,
               count(*) filter (where stock_issued_at is not null)::int as issued,
               count(*) filter (where shipped_at is not null)::int as shipped,
               count(*) filter (where stock_issued_at is not null and shipped_at is null)::int as pending,
@@ -1177,7 +1177,7 @@ export async function platformOverview(): Promise<PlatformOverviewRow[]> {
       const rows = await q<Omit<PlatformOverviewRow, "returned">>(
         `select coalesce(platform,'Shopee') as platform,
                 count(*)::int as orders,
-                count(*) filter (where date_trunc('month', coalesce(order_date, doc_date)) = date_trunc('month', (now() at time zone 'Asia/Bangkok')))::int as month,
+                count(*) filter (where date_trunc('month', coalesce(doc_date, order_date)) = date_trunc('month', (now() at time zone 'Asia/Bangkok')))::int as month,
                 count(*) filter (where stock_issued_at is not null)::int as issued,
                 count(*) filter (where shipped_at is not null)::int as shipped,
                 count(*) filter (where stock_issued_at is not null and shipped_at is null)::int as pending
