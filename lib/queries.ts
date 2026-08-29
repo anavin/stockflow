@@ -419,6 +419,7 @@ export async function dailyIssueStatus(platform?: string, days = 14): Promise<Da
               count(stock_issued_at)::int as issued
        from orders
        where deleted_at is null${pc}
+         and (created_at at time zone 'Asia/Bangkok')::date >= ((now() at time zone 'Asia/Bangkok')::date - ($1::int - 1))
          and abs((created_at at time zone 'Asia/Bangkok')::date - coalesce(doc_date, order_date)) <= 1
        group by 1
        order by day desc limit $1`,
@@ -711,7 +712,7 @@ export async function dashboardStats(platform?: string): Promise<DashStats> {
             and abs((created_at at time zone 'Asia/Bangkok')::date - coalesce(doc_date, order_date)) <= 1) as "ordersToday",
          (select count(*)::int from orders where deleted_at is null${pc} and to_char(doc_date,'YYYY-MM') = to_char(current_date,'YYYY-MM')) as "ordersMonth",
          (select count(*)::int from orders where deleted_at is null${pc}${period} and stock_issued_at is not null) as "issuedTotal",
-         (select count(*)::int from orders where deleted_at is null${pc} and stock_issued_at::date = current_date) as "issuedToday",
+         (select count(*)::int from orders where deleted_at is null${pc} and (stock_issued_at at time zone 'Asia/Bangkok')::date = (now() at time zone 'Asia/Bangkok')::date) as "issuedToday",
          (select count(*)::int from stock) as skus,
          (select count(*)::int from stock where qty >= 0 and qty <= 10) as low,
          (select count(*)::int from stock where qty < 0) as negative,
