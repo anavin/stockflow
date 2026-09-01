@@ -26,22 +26,22 @@ export async function POST(req: Request) {
 
   // barcode → กลิ่น(map ชื่อ products)+ขนาด
   const barcodes = [...new Set(items.map((i: any) => String(i.barcode || "").trim()).filter(Boolean))];
-  const rows = await q<{ barcode: string; product: string; size: string }>(
-    `select btrim(pb.barcode) as barcode, coalesce(p.name, pb.scent) as product, pb.size as size
+  const rows = await q<{ barcode: string; product: string; size: string; sku: string | null }>(
+    `select btrim(pb.barcode) as barcode, coalesce(p.name, pb.scent) as product, pb.size as size, pb.sku as sku
        from product_barcodes pb
        left join products p on regexp_replace(lower(btrim(p.name)),'[^a-z0-9ก-๙]','','g')
                              = regexp_replace(lower(btrim(pb.scent)),'[^a-z0-9ก-๙]','','g')
       where btrim(pb.barcode) = any($1)`, [barcodes]);
   const map = new Map(rows.map((r) => [r.barcode, r]));
 
-  const resolved: { product: string; size: string; qty: number }[] = [];
+  const resolved: { product: string; size: string; qty: number; sku: string | null }[] = [];
   const unmatched: string[] = [];
   for (const it of items) {
     const bc = String(it.barcode || "").trim();
     const qty = Math.max(0, Number(it.qty) || 0);
     const b = map.get(bc);
     if (!b) { unmatched.push(bc); continue; }
-    resolved.push({ product: b.product, size: b.size, qty });
+    resolved.push({ product: b.product, size: b.size, qty, sku: b.sku || null });   // เติม SKU (รหัสสินค้า) อัตโนมัติจาก barcode
   }
   if (!resolved.length) return NextResponse.json({ ok: false, error: "ไม่มี barcode ที่ตรงกับระบบเลย", unmatched }, { status: 422 });
 
@@ -64,8 +64,8 @@ export async function POST(req: Request) {
         line += 1;
         await run(
           `insert into order_items (order_no, line_no, product, size, is_free, qty, unit, product_label, sku)
-           values ($1,$2,$3,$4,false,$5,'ขวด',$6,null)`,
-          [po, line, r.product, r.size, r.qty, `${r.product} ${r.size}`]);
+           values ($1,$2,$3,$4,false,$5,'ขวด',$6,$7)`,
+          [po, line, r.product, r.size, r.qty, `${r.product} ${r.size}`, r.sku]);
       }
     });
   } catch (e: any) { return NextResponse.json({ ok: false, error: e?.message || "บันทึกไม่สำเร็จ" }, { status: 500 }); }
