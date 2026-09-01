@@ -49,6 +49,12 @@ const orderSchema = z.object({
   note: z.string().trim().optional().nullable(),
   box_scent: z.string().trim().optional().nullable(),
   order_date: z.string().trim().optional().nullable(),
+  // ฟิลด์ Office (ร้านขาย/จัดส่งเอง) — แพลตฟอร์มอื่นเว้นว่าง
+  price: z.preprocess((v) => (v === "" || v == null ? null : v), z.coerce.number().nullable()).optional(),
+  discount: z.preprocess((v) => (v === "" || v == null ? null : v), z.coerce.number().nullable()).optional(),
+  payment_method: z.string().trim().optional().nullable(),
+  shipping_carrier: z.string().trim().optional().nullable(),
+  tracking_no: z.string().trim().optional().nullable(),
   items: z.array(itemSchema).min(1, "ต้องมีอย่างน้อย 1 รายการ"),
 });
 
@@ -59,6 +65,7 @@ const ORDER_COLS = [
   "order_no", "platform", "doc_no", "doc_date", "month_label", "channel", "shop_name",
   "username", "receiver", "phone", "customer_type", "purchase_count", "district",
   "subdistrict", "province", "postcode", "address", "campaign", "note", "box_scent", "order_date",
+  "price", "discount", "payment_method", "shipping_carrier", "tracking_no",
 ];
 
 /** Allocate the next doc number for a platform/day atomically. */
@@ -136,6 +143,7 @@ export async function saveOrder(input: OrderInput): Promise<SaveResult> {
         o.channel ?? o.platform, o.shop_name, o.username, o.receiver, o.phone, custType || null,
         purchaseCount, o.district, o.subdistrict, o.province, o.postcode, o.address, o.campaign,
         o.note, o.box_scent, o.order_date,
+        o.price ?? null, o.discount ?? null, o.payment_method || null, o.shipping_carrier || null, o.tracking_no || null,
       ];
       const ph = ORDER_COLS.map((_, i) => `$${i + 1}`).join(",");
       const updates = ORDER_COLS.slice(1).map((c) => `${c} = excluded.${c}`).join(", ");

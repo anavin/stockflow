@@ -13,10 +13,14 @@ import { saveOrder, orderExists, customerHistory, type OrderInput } from "@/lib/
 import { CUSTOMER_TYPES, platformColor } from "@/lib/config";
 import type { OrderWithItems } from "@/lib/types";
 import type { PostcodeRow } from "@/lib/queries";
-import { Save, Printer, CheckCircle2, AlertTriangle, History, Check } from "lucide-react";
+import { Save, Printer, CheckCircle2, AlertTriangle, History, Check, Wallet, Truck } from "lucide-react";
 
 // เบอร์โทร: เก็บเฉพาะตัวเลข + - เว้นวรรค (กันพิมพ์ตัวอักษร)
 const cleanPhone = (v: string) => v.replace(/[^0-9\-+ ]/g, "");
+// ตัวเลือกสำหรับใบเบิก Office (ร้านขาย/จัดส่งเอง)
+const PAYMENT_METHODS = ["Cash", "K Shop", "K Shop Credit Card", "Omise"];
+const CARRIERS = ["ไปรษณีย์ไทย", "Flash Express", "J&T Express", "Kerry", "Shopee Express", "Lalamove", "Grab", "รับเอง"];
+const cleanMoney = (v: string) => v.replace(/[^0-9.]/g, "");
 const cleanOrderNo = (v: string) => v.replace(/\s+/g, "").toUpperCase();
 
 type Props = {
@@ -40,6 +44,7 @@ export default function OrderForm({ platform = "Shopee", products, sizes, provin
   const router = useRouter();
   const base = `/${platform.toLowerCase()}`;   // path ฐานของแพลตฟอร์ม (กลับหน้ารายการ)
   const editing = !!initial;
+  const isOffice = (initial?.platform || platform) === "Office";   // Office = ร้านขาย/จัดส่งเอง → มีราคา/ชำระเงิน/ขนส่ง
 
   const [f, setF] = useState({
     order_no: initial?.order_no ?? "",
@@ -61,6 +66,11 @@ export default function OrderForm({ platform = "Shopee", products, sizes, provin
     note: initial?.note ?? "",
     box_scent: initial?.box_scent ?? "",
     order_date: initial?.order_date ?? "",
+    price: initial?.price?.toString() ?? "",
+    discount: initial?.discount?.toString() ?? "",
+    payment_method: initial?.payment_method ?? "",
+    shipping_carrier: initial?.shipping_carrier ?? "",
+    tracking_no: initial?.tracking_no ?? "",
   });
 
   const [items, setItems] = useState<ItemDraft[]>(
@@ -356,11 +366,13 @@ export default function OrderForm({ platform = "Shopee", products, sizes, provin
             <label className="label">ชื่อผู้รับ <span className="text-brand">*</span></label>
             <CustomerSuggest value={f.receiver} onChange={(v) => { set({ receiver: v }); setReturnWarn(0); }} onPick={fillFromCustomer} placeholder="พิมพ์เพื่อค้นหาลูกค้าเดิม" invalid={fieldErrors.receiver} />
           </div>
-          {/* ซ่อนเบอร์โทรไว้ก่อน (ยังเก็บใน DB + ใช้จับคู่ลูกค้าเดิม) — เอากลับมาโชว์ได้โดยเปิดบล็อกนี้
-          <div>
-            <label className="label">เบอร์โทร</label>
-            <CustomerSuggest value={f.phone} onChange={(v) => { set({ phone: cleanPhone(v) }); setReturnWarn(0); }} onPick={fillFromCustomer} placeholder="พิมพ์เบอร์เพื่อค้นหา" type="tel" />
-          </div> */}
+          {/* เบอร์โทร — โชว์เฉพาะ Office (แพลตฟอร์มอื่นซ่อนไว้ ยังเก็บใน DB + ใช้จับคู่ลูกค้าเดิม) */}
+          {isOffice && (
+            <div>
+              <label className="label">เบอร์โทร</label>
+              <CustomerSuggest value={f.phone} onChange={(v) => { set({ phone: cleanPhone(v) }); setReturnWarn(0); }} onPick={fillFromCustomer} placeholder="พิมพ์เบอร์เพื่อค้นหา" type="tel" />
+            </div>
+          )}
           <div className="grid grid-cols-2 gap-2">
             <div>
               <label className="label">ลูกค้า</label>
@@ -460,6 +472,47 @@ export default function OrderForm({ platform = "Shopee", products, sizes, provin
             <textarea className="input min-h-[56px]" value={f.note} onChange={(e) => set({ note: e.target.value })} />
           </div>
         </div>
+
+        {/* ── การขาย & จัดส่ง — เฉพาะ Office (ร้านจัดส่งเอง) ── */}
+        {isOffice && (
+          <div className="mt-5 rounded-xl border border-brand-200 bg-brand-50/40 p-4">
+            <h3 className="mb-3 flex items-center gap-1.5 text-sm font-semibold text-brand-700"><Wallet size={15} /> การขาย & จัดส่ง (Office)</h3>
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+              <div>
+                <label className="label">ราคาสินค้า (บาท)</label>
+                <input className="input text-right tabular-nums" inputMode="decimal" value={f.price}
+                  onChange={(e) => set({ price: cleanMoney(e.target.value) })} placeholder="0.00" />
+              </div>
+              <div>
+                <label className="label">ส่วนลด (บาท)</label>
+                <input className="input text-right tabular-nums" inputMode="decimal" value={f.discount}
+                  onChange={(e) => set({ discount: cleanMoney(e.target.value) })} placeholder="0.00" />
+              </div>
+              <div>
+                <label className="label">ยอดสุทธิ <span className="text-faint">(auto)</span></label>
+                <div className="input flex items-center justify-end bg-soft font-semibold tabular-nums text-ink">
+                  {f.price ? `${Math.max(0, (parseFloat(f.price) || 0) - (parseFloat(f.discount) || 0)).toLocaleString("th-TH")} ฿` : "—"}
+                </div>
+              </div>
+              <div>
+                <label className="label">ช่องทางชำระเงิน</label>
+                <select className="input" value={f.payment_method} onChange={(e) => set({ payment_method: e.target.value })}>
+                  <option value="">— เลือก —</option>
+                  {PAYMENT_METHODS.map((p) => <option key={p} value={p}>{p}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="label inline-flex items-center gap-1"><Truck size={13} className="text-muted" /> ขนส่ง</label>
+                <Combobox value={f.shipping_carrier} onChange={(v) => set({ shipping_carrier: v })} options={CARRIERS} placeholder="เลือก / พิมพ์ขนส่ง" />
+              </div>
+              <div>
+                <label className="label">เลขพัสดุ (Tracking)</label>
+                <input className="input font-mono" value={f.tracking_no}
+                  onChange={(e) => set({ tracking_no: e.target.value.replace(/\s/g, "") })} placeholder="เลขพัสดุ" />
+              </div>
+            </div>
+          </div>
+        )}
       </section>
 
       <div className="sticky bottom-0 flex flex-wrap gap-3 border-t border-line bg-canvas/90 py-4 backdrop-blur">

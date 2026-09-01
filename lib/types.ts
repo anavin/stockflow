@@ -36,6 +36,12 @@ export type Order = {
   note?: string | null;
   box_scent?: string | null;
   order_date?: string | null;
+  // Office (ร้านขาย/จัดส่งเอง)
+  price?: number | null;
+  discount?: number | null;
+  payment_method?: string | null;
+  shipping_carrier?: string | null;
+  tracking_no?: string | null;
   created_by?: number | null;
   created_at?: string;
   updated_at?: string;
