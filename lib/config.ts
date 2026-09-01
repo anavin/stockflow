@@ -7,7 +7,7 @@ export const APP_TITLE = "ระบบเบิกสินค้า — Lab Par
 export const COMPANY_NAME = "บริษัท ทัช ไดเวอร์เจนซ์ จำกัด";
 export const COMPANY_NAME_EN = "Touch Divergence Co., Ltd.";
 
-export type PlatformCode = "Shopee" | "Lazada" | "Tiktok" | "Line" | "Website" | "Office";
+export type PlatformCode = "Shopee" | "Lazada" | "Tiktok" | "Line" | "Website" | "Office" | "CTW";
 
 /**
  * Platforms — `enabled` = โผล่ในเมนู/สร้างใบเบิกได้; `canImport` = มี parser ไฟล์ export เฉพาะ
@@ -21,6 +21,7 @@ export const PLATFORMS: { code: PlatformCode; name: string; prefix: string; enab
   { code: "Line", name: "Line", prefix: "LN", enabled: true, canImport: false },
   { code: "Website", name: "Website", prefix: "WEB", enabled: true, canImport: false },
   { code: "Office", name: "Office", prefix: "OFF", enabled: true, canImport: false },
+  { code: "CTW", name: "CTW (Central World)", prefix: "WPO", enabled: true, canImport: false },   // ใบเบิกโอนสาขา — เข้าผ่าน API จากระบบ CTW
 ];
 
 export type Platform = (typeof PLATFORMS)[number];
@@ -35,6 +36,7 @@ export const PLATFORM_COLORS: Record<string, string> = {
   Line: "#06c755",     // เขียว
   Website: "#2563eb",  // ฟ้า
   Office: "#475569",   // เทา
+  CTW: "#9333ea",      // ม่วง (สาขา Central World)
 };
 /** สีเดี่ยวของแพลตฟอร์ม (fallback เทากลางถ้าไม่รู้จัก) — ใช้กับแถบ/จุด/พื้นแท็บ */
 export const platformColor = (code?: string) => PLATFORM_COLORS[code || ""] || "#94a0b1";

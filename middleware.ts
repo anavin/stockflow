@@ -7,7 +7,8 @@ const PUBLIC = new Set(["/login", "/api/login", "/api/ping", "/api/cron/cleanup"
 
 export function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
-  if (PUBLIC.has(pathname) || pathname.startsWith("/_next/") || pathname === "/favicon.ico") {
+  // /api/ctw/* = API เชื่อมระบบ CTW (กันด้วย CTW_API_KEY เอง, external ไม่มี cookie)
+  if (PUBLIC.has(pathname) || pathname.startsWith("/api/ctw/") || pathname.startsWith("/_next/") || pathname === "/favicon.ico") {
     return NextResponse.next();
   }
   const token = req.cookies.get(SESSION_COOKIE)?.value;
