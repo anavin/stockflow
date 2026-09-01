@@ -3,6 +3,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { deleteOrder, bulkDeleteOrders } from "@/lib/actions/orders";
+import { canCreatePlatform } from "@/lib/config";
 import type { OrderRow } from "@/lib/types";
 import { Printer, Pencil, Trash2, PackageOpen, X, Zap, Clock, Check } from "lucide-react";
 
@@ -74,11 +75,14 @@ export default function OrdersTable({ orders, platform = "Shopee" }: { orders: O
   }
 
   if (orders.length === 0) {
+    const creatable = canCreatePlatform(platform);
     return (
       <div className="card flex flex-col items-center gap-3 py-16 text-center">
         <PackageOpen size={40} className="text-faint" />
-        <div className="text-sm text-muted">ยังไม่มีใบเบิก — สร้างใหม่หรือ นำเข้าจาก Excel/CSV</div>
-        <Link href={`${base}/new`} className="btn-primary">สร้างใบเบิกแรก</Link>
+        <div className="text-sm text-muted">
+          {creatable ? "ยังไม่มีใบเบิก — สร้างใหม่หรือ นำเข้าจาก Excel/CSV" : "ยังไม่มีใบเบิก — รอใบเบิกจากระบบ CTW เข้ามาอัตโนมัติ"}
+        </div>
+        {creatable && <Link href={`${base}/new`} className="btn-primary">สร้างใบเบิกแรก</Link>}
       </div>
     );
   }
