@@ -41,7 +41,7 @@ Base URL: `https://labparfumo-stock.vercel.app`
   "status": "dispatched",              // created → issued → dispatched → received
   "issued_at": "...", "dispatched_at": "...", "received_at": null,
   "items": [ { "product": "Aqua", "size": "10 ml.", "qty": 3 } ],
-  "skus":  [ { "sku": "AQA-...", "product": "Aqua", "size": "10 ml." } ]   // ชิ้นจริงที่ส่ง
+  "skus":  [ { "sku": "AQA-...", "product": "Aqua", "size": "10 ml.", "barcode": "8857128012026" } ]   // ชิ้นจริงที่ส่ง
 }
 ```
 CTW poll ตัวนี้จนกว่า `status = "dispatched"` แล้วเอา `skus` ไปลงสต๊อกสาขาตอนกดรับ

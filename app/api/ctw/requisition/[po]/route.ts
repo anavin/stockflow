@@ -18,8 +18,8 @@ export async function GET(req: Request, ctx: { params: Promise<{ po: string }> }
 
   const items = await q<{ product: string; size: string; qty: number }>(
     `select product, size, qty::float8 as qty from order_items where order_no = $1 order by line_no`, [po]);
-  const skus = await q<{ sku: string; product: string; size: string }>(
-    `select sku, product, size from stock_unit where order_no = $1 order by product, size, sku`, [po]);
+  const skus = await q<{ sku: string; product: string; size: string; barcode: string | null }>(
+    `select sku, product, size, barcode from stock_unit where order_no = $1 order by product, size, sku`, [po]);
 
   const status = o.ctw_received_at ? "received" : o.shipped_at ? "dispatched" : o.stock_issued_at ? "issued" : "created";
   return NextResponse.json({
