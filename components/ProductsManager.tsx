@@ -13,13 +13,14 @@ const grank = (g: string) => { const i = GRADE_ORDER.indexOf(g); return i < 0 ? 
 const sizeMl = (s: string) => { const m = (s || "").match(/[\d.]+/); return m ? parseFloat(m[0]) : 9999; };   // เรียงขนาดน้อย→มาก
 
 export default function ProductsManager({
-  products: productsRaw, sizesByScent = {}, discontinued = {}, sizes = [], fdaKeys = [], isAdmin = false,
+  products: productsRaw, sizesByScent = {}, discontinued = {}, sizes = [], fdaKeys = [], stockSizes = {}, isAdmin = false,
 }: {
   products: ProductAdminRow[];
   sizesByScent?: Record<string, ScentBarcode[]>;
   discontinued?: Record<string, string[]>;
   sizes?: string[];
   fdaKeys?: string[];         // ชื่อกลิ่น (normalize) ที่มีทะเบียน อย.
+  stockSizes?: Record<string, string[]>;   // ขนาดที่มีสต๊อก/เคยสั่ง แต่ยังไม่มีบาร์โค้ด (โชว์ให้ครบเหมือนหน้าสต๊อก)
   isAdmin?: boolean;
 }) {
   // ซ่อนบรรจุภัณฑ์ (ถุงกระดาษ ฯลฯ) — ไม่ใช่กลิ่นน้ำหอม จัดการที่วัตถุดิบ/สเป็กแทน (ยังเลือกในฟอร์มออเดอร์ได้)
@@ -47,6 +48,9 @@ export default function ProductsManager({
   const sizesFor = (n: string) => sizesByScent[normKey(n)] ?? [];
   const discSizes = (n: string) => discontinued[normKey(n)] ?? [];
   const isDisc = (n: string, size: string) => discSizes(n).includes(normKey(size));
+  // ขนาดที่มีสต๊อก/เคยสั่งแต่ยังไม่มีบาร์โค้ด (กันซ้ำกับที่มีบาร์โค้ด/เลิกผลิตแล้ว)
+  const stockOnlyFor = (n: string) => (stockSizes[normKey(n)] ?? [])
+    .filter((sz) => !sizesFor(n).some((s) => normKey(s.size) === normKey(sz)) && !discSizes(n).includes(normKey(sz)));
 
   const filtered = useMemo(() => {
     const t = q.trim().toLowerCase();
@@ -248,7 +252,7 @@ export default function ProductsManager({
 
                         {/* บาร์โค้ดต่อขนาด — แนวตั้ง เยื้องเข้า (nested ใต้ชื่อ) กล่องเต็มแถวสมดุลซ้าย-ขวา */}
                         <div className="mt-2 flex flex-col gap-1 border-l-2 border-line/70 pl-3">
-                          {barcodes.length === 0 && addId !== p.id && discSizes(p.name).length === 0 && <span className="self-start text-xs text-faint">— ยังไม่มีบาร์โค้ด</span>}
+                          {barcodes.length === 0 && addId !== p.id && discSizes(p.name).length === 0 && stockOnlyFor(p.name).length === 0 && <span className="self-start text-xs text-faint">— ยังไม่มีบาร์โค้ด</span>}
                           {barcodes.map((s) => {
                             const disc = isDisc(p.name, s.size);
                             return (
@@ -266,6 +270,15 @@ export default function ProductsManager({
                               <span className="w-14 shrink-0 line-through">{dk.replace(/ml$/, " ml")}</span> เลิกผลิต
                               <button onClick={() => toggleDisc(p.name, dk.replace(/ml$/, " ml"), false)} title="ยกเลิก 'เลิกผลิต'" className="ml-auto shrink-0 hover:text-red-800"><X size={11} /></button>
                             </span>
+                          ))}
+                          {/* ขนาดที่มีสต๊อก/เคยสั่งแต่ยังไม่มีบาร์โค้ด — โชว์ให้ตรงหน้าสต๊อก + ปุ่มเพิ่มบาร์โค้ด */}
+                          {stockOnlyFor(p.name).sort((a, b) => sizeMl(a) - sizeMl(b)).map((sz) => (
+                            <div key={"so" + sz} className="flex w-full items-center gap-2 rounded-lg border border-dashed border-amber-300 bg-amber-50/50 px-3 py-1">
+                              <span className="w-14 shrink-0 text-xs font-semibold text-amber-700">{sz.replace(/\.$/, "")}</span>
+                              <span className="min-w-0 flex-1 truncate text-xs text-amber-600">ยังไม่มีบาร์โค้ด</span>
+                              <button onClick={() => { setAddId(p.id); setASize(sz.replace(/\.$/, "")); setABarcode(""); setASku(""); }}
+                                className="shrink-0 rounded-md border border-amber-300 bg-white px-2 py-0.5 text-[11px] font-medium text-amber-700 hover:bg-amber-100">+ เพิ่มบาร์โค้ด</button>
+                            </div>
                           ))}
                           {/* ควบคุม: เลิกผลิตขนาด (เฉพาะขนาดที่มีบาร์โค้ด active) + เพิ่มรายการ */}
                           <div className="flex flex-wrap items-center gap-1.5 self-start pt-0.5">

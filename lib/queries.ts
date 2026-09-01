@@ -95,6 +95,34 @@ export async function getScentBarcodes(): Promise<Record<string, ScentBarcode[]>
   return map;
 }
 
+/** ขนาดที่ "มีสต๊อก/เคยสั่ง" แต่ยังไม่มีบาร์โค้ด — ต่อกลิ่น (key = ชื่อกลิ่น normalize)
+ *  ใช้บนหน้าจัดการกลิ่น ให้เห็นขนาดครบเหมือนหน้าสต๊อก (เช่น 1.2 ml) พร้อมปุ่มเพิ่มบาร์โค้ด */
+export async function getStockOnlySizes(): Promise<Record<string, string[]>> {
+  const NP = `regexp_replace(lower(btrim(product)),'[^a-z0-9ก-๙]','','g')`;
+  const NS = `regexp_replace(lower(btrim(size)),'[^a-z0-9ก-๙]','','g')`;
+  try {
+    const rows = await q<{ pk: string; size: string }>(
+      `with have as (
+         select ${NP} as pk, ${NS} as sk, max(size) as size
+           from (
+             select product, size from stock
+             union all
+             select oi.product, oi.size from order_items oi join orders o on o.order_no = oi.order_no where o.deleted_at is null
+           ) x
+          where coalesce(product,'') <> '' and coalesce(size,'') <> ''
+          group by 1, 2
+       )
+       select h.pk, h.size from have h
+        where not exists (
+          select 1 from product_barcodes pb
+           where regexp_replace(lower(btrim(pb.scent)),'[^a-z0-9ก-๙]','','g') = h.pk
+             and regexp_replace(lower(btrim(pb.size)),'[^a-z0-9ก-๙]','','g') = regexp_replace(lower(btrim(h.size)),'[^a-z0-9ก-๙]','','g'))`);
+    const map: Record<string, string[]> = {};
+    for (const r of rows) (map[r.pk] ??= []).push(r.size);
+    return map;
+  } catch { return {}; }
+}
+
 export type SpecOption = { label: string; for_bag: boolean };
 /** รายการสเป็กที่เปิดใช้ (+ ธงถุงกระดาษ) — สำหรับ dropdown ตอนตัดสต๊อก */
 export async function getSpecOptionsForIssue(): Promise<SpecOption[]> {

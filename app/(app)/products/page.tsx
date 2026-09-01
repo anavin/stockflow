@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { requireScents } from "@/lib/auth/require-user";
 import { can } from "@/lib/auth/roles";
-import { listProductsAdmin, getScentBarcodes, getDiscontinued, getSizes, getFdaScentKeys } from "@/lib/queries";
+import { listProductsAdmin, getScentBarcodes, getDiscontinued, getSizes, getFdaScentKeys, getStockOnlySizes } from "@/lib/queries";
 import ProductsManager from "@/components/ProductsManager";
 import { ChevronLeft, Tags, Wand2 } from "lucide-react";
 
@@ -9,7 +9,7 @@ export const dynamic = "force-dynamic";
 
 export default async function ProductsPage() {
   const me = await requireScents();
-  const [products, sizesByScent, discontinued, sizes, fdaKeys] = await Promise.all([listProductsAdmin(), getScentBarcodes(), getDiscontinued(), getSizes(), getFdaScentKeys()]);
+  const [products, sizesByScent, discontinued, sizes, fdaKeys, stockSizes] = await Promise.all([listProductsAdmin(), getScentBarcodes(), getDiscontinued(), getSizes(), getFdaScentKeys(), getStockOnlySizes()]);
   return (
     <div className="mx-auto max-w-6xl px-4 py-6 md:px-8">
       <Link href="/" className="mb-4 inline-flex items-center gap-1 text-sm text-muted hover:text-ink">
@@ -23,7 +23,7 @@ export default async function ProductsPage() {
         <Link href="/products/aliases" className="btn-ghost shrink-0" title="ชื่อพ้องกลิ่น (Shopee/Lazada เขียนไม่ตรง)"><Wand2 size={16} /> ชื่อพ้อง</Link>
         {can.issueStock(me.role) && <Link href="/stock/specs" className="btn-ghost shrink-0"><Tags size={16} /> จัดการสเป็ก</Link>}
       </div>
-      <ProductsManager products={products} sizesByScent={sizesByScent} discontinued={discontinued} sizes={sizes} fdaKeys={fdaKeys} isAdmin={can.manageUsers(me.role)} />
+      <ProductsManager products={products} sizesByScent={sizesByScent} discontinued={discontinued} sizes={sizes} fdaKeys={fdaKeys} stockSizes={stockSizes} isAdmin={can.manageUsers(me.role)} />
     </div>
   );
 }
