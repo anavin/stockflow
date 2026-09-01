@@ -60,7 +60,7 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
           </p>
         </div>
         <div className="flex gap-2">
-          <CreateOrderMenu platforms={platforms} />
+          <CreateOrderMenu platforms={platforms.filter((p) => p.canCreate)} />
           <Link href="/stock/issue" className="btn-ghost"><ScanLine size={16} /> ตัดสต๊อก</Link>
         </div>
       </div>

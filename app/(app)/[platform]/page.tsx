@@ -1,10 +1,10 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { listOrders, getMonths, countOrders } from "@/lib/queries";
-import { resolvePlatform, platformBase, canImportPlatform, platformColor, platformTint } from "@/lib/config";
+import { resolvePlatform, platformBase, canImportPlatform, canCreatePlatform, platformColor, platformTint } from "@/lib/config";
 import OrdersTable from "@/components/OrdersTable";
 import OrderFilters from "@/components/OrderFilters";
-import { PlusCircle, Upload, ChevronLeft, ChevronRight, FileDown, FileBarChart, Trash2 } from "lucide-react";
+import { PlusCircle, Upload, ChevronLeft, ChevronRight, FileDown, FileBarChart, Trash2, Info } from "lucide-react";
 import { requireCreator } from "@/lib/auth/require-user";
 
 export const dynamic = "force-dynamic";
@@ -73,9 +73,17 @@ export default async function OrdersPage({ params, searchParams }: {
           <a href={exportHref} className="btn-ghost"><FileDown size={16} /> Export</a>
           <Link href={`${base}/trash`} className="btn-ghost" title="ถังขยะ"><Trash2 size={16} /></Link>
           {canImportPlatform(pf.code) && <Link href={`${base}/import`} className="btn-ghost"><Upload size={16} /> นำเข้า</Link>}
-          <Link href={`${base}/new`} className="btn-primary"><PlusCircle size={16} /> สร้างใบเบิก</Link>
+          {canCreatePlatform(pf.code) && <Link href={`${base}/new`} className="btn-primary"><PlusCircle size={16} /> สร้างใบเบิก</Link>}
         </div>
       </div>
+
+      {!canCreatePlatform(pf.code) && (
+        <div className="mb-4 flex items-start gap-2 rounded-lg border px-4 py-3 text-sm"
+          style={{ color: pfColor, borderColor: platformTint(pf.code, "55"), backgroundColor: platformTint(pf.code, "14") }}>
+          <Info size={16} className="mt-0.5 shrink-0" />
+          <span>ใบเบิก {pf.name} <b>สร้างจากระบบ CTW แล้วเข้ามาอัตโนมัติ</b> — ไม่ต้องสร้างที่นี่ · หน้าที่ของคลัง: สแกน/ตัดสต๊อก + จัดส่ง แล้ว CTW จะกดรับในระบบเขาเอง</span>
+        </div>
+      )}
 
       <OrderFilters platform={pf.code} q={q} month={month} from={from} to={to} issued={iss} shipped={shp} months={months} />
 

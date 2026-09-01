@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getProducts, getSizes, getProvinces, getPostcodes, getProductCodes, getProductTypes, getBlockedSizesForOrder } from "@/lib/queries";
-import { resolvePlatform, platformBase, platformColor, platformTint } from "@/lib/config";
+import { resolvePlatform, platformBase, canCreatePlatform, platformColor, platformTint } from "@/lib/config";
 import OrderForm from "@/components/OrderForm";
 import { ChevronLeft } from "lucide-react";
 import { requireCreator } from "@/lib/auth/require-user";
@@ -12,6 +12,7 @@ export default async function NewOrderPage({ params }: { params: Promise<{ platf
   await requireCreator();
   const pf = resolvePlatform((await params).platform);
   if (!pf) notFound();
+  if (!canCreatePlatform(pf.code)) notFound();   // CTW ต้องมาจากระบบ CTW ผ่าน API — สร้างเองไม่ได้
   const base = platformBase(pf.code);
   const [products, sizes, provinces, postcodes, productCodes, productTypes, discontinued] = await Promise.all([
     getProducts(), getSizes(), getProvinces(), getPostcodes(), getProductCodes(), getProductTypes(), getBlockedSizesForOrder(),

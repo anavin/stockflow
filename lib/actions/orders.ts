@@ -89,6 +89,9 @@ export async function saveOrder(input: OrderInput): Promise<SaveResult> {
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? "ข้อมูลไม่ถูกต้อง" };
   const o = parsed.data;
 
+  // ใบเบิก CTW ต้องมาจากระบบ CTW ผ่าน API เท่านั้น — สร้าง/แก้เองในระบบนี้ไม่ได้ (กันใบลอยที่ CTW กดรับไม่ได้)
+  if (o.platform === "CTW") return { ok: false, error: "ใบเบิก CTW ต้องสร้างจากระบบ CTW (เข้าอัตโนมัติผ่าน API) — สร้าง/แก้เองที่นี่ไม่ได้" };
+
   // ของแถม (Free) ได้เฉพาะขนาดเล็ก — ไซต์ใหญ่ห้ามเป็นของแถม
   const badFree = o.items.find((it) => it.is_free && !isAllowedFreeSize(it.size, it.product));
   if (badFree) {

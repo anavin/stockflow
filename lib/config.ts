@@ -14,14 +14,15 @@ export type PlatformCode = "Shopee" | "Lazada" | "Tiktok" | "Line" | "Website" |
  * (Shopee/Lazada/TikTok มีแล้ว). แพลตฟอร์มที่ยังไม่มี parser (Line/Website/Office) เปิดให้กรอกเอง
  * แต่ซ่อนปุ่มนำเข้าไว้ก่อน จนกว่าจะได้ไฟล์จริงมาทำ parser (กัน parser ผิดอ่านไฟล์ผิดฟอร์แมต).
  */
-export const PLATFORMS: { code: PlatformCode; name: string; prefix: string; enabled: boolean; canImport: boolean }[] = [
-  { code: "Shopee", name: "Shopee", prefix: "SH", enabled: true, canImport: true },
-  { code: "Lazada", name: "Lazada", prefix: "LZ", enabled: true, canImport: true },
-  { code: "Tiktok", name: "TikTok", prefix: "TT", enabled: true, canImport: true },
-  { code: "Line", name: "Line", prefix: "LN", enabled: true, canImport: false },
-  { code: "Website", name: "Website", prefix: "WEB", enabled: true, canImport: false },
-  { code: "Office", name: "Office", prefix: "OFF", enabled: true, canImport: false },
-  { code: "CTW", name: "CTW (Central World)", prefix: "WPO", enabled: true, canImport: false },   // ใบเบิกโอนสาขา — เข้าผ่าน API จากระบบ CTW
+// canCreate = สร้าง/แก้ใบเบิกเองในระบบนี้ได้ (CTW = false เพราะต้องมาจากระบบ CTW ผ่าน API เท่านั้น)
+export const PLATFORMS: { code: PlatformCode; name: string; prefix: string; enabled: boolean; canImport: boolean; canCreate: boolean }[] = [
+  { code: "Shopee", name: "Shopee", prefix: "SH", enabled: true, canImport: true, canCreate: true },
+  { code: "Lazada", name: "Lazada", prefix: "LZ", enabled: true, canImport: true, canCreate: true },
+  { code: "Tiktok", name: "TikTok", prefix: "TT", enabled: true, canImport: true, canCreate: true },
+  { code: "Line", name: "Line", prefix: "LN", enabled: true, canImport: false, canCreate: true },
+  { code: "Website", name: "Website", prefix: "WEB", enabled: true, canImport: false, canCreate: true },
+  { code: "Office", name: "Office", prefix: "OFF", enabled: true, canImport: false, canCreate: true },
+  { code: "CTW", name: "CTW (Central World)", prefix: "WPO", enabled: true, canImport: false, canCreate: false },   // ใบเบิกโอนสาขา — เข้าผ่าน API จากระบบ CTW เท่านั้น
 ];
 
 export type Platform = (typeof PLATFORMS)[number];
@@ -46,6 +47,7 @@ export const platformTint = (code?: string, alpha = "1a") => platformColor(code)
 export const platformName = (code?: string) => PLATFORMS.find((p) => p.code === code)?.name || code || "";
 /** แพลตฟอร์มรองรับนำเข้าไฟล์ export หรือไม่ (มี parser เฉพาะ) */
 export const canImportPlatform = (code?: string) => !!PLATFORMS.find((p) => p.code === code)?.canImport;
+export const canCreatePlatform = (code?: string) => PLATFORMS.find((p) => p.code === code)?.canCreate !== false;
 /** map พารามิเตอร์ URL (เช่น "shopee"/"lazada") → แพลตฟอร์มที่เปิดใช้ (case-insensitive) หรือ null */
 export function resolvePlatform(param?: string): Platform | null {
   const p = (param || "").toLowerCase();
