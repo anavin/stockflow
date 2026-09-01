@@ -625,8 +625,8 @@ export async function listStock(opts: { search?: string; lowOnly?: boolean; thre
         where o.deleted_at is null and coalesce(oi.product,'') <> '' and coalesce(oi.size,'') <> ''
       union all
       -- ทุกขนาดที่มีในแคตตาล็อกบาร์โค้ด (แม้ยังไม่เคยนับ/สั่ง) → โชว์ครบเหมือนหน้าจัดการกลิ่น (qty 0)
-      -- ตัดจุดท้าย "50 ml." → "50 ml" ให้ตรงฟอร์แมตสต๊อก (ไม่แตะจุดใน 1.2 ml)
-      select scent, regexp_replace(size, '\.\s*$', ''), 0::float8, null::timestamptz from product_barcodes
+      -- ตัดจุด/ช่องว่างท้าย "50 ml." → "50 ml" ให้ตรงฟอร์แมตสต๊อก (rtrim เฉพาะท้าย ไม่แตะจุดใน 1.2 ml)
+      select scent, rtrim(size, '. '), 0::float8, null::timestamptz from product_barcodes
         where coalesce(scent,'') <> '' and coalesce(size,'') <> ''
     ),
     n as (select product, size, qty, updated_at, ${NP} as pkey, ${NS} as skey from raw)
