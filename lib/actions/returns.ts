@@ -118,6 +118,14 @@ export async function confirmReturn(orderNo: string, entries: ReturnEntry[], rea
             [sku.product, sku.size, qty]);
           await run(`insert into stock_moves (product, size, qty_change, balance, reason, order_no, note, created_by)
                      values ($1,$2,$3,$4,'return',$5,$6,$7)`, [sku.product, sku.size, qty, row.qty, on, n, user.id]);
+          // คืน serial รายชิ้นของขวดที่คืน กลับเป็น in_stock (สูงสุด = จำนวนที่คืน) → serial สมดุลกับยอด
+          await run(
+            `update stock_unit set status='in_stock', order_no=null, issued_at=null, issued_by=null
+              where sku in (select sku from stock_unit
+                where order_no=$1 and status='issued'
+                  and regexp_replace(lower(btrim(product)),'[^a-z0-9ก-๙]','','g')=regexp_replace(lower(btrim($2)),'[^a-z0-9ก-๙]','','g')
+                  and btrim(lower(size),' .')=btrim(lower($3),' .')
+                order by issued_at desc limit $4)`, [on, it.product, it.size || "", qty]);
           restocked += qty;
         } else if (e.disposition === "damaged") {
           const sku = await matchStockSku(run, it.product, it.size || "");
@@ -127,6 +135,14 @@ export async function confirmReturn(orderNo: string, entries: ReturnEntry[], rea
             [sku.product, sku.size, qty]);
           await run(`insert into damaged_moves (product, size, qty_change, balance, reason, ref, note, created_by)
                      values ($1,$2,$3,$4,'return',$5,$6,$7)`, [sku.product, sku.size, qty, row.qty, on, n, user.id]);
+          // ชำรุด → serial เป็น void (ไม่กลับเข้าคลังขาย · ไม่ถูกนับใน in_stock)
+          await run(
+            `update stock_unit set status='void'
+              where sku in (select sku from stock_unit
+                where order_no=$1 and status='issued'
+                  and regexp_replace(lower(btrim(product)),'[^a-z0-9ก-๙]','','g')=regexp_replace(lower(btrim($2)),'[^a-z0-9ก-๙]','','g')
+                  and btrim(lower(size),' .')=btrim(lower($3),' .')
+                order by issued_at desc limit $4)`, [on, it.product, it.size || "", qty]);
           damaged += qty;
         } else {
           // "none" (ไม่นับ) — ของแถม/รายการที่ไม่นับสต๊อก: บันทึกประวัติการคืนเฉยๆ ไม่แตะสต๊อก/ของชำรุด
@@ -175,6 +191,13 @@ export async function reverseReturn(returnId: number): Promise<{ ok: boolean; er
         // ลง ledger เฉพาะเมื่อแถวเปลี่ยนจริง (กัน balance เพี้ยนถ้าแถวถูกลบไปแล้ว)
         if (row) await run(`insert into stock_moves (product, size, qty_change, balance, reason, order_no, note, created_by)
                    values ($1,$2,$3,$4,'adjust',$5,'ยกเลิกการคืน',$6)`, [sku.product, sku.size, -qty, row.qty, r.order_no, user.id]);
+        // ย้อน serial: หยิบ in_stock ของกลิ่น/ขนาดนี้ กลับเป็น issued ให้ออเดอร์ (สมดุลกับ qty ที่หักคืน)
+        await run(
+          `update stock_unit set status='issued', order_no=$1, issued_at=now(), issued_by=$5
+            where sku in (select sku from stock_unit where status='in_stock'
+              and regexp_replace(lower(btrim(product)),'[^a-z0-9ก-๙]','','g')=regexp_replace(lower(btrim($2)),'[^a-z0-9ก-๙]','','g')
+              and btrim(lower(size),' .')=btrim(lower($3),' .')
+            order by received_at desc limit $4)`, [r.order_no, r.product, r.size || "", qty, user.id]);
       } else if (r.disposition === "damaged") {
         const sku = await matchStockSku(run, r.product, r.size || "");
         const [row] = await run<{ qty: number }>(
@@ -182,6 +205,13 @@ export async function reverseReturn(returnId: number): Promise<{ ok: boolean; er
           [sku.product, sku.size, qty]);
         if (row) await run(`insert into damaged_moves (product, size, qty_change, balance, reason, ref, note, created_by)
                    values ($1,$2,$3,$4,'writeoff',$5,'ยกเลิกการคืน',$6)`, [sku.product, sku.size, -qty, row.qty, r.order_no, user.id]);
+        // ย้อน serial: void → issued กลับให้ออเดอร์ (ของที่เคยตีชำรุดตอนคืน กลับมาเป็นตัดออก)
+        await run(
+          `update stock_unit set status='issued'
+            where sku in (select sku from stock_unit where order_no=$1 and status='void'
+              and regexp_replace(lower(btrim(product)),'[^a-z0-9ก-๙]','','g')=regexp_replace(lower(btrim($2)),'[^a-z0-9ก-๙]','','g')
+              and btrim(lower(size),' .')=btrim(lower($3),' .')
+            order by issued_at desc limit $4)`, [r.order_no, r.product, r.size || "", qty]);
       }
       // "none" (ไม่นับ) — ไม่มีผลกับสต๊อก/ของชำรุด แค่ void แถวด้านล่าง
       await run(`update order_returns set voided_at = now() where id = $1`, [returnId]);
