@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import dynamic from "next/dynamic";
-import { lookupOrderForIssue, confirmIssueByOrder, reverseIssue, resolveIssueSku, type IssueResult, type IssueLookup } from "@/lib/actions/stock";
+import { lookupOrderForIssue, confirmIssueByOrder, reverseIssue, resolveIssueSku, type IssueResult, type IssueLookup, type IssueItemPreview } from "@/lib/actions/stock";
 import { resetOrderIssue } from "@/lib/actions/reset";
 import { PlatformBadge } from "./PlatformBadge";
 import { scanBeep } from "@/lib/scan-feedback";
@@ -76,11 +76,13 @@ export default function StockIssue({ isAdmin, initialOrder, specOptions = [] }: 
     // แต่ละบรรทัดควรมี SKU ครบตามจำนวน (qty>1 = หลาย serial) — เตือนถ้ายังไม่ครบ
     const incomplete = preview.items!.some((it) => it.needs_sku && (form[it.line_no]?.skus?.length || 0) < it.qty);
     if (incomplete && !window.confirm("บางรายการใส่ SKU ยังไม่ครบตามจำนวน — ยืนยันตัดสต๊อกเลยไหม?")) return;
-    // เตือนก่อนตัดถ้าสต๊อกไม่พอ (จะทำให้ติดลบ) — ระบุกลิ่นที่ขาด
-    const shortLines = preview.items!.filter((it) => it.tracked && it.qty > (it.stock ?? 0));
+    // เตือนก่อนตัดถ้าสต๊อกไม่พอ (จะทำให้ติดลบ) — ถุงใช้ยอดตามไซส์ที่เลือกจริง (ไม่ใช่ยอดตอนโหลด)
+    const effStock = (it: IssueItemPreview) =>
+      it.is_bag ? (preview.bag_stock?.[bagLetter(form[it.line_no]?.spec || it.size)] ?? 0) : (it.stock ?? 0);
+    const shortLines = preview.items!.filter((it) => it.tracked && it.qty > effStock(it));
     if (shortLines.length && !window.confirm(
       `สต๊อกไม่พอ ${shortLines.length} รายการ (จะตัดจนติดลบ):\n` +
-      shortLines.map((it) => `• ${it.product} ${it.size} — ต้องตัด ${it.qty} เหลือ ${it.stock ?? 0}`).join("\n") +
+      shortLines.map((it) => `• ${it.product} ${it.size} — ต้องตัด ${it.qty} เหลือ ${effStock(it)}`).join("\n") +
       `\n\nยืนยันตัดสต๊อกต่อไหม?`)) return;
     setBusy(true);
     const entries = preview.items!.map((it) => ({ line_no: it.line_no, skus: form[it.line_no]?.skus || [], spec: form[it.line_no]?.spec }));
