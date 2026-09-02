@@ -19,7 +19,7 @@ export default function StockIssue({ isAdmin, initialOrder, specOptions = [] }: 
   const [log, setLog] = useState<Entry[]>([]);
   const [scanOpen, setScanOpen] = useState(false);          // camera → Order No
   const [preview, setPreview] = useState<IssueLookup | null>(null);
-  const [form, setForm] = useState<Record<number, { sku: string; spec: string }>>({});
+  const [form, setForm] = useState<Record<number, { skus: string[]; spec: string }>>({});
   const [skuScanLine, setSkuScanLine] = useState<number | null>(null); // camera → a SKU field
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -49,8 +49,8 @@ export default function StockIssue({ isAdmin, initialOrder, specOptions = [] }: 
     // เตือน (เสียง warn) ถ้ามีบรรทัดที่สต๊อกไม่พอ — ไม่งั้น ok
     const short = res.items!.some((it) => it.tracked && it.qty > (it.stock ?? 0));
     scanBeep(short ? "warn" : "ok");
-    const init: Record<number, { sku: string; spec: string }> = {};
-    for (const it of res.items!) init[it.line_no] = { sku: it.sku || "", spec: it.spec || "" };
+    const init: Record<number, { skus: string[]; spec: string }> = {};
+    for (const it of res.items!) init[it.line_no] = { skus: it.sku ? it.sku.split(",").map((s) => s.trim()).filter(Boolean) : [], spec: it.spec || "" };
     setForm(init);
     setPreview(res);
   }
@@ -58,8 +58,9 @@ export default function StockIssue({ isAdmin, initialOrder, specOptions = [] }: 
   // ขั้น 2: กดยืนยัน → บันทึก SKU+Spec แล้วตัดสต๊อก
   async function submitIssue() {
     if (!preview?.order_no || busy) return;
-    const missing = preview.items!.some((it) => it.tracked && !(form[it.line_no]?.sku || "").trim());
-    if (missing && !window.confirm("บางรายการยังไม่ได้ใส่ SKU — ยืนยันตัดสต๊อกเลยไหม?")) return;
+    // แต่ละบรรทัดควรมี SKU ครบตามจำนวน (qty>1 = หลาย serial) — เตือนถ้ายังไม่ครบ
+    const incomplete = preview.items!.some((it) => it.tracked && (form[it.line_no]?.skus?.length || 0) < it.qty);
+    if (incomplete && !window.confirm("บางรายการใส่ SKU ยังไม่ครบตามจำนวน — ยืนยันตัดสต๊อกเลยไหม?")) return;
     // เตือนก่อนตัดถ้าสต๊อกไม่พอ (จะทำให้ติดลบ) — ระบุกลิ่นที่ขาด
     const shortLines = preview.items!.filter((it) => it.tracked && it.qty > (it.stock ?? 0));
     if (shortLines.length && !window.confirm(
@@ -67,7 +68,7 @@ export default function StockIssue({ isAdmin, initialOrder, specOptions = [] }: 
       shortLines.map((it) => `• ${it.product} ${it.size} — ต้องตัด ${it.qty} เหลือ ${it.stock ?? 0}`).join("\n") +
       `\n\nยืนยันตัดสต๊อกต่อไหม?`)) return;
     setBusy(true);
-    const entries = preview.items!.map((it) => ({ line_no: it.line_no, sku: form[it.line_no]?.sku, spec: form[it.line_no]?.spec }));
+    const entries = preview.items!.map((it) => ({ line_no: it.line_no, skus: form[it.line_no]?.skus || [], spec: form[it.line_no]?.spec }));
     let res: IssueResult;
     try { res = await confirmIssueByOrder(preview.order_no, entries); }
     catch { res = { ok: false, error: "ตัดสต๊อกไม่สำเร็จ (ระบบขัดข้อง ลองใหม่)" }; }
@@ -78,8 +79,12 @@ export default function StockIssue({ isAdmin, initialOrder, specOptions = [] }: 
     inputRef.current?.focus();
   }
 
-  const setField = (line: number, key: "sku" | "spec", v: string) =>
-    setForm((f) => ({ ...f, [line]: { ...f[line], [key]: v } }));
+  const setSpec = (line: number, v: string) => setForm((f) => ({ ...f, [line]: { ...f[line], spec: v } }));
+  const addSerial = (line: number, v: string) => {
+    const s = (v || "").trim(); if (!s) return;
+    setForm((f) => { const cur = f[line]?.skus || []; if (cur.includes(s)) return f; return { ...f, [line]: { ...f[line], skus: [...cur, s] } }; });
+  };
+  const removeSerial = (line: number, s: string) => setForm((f) => ({ ...f, [line]: { ...f[line], skus: (f[line]?.skus || []).filter((x) => x !== s) } }));
 
   // มาจากปุ่ม "ตัดสต๊อก" ในหน้าใบเบิก (/stock/issue?order=XXX) → ดึงรายการให้อัตโนมัติ
   useEffect(() => {
@@ -139,11 +144,24 @@ export default function StockIssue({ isAdmin, initialOrder, specOptions = [] }: 
                 </div>
                 <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
                   <div>
-                    <div className="flex gap-1">
-                      <input className="input flex-1 font-mono text-sm" placeholder="สแกน/กรอก SKU"
-                        value={form[it.line_no]?.sku || ""} onChange={(e) => setField(it.line_no, "sku", e.target.value)} />
-                      <button type="button" onClick={() => setSkuScanLine(it.line_no)} className="btn-ghost shrink-0 px-2" title="สแกน SKU ด้วยกล้อง"><Camera size={16} /></button>
+                    <div className="mb-1 flex items-center justify-between">
+                      <span className="text-[11px] text-muted">SKU รายชิ้น {it.qty > 1 && "(สแกนทีละขวด)"}</span>
+                      {it.tracked && <span className={`text-[11px] font-medium tabular-nums ${(form[it.line_no]?.skus?.length || 0) >= it.qty ? "text-green-600" : "text-amber-600"}`}>{form[it.line_no]?.skus?.length || 0}/{it.qty}</span>}
                     </div>
+                    <div className="flex gap-1">
+                      <input className="input flex-1 font-mono text-sm" placeholder="สแกน/กรอก SKU แล้ว Enter"
+                        onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); const el = e.target as HTMLInputElement; addSerial(it.line_no, el.value); el.value = ""; } }} />
+                      <button type="button" onClick={() => setSkuScanLine(it.line_no)} className="btn-ghost shrink-0 px-2" title="สแกน SKU ด้วยกล้อง (สแกนได้หลายขวดต่อเนื่อง)"><Camera size={16} /></button>
+                    </div>
+                    {(form[it.line_no]?.skus?.length || 0) > 0 && (
+                      <div className="mt-1.5 flex flex-wrap gap-1">
+                        {form[it.line_no].skus.map((s) => (
+                          <span key={s} className="inline-flex items-center gap-1 rounded-md bg-soft px-2 py-0.5 font-mono text-xs text-ink">
+                            {s}<button type="button" onClick={() => removeSerial(it.line_no, s)} className="text-faint hover:text-red-500" title="เอาออก"><X size={11} /></button>
+                          </span>
+                        ))}
+                      </div>
+                    )}
                   </div>
                   {(() => {
                     const cur = form[it.line_no]?.spec || "";
@@ -151,7 +169,7 @@ export default function StockIssue({ isAdmin, initialOrder, specOptions = [] }: 
                     const opts = specOptions.filter((o) => (it.is_bag ? o.for_bag : !o.for_bag)).map((o) => o.label);
                     const extra = cur && !opts.includes(cur);
                     return (
-                      <select className="input text-sm" value={cur} onChange={(e) => setField(it.line_no, "spec", e.target.value)} title="สเป็กสินค้า">
+                      <select className="input text-sm" value={cur} onChange={(e) => setSpec(it.line_no, e.target.value)} title="สเป็กสินค้า">
                         <option value="">{it.is_bag ? "— เลือกขนาดถุง —" : "— เลือกสเป็ก —"}</option>
                         {opts.map((o) => <option key={o} value={o}>{o}</option>)}
                         {extra && <option value={cur}>{cur}</option>}
@@ -184,7 +202,7 @@ export default function StockIssue({ isAdmin, initialOrder, specOptions = [] }: 
         <CameraScan onClose={() => setScanOpen(false)} onScan={(code) => { setScanOpen(false); lookup(code); }} />
       )}
       {skuScanLine != null && (
-        <CameraScan onClose={() => setSkuScanLine(null)} onScan={(code) => { setField(skuScanLine, "sku", code); setSkuScanLine(null); }} />
+        <CameraScan onClose={() => setSkuScanLine(null)} onScan={(code) => { addSerial(skuScanLine, code); }} />
       )}
     </div>
   );

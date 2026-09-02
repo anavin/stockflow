@@ -179,31 +179,52 @@ export async function lookupOrderForIssue(orderNo: string): Promise<IssueLookup>
 /** บันทึก SKU + Spec ที่พนักงานสแกน/กรอก แล้วตัดสต๊อก (ยืนยัน). */
 export async function confirmIssueByOrder(
   orderNo: string,
-  entries: { line_no: number; sku?: string | null; spec?: string | null }[],
+  // sku = เดิม (1 ต่อบรรทัด) · skus = SKU รายชิ้นหลายตัวต่อบรรทัด (qty>1 แต่ละขวด serial ต่างกัน)
+  entries: { line_no: number; sku?: string | null; skus?: string[]; spec?: string | null }[],
 ): Promise<IssueResult> {
   const user = await getCurrentUser();
   if (!user) return { ok: false, error: "กรุณาเข้าสู่ระบบ" };
   if (!can.issueStock(user.role)) return { ok: false, error: "ไม่มีสิทธิ์ตัดสต๊อก (เฉพาะฝ่ายจัดของ)" };
   const on = (orderNo || "").trim();
   if (!on) return { ok: false, error: "กรอก/สแกน Order No." };
+  // รวม serial ต่อบรรทัด (ตัดซ้ำ/ว่าง) — รองรับทั้ง sku เดี่ยว และ skus หลายตัว
+  const norm = entries.map((e) => ({
+    line_no: e.line_no,
+    spec: (e.spec || "").trim() || null,
+    skus: [...new Set([...(e.skus || []), ...(e.sku ? [e.sku] : [])].map((s) => (s || "").trim()).filter(Boolean))],
+  }));
   try {
-    // บันทึก SKU/Spec แล้วตัดสต๊อก ใน tx เดียว → ถ้าตัดล้มเหลว SKU/Spec ก็ไม่ถูกบันทึกค้าง
     const out = await tx<IssueResult>(async (run) => {
-      for (const e of entries) {
+      const its = await run<{ line_no: number; product: string; size: string; grade: string | null }>(
+        `select line_no, product, size,
+                (select p.ptype from products p where lower(btrim(p.name)) = lower(btrim(order_items.product)) limit 1) as grade
+           from order_items where order_no = $1`, [on]);
+      const byLine = new Map(its.map((i) => [i.line_no, i]));
+      // บันทึก SKU (join serial) + spec ลง order_items
+      for (const e of norm) {
         await run(`update order_items set sku = $2, spec = $3 where order_no = $1 and line_no = $4`,
-          [on, (e.sku || "").trim() || null, (e.spec || "").trim() || null, e.line_no]);
+          [on, e.skus.length ? e.skus.join(", ") : null, e.spec, e.line_no]);
       }
-      return runIssue(run, on, user.id);
-    });
-    // ผูก SKU รายชิ้น → order (best-effort, ไม่ทำให้การตัดล้มถ้าตาราง stock_unit ยังไม่มี)
-    if (out.ok) {
-      try {
-        for (const e of entries) {
-          const sku = (e.sku || "").trim();
-          if (sku) await q(`update stock_unit set status = 'issued', order_no = $1, issued_at = now(), issued_by = $2 where btrim(sku) = $3 and status = 'in_stock'`, [on, user.id, sku]);
+      const res = await runIssue(run, on, user.id);
+      if (!res.ok) return res;
+      // ผูก serial รายชิ้น → stock_unit (atomic ใน tx เดียวกับการตัด — traceability เชื่อถือได้)
+      for (const e of norm) {
+        const li = byLine.get(e.line_no);
+        for (const sku of e.skus) {
+          const [ex] = await run<{ status: string; order_no: string | null }>(`select status, order_no from stock_unit where btrim(sku) = $1`, [sku]);
+          if (!ex) {
+            await run(`insert into stock_unit (sku, product, size, grade, status, order_no, issued_at, issued_by)
+                       values ($1,$2,$3,$4,'issued',$5,now(),$6)`,
+              [sku, li?.product ?? "", li?.size ?? "", li?.grade ?? null, on, user.id]);
+          } else if (ex.status === "in_stock") {
+            await run(`update stock_unit set status='issued', order_no=$2, issued_at=now(), issued_by=$3 where btrim(sku)=$1`, [sku, on, user.id]);
+          } else if (ex.order_no !== on) {
+            throw new Error(`SKU "${sku}" ถูกตัดไปออเดอร์อื่นแล้ว (${ex.order_no || "-"}) — ห้ามใช้ซ้ำ`);
+          }
         }
-      } catch { /* stock_unit ยังไม่พร้อม — ข้าม (traceability เสริม) */ }
-    }
+      }
+      return res;
+    });
     if (out.ok) await logActivity("stock.issue", `${on}${out.doc_no ? " · " + out.doc_no : ""}`);
     revalidatePath("/stock"); revalidateTag("dashboard");
     revalidatePath("/stock/moves");
