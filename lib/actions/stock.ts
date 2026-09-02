@@ -205,10 +205,8 @@ export async function confirmIssueByOrder(
   }));
   try {
     const out = await tx<IssueResult>(async (run) => {
-      const its = await run<{ line_no: number; product: string; size: string; grade: string | null }>(
-        `select line_no, product, size,
-                (select p.ptype from products p where lower(btrim(p.name)) = lower(btrim(order_items.product)) limit 1) as grade
-           from order_items where order_no = $1`, [on]);
+      const its = await run<{ line_no: number; product: string; size: string; qty: number }>(
+        `select line_no, product, size, qty::float8 as qty from order_items where order_no = $1`, [on]);
       const byLine = new Map(its.map((i) => [i.line_no, i]));
       // บันทึก SKU (join serial) + spec ลง order_items
       for (const e of norm) {
@@ -217,20 +215,26 @@ export async function confirmIssueByOrder(
       }
       const res = await runIssue(run, on, user.id);
       if (!res.ok) return res;
-      // ผูก serial รายชิ้น → stock_unit (atomic ใน tx เดียวกับการตัด — traceability เชื่อถือได้)
+      // ── ตัดจาก SKU ที่มีจริงในคลังเท่านั้น (in_stock) · กลิ่น/ขนาดตรง · ครบตามจำนวน (เฉพาะขนาดที่ track สต๊อก) ──
+      const nk = (s: string | null) => (s || "").toLowerCase().replace(/[^a-z0-9ก-๙]/g, "");
+      const nsz = (s: string | null) => (s || "").replace(/[^0-9.]/g, "");
       for (const e of norm) {
         const li = byLine.get(e.line_no);
+        if (!li) continue;
+        if (isStockTracked(li.size)) {
+          const need = Math.round(Number(li.qty) || 0);
+          if (e.skus.length !== need)
+            throw new Error(`${li.product} ${li.size}: ต้องสแกน SKU ให้ครบ ${need} ชิ้น (ใส่มา ${e.skus.length}) — ตัดจาก SKU ที่มีในคลัง`);
+        }
         for (const sku of e.skus) {
-          const [ex] = await run<{ status: string; order_no: string | null }>(`select status, order_no from stock_unit where btrim(sku) = $1`, [sku]);
-          if (!ex) {
-            await run(`insert into stock_unit (sku, product, size, grade, status, order_no, issued_at, issued_by)
-                       values ($1,$2,$3,$4,'issued',$5,now(),$6)`,
-              [sku, li?.product ?? "", li?.size ?? "", li?.grade ?? null, on, user.id]);
-          } else if (ex.status === "in_stock") {
-            await run(`update stock_unit set status='issued', order_no=$2, issued_at=now(), issued_by=$3 where btrim(sku)=$1`, [sku, on, user.id]);
-          } else if (ex.order_no !== on) {
-            throw new Error(`SKU "${sku}" ถูกตัดไปออเดอร์อื่นแล้ว (${ex.order_no || "-"}) — ห้ามใช้ซ้ำ`);
-          }
+          const [u] = await run<{ status: string; order_no: string | null; product: string; size: string }>(
+            `select status, order_no, product, size from stock_unit where btrim(sku) = $1`, [sku]);
+          if (!u) throw new Error(`ไม่พบ SKU "${sku}" ในคลัง — ตัดได้เฉพาะ SKU ที่มีจริง`);
+          if (u.status === "issued" && u.order_no === on) continue;   // ตัดซ้ำใบเดิม = ข้าม (idempotent)
+          if (u.status !== "in_stock") throw new Error(`SKU "${sku}" ตัดไม่ได้ (สถานะ ${u.status}${u.order_no ? " · ออเดอร์ " + u.order_no : ""})`);
+          if (nk(u.product) !== nk(li.product) || nsz(u.size) !== nsz(li.size))
+            throw new Error(`SKU "${sku}" เป็น ${u.product} ${u.size} ไม่ตรงกับรายการ ${li.product} ${li.size}`);
+          await run(`update stock_unit set status='issued', order_no=$2, issued_at=now(), issued_by=$3 where btrim(sku)=$1`, [sku, on, user.id]);
         }
       }
       return res;
