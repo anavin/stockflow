@@ -78,7 +78,7 @@ export default function StockIssue({ isAdmin, initialOrder, specOptions = [] }: 
     if (incomplete && !window.confirm("บางรายการใส่ SKU ยังไม่ครบตามจำนวน — ยืนยันตัดสต๊อกเลยไหม?")) return;
     // เตือนก่อนตัดถ้าสต๊อกไม่พอ (จะทำให้ติดลบ) — ถุงใช้ยอดตามไซส์ที่เลือกจริง (ไม่ใช่ยอดตอนโหลด)
     const effStock = (it: IssueItemPreview) =>
-      it.is_bag ? (preview.bag_stock?.[bagLetter(form[it.line_no]?.spec || it.size)] ?? 0) : (it.stock ?? 0);
+      it.is_bag ? (preview.bag_stock?.[bagLetter(form[it.line_no]?.spec || it.size)] ?? preview.bag_stock?.[""] ?? 0) : (it.stock ?? 0);
     const shortLines = preview.items!.filter((it) => it.tracked && it.qty > effStock(it));
     if (shortLines.length && !window.confirm(
       `สต๊อกไม่พอ ${shortLines.length} รายการ (จะตัดจนติดลบ):\n` +
@@ -184,7 +184,7 @@ export default function StockIssue({ isAdmin, initialOrder, specOptions = [] }: 
               <div key={it.line_no} className="rounded-lg border border-line p-3">
                 <div className="flex flex-wrap items-center justify-between gap-1 text-sm">
                   <span><span className="font-medium text-ink">{it.product}</span> <span className="text-muted">{it.size}</span>{it.is_free && <span className="chip ml-1 bg-brand-50 text-brand-600">Free</span>}</span>
-                  <span className="text-xs text-muted">จำนวน {it.qty} · {it.tracked ? `คงเหลือ ${it.is_bag ? (preview.bag_stock?.[bagLetter(form[it.line_no]?.spec || it.size)] ?? 0) : it.stock}` : "ไม่ตัดสต๊อก"}</span>
+                  <span className="text-xs text-muted">จำนวน {it.qty} · {it.tracked ? `คงเหลือ ${it.is_bag ? (preview.bag_stock?.[bagLetter(form[it.line_no]?.spec || it.size)] ?? preview.bag_stock?.[""] ?? 0) : it.stock}` : "ไม่ตัดสต๊อก"}</span>
                 </div>
                 <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
                   <div>

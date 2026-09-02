@@ -199,10 +199,16 @@ export async function lookupOrderForIssue(orderNo: string): Promise<IssueLookup>
      where oi.order_no = $1 and coalesce(oi.product,'') <> ''`, [key]);
   const stockByLine = new Map(sr.map((r) => [r.line_no, Number(r.qty)]));
   // ยอดถุงกระดาษจากคลังบรรจุภัณฑ์ (material_item) — map ตามไซส์ S/M เพื่อโชว์คงเหลือถูกที่
+  // จับทุก label ที่มีคำว่า "ถุง" (เผื่อ label ต่างจาก seed) · key "" = รวมทุกไซส์ (ใช้ตอนยังไม่เลือกไซส์ กันเตือน 0 ผิด)
   const bagRows = await q<{ letter: string; qty: number }>(
     `select right(upper(regexp_replace(label,'[^A-Za-z]','','g')),1) as letter, qty::float8 as qty
-       from material_item where category='packaging' and label like 'ถุงกระดาษ%'`).catch(() => []);
-  const bagQty = new Map(bagRows.map((r) => [r.letter, Number(r.qty)]));
+       from material_item where category='packaging' and label ~ 'ถุง'`).catch(() => []);
+  const bagStockMap: Record<string, number> = { "": 0 };
+  for (const r of bagRows) {
+    const L = (r.letter || "").toUpperCase();
+    bagStockMap[""] += Number(r.qty);
+    if (L) bagStockMap[L] = (bagStockMap[L] || 0) + Number(r.qty);
+  }
   const withStock: IssueItemPreview[] = [];
   for (const it of items) {
     const bag = isBagProduct(it.product);
@@ -211,10 +217,14 @@ export async function lookupOrderForIssue(orderNo: string): Promise<IssueLookup>
     // บาร์โค้ด CTW ที่ตรงกับ (กลิ่น + ขนาด) — match ใน JS
     const szKey = normSize(it.size);
     const ctw_barcode = (bcMap[it.product.toLowerCase().replace(/[^a-z0-9ก-๙]/g, "")] || []).find((b) => normSize(b.size) === szKey)?.barcode ?? null;
-    const stockBal = bag ? (bagQty.get(bagLetter(spec || it.size)) ?? 0) : (stockByLine.get(it.line_no) ?? 0);
+    // ถุง: ใช้ยอดตามไซส์ที่รู้ (S/M) · ถ้ายังไม่รู้ไซส์ ใช้ยอดรวมทุกไซส์ (กันเตือน 0 ผิด)
+    const bagLtr = bagLetter(spec || it.size);
+    const stockBal = bag
+      ? (bagLtr && bagStockMap[bagLtr] !== undefined ? bagStockMap[bagLtr] : bagStockMap[""])
+      : (stockByLine.get(it.line_no) ?? 0);
     withStock.push({ ...it, spec, stock: stockBal, tracked: cutsStock(it.product, it.size), needs_sku: needsSerialSku(it.size), is_bag: bag, ctw_barcode });
   }
-  return { ok: true, order_no: key, doc_no: order.doc_no, platform: order.platform, note: order.note, items: withStock, bag_stock: Object.fromEntries(bagQty) };
+  return { ok: true, order_no: key, doc_no: order.doc_no, platform: order.platform, note: order.note, items: withStock, bag_stock: bagStockMap };
 }
 
 /** ตรวจ SKU ที่สแกนตอนตัดสต๊อก: ต้องมีจริง (in_stock) + ตรงกลิ่น/ขนาดของบรรทัดในใบเบิก
