@@ -159,6 +159,7 @@ export type IssueItemPreview = {
 export type IssueLookup = {
   ok: boolean; error?: string; alreadyIssued?: boolean;
   order_no?: string; doc_no?: string | null; platform?: string | null; note?: string | null; items?: IssueItemPreview[];
+  bag_stock?: Record<string, number>;   // คงเหลือถุงกระดาษต่อไซส์ { S: n, M: n } — โชว์ตามไซส์ที่เลือก
 };
 
 /** สแกน/กรอก Order No. → ดึงรายการทั้งหมดของใบเบิกมาให้ตรวจ (ยังไม่ตัดสต๊อก). */
@@ -213,7 +214,7 @@ export async function lookupOrderForIssue(orderNo: string): Promise<IssueLookup>
     const stockBal = bag ? (bagQty.get(bagLetter(spec || it.size)) ?? 0) : (stockByLine.get(it.line_no) ?? 0);
     withStock.push({ ...it, spec, stock: stockBal, tracked: cutsStock(it.product, it.size), needs_sku: needsSerialSku(it.size), is_bag: bag, ctw_barcode });
   }
-  return { ok: true, order_no: key, doc_no: order.doc_no, platform: order.platform, note: order.note, items: withStock };
+  return { ok: true, order_no: key, doc_no: order.doc_no, platform: order.platform, note: order.note, items: withStock, bag_stock: Object.fromEntries(bagQty) };
 }
 
 /** ตรวจ SKU ที่สแกนตอนตัดสต๊อก: ต้องมีจริง (in_stock) + ตรงกลิ่น/ขนาดของบรรทัดในใบเบิก

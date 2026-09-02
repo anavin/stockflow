@@ -11,6 +11,8 @@ const CameraScan = dynamic(() => import("./CameraScan"), { ssr: false });
 type Entry = { at: string; res: IssueResult; input: string; reversed?: boolean; platform?: string | null };
 
 const now = () => new Date().toLocaleTimeString("th-TH");
+// ตัวอักษรไซส์ถุง (S/M) จากสเป็กที่เลือก — ใช้ดึงคงเหลือถุงต่อไซส์
+const bagLetter = (s?: string | null) => ((s || "").replace(/[^A-Za-z]/g, "").slice(-1) || "").toUpperCase();
 
 type SpecOpt = { label: string; for_bag: boolean };
 export default function StockIssue({ isAdmin, initialOrder, specOptions = [] }: { isAdmin: boolean; initialOrder?: string; specOptions?: SpecOpt[] }) {
@@ -169,7 +171,7 @@ export default function StockIssue({ isAdmin, initialOrder, specOptions = [] }: 
               <div key={it.line_no} className="rounded-lg border border-line p-3">
                 <div className="flex flex-wrap items-center justify-between gap-1 text-sm">
                   <span><span className="font-medium text-ink">{it.product}</span> <span className="text-muted">{it.size}</span>{it.is_free && <span className="chip ml-1 bg-brand-50 text-brand-600">Free</span>}</span>
-                  <span className="text-xs text-muted">จำนวน {it.qty} · {it.tracked ? `คงเหลือ ${it.stock}` : "ไม่ตัดสต๊อก"}</span>
+                  <span className="text-xs text-muted">จำนวน {it.qty} · {it.tracked ? `คงเหลือ ${it.is_bag ? (preview.bag_stock?.[bagLetter(form[it.line_no]?.spec || it.size)] ?? 0) : it.stock}` : "ไม่ตัดสต๊อก"}</span>
                 </div>
                 <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
                   <div>
