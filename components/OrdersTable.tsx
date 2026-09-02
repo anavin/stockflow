@@ -3,9 +3,10 @@ import Link from "next/link";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { deleteOrder, bulkDeleteOrders } from "@/lib/actions/orders";
+import { pushToCtw } from "@/lib/actions/ctw";
 import { canCreatePlatform } from "@/lib/config";
 import type { OrderRow } from "@/lib/types";
-import { Printer, Pencil, Trash2, PackageOpen, X, Zap, Clock, Check } from "lucide-react";
+import { Printer, Pencil, Trash2, PackageOpen, X, Zap, Clock, Check, Send, CheckCircle2 } from "lucide-react";
 
 /** สถานะออเดอร์ — ชุดเดียวกัน ไล่สีตามขั้น: รอตัด (เหลือง) → ตัดแล้ว (ฟ้า) → ส่งแล้ว (เขียว)
  *  + ป้ายการคืน (ถ้ามี) — return_status เป็น undefined ถ้า prod ยังไม่รัน migration รับคืน */
@@ -41,6 +42,16 @@ export default function OrdersTable({ orders, platform = "Shopee" }: { orders: O
   }
   function toggleAll() {
     setSel(allChecked ? new Set() : new Set(orders.map((o) => o.order_no)));
+  }
+
+  const isCtw = platform === "CTW";
+  async function onPush(orderNo: string) {
+    if (!confirm(`ส่งใบเบิก ${orderNo} ไปยังระบบ CTW?\n\nระบบ CTW จะรับรายการ + SKU ไปเข้าสต๊อกสาขา`)) return;
+    setBusy(orderNo);
+    const res = await pushToCtw(orderNo);
+    setBusy(null);
+    if (!res.ok) { alert(res.error || "ส่งไม่สำเร็จ"); return; }
+    router.refresh();
   }
 
   async function onDelete(orderNo: string) {
@@ -159,6 +170,19 @@ export default function OrdersTable({ orders, platform = "Shopee" }: { orders: O
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center justify-end gap-1">
+                        {isCtw && (o.ctw_received_at ? (
+                          <span className="inline-flex items-center gap-1 rounded-md bg-purple-50 px-2 py-1 text-xs font-medium text-purple-700 whitespace-nowrap" title="ส่งไป CTW แล้ว">
+                            <CheckCircle2 size={14} /> ส่ง CTW แล้ว
+                          </span>
+                        ) : o.stock_issued_at ? (
+                          <button onClick={() => onPush(o.order_no)} disabled={busy === o.order_no}
+                            className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium text-white disabled:opacity-50 whitespace-nowrap"
+                            style={{ backgroundColor: "#9333ea" }} title="ส่งใบเบิกนี้ไป CTW">
+                            <Send size={14} /> {busy === o.order_no ? "กำลังส่ง…" : "ส่งไป CTW"}
+                          </button>
+                        ) : (
+                          <span className="text-[11px] text-muted whitespace-nowrap" title="ต้องตัดสต๊อกก่อน">รอตัดสต๊อก</span>
+                        ))}
                         <a href={`/print/pdf/${encodeURIComponent(o.order_no)}`} target="_blank" rel="noreferrer"
                           className="rounded-md p-1.5 text-muted hover:bg-brand-50 hover:text-brand-600" title="พิมพ์">
                           <Printer size={16} />

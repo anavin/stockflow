@@ -181,7 +181,7 @@ const UNITS_UNION = `
 type UnitsFilter = { search?: string; status?: string; product?: string; size?: string; platform?: string };
 function unitsWhere(opts: UnitsFilter, params: any[]): string {
   const where: string[] = [];
-  if (opts.search) { params.push(`%${opts.search}%`); const i = params.length; where.push(`(u.sku ilike $${i} or u.product ilike $${i} or coalesce(u.order_no,'') ilike $${i})`); }
+  if (opts.search) { params.push(`%${opts.search}%`); const i = params.length; where.push(`(u.sku ilike $${i} or u.product ilike $${i} or coalesce(u.order_no,'') ilike $${i} or coalesce(o.doc_no,'') ilike $${i})`); }
   if (opts.product) { params.push(opts.product); where.push(`lower(btrim(u.product)) = lower(btrim($${params.length}))`); }
   if (opts.size) { params.push(opts.size); where.push(`regexp_replace(lower(u.size),'[^0-9a-z]','','g') = regexp_replace(lower($${params.length}),'[^0-9a-z]','','g')`); }
   if (opts.status) { params.push(opts.status); where.push(`u.status = $${params.length}`); }
