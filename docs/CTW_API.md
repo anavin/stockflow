@@ -1,66 +1,46 @@
-# CTW ↔ stockflow — API เชื่อมใบเบิกโอนสาขา
+# stockflow → CTW — ส่งใบเบิกโอนสาขา (push ทางเดียว)
 
-คลังกลาง = **stockflow** (labparfumo-stock.vercel.app) · สาขา = **CTW/central**
-ผูกกันด้วย **PO Order No. (`WPO...`)** เป็นกุญแจร่วม · สินค้าอ้างด้วย **บาร์โค้ด** (ตรงกันทั้งสองระบบแล้ว)
+**คลังกลาง (stockflow) เป็นคนสร้างใบเบิก + ตัดสต๊อก + ใส่ SKU เอง** แล้ว push ไปให้ระบบ CTW
+ระบบ CTW มีหน้าที่แค่ **รับ webhook** แล้วเอาไปดำเนินการต่อ (ลงสต๊อกสาขา ฯลฯ)
 
-## Auth
-ทุก endpoint ต้องมี header:
+## Flow
 ```
+stockflow: สร้างใบเบิก CTW (เลือกสาขา + รายการ) → ตัดสต๊อก + SKU → กด "ส่งไป CTW"
+   │  POST (Bearer CTW_API_KEY)
+   ▼
+CTW:       รับ payload → ลงสต๊อกสาขา / ปิดงานเอง → ตอบ 2xx
+```
+
+## สิ่งที่ CTW ต้องทำ: เปิด endpoint 1 ตัว รับ POST
+ตั้ง 2 ค่าใน env ของ **stockflow** (Vercel):
+- `CTW_WEBHOOK_URL` = URL endpoint ของระบบ CTW (เช่น `https://central.example.com/api/inbound/requisition`)
+- `CTW_API_KEY` = คีย์ลับร่วม (สุ่ม `openssl rand -hex 24`)
+
+stockflow จะยิง:
+```
+POST <CTW_WEBHOOK_URL>
 Authorization: Bearer <CTW_API_KEY>
+Content-Type: application/json
 ```
-(ตั้ง `CTW_API_KEY` ใน env ของ stockflow บน Vercel — สุ่มด้วย `openssl rand -hex 24`)
-
-Base URL: `https://labparfumo-stock.vercel.app`
-
----
-
-## (A) CTW ส่งใบเบิกเข้าคลังกลาง
-`POST /api/ctw/requisition`
 ```json
 {
-  "po_no": "WPO260829001",
-  "branch": "01_CTW",
+  "po_no": "WPO260901003",
+  "branch": "01_CTW - Central World",
+  "doc_date": "2026-09-01",
   "items": [
-    { "barcode": "8857128012026", "qty": 3 },
-    { "barcode": "8857128012034", "qty": 4 }
+    { "product": "Dream Island", "size": "50 ml", "qty": 2, "sku": "DID-50 ml" },
+    { "product": "Secret of Peach", "size": "50 ml", "qty": 3, "sku": "SPH-50 ml" }
+  ],
+  "skus": [
+    { "sku": "DID-50-000001", "product": "Dream Island", "size": "50 ml", "barcode": "8857128011300" }
   ]
 }
 ```
-ตอบ `200`:
-```json
-{ "ok": true, "order_no": "WPO260829001", "saved": 2, "unmatched": [] }
-```
-- `unmatched` = บาร์โค้ดที่ไม่มีในระบบ (ไม่ถูกบันทึก) — ควรเช็ค
-- ยิงซ้ำ po_no เดิม = อัปเดตรายการ (ตราบใดยังไม่ตัดสต๊อก) · ถ้าตัดแล้วจะปฏิเสธ
+- `items` = รายการรวม (product · ขนาด · จำนวน · **SKU รหัสสินค้า**)
+- `skus` = **SKU รายชิ้น (serial)** ที่คลังตัดออกจริง — มีค่าเมื่อคลัง serialize สต๊อก (ถ้ายังไม่ทำ = ว่าง)
+- ระบบ CTW ควรตอบ **HTTP 2xx** ถ้ารับสำเร็จ → stockflow จะปักธง "ส่งไป CTW แล้ว"
+  (ตอบ error → stockflow แจ้งเตือน ให้กดส่งซ้ำได้)
 
-## (B) CTW ดึงสถานะ + SKU ที่คลังส่งจริง
-`GET /api/ctw/requisition/{po_no}`
-```json
-{
-  "ok": true, "order_no": "WPO260829001", "branch": "01_CTW",
-  "status": "dispatched",              // created → issued → dispatched → received
-  "issued_at": "...", "dispatched_at": "...", "received_at": null,
-  "items": [ { "product": "Aqua", "size": "10 ml.", "qty": 3 } ],
-  "skus":  [ { "sku": "AQA-...", "product": "Aqua", "size": "10 ml.", "barcode": "8857128012026" } ]   // ชิ้นจริงที่ส่ง
-}
-```
-CTW poll ตัวนี้จนกว่า `status = "dispatched"` แล้วเอา `skus` ไปลงสต๊อกสาขาตอนกดรับ
-
-## (C) CTW กดรับ (ปิดใบเบิก)
-`POST /api/ctw/requisition/{po_no}/receive`
-```json
-{ "received_by": "ชื่อ/รหัสพนักงาน CTW" }
-```
-ตอบ `200`: `{ "ok": true, "received_at": "..." }` (รับซ้ำ → `already: true`)
-- ต้องคลัง **จัดส่งแล้ว** (`status = dispatched`) ก่อน ไม่งั้น `409`
-- CTW ควร: เพิ่ม `skus` เข้าสต๊อกสาขาฝั่งตัวเอง **แล้วค่อย** เรียก endpoint นี้
-
----
-
-## ลำดับงานเต็ม
-```
-CTW: สร้าง WPO → (A) POST requisition
-คลัง: สแกน WPO → ตัดสต๊อก + สแกน SKU รายชิ้น → จัดส่ง (dispatched)
-CTW: (B) poll จน dispatched → เอา skus ลงสต๊อกสาขา → (C) POST receive
-```
-สถานะบน stockflow: `สร้าง → ตัดสต๊อก(SKU) → จัดส่ง CTW → CTW รับแล้ว`
+## หมายเหตุ
+- ยิงซ้ำ (กดส่งซ้ำ) ได้ — ระบบ CTW ควร idempotent ตาม `po_no` (po เดิม = อัปเดต ไม่สร้างซ้ำ)
+- บาร์โค้ดสินค้า (8857128…) ตรงกันทั้งสองระบบแล้ว → CTW แมตช์กลิ่น/ขนาดจาก barcode หรือ sku ได้

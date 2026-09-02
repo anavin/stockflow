@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { getOrder, getProducts, getSizes, getProvinces, getPostcodes, getProductCodes, getProductTypes, getBlockedSizesForOrder } from "@/lib/queries";
 import { resolvePlatform, platformBase, platformColor, platformTint } from "@/lib/config";
 import OrderForm from "@/components/OrderForm";
+import CtwPushButton from "@/components/CtwPushButton";
 import { ChevronLeft, Printer, ScanLine, PackageCheck } from "lucide-react";
 import { requireCreator } from "@/lib/auth/require-user";
 import { can } from "@/lib/auth/roles";
@@ -41,6 +42,7 @@ export default async function EditOrderPage({ params }: { params: Promise<{ plat
               <ScanLine size={16} /> ตัดสต๊อก
             </Link>
           ) : null}
+          {pf.code === "CTW" && <CtwPushButton orderNo={decoded} issued={!!order.stock_issued_at} pushedAt={order.ctw_received_at ?? null} />}
           <a href={`/print/pdf/${encodeURIComponent(decoded)}`} target="_blank" rel="noreferrer" className="btn-ghost">
             <Printer size={16} /> พิมพ์ใบเบิก (PDF)
           </a>

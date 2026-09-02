@@ -22,7 +22,7 @@ export const PLATFORMS: { code: PlatformCode; name: string; prefix: string; enab
   { code: "Line", name: "Line", prefix: "LN", enabled: true, canImport: false, canCreate: true },
   { code: "Website", name: "Website", prefix: "WEB", enabled: true, canImport: false, canCreate: true },
   { code: "Office", name: "Office", prefix: "OFF", enabled: true, canImport: false, canCreate: true },
-  { code: "CTW", name: "CTW (Central World)", prefix: "WPO", enabled: true, canImport: false, canCreate: false },   // ใบเบิกโอนสาขา — เข้าผ่าน API จากระบบ CTW เท่านั้น
+  { code: "CTW", name: "CTW (Central World)", prefix: "WPO", enabled: true, canImport: false, canCreate: true },   // ใบเบิกโอนสาขา — คลังกลางสร้างเอง → ตัดสต๊อก → ส่งไป CTW
 ];
 
 export type Platform = (typeof PLATFORMS)[number];

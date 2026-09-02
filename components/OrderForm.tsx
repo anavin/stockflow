@@ -20,6 +20,7 @@ const cleanPhone = (v: string) => v.replace(/[^0-9\-+ ]/g, "");
 // ตัวเลือกสำหรับใบเบิก Office (ร้านขาย/จัดส่งเอง)
 const PAYMENT_METHODS = ["Cash", "K Shop", "K Shop Credit Card", "Omise"];
 const CARRIERS = ["ไปรษณีย์ไทย", "Flash Express", "J&T Express", "Kerry", "Shopee Express", "Lalamove", "Grab", "รับเอง"];
+const CTW_BRANCHES = ["01_CTW - Central World"];   // สาขา CTW (พิมพ์เพิ่มเองได้)
 const cleanMoney = (v: string) => v.replace(/[^0-9.]/g, "");
 const cleanOrderNo = (v: string) => v.replace(/\s+/g, "").toUpperCase();
 
@@ -45,6 +46,7 @@ export default function OrderForm({ platform = "Shopee", products, sizes, provin
   const base = `/${platform.toLowerCase()}`;   // path ฐานของแพลตฟอร์ม (กลับหน้ารายการ)
   const editing = !!initial;
   const isOffice = (initial?.platform || platform) === "Office";   // Office = ร้านขาย/จัดส่งเอง → มีราคา/ชำระเงิน/ขนส่ง
+  const isCTW = (initial?.platform || platform) === "CTW";         // CTW = โอนสาขา → มีช่องสาขา ไม่ต้องมีลูกค้า/ที่อยู่
 
   const [f, setF] = useState({
     order_no: initial?.order_no ?? "",
@@ -66,6 +68,7 @@ export default function OrderForm({ platform = "Shopee", products, sizes, provin
     note: initial?.note ?? "",
     box_scent: initial?.box_scent ?? "",
     order_date: initial?.order_date ?? "",
+    branch: initial?.branch ?? "",
     price: initial?.price?.toString() ?? "",
     discount: initial?.discount?.toString() ?? "",
     payment_method: initial?.payment_method ?? "",
@@ -239,7 +242,9 @@ export default function OrderForm({ platform = "Shopee", products, sizes, provin
     if (!f.order_no.trim()) { setError("กรุณากรอก Order No."); return; }
 
     // บังคับช่องจำเป็นสำหรับจัดส่ง — ผู้รับ / จังหวัด (ที่อยู่ไม่บังคับ)
-    const fErr = { receiver: !f.receiver.trim(), province: !f.province.trim() };
+    // CTW = โอนสาขา ไม่ต้องมีผู้รับ/จังหวัด (ใช้ช่องสาขาแทน)
+    const fErr = isCTW ? { receiver: false, province: false } : { receiver: !f.receiver.trim(), province: !f.province.trim() };
+    if (isCTW && !f.branch.trim()) { setError("เลือกสาขาปลายทาง (CTW)"); return; }
     if (fErr.receiver || fErr.province) {
       setFieldErrors(fErr);
       const miss = [fErr.receiver && "ผู้รับ", fErr.province && "จังหวัด"].filter(Boolean).join(" / ");
@@ -337,9 +342,17 @@ export default function OrderForm({ platform = "Shopee", products, sizes, provin
         )}
       </section>
 
-      {/* recipient */}
+      {/* recipient (CTW = สาขา · อื่นๆ = ลูกค้า/ที่อยู่) */}
       <section className="card p-5">
-        <h2 className="mb-4 text-sm font-semibold text-ink">ผู้รับ & ที่อยู่จัดส่ง</h2>
+        <h2 className="mb-4 text-sm font-semibold text-ink">{isCTW ? "สาขาปลายทาง (CTW)" : "ผู้รับ & ที่อยู่จัดส่ง"}</h2>
+        {isCTW ? (
+          <div className="max-w-md">
+            <label className="label">สาขา CTW <span className="text-brand">*</span></label>
+            <Combobox value={f.branch} onChange={(v) => set({ branch: v })} options={CTW_BRANCHES} placeholder="เลือก / พิมพ์สาขา" />
+            <p className="mt-1.5 text-xs text-faint">โอนสาขา — ไม่ต้องกรอกลูกค้า/ที่อยู่ · ตัดสต๊อกเสร็จแล้วกด “ส่งไป CTW”</p>
+          </div>
+        ) : (
+        <>
 
         {/* ป้ายลูกค้าเก่า — เห็นชัดในหน้าแก้ไข + กดตั้ง/ดูประวัติได้ */}
         {hist && (
@@ -418,6 +431,8 @@ export default function OrderForm({ platform = "Shopee", products, sizes, provin
             <textarea rows={1} className="input !h-10 resize-none" value={f.address} onChange={(e) => set({ address: e.target.value })} />
           </div>
         </div>
+        </>
+        )}
       </section>
 
       {/* การ์ดประวัติลูกค้าเก่า — เทียบข้อมูล กดเติมที่อยู่/รายการเอง */}

@@ -42,6 +42,10 @@ export type Order = {
   payment_method?: string | null;
   shipping_carrier?: string | null;
   tracking_no?: string | null;
+  // CTW (โอนสาขา)
+  branch?: string | null;
+  ctw_received_at?: string | null;
+  ctw_received_by?: string | null;
   created_by?: number | null;
   created_at?: string;
   updated_at?: string;

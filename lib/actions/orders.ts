@@ -55,6 +55,7 @@ const orderSchema = z.object({
   payment_method: z.string().trim().optional().nullable(),
   shipping_carrier: z.string().trim().optional().nullable(),
   tracking_no: z.string().trim().optional().nullable(),
+  branch: z.string().trim().optional().nullable(),   // ใบเบิก CTW: สาขาปลายทาง
   items: z.array(itemSchema).min(1, "ต้องมีอย่างน้อย 1 รายการ"),
 });
 
@@ -65,7 +66,7 @@ const ORDER_COLS = [
   "order_no", "platform", "doc_no", "doc_date", "month_label", "channel", "shop_name",
   "username", "receiver", "phone", "customer_type", "purchase_count", "district",
   "subdistrict", "province", "postcode", "address", "campaign", "note", "box_scent", "order_date",
-  "price", "discount", "payment_method", "shipping_carrier", "tracking_no",
+  "price", "discount", "payment_method", "shipping_carrier", "tracking_no", "branch",
 ];
 
 /** Allocate the next doc number for a platform/day atomically. */
@@ -88,9 +89,6 @@ export async function saveOrder(input: OrderInput): Promise<SaveResult> {
   const parsed = orderSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? "ข้อมูลไม่ถูกต้อง" };
   const o = parsed.data;
-
-  // ใบเบิก CTW ต้องมาจากระบบ CTW ผ่าน API เท่านั้น — สร้าง/แก้เองในระบบนี้ไม่ได้ (กันใบลอยที่ CTW กดรับไม่ได้)
-  if (o.platform === "CTW") return { ok: false, error: "ใบเบิก CTW ต้องสร้างจากระบบ CTW (เข้าอัตโนมัติผ่าน API) — สร้าง/แก้เองที่นี่ไม่ได้" };
 
   // ของแถม (Free) ได้เฉพาะขนาดเล็ก — ไซต์ใหญ่ห้ามเป็นของแถม
   const badFree = o.items.find((it) => it.is_free && !isAllowedFreeSize(it.size, it.product));
@@ -147,6 +145,7 @@ export async function saveOrder(input: OrderInput): Promise<SaveResult> {
         purchaseCount, o.district, o.subdistrict, o.province, o.postcode, o.address, o.campaign,
         o.note, o.box_scent, o.order_date,
         o.price ?? null, o.discount ?? null, o.payment_method || null, o.shipping_carrier || null, o.tracking_no || null,
+        o.branch || null,
       ];
       const ph = ORDER_COLS.map((_, i) => `$${i + 1}`).join(",");
       const updates = ORDER_COLS.slice(1).map((c) => `${c} = excluded.${c}`).join(", ");
