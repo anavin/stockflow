@@ -2,9 +2,10 @@
 import { useEffect, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import { lookupOrderForIssue, confirmIssueByOrder, reverseIssue, resolveIssueSku, type IssueResult, type IssueLookup } from "@/lib/actions/stock";
+import { resetOrderIssue } from "@/lib/actions/reset";
 import { PlatformBadge } from "./PlatformBadge";
 import { scanBeep } from "@/lib/scan-feedback";
-import { ScanLine, CheckCircle2, AlertTriangle, XCircle, Undo2, Camera, PackageCheck, X, Printer, StickyNote, ClipboardList } from "lucide-react";
+import { ScanLine, CheckCircle2, AlertTriangle, XCircle, Undo2, Camera, PackageCheck, X, Printer, StickyNote, ClipboardList, RotateCcw } from "lucide-react";
 
 const CameraScan = dynamic(() => import("./CameraScan"), { ssr: false });
 
@@ -32,6 +33,16 @@ export default function StockIssue({ isAdmin, initialOrder, specOptions = [] }: 
     const res = await reverseIssue(orderNo);
     if (!res.ok) { alert(res.error); return; }
     setLog((l) => l.map((e, i) => (i === idx ? { ...e, reversed: true } : e)));
+  }
+
+  // รีเซ็ตใบที่ตัน (ตัดแล้ว+ส่งแล้ว/มีการคืน) แล้วดึงรายการมาตัดใหม่ทันที — แอดมินเท่านั้น
+  async function onResetAndCut(orderNo: string) {
+    if (!confirm(`รีเซ็ตใบเบิก ${orderNo} กลับ "รอตัดสต๊อก"?\n\nยกเลิกการคืน + ยกเลิกการส่ง + คืนสต๊อก/SKU/ถุงทั้งหมด แล้วดึงรายการมาตัดใหม่ทันที`)) return;
+    setBusy(true);
+    const res = await resetOrderIssue(orderNo);
+    setBusy(false);
+    if (!res.ok) { alert(res.error); return; }
+    lookup(orderNo);   // โหลดรายการมาตัดต่อได้เลย
   }
 
   // ขั้น 1: สแกน/กรอก Order No. → ดึงรายการมาตรวจ
@@ -224,7 +235,7 @@ export default function StockIssue({ isAdmin, initialOrder, specOptions = [] }: 
       <div className="space-y-3 lg:col-span-2">
         <h3 className="flex items-center gap-2 text-sm font-semibold text-ink"><ClipboardList size={15} className="text-brand" /> ผลล่าสุด</h3>
         {log.length > 0 ? (
-          log.map((e, i) => <ResultCard key={i} entry={e} idx={i} isAdmin={isAdmin} onReverse={onReverse} />)
+          log.map((e, i) => <ResultCard key={i} entry={e} idx={i} isAdmin={isAdmin} onReverse={onReverse} onReset={onResetAndCut} />)
         ) : (
           <div className="card p-6 text-center text-sm text-muted">ยังไม่มีการตัดสต๊อกในรอบนี้ — สแกนใบเบิกด้านซ้ายเพื่อเริ่ม</div>
         )}
@@ -240,16 +251,26 @@ export default function StockIssue({ isAdmin, initialOrder, specOptions = [] }: 
   );
 }
 
-function ResultCard({ entry, idx, isAdmin, onReverse }: { entry: Entry; idx: number; isAdmin: boolean; onReverse: (o: string, i: number) => void }) {
+function ResultCard({ entry, idx, isAdmin, onReverse, onReset }: { entry: Entry; idx: number; isAdmin: boolean; onReverse: (o: string, i: number) => void; onReset: (o: string) => void }) {
   const { res, input, at, reversed, platform } = entry;
 
   if (!res.ok && res.alreadyIssued) {
     return (
       <div className="card border-amber-200 p-4">
-        <div className="flex items-center gap-2 text-sm font-semibold text-amber-700">
-          <AlertTriangle size={16} /> {input} — ตัดสต๊อกไปแล้ว (ไม่ตัดซ้ำ) <PlatformBadge platform={platform} />
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2 text-sm font-semibold text-amber-700">
+            <AlertTriangle size={16} /> {input} — ตัดสต๊อกไปแล้ว (ไม่ตัดซ้ำ) <PlatformBadge platform={platform} />
+          </div>
+          {isAdmin && (
+            <button onClick={() => onReset(input)}
+              className="inline-flex shrink-0 items-center gap-1 rounded-md border border-red-200 bg-red-50 px-2 py-1 text-xs font-medium text-red-600 hover:bg-red-100"
+              title="รีเซ็ตใบเบิก (ยกเลิกการคืน+การส่ง+คืนสต๊อก) แล้วดึงมาตัดใหม่">
+              <RotateCcw size={13} /> รีเซ็ต & ตัดใหม่
+            </button>
+          )}
         </div>
         <div className="mt-0.5 text-xs text-muted">เลขที่ใบเบิก {res.doc_no || "-"} · {at}</div>
+        {isAdmin && <div className="mt-1 text-[11px] text-muted">ตัดไปแล้ว/ส่งแล้ว/มีการคืน — กด "รีเซ็ต & ตัดใหม่" เพื่อคืนสต๊อกทั้งหมดแล้วตัดใหม่</div>}
       </div>
     );
   }
