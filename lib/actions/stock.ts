@@ -51,6 +51,28 @@ async function matchStockSku(
   return m ?? { product, size: size || "" };
 }
 
+/** ถุงกระดาษอยู่ในคลังบรรจุภัณฑ์ (material_item category='packaging') ไม่ใช่ตาราง stock
+ *  → หาแถวถุงจากตัวอักษรไซส์ (S/M ใน spec หรือ size) แล้วตัด material_item + บันทึก material_move */
+const bagLetter = (s?: string | null) => ((s || "").replace(/[^A-Za-z]/g, "").slice(-1) || "").toUpperCase();
+async function issueBagUnit(
+  run: <R = any>(sql: string, p?: any[]) => Promise<R[]>,
+  bagSize: string, qty: number, orderNo: string, userId: number,
+): Promise<{ label: string; size: string; balance: number } | null> {
+  const letter = bagLetter(bagSize);
+  if (!letter) return null;
+  const [it] = await run<{ id: number; label: string }>(
+    `select id, label from material_item
+       where category = 'packaging' and label like 'ถุงกระดาษ%'
+         and right(upper(regexp_replace(label,'[^A-Za-z]','','g')),1) = $1
+       order by id limit 1`, [letter]);
+  if (!it) return null;
+  const [row] = await run<{ qty: number }>(
+    `update material_item set qty = qty - $2, updated_at = now() where id = $1 returning qty::float8 as qty`, [it.id, qty]);
+  await run(`insert into material_move (item_id, qty_change, balance, reason, note, order_no, created_by)
+             values ($1,$2,$3,'issue',$4,$5,$6)`, [it.id, -qty, row.qty, "ตัดจากใบเบิก", orderNo, userId]);
+  return { label: it.label, size: `Size ${letter}`, balance: Number(row.qty) };
+}
+
 export type IssueLine = { product: string; size: string; qty: number; balance: number };
 export type SkipLine = { product: string; size: string; qty: number };
 export type IssueResult = {
@@ -91,14 +113,21 @@ async function runIssue(
     [key, userId]);
   if (claim.length === 0) return { ok: false, alreadyIssued: true, order_no: key, doc_no: order.doc_no, error: `ใบเบิกนี้ตัดสต๊อกไปแล้ว` };
 
-  const items = await run<{ product: string; size: string; qty: number }>(
-    `select product, size, qty::float8 as qty from order_items where order_no = $1 and coalesce(product,'') <> ''`, [key]);
+  const items = await run<{ product: string; size: string; spec: string | null; qty: number }>(
+    `select product, size, spec, qty::float8 as qty from order_items where order_no = $1 and coalesce(product,'') <> ''`, [key]);
   if (items.length === 0) throw new Error("ใบเบิกไม่มีรายการสินค้า");
 
   const lines: IssueLine[] = [];
   const skipped: SkipLine[] = [];
   for (const it of items) {
-    // ตัดสต๊อกทุกขนาด ml (รวมตัวอย่าง 1.2/4 ml) + ถุงกระดาษ (มีสต๊อกของตัวเอง) — ของแถม/อุปกรณ์อื่นไม่ตัด
+    // ถุงกระดาษ → ตัดจากคลังบรรจุภัณฑ์ (material_item p31/p32) ตามไซส์ใน spec (ทางเลือก size)
+    if (isBagProduct(it.product)) {
+      const bag = await issueBagUnit(run, it.spec || it.size || "", Number(it.qty), key, userId);
+      if (bag) lines.push({ product: bag.label, size: bag.size, qty: Number(it.qty), balance: bag.balance });
+      else skipped.push({ product: it.product, size: it.spec || it.size || "", qty: Number(it.qty) });
+      continue;
+    }
+    // ตัดสต๊อกทุกขนาด ml (รวมตัวอย่าง 1.2/4 ml) — ของแถม/อุปกรณ์อื่นไม่ตัด
     if (!cutsStock(it.product, it.size)) {
       skipped.push({ product: it.product, size: it.size || "", qty: Number(it.qty) });
       continue;
@@ -168,6 +197,11 @@ export async function lookupOrderForIssue(orderNo: string): Promise<IssueLookup>
      ) s on true
      where oi.order_no = $1 and coalesce(oi.product,'') <> ''`, [key]);
   const stockByLine = new Map(sr.map((r) => [r.line_no, Number(r.qty)]));
+  // ยอดถุงกระดาษจากคลังบรรจุภัณฑ์ (material_item) — map ตามไซส์ S/M เพื่อโชว์คงเหลือถูกที่
+  const bagRows = await q<{ letter: string; qty: number }>(
+    `select right(upper(regexp_replace(label,'[^A-Za-z]','','g')),1) as letter, qty::float8 as qty
+       from material_item where category='packaging' and label like 'ถุงกระดาษ%'`).catch(() => []);
+  const bagQty = new Map(bagRows.map((r) => [r.letter, Number(r.qty)]));
   const withStock: IssueItemPreview[] = [];
   for (const it of items) {
     const bag = isBagProduct(it.product);
@@ -176,7 +210,8 @@ export async function lookupOrderForIssue(orderNo: string): Promise<IssueLookup>
     // บาร์โค้ด CTW ที่ตรงกับ (กลิ่น + ขนาด) — match ใน JS
     const szKey = normSize(it.size);
     const ctw_barcode = (bcMap[it.product.toLowerCase().replace(/[^a-z0-9ก-๙]/g, "")] || []).find((b) => normSize(b.size) === szKey)?.barcode ?? null;
-    withStock.push({ ...it, spec, stock: stockByLine.get(it.line_no) ?? 0, tracked: cutsStock(it.product, it.size), needs_sku: needsSerialSku(it.size), is_bag: bag, ctw_barcode });
+    const stockBal = bag ? (bagQty.get(bagLetter(spec || it.size)) ?? 0) : (stockByLine.get(it.line_no) ?? 0);
+    withStock.push({ ...it, spec, stock: stockBal, tracked: cutsStock(it.product, it.size), needs_sku: needsSerialSku(it.size), is_bag: bag, ctw_barcode });
   }
   return { ok: true, order_no: key, doc_no: order.doc_no, platform: order.platform, note: order.note, items: withStock };
 }
@@ -319,6 +354,19 @@ export async function reverseIssue(orderNo: string): Promise<{ ok: boolean; erro
         await run(`insert into stock_moves (product, size, qty_change, balance, reason, order_no, note, created_by)
                    values ($1,$2,$3,$4,'adjust',$5,'ยกเลิกตัดสต๊อก',$6)`, [mv.product, mv.size || "", back, row.qty, on, user.id]);
       }
+      // คืนถุงกระดาษที่ตัดจากคลังบรรจุภัณฑ์ (material_move ผูก order_no รอบล่าสุด) — best-effort ก่อนรัน migration 0040
+      try {
+        const bmoves = await run<{ item_id: number; qty_change: number }>(
+          `select item_id, qty_change::float8 as qty_change from material_move
+             where order_no = $1 and reason = 'issue' and created_at >= $2`, [on, o.stock_issued_at]);
+        for (const bm of bmoves) {
+          const back = -Number(bm.qty_change);
+          if (!back) continue;
+          const [r] = await run<{ qty: number }>(`update material_item set qty = qty + $2, updated_at = now() where id = $1 returning qty::float8 as qty`, [bm.item_id, back]);
+          await run(`insert into material_move (item_id, qty_change, balance, reason, note, order_no, created_by)
+                     values ($1,$2,$3,'adjust',$4,$5,$6)`, [bm.item_id, back, r.qty, "ยกเลิกตัดสต๊อก", on, user.id]);
+        }
+      } catch { /* material_move.order_no ยังไม่มี — ข้าม */ }
       await run(`update orders set stock_issued_at = null, stock_issued_by = null where order_no = $1`, [on]);
     });
     // คืนสถานะ SKU รายชิ้นกลับเป็น in_stock (best-effort — stock_unit อาจยังไม่มีบน prod)
