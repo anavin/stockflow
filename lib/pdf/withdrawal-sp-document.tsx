@@ -41,6 +41,8 @@ const s = StyleSheet.create({
   page: { fontFamily: "NotoSansThai", fontSize: 8, color: C.ink, paddingVertical: 20, paddingHorizontal: 20 },
   pageRow: { flexDirection: "row", alignItems: "stretch" },
   panel: { flex: 1, height: 552, borderWidth: 1, borderColor: C.ink, padding: 9, flexDirection: "column" },
+  // full = A4 portrait เต็มแผ่น: ไม่ล็อกความสูง ให้เนื้อหาไหลลงตามปกติ (กันตัวหนังสือซ้อนกัน)
+  panelFull: { borderWidth: 1, borderColor: C.ink, padding: 14, flexDirection: "column" },
   spacer: { flexGrow: 1 },   // ดันลายเซ็นลงล่างสุด (ไม่มีเส้น/เลข)
   // dashed fold/cut line down the middle between the two copies
   divider: { width: 18, alignItems: "center" },
@@ -153,9 +155,8 @@ function Panel({ order, copyLabel, full = false }: { order: OrderWithItems; copy
   // full = A4 portrait เต็มแผ่น (สูง ~802) → มีที่มากกว่า ย่อช้ากว่า half (สูง 552)
   const n = items.length;
   const COL = full ? COL_FULL : COL_HALF;
-  const H = full ? 802 : 552;                        // กล่องใบสูงคงที่
-  // เกณฑ์จำนวนรายการที่เริ่มย่อ — full ปรับสูงขึ้นตามพื้นที่ (~×1.45)
-  const [T0, T1, T2, T3, T4, T5] = full ? [101, 80, 58, 45, 32, 20] : [70, 55, 40, 31, 22, 14];
+  // เกณฑ์จำนวนรายการที่เริ่มย่อ — full (A4 เต็มแผ่น) จูนให้ ~50 รายการพอดี 1 หน้า
+  const [T0, T1, T2, T3, T4, T5] = full ? [92, 68, 46, 33, 23, 13] : [70, 55, 40, 31, 22, 14];
   const rowH = n > T0 ? 4.7 : n > T1 ? 5.4 : n > T2 ? 6.3 : n > T3 ? 7.4 : n > T4 ? 9.5 : n > T5 ? 11 : 14;
   const cfs = n > T0 ? 4.7 : n > T1 ? 5.0 : n > T2 ? 5.4 : n > T3 ? 6 : n > T4 ? 6.6 : n > T5 ? 7 : 7.5;
   // เพดานกันตกขอบเงียบ ๆ: ถ้าเกิน CAP บรรทัด แสดงเท่าที่พอดี + แถวเตือน (ยอดรวมยังนับครบทุกชิ้น)
@@ -174,7 +175,7 @@ function Panel({ order, copyLabel, full = false }: { order: OrderWithItems; copy
   const restNote = noteText.replace("ส่งด่วน", "").replace("ส่งทันที", "").replace(/\s{2,}/g, " ").trim();
 
   return (
-    <View style={[s.panel, full ? { height: H, width: "100%", flexGrow: 0 } : { height: H }]}>
+    <View style={full ? s.panelFull : s.panel}>
       {/* header */}
       <View style={s.head}>
         <View>
@@ -264,11 +265,11 @@ function Panel({ order, copyLabel, full = false }: { order: OrderWithItems; copy
         </View>
       </View>
 
-      {/* เว้นว่างตรงกลาง (ไม่มีเส้น/เลข) ดันลายเซ็นไปล่างสุด — กล่องใบสูงคงที่ ขอบบน/ล่างตรงกันทุกใบ */}
-      <View style={s.spacer} />
+      {/* เว้นว่างตรงกลาง (ไม่มีเส้น/เลข) ดันลายเซ็นไปล่างสุด — เฉพาะใบสูงคงที่ (half); full ไหลตามเนื้อหา */}
+      {!full && <View style={s.spacer} />}
 
       {/* signatures — ล็อกอยู่ท้ายเอกสาร (ตำแหน่งเดิมทุกใบ) */}
-      <View style={[s.signRow, { marginTop: signGap }]}>
+      <View style={[s.signRow, { marginTop: full ? 14 : signGap }]}>
         <Sign label="ผู้เบิก" />
         <Sign label="ผู้ตรวจ" />
         <Sign label="ผู้จ่ายสินค้า" />
