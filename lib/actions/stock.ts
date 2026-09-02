@@ -74,22 +74,25 @@ async function runIssue(
   on: string,
   userId: number,
 ): Promise<IssueResult> {
+  // match either the order_no (PK) OR the printed doc_no (e.g. WPO-26-09-02-0001) so
+  // scanning the number on the slip works even when they differ.
   const [order] = await run<{ order_no: string; doc_no: string | null; deleted_at: string | null; stock_issued_at: string | null }>(
-    `select order_no, doc_no, deleted_at, stock_issued_at from orders where order_no = $1`, [on]);
+    `select order_no, doc_no, deleted_at, stock_issued_at from orders where order_no = $1 or doc_no = $1 order by (order_no = $1) desc limit 1`, [on]);
   if (!order) return { ok: false, error: `ไม่พบใบเบิก Order No. ${on}` };
+  const key = order.order_no;   // real PK for all follow-up queries
   if (order.deleted_at) return { ok: false, error: `ใบเบิกนี้อยู่ในถังขยะ` };
-  if (order.stock_issued_at) return { ok: false, alreadyIssued: true, order_no: on, doc_no: order.doc_no, error: `ใบเบิกนี้ตัดสต๊อกไปแล้ว` };
+  if (order.stock_issued_at) return { ok: false, alreadyIssued: true, order_no: key, doc_no: order.doc_no, error: `ใบเบิกนี้ตัดสต๊อกไปแล้ว` };
 
   // Atomically CLAIM the order so two concurrent scans can't both deduct.
   const claim = await run<{ order_no: string }>(
     `update orders set stock_issued_at = now(), stock_issued_by = $2
      where order_no = $1 and deleted_at is null and stock_issued_at is null
      returning order_no`,
-    [on, userId]);
-  if (claim.length === 0) return { ok: false, alreadyIssued: true, order_no: on, doc_no: order.doc_no, error: `ใบเบิกนี้ตัดสต๊อกไปแล้ว` };
+    [key, userId]);
+  if (claim.length === 0) return { ok: false, alreadyIssued: true, order_no: key, doc_no: order.doc_no, error: `ใบเบิกนี้ตัดสต๊อกไปแล้ว` };
 
   const items = await run<{ product: string; size: string; qty: number }>(
-    `select product, size, qty::float8 as qty from order_items where order_no = $1 and coalesce(product,'') <> ''`, [on]);
+    `select product, size, qty::float8 as qty from order_items where order_no = $1 and coalesce(product,'') <> ''`, [key]);
   if (items.length === 0) throw new Error("ใบเบิกไม่มีรายการสินค้า");
 
   const lines: IssueLine[] = [];
@@ -111,12 +114,12 @@ async function runIssue(
     await run(
       `insert into stock_moves (product, size, qty_change, balance, reason, order_no, created_by)
        values ($1,$2,$3,$4,'issue',$5,$6)`,
-      [sku.product, sku.size, -Number(it.qty), row.qty, on, userId],
+      [sku.product, sku.size, -Number(it.qty), row.qty, key, userId],
     );
     lines.push({ product: sku.product, size: sku.size, qty: Number(it.qty), balance: row.qty });
   }
 
-  return { ok: true, order_no: on, doc_no: order.doc_no, lines, negatives: lines.filter((l) => l.balance < 0), skipped };
+  return { ok: true, order_no: key, doc_no: order.doc_no, lines, negatives: lines.filter((l) => l.balance < 0), skipped };
 }
 
 export type IssueItemPreview = {
@@ -137,16 +140,18 @@ export async function lookupOrderForIssue(orderNo: string): Promise<IssueLookup>
   const on = (orderNo || "").trim();
   if (!on) return { ok: false, error: "กรอก/สแกน Order No." };
 
+  // match either the order_no (PK) OR the printed doc_no (e.g. WPO-26-09-02-0001)
   const [order] = await q<{ order_no: string; doc_no: string | null; platform: string | null; note: string | null; deleted_at: string | null; stock_issued_at: string | null }>(
-    `select order_no, doc_no, platform, note, deleted_at, stock_issued_at from orders where order_no = $1`, [on]);
+    `select order_no, doc_no, platform, note, deleted_at, stock_issued_at from orders where order_no = $1 or doc_no = $1 order by (order_no = $1) desc limit 1`, [on]);
   if (!order) return { ok: false, error: `ไม่พบใบเบิก Order No. ${on}` };
+  const key = order.order_no;   // real PK for all follow-up queries
   if (order.deleted_at) return { ok: false, error: "ใบเบิกนี้อยู่ในถังขยะ" };
-  if (order.stock_issued_at) return { ok: false, alreadyIssued: true, order_no: on, doc_no: order.doc_no, platform: order.platform, error: "ใบเบิกนี้ตัดสต๊อกไปแล้ว" };
+  if (order.stock_issued_at) return { ok: false, alreadyIssued: true, order_no: key, doc_no: order.doc_no, platform: order.platform, error: "ใบเบิกนี้ตัดสต๊อกไปแล้ว" };
 
   const items = await q<{ line_no: number; product: string; size: string; qty: number; unit: string; is_free: boolean; sku: string | null; spec: string | null; grade: string | null }>(
     `select line_no, product, size, qty::float8 as qty, unit, is_free, sku, spec,
             (select p.ptype from products p where lower(btrim(p.name)) = lower(btrim(order_items.product)) limit 1) as grade
-     from order_items where order_no = $1 and coalesce(product,'') <> '' order by line_no`, [on]);
+     from order_items where order_no = $1 and coalesce(product,'') <> '' order by line_no`, [key]);
   if (items.length === 0) return { ok: false, error: "ใบเบิกไม่มีรายการสินค้า" };
 
   const rules = await getActiveSpecRules();
@@ -161,7 +166,7 @@ export async function lookupOrderForIssue(orderNo: string): Promise<IssueLookup>
          and btrim(lower(size),' .') = btrim(lower(coalesce(oi.size,'')),' .')
        order by (product = oi.product) desc, (size = oi.size) desc limit 1
      ) s on true
-     where oi.order_no = $1 and coalesce(oi.product,'') <> ''`, [on]);
+     where oi.order_no = $1 and coalesce(oi.product,'') <> ''`, [key]);
   const stockByLine = new Map(sr.map((r) => [r.line_no, Number(r.qty)]));
   const withStock: IssueItemPreview[] = [];
   for (const it of items) {
@@ -173,7 +178,7 @@ export async function lookupOrderForIssue(orderNo: string): Promise<IssueLookup>
     const ctw_barcode = (bcMap[it.product.toLowerCase().replace(/[^a-z0-9ก-๙]/g, "")] || []).find((b) => normSize(b.size) === szKey)?.barcode ?? null;
     withStock.push({ ...it, spec, stock: stockByLine.get(it.line_no) ?? 0, tracked: isStockTracked(it.size), is_bag: bag, ctw_barcode });
   }
-  return { ok: true, order_no: on, doc_no: order.doc_no, platform: order.platform, note: order.note, items: withStock };
+  return { ok: true, order_no: key, doc_no: order.doc_no, platform: order.platform, note: order.note, items: withStock };
 }
 
 /** บันทึก SKU + Spec ที่พนักงานสแกน/กรอก แล้วตัดสต๊อก (ยืนยัน). */
@@ -185,8 +190,13 @@ export async function confirmIssueByOrder(
   const user = await getCurrentUser();
   if (!user) return { ok: false, error: "กรุณาเข้าสู่ระบบ" };
   if (!can.issueStock(user.role)) return { ok: false, error: "ไม่มีสิทธิ์ตัดสต๊อก (เฉพาะฝ่ายจัดของ)" };
-  const on = (orderNo || "").trim();
-  if (!on) return { ok: false, error: "กรอก/สแกน Order No." };
+  const scanned = (orderNo || "").trim();
+  if (!scanned) return { ok: false, error: "กรอก/สแกน Order No." };
+  // resolve to the real order_no (PK) whether the slip's order_no or its doc_no was scanned,
+  // so every follow-up query (order_items, stock_unit) uses the same key.
+  const [resolved] = await q<{ order_no: string }>(
+    `select order_no from orders where order_no = $1 or doc_no = $1 order by (order_no = $1) desc limit 1`, [scanned]);
+  const on = resolved?.order_no || scanned;   // fall through to runIssue's not-found if truly absent
   // รวม serial ต่อบรรทัด (ตัดซ้ำ/ว่าง) — รองรับทั้ง sku เดี่ยว และ skus หลายตัว
   const norm = entries.map((e) => ({
     line_no: e.line_no,
