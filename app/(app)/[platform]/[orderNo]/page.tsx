@@ -5,9 +5,10 @@ import { resolvePlatform, platformBase, platformColor, platformTint } from "@/li
 import OrderForm from "@/components/OrderForm";
 import CtwPushButton from "@/components/CtwPushButton";
 import ReverseIssueButton from "@/components/ReverseIssueButton";
+import ResetIssueButton from "@/components/ResetIssueButton";
 import { ChevronLeft, Printer, ScanLine, PackageCheck } from "lucide-react";
 import { requireCreator } from "@/lib/auth/require-user";
-import { can } from "@/lib/auth/roles";
+import { can, isAdmin } from "@/lib/auth/roles";
 
 export const dynamic = "force-dynamic";
 
@@ -43,9 +44,13 @@ export default async function EditOrderPage({ params }: { params: Promise<{ plat
               <ScanLine size={16} /> ตัดสต๊อก
             </Link>
           ) : null}
-          {/* ยกเลิกการตัดสต๊อก — เฉพาะที่ตัดแล้วแต่ยังไม่ส่ง (คืนสต๊อก+serial → แก้/ตัดใหม่) */}
-          {order.stock_issued_at && !order.shipped_at && can.issueStock(me.role) && (
+          {/* ยกเลิกการตัดสต๊อก — เฉพาะที่ตัดแล้วแต่ยังไม่ส่ง + ไม่มีการคืน (คืนสต๊อก+serial → แก้/ตัดใหม่) */}
+          {order.stock_issued_at && !order.shipped_at && (!order.return_status || order.return_status === "none") && can.issueStock(me.role) && (
             <ReverseIssueButton orderNo={decoded} platform={pf.code} />
+          )}
+          {/* รีเซ็ตใบเบิก (แอดมิน) — สำหรับใบที่ตัน: ตัดแล้ว + ส่งแล้ว หรือมีการคืน → ตัดใหม่ไม่ได้ */}
+          {order.stock_issued_at && (order.shipped_at || (order.return_status && order.return_status !== "none")) && isAdmin(me.role) && (
+            <ResetIssueButton orderNo={decoded} platform={pf.code} />
           )}
           {pf.code === "CTW" && <CtwPushButton orderNo={decoded} issued={!!order.stock_issued_at} pushedAt={order.ctw_received_at ?? null} />}
           <a href={`/print/pdf/${encodeURIComponent(decoded)}`} target="_blank" rel="noreferrer" className="btn-ghost">
