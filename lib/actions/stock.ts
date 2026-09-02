@@ -4,7 +4,7 @@ import { q, tx } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth/session";
 import { can, isAdmin } from "@/lib/auth/roles";
 import { logActivity } from "@/lib/activity";
-import { isStockTracked, needsSerialSku } from "@/lib/config";
+import { isStockTracked, needsSerialSku, cutsStock } from "@/lib/config";
 import { getActiveSpecRules, getScentBarcodes, stockGapFor } from "@/lib/queries";
 
 // ---- auto-select spec ตามขนาด + Grade (จากตาราง spec_rules) --------------------
@@ -98,8 +98,8 @@ async function runIssue(
   const lines: IssueLine[] = [];
   const skipped: SkipLine[] = [];
   for (const it of items) {
-    // ตัดสต๊อกทุกขนาดที่เป็น ml (รวมตัวอย่าง 1.2/4 ml) — ขนาดที่ไม่มี ml (ของแถม/อุปกรณ์) ไม่ตัด
-    if (!isStockTracked(it.size)) {
+    // ตัดสต๊อกทุกขนาด ml (รวมตัวอย่าง 1.2/4 ml) + ถุงกระดาษ (มีสต๊อกของตัวเอง) — ของแถม/อุปกรณ์อื่นไม่ตัด
+    if (!cutsStock(it.product, it.size)) {
       skipped.push({ product: it.product, size: it.size || "", qty: Number(it.qty) });
       continue;
     }
@@ -176,7 +176,7 @@ export async function lookupOrderForIssue(orderNo: string): Promise<IssueLookup>
     // บาร์โค้ด CTW ที่ตรงกับ (กลิ่น + ขนาด) — match ใน JS
     const szKey = normSize(it.size);
     const ctw_barcode = (bcMap[it.product.toLowerCase().replace(/[^a-z0-9ก-๙]/g, "")] || []).find((b) => normSize(b.size) === szKey)?.barcode ?? null;
-    withStock.push({ ...it, spec, stock: stockByLine.get(it.line_no) ?? 0, tracked: isStockTracked(it.size), needs_sku: needsSerialSku(it.size), is_bag: bag, ctw_barcode });
+    withStock.push({ ...it, spec, stock: stockByLine.get(it.line_no) ?? 0, tracked: cutsStock(it.product, it.size), needs_sku: needsSerialSku(it.size), is_bag: bag, ctw_barcode });
   }
   return { ok: true, order_no: key, doc_no: order.doc_no, platform: order.platform, note: order.note, items: withStock };
 }

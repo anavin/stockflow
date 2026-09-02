@@ -188,7 +188,7 @@ export default function StockIssue({ isAdmin, initialOrder, specOptions = [] }: 
                     ) : it.needs_sku ? (
                       <p className="text-[11px] text-faint">ยังไม่ได้สแกน — สแกน SKU ในช่องด้านบน</p>
                     ) : it.tracked ? (
-                      <p className="text-[11px] text-faint">ตัดตามจำนวน {it.qty} · ไม่ต้องมี SKU (ตัวอย่าง {it.size})</p>
+                      <p className="text-[11px] text-faint">ตัดตามจำนวน {it.qty} · ไม่ต้องมี SKU{it.is_bag ? " (ถุงกระดาษ)" : ` (ตัวอย่าง ${it.size})`}</p>
                     ) : (
                       <p className="text-[11px] text-faint">ไม่ตัดสต๊อก (ไม่ต้องมี SKU)</p>
                     )}

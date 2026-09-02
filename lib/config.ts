@@ -82,8 +82,12 @@ export function isStockTracked(size?: string | null): boolean {
 /** ขนาดตัวอย่าง/แถม — ตัดสต๊อกตามจำนวน แต่ไม่ได้ทำ SKU รายชิ้น (มาเป็นแพ็ค) → ไม่ต้องสแกน SKU */
 export const NON_SERIAL_SIZES = ["1.2 ml", "4 ml"];
 const mlToken = (s?: string | null) => (s || "").toLowerCase().match(/[0-9]+(\.[0-9]+)?/)?.[0] ?? "";
+/** ตัดสต๊อกไหม — ขนาด ml ทุกอัน + ถุงกระดาษ (Size S/M มีสต๊อกของตัวเอง ต้องตัดด้วย) */
+export function cutsStock(product?: string | null, size?: string | null): boolean {
+  return isStockTracked(size) || isBagProduct(product);
+}
 /** ต้องสแกน SKU รายชิ้น (serial) ไหม — เฉพาะขวดจริงที่ track สต๊อก และไม่ใช่ขนาดตัวอย่าง
- *  ถุงกระดาษ/ของแถมไม่มี ml = ไม่ track = ไม่ต้องมี SKU · 1.2/4 ml = track แต่ไม่ serial */
+ *  ถุงกระดาษ/ของแถมไม่มี ml = ไม่ต้องมี SKU · 1.2/4 ml = ตัดสต๊อกแต่ไม่ serial */
 export function needsSerialSku(size?: string | null): boolean {
   if (!isStockTracked(size)) return false;
   return !NON_SERIAL_SIZES.some((s) => mlToken(s) === mlToken(size));
