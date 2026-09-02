@@ -79,6 +79,16 @@ export function isStockTracked(size?: string | null): boolean {
   return /\d\s*ml/i.test((size || "").trim());
 }
 
+/** ขนาดตัวอย่าง/แถม — ตัดสต๊อกตามจำนวน แต่ไม่ได้ทำ SKU รายชิ้น (มาเป็นแพ็ค) → ไม่ต้องสแกน SKU */
+export const NON_SERIAL_SIZES = ["1.2 ml", "4 ml"];
+const mlToken = (s?: string | null) => (s || "").toLowerCase().match(/[0-9]+(\.[0-9]+)?/)?.[0] ?? "";
+/** ต้องสแกน SKU รายชิ้น (serial) ไหม — เฉพาะขวดจริงที่ track สต๊อก และไม่ใช่ขนาดตัวอย่าง
+ *  ถุงกระดาษ/ของแถมไม่มี ml = ไม่ track = ไม่ต้องมี SKU · 1.2/4 ml = track แต่ไม่ serial */
+export function needsSerialSku(size?: string | null): boolean {
+  if (!isStockTracked(size)) return false;
+  return !NON_SERIAL_SIZES.some((s) => mlToken(s) === mlToken(size));
+}
+
 /** ของแถม (Free) ให้ได้เฉพาะขนาดเล็กเท่านั้น — ไซต์ใหญ่ห้ามเป็นของแถม */
 export const FREE_ALLOWED_SIZES = ["1.2 ml", "4 ml", "10 ml"];
 /** ถุงกระดาษ (ของแถมพิเศษ) = แถมได้เฉพาะ Size S / Size M */

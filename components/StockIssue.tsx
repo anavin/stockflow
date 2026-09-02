@@ -61,7 +61,7 @@ export default function StockIssue({ isAdmin, initialOrder, specOptions = [] }: 
   async function submitIssue() {
     if (!preview?.order_no || busy) return;
     // แต่ละบรรทัดควรมี SKU ครบตามจำนวน (qty>1 = หลาย serial) — เตือนถ้ายังไม่ครบ
-    const incomplete = preview.items!.some((it) => it.tracked && (form[it.line_no]?.skus?.length || 0) < it.qty);
+    const incomplete = preview.items!.some((it) => it.needs_sku && (form[it.line_no]?.skus?.length || 0) < it.qty);
     if (incomplete && !window.confirm("บางรายการใส่ SKU ยังไม่ครบตามจำนวน — ยืนยันตัดสต๊อกเลยไหม?")) return;
     // เตือนก่อนตัดถ้าสต๊อกไม่พอ (จะทำให้ติดลบ) — ระบุกลิ่นที่ขาด
     const shortLines = preview.items!.filter((it) => it.tracked && it.qty > (it.stock ?? 0));
@@ -175,7 +175,7 @@ export default function StockIssue({ isAdmin, initialOrder, specOptions = [] }: 
                   <div>
                     <div className="mb-1 flex items-center justify-between">
                       <span className="text-[11px] text-muted">SKU รายชิ้นที่สแกน</span>
-                      {it.tracked && <span className={`text-[11px] font-medium tabular-nums ${(form[it.line_no]?.skus?.length || 0) >= it.qty ? "text-green-600" : "text-amber-600"}`}>{form[it.line_no]?.skus?.length || 0}/{it.qty}</span>}
+                      {it.needs_sku && <span className={`text-[11px] font-medium tabular-nums ${(form[it.line_no]?.skus?.length || 0) >= it.qty ? "text-green-600" : "text-amber-600"}`}>{form[it.line_no]?.skus?.length || 0}/{it.qty}</span>}
                     </div>
                     {(form[it.line_no]?.skus?.length || 0) > 0 ? (
                       <div className="flex flex-wrap gap-1">
@@ -185,8 +185,10 @@ export default function StockIssue({ isAdmin, initialOrder, specOptions = [] }: 
                           </span>
                         ))}
                       </div>
-                    ) : it.tracked ? (
+                    ) : it.needs_sku ? (
                       <p className="text-[11px] text-faint">ยังไม่ได้สแกน — สแกน SKU ในช่องด้านบน</p>
+                    ) : it.tracked ? (
+                      <p className="text-[11px] text-faint">ตัดตามจำนวน {it.qty} · ไม่ต้องมี SKU (ตัวอย่าง {it.size})</p>
                     ) : (
                       <p className="text-[11px] text-faint">ไม่ตัดสต๊อก (ไม่ต้องมี SKU)</p>
                     )}

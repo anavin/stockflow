@@ -4,7 +4,7 @@ import { q, tx } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth/session";
 import { can, isAdmin } from "@/lib/auth/roles";
 import { logActivity } from "@/lib/activity";
-import { isStockTracked } from "@/lib/config";
+import { isStockTracked, needsSerialSku } from "@/lib/config";
 import { getActiveSpecRules, getScentBarcodes, stockGapFor } from "@/lib/queries";
 
 // ---- auto-select spec ตามขนาด + Grade (จากตาราง spec_rules) --------------------
@@ -124,7 +124,7 @@ async function runIssue(
 
 export type IssueItemPreview = {
   line_no: number; product: string; size: string; qty: number; unit: string;
-  is_free: boolean; sku: string | null; spec: string | null; stock: number; tracked: boolean;
+  is_free: boolean; sku: string | null; spec: string | null; stock: number; tracked: boolean; needs_sku: boolean;
   grade: string | null; is_bag: boolean; ctw_barcode: string | null;
 };
 export type IssueLookup = {
@@ -176,7 +176,7 @@ export async function lookupOrderForIssue(orderNo: string): Promise<IssueLookup>
     // บาร์โค้ด CTW ที่ตรงกับ (กลิ่น + ขนาด) — match ใน JS
     const szKey = normSize(it.size);
     const ctw_barcode = (bcMap[it.product.toLowerCase().replace(/[^a-z0-9ก-๙]/g, "")] || []).find((b) => normSize(b.size) === szKey)?.barcode ?? null;
-    withStock.push({ ...it, spec, stock: stockByLine.get(it.line_no) ?? 0, tracked: isStockTracked(it.size), is_bag: bag, ctw_barcode });
+    withStock.push({ ...it, spec, stock: stockByLine.get(it.line_no) ?? 0, tracked: isStockTracked(it.size), needs_sku: needsSerialSku(it.size), is_bag: bag, ctw_barcode });
   }
   return { ok: true, order_no: key, doc_no: order.doc_no, platform: order.platform, note: order.note, items: withStock };
 }
@@ -244,7 +244,9 @@ export async function confirmIssueByOrder(
       for (const e of norm) {
         const li = byLine.get(e.line_no);
         if (!li) continue;
-        if (isStockTracked(li.size)) {
+        // เฉพาะขวดจริงที่ทำ serial (30/50/90/100 ml ฯลฯ) ต้องสแกน SKU ให้ครบ
+        // ถุงกระดาษ/ของแถม (ไม่ track) และตัวอย่าง 1.2/4 ml (ตัดตามจำนวน ไม่มี serial) = ไม่ต้องมี SKU
+        if (needsSerialSku(li.size)) {
           const need = Math.round(Number(li.qty) || 0);
           if (e.skus.length !== need)
             throw new Error(`${li.product} ${li.size}: ต้องสแกน SKU ให้ครบ ${need} ชิ้น (ใส่มา ${e.skus.length}) — ตัดจาก SKU ที่มีในคลัง`);
