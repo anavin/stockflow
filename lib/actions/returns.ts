@@ -39,20 +39,22 @@ export async function lookupOrderForReturn(orderNo: string): Promise<ReturnLooku
   const on = (orderNo || "").trim();
   if (!on) return { ok: false, error: "กรอก/สแกน Order No." };
 
+  // จับคู่ด้วย order_no (PK) หรือ doc_no ที่พิมพ์บนใบเบิก (เช่น WPO-26-09-02-0001)
   const [o] = await q<{ order_no: string; doc_no: string | null; platform: string | null; receiver: string | null; username: string | null; deleted_at: string | null; shipped_at: string | null; stock_issued_at: string | null }>(
-    `select order_no, doc_no, platform, receiver, username, deleted_at, shipped_at, stock_issued_at from orders where order_no = $1`, [on]);
+    `select order_no, doc_no, platform, receiver, username, deleted_at, shipped_at, stock_issued_at from orders where order_no = $1 or doc_no = $1 order by (order_no = $1) desc limit 1`, [on]);
   if (!o) return { ok: false, error: `ไม่พบออเดอร์ ${on}` };
   if (o.deleted_at) return { ok: false, error: "ออเดอร์นี้อยู่ในถังขยะ" };
   if (!o.shipped_at) return { ok: false, error: "รับคืนได้เฉพาะออเดอร์ที่ส่งแล้ว — ยังไม่ส่ง ให้ยกเลิกออเดอร์/ยกเลิกการตัดแทน" };
+  const key = o.order_no;   // ใช้ order_no จริงกับ query ถัดไป (เผื่อค้นด้วย doc_no)
 
   const items = await q<{ line_no: number; product: string; size: string; qty: number; unit: string; is_free: boolean }>(
     `select line_no, product, size, qty::float8 as qty, unit, is_free
-     from order_items where order_no = $1 and coalesce(product,'') <> '' order by line_no`, [on]);
+     from order_items where order_no = $1 and coalesce(product,'') <> '' order by line_no`, [key]);
   if (items.length === 0) return { ok: false, error: "ออเดอร์นี้ไม่มีรายการสินค้า" };
 
   // คืนไปแล้วต่อบรรทัด (ไม่นับที่ voided)
   const ret = await q<{ line_no: number; qty: number }>(
-    `select line_no, sum(qty)::float8 as qty from order_returns where order_no = $1 and voided_at is null group by line_no`, [on]);
+    `select line_no, sum(qty)::float8 as qty from order_returns where order_no = $1 and voided_at is null group by line_no`, [key]);
   const retMap = new Map(ret.map((r) => [r.line_no, Number(r.qty)]));
 
   const out: ReturnItemPreview[] = items.map((it) => {
