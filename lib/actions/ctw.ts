@@ -29,6 +29,13 @@ export async function pushToCtw(orderNo: string): Promise<CtwPushResult> {
   const skus = await q(`select sku, product, size, barcode from stock_unit where order_no = $1 order by product, size, sku`, [on]);
   const payload = { po_no: on, branch: o.branch, doc_date: o.doc_date, items, skus };
 
+  // อ้างสิทธิ์ ctw_received_at ก่อน POST (atomic) — กันกดซ้ำ/สองแท็บ ส่งข้อมูลไป CTW ซ้ำ (สต๊อกสาขาเบิ้ล)
+  const claim = await q<{ order_no: string }>(
+    `update orders set ctw_received_at = now(), ctw_received_by = 'push', updated_at = now()
+       where order_no = $1 and platform = 'CTW' and ctw_received_at is null returning order_no`, [on]);
+  if (claim.length === 0) return { ok: false, error: "ใบเบิกนี้ส่งไป CTW แล้ว (ไม่ส่งซ้ำ)" };
+
+  const release = () => q(`update orders set ctw_received_at = null, ctw_received_by = null where order_no = $1`, [on]);
   let res: Response;
   try {
     res = await fetch(url, {
@@ -36,13 +43,13 @@ export async function pushToCtw(orderNo: string): Promise<CtwPushResult> {
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${key}` },
       body: JSON.stringify(payload),
     });
-  } catch (e: any) { return { ok: false, error: `ต่อระบบ CTW ไม่ได้: ${e?.message || "network error"}` }; }
+  } catch (e: any) { await release(); return { ok: false, error: `ต่อระบบ CTW ไม่ได้: ${e?.message || "network error"}` }; }
   if (!res.ok) {
     const t = await res.text().catch(() => "");
+    await release();   // ปล่อยสิทธิ์คืน → กดส่งใหม่ได้
     return { ok: false, error: `CTW ตอบกลับ ${res.status}${t ? `: ${t.slice(0, 200)}` : ""}` };
   }
 
-  await q(`update orders set ctw_received_at = now(), ctw_received_by = 'push', updated_at = now() where order_no = $1`, [on]);
   await logActivity("ctw.push", `${on} → CTW (${(skus as any[]).length} SKU)`);
   revalidatePath(`/ctw/${encodeURIComponent(on)}`); revalidatePath("/ctw"); revalidateTag("dashboard");
   return { ok: true, skus: (skus as any[]).length };

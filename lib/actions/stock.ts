@@ -62,7 +62,7 @@ async function issueBagUnit(
   if (!letter) return null;
   const [it] = await run<{ id: number; label: string }>(
     `select id, label from material_item
-       where category = 'packaging' and label like 'ถุงกระดาษ%'
+       where category = 'packaging' and label ~ 'ถุง'
          and right(upper(regexp_replace(label,'[^A-Za-z]','','g')),1) = $1
        order by id limit 1`, [letter]);
   if (!it) return null;
@@ -272,18 +272,28 @@ export async function confirmIssueByOrder(
     spec: (e.spec || "").trim() || null,
     skus: [...new Set([...(e.skus || []), ...(e.sku ? [e.sku] : [])].map((s) => (s || "").trim()).filter(Boolean))],
   }));
+  let raceResult: IssueResult | null = null;   // ใบถูกตัดโดย session อื่นระหว่างเขียน → rollback แล้วคืนผลนี้
   try {
     const out = await tx<IssueResult>(async (run) => {
+      // guard ก่อนเขียน sku/spec — ใบถังขยะ/ตัดแล้ว = no-op (กันเขียนทับ serial ของใบที่ตัดไปแล้ว)
+      const [pre] = await run<{ stock_issued_at: string | null; deleted_at: string | null; doc_no: string | null }>(
+        `select stock_issued_at, deleted_at, doc_no from orders where order_no = $1`, [on]);
+      if (pre?.deleted_at) return { ok: false, error: "ใบเบิกนี้อยู่ในถังขยะ" };
+      if (pre?.stock_issued_at) return { ok: false, alreadyIssued: true, order_no: on, doc_no: pre.doc_no, error: "ใบเบิกนี้ตัดสต๊อกไปแล้ว" };
       const its = await run<{ line_no: number; product: string; size: string; qty: number }>(
         `select line_no, product, size, qty::float8 as qty from order_items where order_no = $1`, [on]);
       const byLine = new Map(its.map((i) => [i.line_no, i]));
-      // บันทึก SKU (join serial) + spec ลง order_items
+      // บันทึก SKU (join serial) + spec ลง order_items (spec ต้องเขียนก่อน runIssue อ่านตอนตัดถุง)
       for (const e of norm) {
         await run(`update order_items set sku = $2, spec = $3 where order_no = $1 and line_no = $4`,
           [on, e.skus.length ? e.skus.join(", ") : null, e.spec, e.line_no]);
       }
       const res = await runIssue(run, on, user.id);
-      if (!res.ok) return res;
+      if (!res.ok) {
+        // แข่งกัน: อีก session ตัดไปก่อนระหว่างเขียน → throw เพื่อ rollback การเขียน sku/spec (กันเขียนทับ)
+        if (res.alreadyIssued) { raceResult = res; throw new Error("__issue_race__"); }
+        return res;
+      }
       // ── ตัดจาก SKU ที่มีจริงในคลังเท่านั้น (in_stock) · กลิ่น/ขนาดตรง · ครบตามจำนวน (เฉพาะขนาดที่ track สต๊อก) ──
       const nk = (s: string | null) => (s || "").toLowerCase().replace(/[^a-z0-9ก-๙]/g, "");
       const nsz = (s: string | null) => (s || "").toLowerCase().replace(/^[\s.]+|[\s.]+$/g, "");   // btrim ' .' — "50 ml." = "50 ml"
@@ -316,6 +326,7 @@ export async function confirmIssueByOrder(
     revalidatePath("/stock/units");
     return out;
   } catch (e: any) {
+    if (raceResult) return raceResult;   // ใบถูกตัดโดย session อื่น — คืนผล alreadyIssued (การเขียน sku/spec ถูก rollback แล้ว)
     return { ok: false, error: e?.message || "ตัดสต๊อกไม่สำเร็จ" };
   }
 }
@@ -378,15 +389,19 @@ export async function reverseIssue(orderNo: string): Promise<{ ok: boolean; erro
                      values ($1,$2,$3,'adjust',$4,$5,$6)`, [bm.item_id, back, r.qty, "ยกเลิกตัดสต๊อก", on, user.id]);
         }
       } catch { /* material_move.order_no ยังไม่มี — ข้าม */ }
+      // คืนสถานะ SKU รายชิ้นกลับเป็น in_stock — ในทรานแซกชันเดียวกับการคืน qty (กัน qty/serial เพี้ยนถ้าล้มกลางคัน)
+      // guard ด้วย to_regclass เผื่อ prod ยังไม่มีตาราง stock_unit (ไม่ให้ tx abort)
+      const [ur] = await run<{ ok: boolean }>(`select to_regclass('stock_unit') is not null as ok`);
+      if (ur?.ok) {
+        await run(`update stock_unit set status = 'in_stock', order_no = null, issued_at = null, issued_by = null
+                   where order_no = $1 and status = 'issued'`, [on]);
+      }
+      // เคลียร์ serial ที่ผูกไว้ใน order_items → ตัดใหม่เริ่มสะอาด (spec/ไซส์ถุงคงไว้)
+      await run(`update order_items set sku = null where order_no = $1 and coalesce(sku,'') <> ''`, [on]);
       await run(`update orders set stock_issued_at = null, stock_issued_by = null where order_no = $1`, [on]);
     });
-    // คืนสถานะ SKU รายชิ้นกลับเป็น in_stock (best-effort — stock_unit อาจยังไม่มีบน prod)
-    try {
-      await q(`update stock_unit set status = 'in_stock', order_no = null, issued_at = null, issued_by = null
-               where order_no = $1 and status = 'issued'`, [on]);
-    } catch { /* stock_unit ยังไม่พร้อม — ข้าม */ }
     await logActivity("stock.reverse", on);
-    revalidatePath("/stock"); revalidateTag("dashboard"); revalidatePath("/stock/moves"); revalidatePath("/stock/units");
+    revalidatePath("/stock"); revalidateTag("dashboard"); revalidatePath("/stock/moves"); revalidatePath("/stock/units"); revalidatePath("/returns");
     return { ok: true };
   } catch (e: any) {
     return { ok: false, error: e?.message || "ยกเลิกไม่สำเร็จ" };

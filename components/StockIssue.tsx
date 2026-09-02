@@ -73,9 +73,14 @@ export default function StockIssue({ isAdmin, initialOrder, specOptions = [] }: 
   // ขั้น 2: กดยืนยัน → บันทึก SKU+Spec แล้วตัดสต๊อก
   async function submitIssue() {
     if (!preview?.order_no || busy) return;
-    // แต่ละบรรทัดควรมี SKU ครบตามจำนวน (qty>1 = หลาย serial) — เตือนถ้ายังไม่ครบ
-    const incomplete = preview.items!.some((it) => it.needs_sku && (form[it.line_no]?.skus?.length || 0) < it.qty);
-    if (incomplete && !window.confirm("บางรายการใส่ SKU ยังไม่ครบตามจำนวน — ยืนยันตัดสต๊อกเลยไหม?")) return;
+    // ขวดจริง (needs_sku) ต้องสแกน SKU ให้ครบทุกขวด — server บังคับตรงนี้ ถ้าไม่ครบจะตัดไม่ได้ → บล็อกตั้งแต่หน้าจอ
+    const incomplete = preview.items!.filter((it) => it.needs_sku && (form[it.line_no]?.skus?.length || 0) < it.qty);
+    if (incomplete.length) {
+      alert(
+        `ต้องสแกน SKU ให้ครบทุกขวดก่อนตัดสต๊อก:\n` +
+        incomplete.map((it) => `• ${it.product} ${it.size} — ${(form[it.line_no]?.skus?.length || 0)}/${it.qty}`).join("\n"));
+      return;
+    }
     // ถุงต้องเลือกไซส์ (S/M) ก่อน ไม่งั้นระบบไม่รู้จะหักจากไซส์ไหน → ถุงจะไม่ถูกตัด
     const bagNoSize = preview.items!.filter((it) => it.is_bag && !bagLetter(form[it.line_no]?.spec || it.size));
     if (bagNoSize.length && !window.confirm(

@@ -623,6 +623,7 @@ export async function listStock(opts: { search?: string; lowOnly?: boolean; thre
       select distinct oi.product, oi.size, 0::float8, null::timestamptz
         from order_items oi join orders o on o.order_no = oi.order_no
         where o.deleted_at is null and coalesce(oi.product,'') <> '' and coalesce(oi.size,'') <> ''
+          and oi.size ~* 'ml' and oi.product !~ 'ถุง'   -- เฉพาะขวดน้ำหอม (ml) — กันถุง/ของแถมไม่มี ml หลุดเข้าคลังน้ำหอมเป็นแถวผี qty 0
       union all
       -- ทุกขนาดที่มีในแคตตาล็อกบาร์โค้ด (แม้ยังไม่เคยนับ/สั่ง) → โชว์ครบเหมือนหน้าจัดการกลิ่น (qty 0)
       -- ตัดจุด/ช่องว่างท้าย "50 ml." → "50 ml" ให้ตรงฟอร์แมตสต๊อก (rtrim เฉพาะท้าย ไม่แตะจุดใน 1.2 ml)
@@ -743,7 +744,7 @@ export async function dashboardStats(platform?: string): Promise<DashStats> {
          (select count(*)::int from orders where deleted_at is null${pc}
             and (created_at at time zone 'Asia/Bangkok')::date = (now() at time zone 'Asia/Bangkok')::date
             and abs((created_at at time zone 'Asia/Bangkok')::date - coalesce(doc_date, order_date)) <= 1) as "ordersToday",
-         (select count(*)::int from orders where deleted_at is null${pc} and to_char(doc_date,'YYYY-MM') = to_char(current_date,'YYYY-MM')) as "ordersMonth",
+         (select count(*)::int from orders where deleted_at is null${pc} and to_char(doc_date,'YYYY-MM') = to_char((now() at time zone 'Asia/Bangkok')::date,'YYYY-MM')) as "ordersMonth",
          (select count(*)::int from orders where deleted_at is null${pc}${period} and stock_issued_at is not null) as "issuedTotal",
          (select count(*)::int from orders where deleted_at is null${pc} and (stock_issued_at at time zone 'Asia/Bangkok')::date = (now() at time zone 'Asia/Bangkok')::date) as "issuedToday",
          (select count(*)::int from stock) as skus,
@@ -803,7 +804,7 @@ export async function ordersTrend(months = 6, platform?: string): Promise<MonthP
 
 export async function stockSummary(): Promise<{ skus: number; low: number; issuedOrders: number }> {
   try {
-    const [a] = await q<{ n: number }>(`select count(*)::int n from (select distinct oi.product, oi.size from order_items oi join orders o on o.order_no=oi.order_no where o.deleted_at is null and coalesce(oi.product,'')<>'' union select product,size from stock) t`);
+    const [a] = await q<{ n: number }>(`select count(*)::int n from (select distinct oi.product, oi.size from order_items oi join orders o on o.order_no=oi.order_no where o.deleted_at is null and coalesce(oi.product,'')<>'' and oi.size ~* 'ml' and oi.product !~ 'ถุง' union select product,size from stock) t`);
     const [b] = await q<{ n: number }>(`select count(*)::int n from stock where qty <= 10`);
     const [c] = await q<{ n: number }>(`select count(*)::int n from orders where deleted_at is null and stock_issued_at is not null`);
     return { skus: a?.n ?? 0, low: b?.n ?? 0, issuedOrders: c?.n ?? 0 };
