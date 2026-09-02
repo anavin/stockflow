@@ -443,7 +443,7 @@ export default function OrderForm({ platform = "Shopee", products, sizes, provin
       {/* items */}
       <section className="card p-5">
         <h2 className="mb-4 text-sm font-semibold text-ink">รายการสินค้า</h2>
-        <ItemsEditor items={items} onChange={onItemsChange} products={products} sizes={sizes} errors={itemErrors} productCodes={productCodes} productTypes={productTypes} discontinued={discontinued} />
+        <ItemsEditor items={items} onChange={onItemsChange} products={products} sizes={sizes} errors={itemErrors} productCodes={productCodes} productTypes={productTypes} discontinued={discontinued} platform={initial?.platform || platform} />
       </section>
 
       {/* extras */}

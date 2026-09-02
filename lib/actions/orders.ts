@@ -7,7 +7,7 @@ import { can } from "@/lib/auth/roles";
 import { logActivity } from "@/lib/activity";
 import { buildProductLabel, type OrderWithItems } from "@/lib/types";
 import { formatDocNo, monthLabel, ymdKey } from "@/lib/docno";
-import { isAllowedFreeSize, FREE_ALLOWED_SIZES, enabledPlatforms, platformBase } from "@/lib/config";
+import { isAllowedFreeSize, FREE_ALLOWED_SIZES, enabledPlatforms, platformBase, isBagProduct } from "@/lib/config";
 
 /** revalidate หน้ารายการ+ถังขยะใบเบิกของทุกแพลตฟอร์ม (route เป็น /[platform] — hardcode /shopee ครอบไม่ครบ) */
 function revalidateOrderLists() {
@@ -95,10 +95,11 @@ export async function saveOrder(input: OrderInput): Promise<SaveResult> {
   if (badFree) {
     return { ok: false, error: `ของแถม "${badFree.product}" ขนาด ${badFree.size} ไม่ได้ — ของแถมได้เฉพาะ ${FREE_ALLOWED_SIZES.join(" / ")} (ถุงกระดาษ: Size S / Size M)` };
   }
-  // ของแถมจำนวนต้องไม่เกิน 30 (บังคับฝั่ง server ด้วย ไม่ใช่แค่ disable ปุ่มบนฟอร์ม/นำเข้า)
-  const bigFree = o.items.find((it) => it.is_free && Number(it.qty) > 30);
+  // ของแถมจำนวนต้องไม่เกิน 30 (บังคับฝั่ง server ด้วย) — ยกเว้นถุงกระดาษบนใบเบิก CTW เบิกได้ถึง 80
+  const freeMax = (it: { product?: string | null }) => (isBagProduct(it.product) && o.platform === "CTW" ? 80 : 30);
+  const bigFree = o.items.find((it) => it.is_free && Number(it.qty) > freeMax(it));
   if (bigFree) {
-    return { ok: false, error: `ของแถม "${bigFree.product}" จำนวน ${bigFree.qty} เกิน 30 ไม่ได้` };
+    return { ok: false, error: `ของแถม "${bigFree.product}" จำนวน ${bigFree.qty} เกิน ${freeMax(bigFree)} ไม่ได้` };
   }
 
   // ล็อก "วันที่ใบเบิก" = วันที่สร้างจริงในระบบ (เวลาไทย) — ไม่ให้ backdate จากฟอร์ม (ค่าที่ฟอร์มส่งมาไม่ถูกใช้)

@@ -9,15 +9,14 @@ export const BAG_PRODUCT = "ถุงกระดาษ";
 const BAG_SIZES = ["Size S", "Size M"];
 export const isBagProduct = (p: string) => /ถุง/.test(p || "");
 
-// จำนวน dropdown options (1–30). ครอบคลุมการใช้งานปกติ; แก้เพิ่มได้ที่นี่
-const QTY_OPTIONS = Array.from({ length: 30 }, (_, i) => i + 1);
-
-function QtySelect({ value, onChange, invalid }: { value: number; onChange: (v: number) => void; invalid?: boolean }) {
-  const inList = QTY_OPTIONS.includes(value);
+// จำนวน dropdown (ค่าเริ่มต้น 1–30 · ส่ง max มากขึ้นได้ เช่น ถุงกระดาษ CTW ถึง 80)
+function QtySelect({ value, onChange, invalid, max = 30 }: { value: number; onChange: (v: number) => void; invalid?: boolean; max?: number }) {
+  const options = Array.from({ length: max }, (_, i) => i + 1);
+  const inList = options.includes(value);
   return (
     <select className={`input ${invalid ? "border-red-400 ring-2 ring-red-100" : ""}`} value={value} onChange={(e) => onChange(Number(e.target.value))}>
       {!inList && <option value={value}>{value}</option>}
-      {QTY_OPTIONS.map((n) => (
+      {options.map((n) => (
         <option key={n} value={n}>{n}</option>
       ))}
     </select>
@@ -60,6 +59,7 @@ export default function ItemsEditor({
   productCodes,
   productTypes,
   discontinued,
+  platform,
 }: {
   items: ItemDraft[];
   onChange: (items: ItemDraft[]) => void;
@@ -69,7 +69,10 @@ export default function ItemsEditor({
   productCodes?: Record<string, string>;
   productTypes?: Record<string, string>;
   discontinued?: Record<string, string[]>;
+  platform?: string;
 }) {
+  // CTW โอนสาขา = เบิกถุงกระดาษทีละมาก → เพิ่มได้ถึง 80 ใบ (ปกติ/แพลตฟอร์มอื่น 30)
+  const qtyMaxOf = (it: ItemDraft) => (isBagProduct(it.product) && platform === "CTW" ? 80 : 30);
   const normKey = (s: string) => (s || "").toLowerCase().replace(/[^a-z0-9ก-๙]/g, "");
   const errMsg = (e?: ItemError) => {
     if (!e) return "";
@@ -119,7 +122,8 @@ export default function ItemsEditor({
   const FREE_MAX_QTY = 30;
   function setQty(i: number, v: number) {
     const it = items[i];
-    update(i, { qty: v, ...(v > FREE_MAX_QTY && it.is_free ? { is_free: false } : {}) });
+    // ถุงกระดาษ = ฟรีเสมอ (แม้จำนวนเกิน 30) — ไม่ปลดฟรี
+    update(i, { qty: v, ...(v > FREE_MAX_QTY && it.is_free && !isBagProduct(it.product) ? { is_free: false } : {}) });
   }
   // ปิดปุ่ม Free เมื่อ: ขนาดใหญ่ (ไม่ใช่ 1.2/4/10 ml) หรือ จำนวนเกิน 30
   // (ถ้าติ๊ก Free ไว้แล้ว ไม่ปิด เพื่อให้ยกเลิกได้)
@@ -171,7 +175,7 @@ export default function ItemsEditor({
                   )}
                 </td>
                 <td className="px-3 py-2">
-                  <QtySelect value={it.qty} onChange={(v) => setQty(i, v)} invalid={errors[i]?.qty} />
+                  <QtySelect value={it.qty} onChange={(v) => setQty(i, v)} invalid={errors[i]?.qty} max={qtyMaxOf(it)} />
                 </td>
                 <td className="px-3 py-2 text-center">
                   <input type="checkbox" className="h-4 w-4 accent-brand disabled:cursor-not-allowed" checked={it.is_free || isBagProduct(it.product)}
@@ -210,7 +214,7 @@ export default function ItemsEditor({
               <Combobox value={it.size} onChange={(v) => update(i, { size: v })}
                 options={sizeOptionsFor(it)}
                 allowCustom={!it.is_free && !isBagProduct(it.product)} placeholder={isBagProduct(it.product) ? "ขนาดถุง (ถ้ามี)" : "ขนาด"} invalid={errors[i]?.size} />
-              <QtySelect value={it.qty} onChange={(v) => setQty(i, v)} invalid={errors[i]?.qty} />
+              <QtySelect value={it.qty} onChange={(v) => setQty(i, v)} invalid={errors[i]?.qty} max={qtyMaxOf(it)} />
             </div>
             {errMsg(errors[i]) && (
               <div className="flex items-center gap-1 text-xs text-red-600"><AlertTriangle size={12} /> {errMsg(errors[i])}</div>
