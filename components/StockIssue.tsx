@@ -85,6 +85,19 @@ export default function StockIssue({ isAdmin, initialOrder, specOptions = [] }: 
     setForm((f) => { const cur = f[line]?.skus || []; if (cur.includes(s)) return f; return { ...f, [line]: { ...f[line], skus: [...cur, s] } }; });
   };
   const removeSerial = (line: number, s: string) => setForm((f) => ({ ...f, [line]: { ...f[line], skus: (f[line]?.skus || []).filter((x) => x !== s) } }));
+  // คลิกเลือก/เอาออก SKU จากคลัง (ไม่เกิน qty)
+  const toggleSerial = (line: number, s: string, cap: number) => setForm((f) => {
+    const cur = f[line]?.skus || [];
+    if (cur.includes(s)) return { ...f, [line]: { ...f[line], skus: cur.filter((x) => x !== s) } };
+    if (cur.length >= cap) return f;
+    return { ...f, [line]: { ...f[line], skus: [...cur, s] } };
+  });
+  // เลือกให้ครบอัตโนมัติ (หยิบ SKU ในคลังที่ยังไม่เลือก จนครบ qty)
+  const autoFill = (line: number, qty: number, available: string[]) => setForm((f) => {
+    const cur = f[line]?.skus || []; const need = qty - cur.length; if (need <= 0) return f;
+    const add = available.filter((s) => !cur.includes(s)).slice(0, need);
+    return { ...f, [line]: { ...f[line], skus: [...cur, ...add] } };
+  });
 
   // มาจากปุ่ม "ตัดสต๊อก" ในหน้าใบเบิก (/stock/issue?order=XXX) → ดึงรายการให้อัตโนมัติ
   useEffect(() => {
@@ -156,11 +169,35 @@ export default function StockIssue({ isAdmin, initialOrder, specOptions = [] }: 
                     {(form[it.line_no]?.skus?.length || 0) > 0 && (
                       <div className="mt-1.5 flex flex-wrap gap-1">
                         {form[it.line_no].skus.map((s) => (
-                          <span key={s} className="inline-flex items-center gap-1 rounded-md bg-soft px-2 py-0.5 font-mono text-xs text-ink">
-                            {s}<button type="button" onClick={() => removeSerial(it.line_no, s)} className="text-faint hover:text-red-500" title="เอาออก"><X size={11} /></button>
+                          <span key={s} className="inline-flex items-center gap-1 rounded-md bg-brand-50 px-2 py-0.5 font-mono text-xs text-brand-700">
+                            {s}<button type="button" onClick={() => removeSerial(it.line_no, s)} className="text-brand-600 hover:text-red-500" title="เอาออก"><X size={11} /></button>
                           </span>
                         ))}
                       </div>
+                    )}
+                    {/* SKU ที่มีในคลัง — คลิกเลือกได้ (เร็ว + กันผิด) */}
+                    {it.tracked && (
+                      it.available.length > 0 ? (
+                        <div className="mt-2 rounded-lg border border-line bg-soft/40 p-2">
+                          <div className="mb-1 flex items-center justify-between">
+                            <span className="text-[11px] text-muted">SKU ในคลัง ({it.available.length}) — คลิกเลือก</span>
+                            <button type="button" onClick={() => autoFill(it.line_no, it.qty, it.available)} className="text-[11px] font-semibold text-brand-600 hover:underline">เลือกให้ครบ {it.qty}</button>
+                          </div>
+                          <div className="flex max-h-24 flex-wrap gap-1 overflow-y-auto">
+                            {it.available.map((s) => {
+                              const sel = (form[it.line_no]?.skus || []).includes(s);
+                              return (
+                                <button key={s} type="button" onClick={() => toggleSerial(it.line_no, s, it.qty)}
+                                  className={`rounded-md border px-2 py-0.5 font-mono text-xs transition-colors ${sel ? "border-brand bg-brand-50 text-brand-700" : "border-line bg-white text-muted hover:border-brand-300 hover:text-ink"}`}>
+                                  {s}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      ) : (
+                        <p className="mt-1.5 text-[11px] text-amber-600">⚠ ไม่มี SKU ของกลิ่น/ขนาดนี้ในคลัง — ต้องรับเข้า SKU ก่อนตัด</p>
+                      )
                     )}
                   </div>
                   {(() => {

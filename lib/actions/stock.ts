@@ -126,6 +126,7 @@ export type IssueItemPreview = {
   line_no: number; product: string; size: string; qty: number; unit: string;
   is_free: boolean; sku: string | null; spec: string | null; stock: number; tracked: boolean;
   grade: string | null; is_bag: boolean; ctw_barcode: string | null;
+  available: string[];   // SKU รายชิ้นที่มีในคลัง (in_stock) ตรงกลิ่น/ขนาด — ให้คลิกเลือกแทนสแกน
 };
 export type IssueLookup = {
   ok: boolean; error?: string; alreadyIssued?: boolean;
@@ -168,6 +169,20 @@ export async function lookupOrderForIssue(orderNo: string): Promise<IssueLookup>
      ) s on true
      where oi.order_no = $1 and coalesce(oi.product,'') <> ''`, [key]);
   const stockByLine = new Map(sr.map((r) => [r.line_no, Number(r.qty)]));
+  // SKU รายชิ้นที่มีในคลัง (in_stock) ของกลิ่น/ขนาดในใบเบิกนี้ → ให้คลิกเลือกได้
+  const pkOf = (s: string) => (s || "").toLowerCase().replace(/[^a-z0-9ก-๙]/g, "");
+  const skOf = (s: string) => (s || "").replace(/[^0-9.]/g, "");
+  const prodKeys = [...new Set(items.map((it) => pkOf(it.product)))];
+  const availByKey = new Map<string, string[]>();
+  try {
+    const units = await q<{ sku: string; pk: string; sk: string }>(
+      `select sku, regexp_replace(lower(btrim(product)),'[^a-z0-9ก-๙]','','g') as pk, regexp_replace(size,'[^0-9.]','','g') as sk
+         from stock_unit where status = 'in_stock'
+          and regexp_replace(lower(btrim(product)),'[^a-z0-9ก-๙]','','g') = any($1)
+        order by sku`, [prodKeys]);
+    for (const u of units) { const k = `${u.pk}|${u.sk}`; const a = availByKey.get(k) || []; if (a.length < 500) a.push(u.sku); availByKey.set(k, a); }
+  } catch { /* stock_unit ยังไม่พร้อม — ปล่อยว่าง (ยังสแกน/กรอกได้) */ }
+
   const withStock: IssueItemPreview[] = [];
   for (const it of items) {
     const bag = isBagProduct(it.product);
@@ -176,7 +191,7 @@ export async function lookupOrderForIssue(orderNo: string): Promise<IssueLookup>
     // บาร์โค้ด CTW ที่ตรงกับ (กลิ่น + ขนาด) — match ใน JS
     const szKey = normSize(it.size);
     const ctw_barcode = (bcMap[it.product.toLowerCase().replace(/[^a-z0-9ก-๙]/g, "")] || []).find((b) => normSize(b.size) === szKey)?.barcode ?? null;
-    withStock.push({ ...it, spec, stock: stockByLine.get(it.line_no) ?? 0, tracked: isStockTracked(it.size), is_bag: bag, ctw_barcode });
+    withStock.push({ ...it, spec, stock: stockByLine.get(it.line_no) ?? 0, tracked: isStockTracked(it.size), is_bag: bag, ctw_barcode, available: availByKey.get(`${pkOf(it.product)}|${skOf(it.size)}`) || [] });
   }
   return { ok: true, order_no: key, doc_no: order.doc_no, platform: order.platform, note: order.note, items: withStock };
 }
