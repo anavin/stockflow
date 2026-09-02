@@ -7,7 +7,7 @@ import { can } from "@/lib/auth/roles";
 import { logActivity } from "@/lib/activity";
 import { buildProductLabel, type OrderWithItems } from "@/lib/types";
 import { formatDocNo, monthLabel, ymdKey } from "@/lib/docno";
-import { isAllowedFreeSize, FREE_ALLOWED_SIZES, enabledPlatforms, platformBase, isBagProduct } from "@/lib/config";
+import { isAllowedFreeSize, FREE_ALLOWED_SIZES, enabledPlatforms, platformBase, isBagProduct, PLATFORMS, canImportPlatform } from "@/lib/config";
 
 /** revalidate หน้ารายการ+ถังขยะใบเบิกของทุกแพลตฟอร์ม (route เป็น /[platform] — hardcode /shopee ครอบไม่ครบ) */
 function revalidateOrderLists() {
@@ -81,7 +81,7 @@ async function allocDocNo(run: <R = any>(sql: string, p?: any[]) => Promise<R[]>
   return formatDocNo(platform, date, seq);
 }
 
-export async function saveOrder(input: OrderInput): Promise<SaveResult> {
+export async function saveOrder(input: OrderInput, opts?: { silent?: boolean }): Promise<SaveResult> {
   const user = await getCurrentUser();
   if (!user) return { ok: false, error: "กรุณาเข้าสู่ระบบ" };
   if (!can.createOrders(user.role)) return { ok: false, error: "ไม่มีสิทธิ์จัดการใบเบิก (เฉพาะฝ่ายสร้างใบเบิก)" };
@@ -90,10 +90,18 @@ export async function saveOrder(input: OrderInput): Promise<SaveResult> {
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? "ข้อมูลไม่ถูกต้อง" };
   const o = parsed.data;
 
+  // platform ต้องมีจริงในระบบ (กัน action call ตรงๆ ใส่ platform มั่ว → doc_no prefix เพี้ยน)
+  if (!PLATFORMS.some((p) => p.code === o.platform)) return { ok: false, error: `แพลตฟอร์มไม่ถูกต้อง: ${o.platform}` };
+
   // ของแถม (Free) ได้เฉพาะขนาดเล็ก — ไซต์ใหญ่ห้ามเป็นของแถม
   const badFree = o.items.find((it) => it.is_free && !isAllowedFreeSize(it.size, it.product));
   if (badFree) {
     return { ok: false, error: `ของแถม "${badFree.product}" ขนาด ${badFree.size} ไม่ได้ — ของแถมได้เฉพาะ ${FREE_ALLOWED_SIZES.join(" / ")} (ถุงกระดาษ: Size S / Size M)` };
+  }
+  // ของแถมที่ไม่ใช่ถุง ต้องระบุขนาด (กัน action call ใส่ free ขนาดว่าง เลี่ยงกฎ 1.2/4/10 ml)
+  const freeNoSize = o.items.find((it) => it.is_free && !isBagProduct(it.product) && !(it.size || "").trim());
+  if (freeNoSize) {
+    return { ok: false, error: `ของแถม "${freeNoSize.product}" ต้องระบุขนาด (ได้เฉพาะ ${FREE_ALLOWED_SIZES.join(" / ")})` };
   }
   // ของแถมจำนวนต้องไม่เกิน 30 (บังคับฝั่ง server ด้วย) — ยกเว้นถุงกระดาษบนใบเบิก CTW เบิกได้ถึง 80
   const freeMax = (it: { product?: string | null }) => (isBagProduct(it.product) && o.platform === "CTW" ? 80 : 30);
@@ -107,6 +115,10 @@ export async function saveOrder(input: OrderInput): Promise<SaveResult> {
 
   try {
     const outDoc = await tx(async (run) => {
+      // ใช้ PK เดิมถ้ามีใบเลขนี้อยู่แล้ว (ต่างแค่ตัวพิมพ์/ช่องว่าง) — กันสร้างซ้ำคนละ case (import เก็บพิมพ์เล็ก, สร้างเองพิมพ์ใหญ่)
+      const [canon] = await run<{ order_no: string }>(
+        `select order_no from orders where upper(btrim(order_no)) = upper(btrim($1)) order by (order_no = $1) desc limit 1`, [o.order_no]);
+      if (canon) o.order_no = canon.order_no;
       const [existing] = await run<{ doc_no: string | null; doc_date: string | null; stock_issued_at: string | null; shipped_at: string | null }>(
         `select doc_no, to_char(doc_date,'YYYY-MM-DD') as doc_date, stock_issued_at, shipped_at from orders where order_no = $1`, [o.order_no]);
       // กันแก้ "รายการสินค้า" หลังตัดสต๊อก/ส่งแล้ว — ทำให้ยอดรับคืน/คืนสต๊อกเพี้ยน (แก้ที่อยู่/โน้ตยังได้)
@@ -174,9 +186,11 @@ export async function saveOrder(input: OrderInput): Promise<SaveResult> {
       return docNo;
     });
 
-    revalidateOrderLists();
-    revalidatePath(`${platformBase(o.platform)}/${encodeURIComponent(o.order_no)}`);
-    await logActivity("order.create", `${o.order_no} · ${o.platform}${outDoc ? " · " + outDoc : ""}`);
+    if (!opts?.silent) {   // bulk import ข้าม revalidate/log ต่อใบ → ทำครั้งเดียวตอนจบ (เร็ว + activity ไม่รก)
+      revalidateOrderLists();
+      revalidatePath(`${platformBase(o.platform)}/${encodeURIComponent(o.order_no)}`);
+      await logActivity("order.create", `${o.order_no} · ${o.platform}${outDoc ? " · " + outDoc : ""}`);
+    }
     return { ok: true, order_no: o.order_no, doc_no: outDoc };
   } catch (e: any) {
     return { ok: false, error: e?.message || "บันทึกไม่สำเร็จ" };
@@ -500,6 +514,9 @@ export async function bulkSaveOrders(orders: OrderWithItems[]): Promise<{ ok: bo
   const user = await getCurrentUser();
   if (!user) return { ok: false, saved: 0, error: "กรุณาเข้าสู่ระบบ" };
   if (!can.createOrders(user.role)) return { ok: false, saved: 0, error: "ไม่มีสิทธิ์นำเข้าใบเบิก (เฉพาะฝ่ายสร้างใบเบิก)" };
+  // แพลตฟอร์มที่ห้าม import (เช่น CTW = สร้างในระบบเท่านั้น) — กันนำเข้าผิดช่องทาง
+  const badPf = orders.find((o) => o.platform && !canImportPlatform(o.platform));
+  if (badPf) return { ok: false, saved: 0, error: `แพลตฟอร์ม ${badPf.platform} นำเข้าจากไฟล์ไม่ได้ (สร้างในระบบเท่านั้น)` };
   let saved = 0;
   const errors: string[] = [];
 
@@ -519,21 +536,24 @@ export async function bulkSaveOrders(orders: OrderWithItems[]): Promise<{ ok: bo
   for (let gi = 0; gi < groupArr.length; gi += CONC) {
     await Promise.all(groupArr.slice(gi, gi + CONC).map(async ([k, list]) => {
       const ons = list.map((o) => o.order_no);
-      let existing = 0;
+      // ดึงประวัติเดิม (พร้อมวันที่) ของ username นี้ → จัดอันดับ "ซื้อครั้งที่" ตามวันที่รวมกับไฟล์
+      // (เดิมใช้ existing + index ในไฟล์ → retry เฉพาะใบที่ fail แล้วนับเพี้ยนถ้าใบนั้นไม่ใช่ใบล่าสุด)
+      let prior: { d: string; on: string }[] = [];
       try {
-        const [r] = await q<{ c: number }>(
-          `select count(*)::int as c from orders
-            where lower(btrim(username)) = $1 and deleted_at is null and order_no <> all($2::text[])`,
+        prior = await q<{ d: string; on: string }>(
+          `select coalesce(to_char(order_date,'YYYY-MM-DD'), to_char(doc_date,'YYYY-MM-DD'), '') as d, order_no as on
+             from orders where lower(btrim(username)) = $1 and deleted_at is null and order_no <> all($2::text[])`,
           [k, ons]);
-        existing = r?.c ?? 0;
-      } catch { existing = 0; }
-      list.sort((a, b) =>
-        String(a.order_date || a.doc_date || "").localeCompare(String(b.order_date || b.doc_date || ""))
-        || String(a.order_no).localeCompare(String(b.order_no)));
-      list.forEach((o, i) => {
-        const n = existing + i + 1;
-        o.purchase_count = n as any;
-        o.customer_type = (n > 1 ? "ลูกค้าเก่า" : "ลูกค้าใหม่") as any;
+      } catch { prior = []; }
+      const merged = [
+        ...prior.map((p) => ({ d: p.d, on: p.on, ref: null as OrderWithItems | null })),
+        ...list.map((o) => ({ d: String(o.order_date || o.doc_date || ""), on: String(o.order_no), ref: o })),
+      ].sort((a, b) => a.d.localeCompare(b.d) || a.on.localeCompare(b.on));
+      merged.forEach((m, i) => {
+        if (!m.ref) return;   // ประวัติเดิม — ไม่แตะ
+        const n = i + 1;
+        m.ref.purchase_count = n as any;
+        m.ref.customer_type = (n > 1 ? "ลูกค้าเก่า" : "ลูกค้าใหม่") as any;
       });
     }));
   }
@@ -551,7 +571,7 @@ export async function bulkSaveOrders(orders: OrderWithItems[]): Promise<{ ok: bo
           items: ord.items.map((it) => ({
             product: it.product, size: it.size, is_free: it.is_free, qty: it.qty, unit: it.unit, sku: it.sku ?? null,
           })),
-        } as OrderInput);
+        } as OrderInput, { silent: true });   // ข้าม revalidate/log ต่อใบ → ทำครั้งเดียวตอนจบ
         return res.ok ? { ok: true as const } : { ok: false as const, order_no: ord.order_no, err: `${ord.order_no}: ${res.error}` };
       } catch (e: any) {
         return { ok: false as const, order_no: ord.order_no, err: `${ord.order_no}: ${e?.message || "บันทึกไม่สำเร็จ"}` };

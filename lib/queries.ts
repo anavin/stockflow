@@ -322,7 +322,7 @@ export async function stockUnitMismatches(): Promise<UnitMismatch[]> {
                 sum(qty)::float8 as qty from stock group by 1,2)
        select u.product, u.size, u.units, coalesce(s.qty,0)::float8 as qty
        from u left join s on s.pk=u.pk and s.sk=u.sk
-       where u.units <> coalesce(s.qty,0)
+       where u.units > coalesce(s.qty,0)   -- flag เฉพาะ serial เกินยอด (corruption/ตัดเกิน) — qty>units เป็น gap ปกติ (รับแบบ qty ยังไม่ทำ serial)
        order by u.product, u.size`);
   } catch { return []; }
 }

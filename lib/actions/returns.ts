@@ -119,13 +119,14 @@ export async function confirmReturn(orderNo: string, entries: ReturnEntry[], rea
           await run(`insert into stock_moves (product, size, qty_change, balance, reason, order_no, note, created_by)
                      values ($1,$2,$3,$4,'return',$5,$6,$7)`, [sku.product, sku.size, qty, row.qty, on, n, user.id]);
           // คืน serial รายชิ้นของขวดที่คืน กลับเป็น in_stock (สูงสุด = จำนวนที่คืน) → serial สมดุลกับยอด
+          // เก็บ order_no ไว้ (ไม่ null) → ยกเลิกการคืนจับ serial เดิมของออเดอร์นี้กลับได้ถูกตัว
           await run(
-            `update stock_unit set status='in_stock', order_no=null, issued_at=null, issued_by=null
+            `update stock_unit set status='in_stock', issued_at=null, issued_by=null
               where sku in (select sku from stock_unit
                 where order_no=$1 and status='issued'
                   and regexp_replace(lower(btrim(product)),'[^a-z0-9ก-๙]','','g')=regexp_replace(lower(btrim($2)),'[^a-z0-9ก-๙]','','g')
                   and btrim(lower(size),' .')=btrim(lower($3),' .')
-                order by issued_at desc limit $4)`, [on, it.product, it.size || "", qty]);
+                order by issued_at desc limit $4)`, [on, it.product, it.size || "", Math.round(qty)]);
           restocked += qty;
         } else if (e.disposition === "damaged") {
           const sku = await matchStockSku(run, it.product, it.size || "");
@@ -142,7 +143,7 @@ export async function confirmReturn(orderNo: string, entries: ReturnEntry[], rea
                 where order_no=$1 and status='issued'
                   and regexp_replace(lower(btrim(product)),'[^a-z0-9ก-๙]','','g')=regexp_replace(lower(btrim($2)),'[^a-z0-9ก-๙]','','g')
                   and btrim(lower(size),' .')=btrim(lower($3),' .')
-                order by issued_at desc limit $4)`, [on, it.product, it.size || "", qty]);
+                order by issued_at desc limit $4)`, [on, it.product, it.size || "", Math.round(qty)]);
           damaged += qty;
         } else {
           // "none" (ไม่นับ) — ของแถม/รายการที่ไม่นับสต๊อก: บันทึกประวัติการคืนเฉยๆ ไม่แตะสต๊อก/ของชำรุด
@@ -152,10 +153,10 @@ export async function confirmReturn(orderNo: string, entries: ReturnEntry[], rea
                    values ($1,$2,$3,$4,$5,$6,$7,$8,$9)`, [on, e.line_no, it.product, it.size || "", qty, e.disposition, rsn, n, user.id]);
       }
 
-      // อัปเดตสถานะการคืนของออเดอร์
+      // อัปเดตสถานะการคืนของออเดอร์ — ไม่นับการคืนแบบ 'none' (ไม่กระทบสต๊อก) เข้าสถานะ (กันบล็อก reverse/unship)
       const [tot] = await run<{ sent: number; returned: number }>(
         `select coalesce((select sum(qty) from order_items where order_no=$1 and coalesce(product,'')<>''),0)::float8 as sent,
-                coalesce((select sum(qty) from order_returns where order_no=$1 and voided_at is null),0)::float8 as returned`, [on]);
+                coalesce((select sum(qty) from order_returns where order_no=$1 and voided_at is null and disposition <> 'none'),0)::float8 as returned`, [on]);
       const status = Number(tot.returned) <= 0 ? "none" : Number(tot.returned) >= Number(tot.sent) ? "full" : "partial";
       await run(`update orders set returned_at = coalesce(returned_at, now()), return_status = $2 where order_no = $1`, [on, status]);
       return { ok: true, order_no: on, restocked, damaged, skipped };
@@ -192,12 +193,13 @@ export async function reverseReturn(returnId: number): Promise<{ ok: boolean; er
         if (row) await run(`insert into stock_moves (product, size, qty_change, balance, reason, order_no, note, created_by)
                    values ($1,$2,$3,$4,'adjust',$5,'ยกเลิกการคืน',$6)`, [sku.product, sku.size, -qty, row.qty, r.order_no, user.id]);
         // ย้อน serial: หยิบ in_stock ของกลิ่น/ขนาดนี้ กลับเป็น issued ให้ออเดอร์ (สมดุลกับ qty ที่หักคืน)
+        // เลือก serial เดิมของออเดอร์นี้ก่อน (order_no=$1) → ยกเลิกการคืนได้ถูกขวด ไม่ไปหยิบขวดคนอื่น
         await run(
           `update stock_unit set status='issued', order_no=$1, issued_at=now(), issued_by=$5
             where sku in (select sku from stock_unit where status='in_stock'
               and regexp_replace(lower(btrim(product)),'[^a-z0-9ก-๙]','','g')=regexp_replace(lower(btrim($2)),'[^a-z0-9ก-๙]','','g')
               and btrim(lower(size),' .')=btrim(lower($3),' .')
-            order by received_at desc limit $4)`, [r.order_no, r.product, r.size || "", qty, user.id]);
+            order by (coalesce(order_no,'') = $1) desc, received_at desc limit $4)`, [r.order_no, r.product, r.size || "", Math.round(qty), user.id]);
       } else if (r.disposition === "damaged") {
         const sku = await matchStockSku(run, r.product, r.size || "");
         const [row] = await run<{ qty: number }>(
@@ -211,14 +213,14 @@ export async function reverseReturn(returnId: number): Promise<{ ok: boolean; er
             where sku in (select sku from stock_unit where order_no=$1 and status='void'
               and regexp_replace(lower(btrim(product)),'[^a-z0-9ก-๙]','','g')=regexp_replace(lower(btrim($2)),'[^a-z0-9ก-๙]','','g')
               and btrim(lower(size),' .')=btrim(lower($3),' .')
-            order by issued_at desc limit $4)`, [r.order_no, r.product, r.size || "", qty]);
+            order by issued_at desc limit $4)`, [r.order_no, r.product, r.size || "", Math.round(qty)]);
       }
       // "none" (ไม่นับ) — ไม่มีผลกับสต๊อก/ของชำรุด แค่ void แถวด้านล่าง
       await run(`update order_returns set voided_at = now() where id = $1`, [returnId]);
-      // อัปเดตสถานะออเดอร์
+      // อัปเดตสถานะออเดอร์ — ไม่นับการคืนแบบ 'none' (สอดคล้องกับ confirmReturn)
       const [tot] = await run<{ sent: number; returned: number }>(
         `select coalesce((select sum(qty) from order_items where order_no=$1 and coalesce(product,'')<>''),0)::float8 as sent,
-                coalesce((select sum(qty) from order_returns where order_no=$1 and voided_at is null),0)::float8 as returned`, [r.order_no]);
+                coalesce((select sum(qty) from order_returns where order_no=$1 and voided_at is null and disposition <> 'none'),0)::float8 as returned`, [r.order_no]);
       const status = Number(tot.returned) <= 0 ? "none" : Number(tot.returned) >= Number(tot.sent) ? "full" : "partial";
       await run(`update orders set return_status = $2, returned_at = case when $2='none' then null else returned_at end where order_no = $1`, [r.order_no, status]);
     });

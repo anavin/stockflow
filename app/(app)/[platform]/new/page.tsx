@@ -12,7 +12,7 @@ export default async function NewOrderPage({ params }: { params: Promise<{ platf
   await requireCreator();
   const pf = resolvePlatform((await params).platform);
   if (!pf) notFound();
-  if (!canCreatePlatform(pf.code)) notFound();   // CTW ต้องมาจากระบบ CTW ผ่าน API — สร้างเองไม่ได้
+  if (!canCreatePlatform(pf.code)) notFound();   // เฉพาะแพลตฟอร์มที่ canCreate:true (CTW = คลังกลางสร้างเอง)
   const base = platformBase(pf.code);
   const [products, sizes, provinces, postcodes, productCodes, productTypes, discontinued] = await Promise.all([
     getProducts(), getSizes(), getProvinces(), getPostcodes(), getProductCodes(), getProductTypes(), getBlockedSizesForOrder(),

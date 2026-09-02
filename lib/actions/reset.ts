@@ -34,20 +34,22 @@ export async function resetOrderIssue(orderNo: string): Promise<{ ok: boolean; e
   const rets = await q<{ id: number }>(
     `select id from order_returns where order_no = $1 and voided_at is null order by id`, [on],
   ).catch(() => []);   // ตาราง order_returns อาจยังไม่มีบน prod → ข้าม
+  // แต่ละขั้นเป็น tx แยก + idempotent (retry-safe) — ถ้าล้มกลางทาง กดรีเซ็ตซ้ำจะทำต่อจากจุดที่ค้าง
+  const retry = "— กดรีเซ็ตอีกครั้งเพื่อทำต่อ";
   for (const r of rets) {
     const res = await reverseReturn(r.id);
-    if (!res.ok) return { ok: false, error: `ยกเลิกการคืนไม่สำเร็จ (#${r.id}): ${res.error}` };
+    if (!res.ok) return { ok: false, error: `ยกเลิกการคืนไม่สำเร็จ (#${r.id}): ${res.error} ${retry}` };
   }
 
   // 2) ยกเลิกการส่ง (ถ้าส่งแล้ว) — ต้องทำหลังยกเลิกการคืน (unship บล็อกถ้ายังมีการคืน)
   if (o.shipped_at) {
     const res = await unshipOrder(on);
-    if (!res.ok) return { ok: false, error: `ยกเลิกการส่งไม่สำเร็จ: ${res.error}` };
+    if (!res.ok) return { ok: false, error: `ยกเลิกการส่งไม่สำเร็จ: ${res.error} ${retry}` };
   }
 
   // 3) ยกเลิกการตัดสต๊อก → คืนสต๊อก+serial+ถุง เคลียร์ stock_issued_at (กลับเป็น "รอตัด")
   const res = await reverseIssue(on);
-  if (!res.ok) return { ok: false, error: `ยกเลิกการตัดสต๊อกไม่สำเร็จ: ${res.error}` };
+  if (!res.ok) return { ok: false, error: `ยกเลิกการตัดสต๊อกไม่สำเร็จ: ${res.error} ${retry}` };
 
   await logActivity("order.reset", on);
   return { ok: true };

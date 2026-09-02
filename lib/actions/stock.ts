@@ -353,7 +353,7 @@ export async function reverseIssue(orderNo: string): Promise<{ ok: boolean; erro
       // เช็คตารางก่อน (to_regclass ไม่ error ถ้าตารางยังไม่มี — กัน tx abort บน prod ก่อนรัน migration รับคืน)
       const [reg] = await run<{ ok: boolean }>(`select to_regclass('order_returns') is not null as ok`);
       if (reg?.ok) {
-        const [ret] = await run<{ c: number }>(`select count(*)::int as c from order_returns where order_no = $1 and voided_at is null`, [on]);
+        const [ret] = await run<{ c: number }>(`select count(*)::int as c from order_returns where order_no = $1 and voided_at is null and disposition <> 'none'`, [on]);
         if (Number(ret?.c) > 0) throw new Error("ออเดอร์นี้มีการรับคืนแล้ว — จัดการผ่านหน้า 'รับคืนสินค้า'");
       }
       if (!admin) {

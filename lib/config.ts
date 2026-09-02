@@ -14,7 +14,7 @@ export type PlatformCode = "Shopee" | "Lazada" | "Tiktok" | "Line" | "Website" |
  * (Shopee/Lazada/TikTok มีแล้ว). แพลตฟอร์มที่ยังไม่มี parser (Line/Website/Office) เปิดให้กรอกเอง
  * แต่ซ่อนปุ่มนำเข้าไว้ก่อน จนกว่าจะได้ไฟล์จริงมาทำ parser (กัน parser ผิดอ่านไฟล์ผิดฟอร์แมต).
  */
-// canCreate = สร้าง/แก้ใบเบิกเองในระบบนี้ได้ (CTW = false เพราะต้องมาจากระบบ CTW ผ่าน API เท่านั้น)
+// canCreate = สร้าง/แก้ใบเบิกเองในระบบนี้ได้ (CTW = true: คลังกลางสร้างเอง → ตัดสต๊อก → push ไป CTW)
 export const PLATFORMS: { code: PlatformCode; name: string; prefix: string; enabled: boolean; canImport: boolean; canCreate: boolean }[] = [
   { code: "Shopee", name: "Shopee", prefix: "SH", enabled: true, canImport: true, canCreate: true },
   { code: "Lazada", name: "Lazada", prefix: "LZ", enabled: true, canImport: true, canCreate: true },
