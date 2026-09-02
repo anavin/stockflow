@@ -76,6 +76,10 @@ export default function StockIssue({ isAdmin, initialOrder, specOptions = [] }: 
     // แต่ละบรรทัดควรมี SKU ครบตามจำนวน (qty>1 = หลาย serial) — เตือนถ้ายังไม่ครบ
     const incomplete = preview.items!.some((it) => it.needs_sku && (form[it.line_no]?.skus?.length || 0) < it.qty);
     if (incomplete && !window.confirm("บางรายการใส่ SKU ยังไม่ครบตามจำนวน — ยืนยันตัดสต๊อกเลยไหม?")) return;
+    // ถุงต้องเลือกไซส์ (S/M) ก่อน ไม่งั้นระบบไม่รู้จะหักจากไซส์ไหน → ถุงจะไม่ถูกตัด
+    const bagNoSize = preview.items!.filter((it) => it.is_bag && !bagLetter(form[it.line_no]?.spec || it.size));
+    if (bagNoSize.length && !window.confirm(
+      `ยังไม่เลือกไซส์ถุง (Size S / Size M) ${bagNoSize.length} รายการ\n→ ถุงจะไม่ถูกตัดสต๊อก\n\nยืนยันตัดต่อไหม? (แนะนำให้เลือกไซส์ถุงก่อน)`)) return;
     // เตือนก่อนตัดถ้าสต๊อกไม่พอ (จะทำให้ติดลบ) — ถุงใช้ยอดตามไซส์ที่เลือกจริง (ไม่ใช่ยอดตอนโหลด)
     const effStock = (it: IssueItemPreview) =>
       it.is_bag ? (preview.bag_stock?.[bagLetter(form[it.line_no]?.spec || it.size)] ?? preview.bag_stock?.[""] ?? 0) : (it.stock ?? 0);
