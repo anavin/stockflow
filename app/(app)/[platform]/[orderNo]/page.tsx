@@ -4,6 +4,7 @@ import { getOrder, getProducts, getSizes, getProvinces, getPostcodes, getProduct
 import { resolvePlatform, platformBase, platformColor, platformTint } from "@/lib/config";
 import OrderForm from "@/components/OrderForm";
 import CtwPushButton from "@/components/CtwPushButton";
+import ReverseIssueButton from "@/components/ReverseIssueButton";
 import { ChevronLeft, Printer, ScanLine, PackageCheck } from "lucide-react";
 import { requireCreator } from "@/lib/auth/require-user";
 import { can } from "@/lib/auth/roles";
@@ -42,6 +43,10 @@ export default async function EditOrderPage({ params }: { params: Promise<{ plat
               <ScanLine size={16} /> ตัดสต๊อก
             </Link>
           ) : null}
+          {/* ยกเลิกการตัดสต๊อก — เฉพาะที่ตัดแล้วแต่ยังไม่ส่ง (คืนสต๊อก+serial → แก้/ตัดใหม่) */}
+          {order.stock_issued_at && !order.shipped_at && can.issueStock(me.role) && (
+            <ReverseIssueButton orderNo={decoded} platform={pf.code} />
+          )}
           {pf.code === "CTW" && <CtwPushButton orderNo={decoded} issued={!!order.stock_issued_at} pushedAt={order.ctw_received_at ?? null} />}
           <a href={`/print/pdf/${encodeURIComponent(decoded)}`} target="_blank" rel="noreferrer" className="btn-ghost">
             <Printer size={16} /> พิมพ์ใบเบิก (PDF)
