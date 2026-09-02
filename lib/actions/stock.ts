@@ -198,7 +198,7 @@ export async function resolveIssueSku(orderNo: string, sku: string): Promise<{ o
     `select oi.line_no from order_items oi join orders o on o.order_no = oi.order_no
       where (o.order_no = $1 or o.doc_no = $1) and coalesce(oi.product,'') <> ''
         and regexp_replace(lower(btrim(oi.product)),'[^a-z0-9ก-๙]','','g') = regexp_replace(lower(btrim($2)),'[^a-z0-9ก-๙]','','g')
-        and regexp_replace(oi.size,'[^0-9.]','','g') = regexp_replace($3,'[^0-9.]','','g')
+        and btrim(lower(oi.size),' .') = btrim(lower($3),' .')
       order by (o.order_no = $1) desc, oi.line_no limit 1`, [on, u.product, u.size]);
   if (!li) return { ok: false, error: `SKU "${s}" (${u.product} ${u.size}) ไม่มีในใบเบิกนี้` };
   return { ok: true, line_no: li.line_no, product: u.product, size: u.size };
@@ -240,7 +240,7 @@ export async function confirmIssueByOrder(
       if (!res.ok) return res;
       // ── ตัดจาก SKU ที่มีจริงในคลังเท่านั้น (in_stock) · กลิ่น/ขนาดตรง · ครบตามจำนวน (เฉพาะขนาดที่ track สต๊อก) ──
       const nk = (s: string | null) => (s || "").toLowerCase().replace(/[^a-z0-9ก-๙]/g, "");
-      const nsz = (s: string | null) => (s || "").replace(/[^0-9.]/g, "");
+      const nsz = (s: string | null) => (s || "").toLowerCase().replace(/^[\s.]+|[\s.]+$/g, "");   // btrim ' .' — "50 ml." = "50 ml"
       for (const e of norm) {
         const li = byLine.get(e.line_no);
         if (!li) continue;
