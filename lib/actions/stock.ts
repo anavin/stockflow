@@ -126,7 +126,6 @@ export type IssueItemPreview = {
   line_no: number; product: string; size: string; qty: number; unit: string;
   is_free: boolean; sku: string | null; spec: string | null; stock: number; tracked: boolean;
   grade: string | null; is_bag: boolean; ctw_barcode: string | null;
-  available: string[];   // SKU รายชิ้นที่มีในคลัง (in_stock) ตรงกลิ่น/ขนาด — ให้คลิกเลือกแทนสแกน
 };
 export type IssueLookup = {
   ok: boolean; error?: string; alreadyIssued?: boolean;
@@ -169,20 +168,6 @@ export async function lookupOrderForIssue(orderNo: string): Promise<IssueLookup>
      ) s on true
      where oi.order_no = $1 and coalesce(oi.product,'') <> ''`, [key]);
   const stockByLine = new Map(sr.map((r) => [r.line_no, Number(r.qty)]));
-  // SKU รายชิ้นที่มีในคลัง (in_stock) ของกลิ่น/ขนาดในใบเบิกนี้ → ให้คลิกเลือกได้
-  const pkOf = (s: string) => (s || "").toLowerCase().replace(/[^a-z0-9ก-๙]/g, "");
-  const skOf = (s: string) => (s || "").replace(/[^0-9.]/g, "");
-  const prodKeys = [...new Set(items.map((it) => pkOf(it.product)))];
-  const availByKey = new Map<string, string[]>();
-  try {
-    const units = await q<{ sku: string; pk: string; sk: string }>(
-      `select sku, regexp_replace(lower(btrim(product)),'[^a-z0-9ก-๙]','','g') as pk, regexp_replace(size,'[^0-9.]','','g') as sk
-         from stock_unit where status = 'in_stock'
-          and regexp_replace(lower(btrim(product)),'[^a-z0-9ก-๙]','','g') = any($1)
-        order by sku`, [prodKeys]);
-    for (const u of units) { const k = `${u.pk}|${u.sk}`; const a = availByKey.get(k) || []; if (a.length < 500) a.push(u.sku); availByKey.set(k, a); }
-  } catch { /* stock_unit ยังไม่พร้อม — ปล่อยว่าง (ยังสแกน/กรอกได้) */ }
-
   const withStock: IssueItemPreview[] = [];
   for (const it of items) {
     const bag = isBagProduct(it.product);
@@ -191,9 +176,32 @@ export async function lookupOrderForIssue(orderNo: string): Promise<IssueLookup>
     // บาร์โค้ด CTW ที่ตรงกับ (กลิ่น + ขนาด) — match ใน JS
     const szKey = normSize(it.size);
     const ctw_barcode = (bcMap[it.product.toLowerCase().replace(/[^a-z0-9ก-๙]/g, "")] || []).find((b) => normSize(b.size) === szKey)?.barcode ?? null;
-    withStock.push({ ...it, spec, stock: stockByLine.get(it.line_no) ?? 0, tracked: isStockTracked(it.size), is_bag: bag, ctw_barcode, available: availByKey.get(`${pkOf(it.product)}|${skOf(it.size)}`) || [] });
+    withStock.push({ ...it, spec, stock: stockByLine.get(it.line_no) ?? 0, tracked: isStockTracked(it.size), is_bag: bag, ctw_barcode });
   }
   return { ok: true, order_no: key, doc_no: order.doc_no, platform: order.platform, note: order.note, items: withStock };
+}
+
+/** ตรวจ SKU ที่สแกนตอนตัดสต๊อก: ต้องมีจริง (in_stock) + ตรงกลิ่น/ขนาดของบรรทัดในใบเบิก
+ *  คืน line_no ที่จับคู่ได้ (ให้ UI เพิ่ม serial ให้บรรทัดนั้นอัตโนมัติ) หรือ error ทันที */
+export async function resolveIssueSku(orderNo: string, sku: string): Promise<{ ok: boolean; line_no?: number; product?: string; size?: string; error?: string }> {
+  const user = await getCurrentUser();
+  if (!user) return { ok: false, error: "กรุณาเข้าสู่ระบบ" };
+  if (!can.issueStock(user.role)) return { ok: false, error: "ไม่มีสิทธิ์ตัดสต๊อก" };
+  const s = (sku || "").trim();
+  if (!s) return { ok: false, error: "สแกน SKU" };
+  const on = (orderNo || "").trim();
+  const [u] = await q<{ status: string; order_no: string | null; product: string; size: string }>(
+    `select status, order_no, product, size from stock_unit where btrim(sku) = $1`, [s]);
+  if (!u) return { ok: false, error: `ไม่พบ SKU "${s}" ในคลัง` };
+  if (u.status !== "in_stock") return { ok: false, error: `SKU "${s}" ตัดไม่ได้ (${u.status === "issued" ? "ตัดไปแล้ว" + (u.order_no ? " · " + u.order_no : "") : u.status})` };
+  const [li] = await q<{ line_no: number }>(
+    `select oi.line_no from order_items oi join orders o on o.order_no = oi.order_no
+      where (o.order_no = $1 or o.doc_no = $1) and coalesce(oi.product,'') <> ''
+        and regexp_replace(lower(btrim(oi.product)),'[^a-z0-9ก-๙]','','g') = regexp_replace(lower(btrim($2)),'[^a-z0-9ก-๙]','','g')
+        and regexp_replace(oi.size,'[^0-9.]','','g') = regexp_replace($3,'[^0-9.]','','g')
+      order by (o.order_no = $1) desc, oi.line_no limit 1`, [on, u.product, u.size]);
+  if (!li) return { ok: false, error: `SKU "${s}" (${u.product} ${u.size}) ไม่มีในใบเบิกนี้` };
+  return { ok: true, line_no: li.line_no, product: u.product, size: u.size };
 }
 
 /** บันทึก SKU + Spec ที่พนักงานสแกน/กรอก แล้วตัดสต๊อก (ยืนยัน). */

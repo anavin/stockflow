@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import dynamic from "next/dynamic";
-import { lookupOrderForIssue, confirmIssueByOrder, reverseIssue, type IssueResult, type IssueLookup } from "@/lib/actions/stock";
+import { lookupOrderForIssue, confirmIssueByOrder, reverseIssue, resolveIssueSku, type IssueResult, type IssueLookup } from "@/lib/actions/stock";
 import { PlatformBadge } from "./PlatformBadge";
 import { scanBeep } from "@/lib/scan-feedback";
 import { ScanLine, CheckCircle2, AlertTriangle, XCircle, Undo2, Camera, PackageCheck, X, Printer, StickyNote, ClipboardList } from "lucide-react";
@@ -20,8 +20,10 @@ export default function StockIssue({ isAdmin, initialOrder, specOptions = [] }: 
   const [scanOpen, setScanOpen] = useState(false);          // camera → Order No
   const [preview, setPreview] = useState<IssueLookup | null>(null);
   const [form, setForm] = useState<Record<number, { skus: string[]; spec: string }>>({});
-  const [skuScanLine, setSkuScanLine] = useState<number | null>(null); // camera → a SKU field
+  const [skuScanOpen, setSkuScanOpen] = useState(false);   // camera → สแกน SKU (จับคู่บรรทัดอัตโนมัติ)
+  const [scanMsg, setScanMsg] = useState<{ type: "ok" | "warn" | "error"; text: string } | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const skuRef = useRef<HTMLInputElement>(null);
 
   async function onReverse(orderNo: string, idx: number) {
     if (!confirm(`ยกเลิกการตัดสต๊อกของ ${orderNo}? (คืนสต๊อกกลับ)`)) return;
@@ -85,19 +87,21 @@ export default function StockIssue({ isAdmin, initialOrder, specOptions = [] }: 
     setForm((f) => { const cur = f[line]?.skus || []; if (cur.includes(s)) return f; return { ...f, [line]: { ...f[line], skus: [...cur, s] } }; });
   };
   const removeSerial = (line: number, s: string) => setForm((f) => ({ ...f, [line]: { ...f[line], skus: (f[line]?.skus || []).filter((x) => x !== s) } }));
-  // คลิกเลือก/เอาออก SKU จากคลัง (ไม่เกิน qty)
-  const toggleSerial = (line: number, s: string, cap: number) => setForm((f) => {
-    const cur = f[line]?.skus || [];
-    if (cur.includes(s)) return { ...f, [line]: { ...f[line], skus: cur.filter((x) => x !== s) } };
-    if (cur.length >= cap) return f;
-    return { ...f, [line]: { ...f[line], skus: [...cur, s] } };
-  });
-  // เลือกให้ครบอัตโนมัติ (หยิบ SKU ในคลังที่ยังไม่เลือก จนครบ qty)
-  const autoFill = (line: number, qty: number, available: string[]) => setForm((f) => {
-    const cur = f[line]?.skus || []; const need = qty - cur.length; if (need <= 0) return f;
-    const add = available.filter((s) => !cur.includes(s)).slice(0, need);
-    return { ...f, [line]: { ...f[line], skus: [...cur, ...add] } };
-  });
+
+  // สแกน SKU 1 ตัว → ตรวจ (มีในคลัง + ตรงกลิ่น/ขนาดใบเบิก + ไม่ซ้ำ + ไม่เกิน qty) → เพิ่มให้บรรทัดที่ตรงอัตโนมัติ
+  async function scanForIssue(code: string) {
+    const s = (code || "").trim(); if (!s || !preview?.order_no) return;
+    // สแกนซ้ำ (ทุกบรรทัด)
+    if (Object.values(form).some((v) => (v?.skus || []).includes(s))) { scanBeep("warn"); setScanMsg({ type: "warn", text: `สแกนซ้ำ: ${s}` }); return; }
+    const res = await resolveIssueSku(preview.order_no, s);
+    if (!res.ok || res.line_no == null) { scanBeep("error"); setScanMsg({ type: "error", text: res.error || "SKU ไม่ถูกต้อง" }); return; }
+    const it = preview.items!.find((i) => i.line_no === res.line_no);
+    const have = form[res.line_no]?.skus?.length || 0;
+    if (it && have >= it.qty) { scanBeep("warn"); setScanMsg({ type: "warn", text: `${res.product} ${res.size} ครบ ${it.qty} แล้ว` }); return; }
+    addSerial(res.line_no, s);
+    scanBeep("ok");
+    setScanMsg({ type: "ok", text: `✓ ${res.product} ${res.size} (${have + 1}/${it?.qty ?? "?"})` });
+  }
 
   // มาจากปุ่ม "ตัดสต๊อก" ในหน้าใบเบิก (/stock/issue?order=XXX) → ดึงรายการให้อัตโนมัติ
   useEffect(() => {
@@ -148,6 +152,18 @@ export default function StockIssue({ isAdmin, initialOrder, specOptions = [] }: 
             </div>
           )}
 
+          {/* สแกน SKU ทีละขวด — ระบบจับคู่บรรทัดให้อัตโนมัติ + เตือนทันทีถ้าผิด */}
+          <div className="mb-3 rounded-xl border-2 border-brand/30 bg-brand-50/40 p-3">
+            <label className="mb-1 flex items-center gap-1 text-xs font-semibold text-ink"><ScanLine size={14} /> สแกน SKU ทีละขวด — ระบบจับคู่บรรทัดให้เอง</label>
+            <div className="flex gap-1">
+              <input ref={skuRef} autoFocus className="input flex-1 font-mono text-base"
+                placeholder="สแกน / กรอก SKU แล้ว Enter"
+                onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); const el = e.target as HTMLInputElement; scanForIssue(el.value); el.value = ""; } }} />
+              <button type="button" onClick={() => setSkuScanOpen(true)} className="btn-ghost shrink-0 px-2" title="สแกนด้วยกล้อง (ต่อเนื่องหลายขวด)"><Camera size={16} /></button>
+            </div>
+            {scanMsg && <div className={`mt-1.5 rounded-md px-2 py-1 text-xs font-medium ${scanMsg.type === "ok" ? "bg-green-50 text-green-700" : scanMsg.type === "warn" ? "bg-amber-50 text-amber-700" : "bg-red-50 text-red-700"}`}>{scanMsg.text}</div>}
+          </div>
+
           <div className="space-y-2">
             {preview.items!.map((it) => (
               <div key={it.line_no} className="rounded-lg border border-line p-3">
@@ -158,46 +174,21 @@ export default function StockIssue({ isAdmin, initialOrder, specOptions = [] }: 
                 <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
                   <div>
                     <div className="mb-1 flex items-center justify-between">
-                      <span className="text-[11px] text-muted">SKU รายชิ้น {it.qty > 1 && "(สแกนทีละขวด)"}</span>
+                      <span className="text-[11px] text-muted">SKU รายชิ้นที่สแกน</span>
                       {it.tracked && <span className={`text-[11px] font-medium tabular-nums ${(form[it.line_no]?.skus?.length || 0) >= it.qty ? "text-green-600" : "text-amber-600"}`}>{form[it.line_no]?.skus?.length || 0}/{it.qty}</span>}
                     </div>
-                    <div className="flex gap-1">
-                      <input className="input flex-1 font-mono text-sm" placeholder="สแกน/กรอก SKU แล้ว Enter"
-                        onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); const el = e.target as HTMLInputElement; addSerial(it.line_no, el.value); el.value = ""; } }} />
-                      <button type="button" onClick={() => setSkuScanLine(it.line_no)} className="btn-ghost shrink-0 px-2" title="สแกน SKU ด้วยกล้อง (สแกนได้หลายขวดต่อเนื่อง)"><Camera size={16} /></button>
-                    </div>
-                    {(form[it.line_no]?.skus?.length || 0) > 0 && (
-                      <div className="mt-1.5 flex flex-wrap gap-1">
+                    {(form[it.line_no]?.skus?.length || 0) > 0 ? (
+                      <div className="flex flex-wrap gap-1">
                         {form[it.line_no].skus.map((s) => (
                           <span key={s} className="inline-flex items-center gap-1 rounded-md bg-brand-50 px-2 py-0.5 font-mono text-xs text-brand-700">
                             {s}<button type="button" onClick={() => removeSerial(it.line_no, s)} className="text-brand-600 hover:text-red-500" title="เอาออก"><X size={11} /></button>
                           </span>
                         ))}
                       </div>
-                    )}
-                    {/* SKU ที่มีในคลัง — คลิกเลือกได้ (เร็ว + กันผิด) */}
-                    {it.tracked && (
-                      it.available.length > 0 ? (
-                        <div className="mt-2 rounded-lg border border-line bg-soft/40 p-2">
-                          <div className="mb-1 flex items-center justify-between">
-                            <span className="text-[11px] text-muted">SKU ในคลัง ({it.available.length}) — คลิกเลือก</span>
-                            <button type="button" onClick={() => autoFill(it.line_no, it.qty, it.available)} className="text-[11px] font-semibold text-brand-600 hover:underline">เลือกให้ครบ {it.qty}</button>
-                          </div>
-                          <div className="flex max-h-24 flex-wrap gap-1 overflow-y-auto">
-                            {it.available.map((s) => {
-                              const sel = (form[it.line_no]?.skus || []).includes(s);
-                              return (
-                                <button key={s} type="button" onClick={() => toggleSerial(it.line_no, s, it.qty)}
-                                  className={`rounded-md border px-2 py-0.5 font-mono text-xs transition-colors ${sel ? "border-brand bg-brand-50 text-brand-700" : "border-line bg-white text-muted hover:border-brand-300 hover:text-ink"}`}>
-                                  {s}
-                                </button>
-                              );
-                            })}
-                          </div>
-                        </div>
-                      ) : (
-                        <p className="mt-1.5 text-[11px] text-amber-600">⚠ ไม่มี SKU ของกลิ่น/ขนาดนี้ในคลัง — ต้องรับเข้า SKU ก่อนตัด</p>
-                      )
+                    ) : it.tracked ? (
+                      <p className="text-[11px] text-faint">ยังไม่ได้สแกน — สแกน SKU ในช่องด้านบน</p>
+                    ) : (
+                      <p className="text-[11px] text-faint">ไม่ตัดสต๊อก (ไม่ต้องมี SKU)</p>
                     )}
                   </div>
                   {(() => {
@@ -238,8 +229,8 @@ export default function StockIssue({ isAdmin, initialOrder, specOptions = [] }: 
       {scanOpen && (
         <CameraScan onClose={() => setScanOpen(false)} onScan={(code) => { setScanOpen(false); lookup(code); }} />
       )}
-      {skuScanLine != null && (
-        <CameraScan onClose={() => setSkuScanLine(null)} onScan={(code) => { addSerial(skuScanLine, code); }} />
+      {skuScanOpen && (
+        <CameraScan onClose={() => setSkuScanOpen(false)} onScan={(code) => { scanForIssue(code); }} />
       )}
     </div>
   );
