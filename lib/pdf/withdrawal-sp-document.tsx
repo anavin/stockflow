@@ -92,8 +92,9 @@ const s = StyleSheet.create({
   signLabel: { fontSize: 7, color: C.muted },
 });
 
-// column widths for a ~378pt panel (# / ประเภท / สินค้า / ขนาด / จำนวน / Free / หน่วย / SKU)
-const COL = [16, 46, 104, 42, 34, 28, 30, 62];
+// column widths (# / Grade / สินค้า / ขนาด / จำนวน / Free / หน่วย / SKU)
+const COL_HALF = [16, 46, 104, 42, 34, 28, 30, 62];        // ~362pt half-panel (A4 landscape 2-up)
+const COL_FULL = [22, 60, 150, 55, 45, 36, 40, 127];       // ~535pt full panel (A4 portrait, 1 ใบเต็มแผ่น)
 
 function Barcode({ value, width = 250, height = 50 }: { value: string; width?: number; height?: number }) {
   const bc = code128(value);
@@ -139,7 +140,7 @@ const TYPE_ORDER = ["PARFUM", "EDP+", "EDT", "EDP"];
 const typeRank = (t?: string | null) => { const i = TYPE_ORDER.indexOf(String(t || "").trim()); return i < 0 ? 9 : i; };
 const mlOf = (sz?: string | null) => { const m = String(sz || "").match(/(\d+(?:\.\d+)?)/); return m ? parseFloat(m[1]) : 0; };
 
-function Panel({ order, copyLabel }: { order: OrderWithItems; copyLabel: string }) {
+function Panel({ order, copyLabel, full = false }: { order: OrderWithItems; copyLabel: string; full?: boolean }) {
   const items = [...(order.items ?? [])].sort((a, b) =>
     (isFreeItem(a) ? 1 : 0) - (isFreeItem(b) ? 1 : 0)   // ของขายขึ้นก่อน ของแถมไว้ล่าง
     || typeRank(a.ptype) - typeRank(b.ptype)             // Grade
@@ -148,19 +149,22 @@ function Panel({ order, copyLabel }: { order: OrderWithItems; copyLabel: string 
   const total = items.reduce((sum, it) => sum + (Number(it.qty) || 0), 0);
   const addr = [order.address, order.subdistrict, order.district, order.province, order.postcode].filter(Boolean).join(" ");
 
-  // Density: shrink rows/fonts for big orders so it all fits ONE landscape page.
-  // เพิ่มระดับย่อสำหรับใบใหญ่มาก (40–50 รายการ) กันตกขอบเงียบๆ.
+  // Density: shrink rows/fonts for big orders so it all fits ONE page.
+  // full = A4 portrait เต็มแผ่น (สูง ~802) → มีที่มากกว่า ย่อช้ากว่า half (สูง 552)
   const n = items.length;
-  // density ย่อตามจำนวนรายการ กันล้นกล่องสูงคงที่ (552) — เพิ่ม tier แน่นสำหรับใบใหญ่ (>55, >70)
-  const rowH = n > 70 ? 4.7 : n > 55 ? 5.4 : n > 40 ? 6.3 : n > 31 ? 7.4 : n > 22 ? 9.5 : n > 14 ? 11 : 14;
-  const cfs = n > 70 ? 4.7 : n > 55 ? 5.0 : n > 40 ? 5.4 : n > 31 ? 6 : n > 22 ? 6.6 : n > 14 ? 7 : 7.5;
+  const COL = full ? COL_FULL : COL_HALF;
+  const H = full ? 802 : 552;                        // กล่องใบสูงคงที่
+  // เกณฑ์จำนวนรายการที่เริ่มย่อ — full ปรับสูงขึ้นตามพื้นที่ (~×1.45)
+  const [T0, T1, T2, T3, T4, T5] = full ? [101, 80, 58, 45, 32, 20] : [70, 55, 40, 31, 22, 14];
+  const rowH = n > T0 ? 4.7 : n > T1 ? 5.4 : n > T2 ? 6.3 : n > T3 ? 7.4 : n > T4 ? 9.5 : n > T5 ? 11 : 14;
+  const cfs = n > T0 ? 4.7 : n > T1 ? 5.0 : n > T2 ? 5.4 : n > T3 ? 6 : n > T4 ? 6.6 : n > T5 ? 7 : 7.5;
   // เพดานกันตกขอบเงียบ ๆ: ถ้าเกิน CAP บรรทัด แสดงเท่าที่พอดี + แถวเตือน (ยอดรวมยังนับครบทุกชิ้น)
-  const CAP = 78;
+  const CAP = full ? 112 : 78;
   const shownItems = n > CAP ? items.slice(0, CAP - 1) : items;
   const truncated = n - shownItems.length;
-  const pv = n > 31 ? 0.8 : n > 14 ? 1.3 : 2.5;
-  const signGap = n > 31 ? 3 : n > 14 ? 6 : 14;
-  const bcH = n > 31 ? 22 : n > 14 ? 26 : 34;   // barcode เล็กลงเมื่อออร์เดอร์ใหญ่ กันล้น
+  const pv = n > T3 ? 0.8 : n > T5 ? 1.3 : 2.5;
+  const signGap = n > T3 ? 3 : n > T5 ? 6 : 14;
+  const bcH = n > T3 ? 22 : n > T5 ? 26 : 34;   // barcode เล็กลงเมื่อออร์เดอร์ใหญ่ กันล้น
   const rowStyle = { minHeight: rowH };
   const cStyle = { fontSize: cfs, paddingVertical: pv };
   // ประเภทการส่ง (ดึงจากแท็กในหมายเหตุ) — โชว์เป็นชิปสีในช่องหมายเหตุ
@@ -170,7 +174,7 @@ function Panel({ order, copyLabel }: { order: OrderWithItems; copyLabel: string 
   const restNote = noteText.replace("ส่งด่วน", "").replace("ส่งทันที", "").replace(/\s{2,}/g, " ").trim();
 
   return (
-    <View style={s.panel}>
+    <View style={[s.panel, full ? { height: H, width: "100%", flexGrow: 0 } : { height: H }]}>
       {/* header */}
       <View style={s.head}>
         <View>
@@ -180,7 +184,7 @@ function Panel({ order, copyLabel }: { order: OrderWithItems; copyLabel: string 
         <View style={s.titleWrap}>
           <Text style={s.docTitle}>{T("ใบเบิกสินค้า")}</Text>
           <Text style={s.docSub}>Goods Issue Form</Text>
-          <Text style={s.badge}>{T(copyLabel)}</Text>
+          {copyLabel ? <Text style={s.badge}>{T(copyLabel)}</Text> : null}
         </View>
       </View>
 
@@ -273,7 +277,8 @@ function Panel({ order, copyLabel }: { order: OrderWithItems; copyLabel: string 
   );
 }
 
-function OrderPage({ order }: { order: OrderWithItems }) {
+// A4 landscape, 2 ชุด (ต้นฉบับ | สำเนา) — ใบทั่วไป
+function OrderPageHalf({ order }: { order: OrderWithItems }) {
   return (
     <Page size="A4" orientation="landscape" style={s.page}>
       <View style={s.pageRow}>
@@ -287,6 +292,20 @@ function OrderPage({ order }: { order: OrderWithItems }) {
       </View>
     </Page>
   );
+}
+
+// A4 portrait เต็มแผ่น 1 ใบ — สำหรับใบเบิก CTW ที่มีรายการเยอะ
+function OrderPageFull({ order }: { order: OrderWithItems }) {
+  return (
+    <Page size="A4" style={s.page}>
+      <Panel order={order} copyLabel="" full />
+    </Page>
+  );
+}
+
+// CTW = เต็มแผ่น A4 (รายการเยอะ) · แพลตฟอร์มอื่น = 2 ชุดต่อหน้า
+function OrderPage({ order }: { order: OrderWithItems }) {
+  return String(order.platform) === "CTW" ? <OrderPageFull order={order} /> : <OrderPageHalf order={order} />;
 }
 
 export function WithdrawalDocument({ order }: { order: OrderWithItems }) {
