@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { APP_TITLE } from "@/lib/config";
+import EnvBanner from "@/components/EnvBanner";
 
 export const metadata: Metadata = {
   title: APP_TITLE,
@@ -20,7 +21,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           rel="stylesheet"
         />
       </head>
-      <body className="min-h-screen">{children}</body>
+      <body className="min-h-screen"><EnvBanner />{children}</body>
     </html>
   );
 }

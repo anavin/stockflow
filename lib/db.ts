@@ -11,6 +11,7 @@
 import type { PGlite } from "@electric-sql/pglite";
 import { readFile, readdir } from "node:fs/promises";
 import path from "node:path";
+import { appEnv } from "./env";
 
 const ROOT = process.cwd();
 const DATA_DIR = path.join(ROOT, ".pgdata");
@@ -18,7 +19,18 @@ const MIG_DIR = path.join(ROOT, "migrations");
 const SEED_DIR = path.join(ROOT, "seed");
 
 function usePg() {
-  return !!process.env.DATABASE_URL;
+  const has = !!process.env.DATABASE_URL;
+  // 🛡️ guardrail: กัน `next dev` (NODE_ENV=development) ต่อฐานข้อมูล PRODUCTION โดยไม่ตั้งใจ
+  //    (เผลอ copy .env ของ prod มาใส่ .env.local → เขียนทับข้อมูลจริงเงียบๆ)
+  if (has && process.env.NODE_ENV !== "production" && appEnv() === "production" && process.env.ALLOW_PROD_DB !== "1") {
+    throw new Error(
+      "🛑 หยุด: กำลังรัน dev ต่อฐานข้อมูล PRODUCTION โดยตรง — เสี่ยงเขียนทับข้อมูลจริง!\n" +
+      "  • ทดลอง (แนะนำ): ลบ DATABASE_URL ออกจาก .env.local → ใช้ PGlite (.pgdata) แยกขาด\n" +
+      "  • ต่อ staging: ตั้ง NEXT_PUBLIC_APP_ENV=staging + DATABASE_URL ของ staging\n" +
+      "  • ยืนยันต่อ prod จริง ๆ: ตั้ง ALLOW_PROD_DB=1",
+    );
+  }
+  return has;
 }
 
 // ---------------------------------------------------------------------------
