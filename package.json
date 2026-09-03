@@ -9,6 +9,7 @@
     "lint": "next lint",
     "reset": "rm -rf .pgdata",
     "gen:fonts": "node scripts/gen-fonts.mjs",
+    "gen:staging": "node scripts/gen-staging-sql.mjs",
     "cf:build": "opennextjs-cloudflare build",
     "cf:preview": "opennextjs-cloudflare build && opennextjs-cloudflare preview",
     "cf:deploy": "opennextjs-cloudflare build && opennextjs-cloudflare deploy"
