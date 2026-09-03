@@ -3,7 +3,7 @@ import { useState } from "react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { updateUnitSku, deleteUnit, assignUnitSkus } from "@/lib/actions/stock";
+import { updateUnitSku, deleteUnit, bulkDeleteUnits, assignUnitSkus } from "@/lib/actions/stock";
 import type { UnitRow } from "@/lib/queries";
 import { PlatformDot } from "./PlatformBadge";
 import { Pencil, Trash2, Check, X, Wrench, Camera, Plus } from "lucide-react";
@@ -21,6 +21,25 @@ export default function UnitsManager({ units, canEdit, reconcile }: { units: Uni
   const [editSku, setEditSku] = useState<string | null>(null);
   const [editVal, setEditVal] = useState("");
   const [busy, setBusy] = useState(false);
+  const [sel, setSel] = useState<Set<string>>(new Set());   // SKU ที่ติ๊กเลือกไว้ (ลบหลายรายการ)
+
+  // row จากใบเบิก (source==='order') = ไม่ใช่ stock_unit จริง ลบไม่ได้ → ติ๊กไม่ได้
+  const selectable = units.filter((u) => u.source !== "order");
+  const allChecked = selectable.length > 0 && sel.size === selectable.length;
+  const someChecked = sel.size > 0 && !allChecked;
+  function toggle(sku: string) { setSel((p) => { const n = new Set(p); n.has(sku) ? n.delete(sku) : n.add(sku); return n; }); }
+  function toggleAll() { setSel(allChecked ? new Set() : new Set(selectable.map((u) => u.sku))); }
+
+  async function onBulkDelete() {
+    const list = [...sel];
+    if (!list.length) return;
+    if (!confirm(`ลบ SKU ${list.length} รายการที่เลือก?\nที่ "อยู่คลัง" จะหักยอดคงเหลือลงตามจำนวน · ที่ "ตัดออกแล้ว" จะล้างประวัติเฉยๆ`)) return;
+    setBusy(true);
+    const res = await bulkDeleteUnits(list);
+    setBusy(false);
+    if (!res.ok) { alert(res.error || "ลบไม่สำเร็จ"); return; }
+    setSel(new Set()); router.refresh();
+  }
 
   function startEdit(sku: string) { setEditSku(sku); setEditVal(sku); }
   function cancelEdit() { setEditSku(null); setEditVal(""); }
@@ -47,17 +66,36 @@ export default function UnitsManager({ units, canEdit, reconcile }: { units: Uni
     router.refresh();
   }
 
-  const cols = canEdit ? 9 : 8;   // +1 = คอลัมน์ Spec
+  const cols = (canEdit ? 9 : 8) + (canEdit ? 1 : 0);   // +Spec +checkbox
   return (
     <div className="space-y-3">
       {reconcile && reconcile.gap > 0 && (
         <ReconcilePanel key={reconcile.gap} {...reconcile} />
+      )}
+      {/* แถบเลือกหลายรายการ — โผล่เมื่อมีการติ๊ก */}
+      {canEdit && sel.size > 0 && (
+        <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-red-200 bg-red-50/60 px-4 py-2.5">
+          <div className="flex items-center gap-3 text-sm text-ink">
+            <button onClick={() => setSel(new Set())} className="text-muted hover:text-ink" title="ล้างที่เลือก"><X size={16} /></button>
+            <span>เลือกไว้ <b>{sel.size}</b> SKU</span>
+          </div>
+          <button onClick={onBulkDelete} disabled={busy} className="btn-danger px-3 py-1.5 text-sm">
+            <Trash2 size={15} /> {busy ? "กำลังลบ…" : `ลบที่เลือก (${sel.size})`}
+          </button>
+        </div>
       )}
       <div className="overflow-hidden rounded-xl border border-line bg-white">
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead className="bg-soft text-left text-xs text-muted">
             <tr>
+              {canEdit && (
+                <th className="w-10 px-3 py-3">
+                  <input type="checkbox" className="h-4 w-4 cursor-pointer accent-brand"
+                    checked={allChecked} ref={(el) => { if (el) el.indeterminate = someChecked; }}
+                    onChange={toggleAll} aria-label="เลือกทั้งหมด" />
+                </th>
+              )}
               <th className="px-4 py-3">วันจัดส่ง</th>
               <th className="px-3 py-3">SKU</th>
               <th className="px-3 py-3">กลิ่น</th>
@@ -74,8 +112,17 @@ export default function UnitsManager({ units, canEdit, reconcile }: { units: Uni
             {units.map((u) => {
               const st = statusChip(u.status);
               const editing = editSku === u.sku;
+              const checked = sel.has(u.sku);
               return (
-                <tr key={u.sku} className="border-t border-line hover:bg-soft/40">
+                <tr key={u.sku} className={`border-t border-line hover:bg-soft/40 ${checked ? "bg-red-50/40" : ""}`}>
+                  {canEdit && (
+                    <td className="px-3 py-2.5">
+                      {u.source !== "order" ? (
+                        <input type="checkbox" className="h-4 w-4 cursor-pointer accent-brand"
+                          checked={checked} onChange={() => toggle(u.sku)} aria-label={`เลือก ${u.sku}`} />
+                      ) : <span className="inline-block h-4 w-4" />}
+                    </td>
+                  )}
                   <td className="px-4 py-2.5 text-xs text-muted">{u.shipped_at ? String(u.shipped_at).slice(0, 10) : "—"}</td>
                   <td className="px-3 py-2.5">
                     {editing ? (

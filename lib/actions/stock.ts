@@ -631,6 +631,35 @@ export async function deleteUnit(sku: string): Promise<{ ok: boolean; error?: st
   } catch (e: any) { return { ok: false, error: e?.message || "ลบไม่สำเร็จ" }; }
 }
 
+/** ลบ SKU รายชิ้นหลายตัวพร้อมกัน (เลือกติ๊กในหน้าติดตาม SKU) — ที่อยู่คลังหักยอด -1 ต่อชิ้น · atomic ทั้งชุด */
+export async function bulkDeleteUnits(skus: string[]): Promise<{ ok: boolean; deleted: number; error?: string }> {
+  const gate = await requireStockEdit();
+  if ("error" in gate) return { ok: false, deleted: 0, error: gate.error };
+  const user = gate.user;
+  const list = Array.from(new Set((skus || []).map((s) => String(s).trim()).filter(Boolean)));
+  if (!list.length) return { ok: true, deleted: 0 };
+  try {
+    let deleted = 0;
+    await tx(async (run) => {
+      for (const s of list) {
+        const [u] = await run<{ product: string; size: string; status: string }>(`select product, size, status from stock_unit where btrim(sku) = $1 for update`, [s]);
+        if (!u) continue;   // ไม่พบ (เช่น row จากใบเบิก) — ข้าม
+        await run(`delete from stock_unit where btrim(sku) = $1`, [s]);
+        if (u.status === "in_stock") {
+          const m = await matchStockSku(run, u.product, u.size);
+          const [row] = await run<{ qty: number }>(
+            `update stock set qty = qty - 1, updated_at = now() where product = $1 and size = $2 returning qty::float8 as qty`, [m.product, m.size]);
+          if (row) await run(`insert into stock_moves (product, size, qty_change, balance, reason, note, sku, created_by) values ($1,$2,-1,$3,'adjust',$4,$5,$6)`,
+            [m.product, m.size, row.qty, "ลบ SKU (หลายรายการ)", s, user.id]);
+        }
+        deleted++;
+      }
+    });
+    revalidatePath("/stock/units"); revalidatePath("/stock"); revalidateTag("dashboard");
+    return { ok: true, deleted };
+  } catch (e: any) { return { ok: false, deleted: 0, error: e?.message || "ลบไม่สำเร็จ" }; }
+}
+
 /** ปรับยอดสต๊อกเป็นค่าที่นับได้ (set) — บันทึกส่วนต่างเป็น movement */
 export async function adjustStock(product: string, size: string, newQty: number, note?: string): Promise<{ ok: boolean; error?: string }> {
   const gate = await requireStockEdit();
