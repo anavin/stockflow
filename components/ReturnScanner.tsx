@@ -89,10 +89,10 @@ export default function ReturnScanner() {
       <div className="space-y-5 lg:col-span-3">
         {!preview ? (
           <form onSubmit={(e) => { e.preventDefault(); lookup(); }} className="card p-5">
-            <label className="label flex items-center gap-1"><Undo2 size={14} /> สแกน / กรอก Order No. ที่ตีกลับ (รับคืนได้เฉพาะที่ส่งแล้ว)</label>
+            <label className="label flex items-center gap-1"><Undo2 size={14} /> สแกน SKU/บาร์โค้ดขวด หรือ Order No. ที่ตีกลับ (รับคืนได้เฉพาะที่ส่งแล้ว)</label>
             <div className="flex gap-2">
               <input ref={inputRef} autoFocus className="input flex-1 font-mono text-lg" value={value}
-                onChange={(e) => setValue(e.target.value.toUpperCase())} placeholder="สแกนบาร์โค้ด หรือ พิมพ์ Order No. แล้ว Enter" />
+                onChange={(e) => setValue(e.target.value.toUpperCase())} placeholder="สแกน SKU/บาร์โค้ดขวด หรือ Order No. แล้ว Enter" />
               <button className="btn-primary" disabled={busy}>{busy ? "กำลังดึง…" : "ดึงรายการ"}</button>
             </div>
             <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
@@ -122,6 +122,15 @@ export default function ReturnScanner() {
                       <span><span className="font-medium text-ink">{it.product}</span> <span className="text-muted">{it.size}</span>{it.is_free && <span className="chip-brand ml-1">Free</span>}</span>
                       <span className="text-xs text-muted">ส่งไป {it.qty}{it.returned > 0 && ` · คืนแล้ว ${it.returned}`}{full && " · คืนครบแล้ว"}</span>
                     </div>
+                    {/* SKU รายชิ้นที่อยู่ในออเดอร์นี้ (เฉพาะขวดจริงที่ทำ serial) */}
+                    {it.skus.length > 0 && (
+                      <div className="mt-1.5 flex flex-wrap items-center gap-1">
+                        <span className="text-[11px] text-faint">SKU ในออเดอร์:</span>
+                        {it.skus.map((s) => (
+                          <span key={s} className="inline-flex items-center rounded bg-soft px-1.5 py-0.5 font-mono text-[11px] text-muted">{s}</span>
+                        ))}
+                      </div>
+                    )}
                     {!full && (
                       <div className="mt-2 flex flex-wrap items-center gap-2">
                         {/* จำนวนที่คืน */}

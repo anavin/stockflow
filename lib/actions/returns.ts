@@ -24,6 +24,7 @@ async function matchStockSku(run: Run, product: string, size: string): Promise<{
 export type ReturnItemPreview = {
   line_no: number; product: string; size: string; qty: number; unit: string;
   is_free: boolean; tracked: boolean; returned: number; remaining: number;
+  skus: string[];                   // SKU รายชิ้น (serial) ที่ตัดออกไปกับออเดอร์ (บรรทัดนี้)
 };
 export type ReturnLookup = {
   ok: boolean; error?: string;
@@ -40,9 +41,17 @@ export async function lookupOrderForReturn(orderNo: string): Promise<ReturnLooku
   if (!on) return { ok: false, error: "กรอก/สแกน Order No." };
 
   // จับคู่ด้วย order_no (PK) หรือ doc_no ที่พิมพ์บนใบเบิก (เช่น WPO-26-09-02-0001)
-  const [o] = await q<{ order_no: string; doc_no: string | null; platform: string | null; receiver: string | null; username: string | null; deleted_at: string | null; shipped_at: string | null; stock_issued_at: string | null }>(
-    `select order_no, doc_no, platform, receiver, username, deleted_at, shipped_at, stock_issued_at from orders where order_no = $1 or doc_no = $1 order by (order_no = $1) desc limit 1`, [on]);
-  if (!o) return { ok: false, error: `ไม่พบออเดอร์ ${on}` };
+  const ORDER_Q = `select order_no, doc_no, platform, receiver, username, deleted_at, shipped_at, stock_issued_at from orders where order_no = $1 or doc_no = $1 order by (order_no = $1) desc limit 1`;
+  type ORow = { order_no: string; doc_no: string | null; platform: string | null; receiver: string | null; username: string | null; deleted_at: string | null; shipped_at: string | null; stock_issued_at: string | null };
+  let [o] = await q<ORow>(ORDER_Q, [on]);
+  // ไม่เจอเป็น Order No. → ลองตีความว่าเป็น SKU/บาร์โค้ดของขวด (serial ที่ตัดออกไปกับออเดอร์) → หาออเดอร์ให้
+  if (!o) {
+    const [u] = await q<{ order_no: string | null }>(
+      `select order_no from stock_unit where (upper(btrim(sku)) = upper($1) or upper(btrim(coalesce(barcode,''))) = upper($1)) and order_no is not null
+         order by (status = 'issued') desc, issued_at desc nulls last limit 1`, [on]).catch(() => []);
+    if (u?.order_no) [o] = await q<ORow>(ORDER_Q, [u.order_no]);
+  }
+  if (!o) return { ok: false, error: `ไม่พบออเดอร์/SKU: ${on}` };
   if (o.deleted_at) return { ok: false, error: "ออเดอร์นี้อยู่ในถังขยะ" };
   if (!o.shipped_at) return { ok: false, error: "รับคืนได้เฉพาะออเดอร์ที่ส่งแล้ว — ยังไม่ส่ง ให้ยกเลิกออเดอร์/ยกเลิกการตัดแทน" };
   const key = o.order_no;   // ใช้ order_no จริงกับ query ถัดไป (เผื่อค้นด้วย doc_no)
@@ -57,12 +66,24 @@ export async function lookupOrderForReturn(orderNo: string): Promise<ReturnLooku
     `select line_no, sum(qty)::float8 as qty from order_returns where order_no = $1 and voided_at is null group by line_no`, [key]);
   const retMap = new Map(ret.map((r) => [r.line_no, Number(r.qty)]));
 
+  // SKU รายชิ้น (serial) ที่ยังตัดออกให้ออเดอร์นี้ (status='issued') → จับเข้าบรรทัดตามกลิ่น+ขนาด
+  const serialRows = await q<{ sku: string; product: string; size: string }>(
+    `select sku, product, size from stock_unit where order_no = $1 and status = 'issued' order by issued_at`, [key]).catch(() => []);
+  const nk = (s: string | null) => (s || "").toLowerCase().replace(/[^a-z0-9ก-๙]/g, "");
+  const nsz = (s: string | null) => (s || "").toLowerCase().replace(/^[\s.]+|[\s.]+$/g, "");
+  const serialsByKey = new Map<string, string[]>();
+  for (const r of serialRows) {
+    const k = nk(r.product) + "|" + nsz(r.size);
+    (serialsByKey.get(k) ?? serialsByKey.set(k, []).get(k)!).push(r.sku);
+  }
+
   const out: ReturnItemPreview[] = items.map((it) => {
     const returned = retMap.get(it.line_no) || 0;
     return {
       line_no: it.line_no, product: it.product, size: it.size || "", qty: Number(it.qty), unit: it.unit,
       is_free: it.is_free, tracked: isStockTracked(it.size), returned,
       remaining: Math.max(0, Number(it.qty) - returned),
+      skus: serialsByKey.get(nk(it.product) + "|" + nsz(it.size)) || [],
     };
   });
   return { ok: true, order_no: o.order_no, doc_no: o.doc_no, platform: o.platform, receiver: o.receiver || o.username, shipped_at: o.shipped_at, issued: !!o.stock_issued_at, items: out };
