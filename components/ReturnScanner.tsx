@@ -124,10 +124,10 @@ export default function ReturnScanner() {
                     </div>
                     {/* SKU รายชิ้นที่อยู่ในออเดอร์นี้ (เฉพาะขวดจริงที่ทำ serial) */}
                     {it.skus.length > 0 && (
-                      <div className="mt-1.5 flex flex-wrap items-center gap-1">
-                        <span className="text-[11px] text-faint">SKU ในออเดอร์:</span>
+                      <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                        <span className="text-xs font-medium text-muted">SKU ในออเดอร์:</span>
                         {it.skus.map((s) => (
-                          <span key={s} className="inline-flex items-center rounded bg-soft px-1.5 py-0.5 font-mono text-[11px] text-muted">{s}</span>
+                          <span key={s} className="inline-flex items-center rounded-md bg-brand-50 px-2.5 py-1 font-mono text-sm font-bold tracking-wide text-brand-700">{s}</span>
                         ))}
                       </div>
                     )}
