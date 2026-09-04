@@ -345,7 +345,7 @@ const dn = StyleSheet.create({
   accentBar: { height: 2.4, backgroundColor: AC, marginTop: 10, marginBottom: 13 },
   infoRow: { flexDirection: "row", gap: 12, marginBottom: 14 },
   card: { flex: 1, borderWidth: 0.7, borderColor: C.border, borderRadius: 3 },
-  cardHead: { backgroundColor: ACS, paddingVertical: 3.5, paddingHorizontal: 8, fontSize: 7, fontWeight: "bold", color: AC, letterSpacing: 1 },
+  cardHead: { backgroundColor: ACS, paddingVertical: 3.5, paddingHorizontal: 8, fontSize: 7.5, fontWeight: "bold", color: AC },
   cardBody: { paddingVertical: 6, paddingHorizontal: 8 },
   cardName: { fontSize: 9.5, fontWeight: "bold" },
   cardText: { fontSize: 7.8, color: C.muted, marginTop: 2.5, lineHeight: 1.35 },
