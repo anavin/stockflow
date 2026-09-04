@@ -132,6 +132,7 @@ export default function ItemsEditor({
   // (ถ้าติ๊ก Free ไว้แล้ว ไม่ปิด เพื่อให้ยกเลิกได้)
   const freeDisabled = (it: ItemDraft) =>
     isBagProduct(it.product) ||   // ถุงกระดาษ = ฟรีเสมอ (ล็อก ปลดไม่ได้)
+    (!!sizeAllow && !isBagProduct(it.product)) ||   // Eveandboy: ขนาดในแคตตาล็อก (50/30) เป็นของแถมไม่ได้ (ต้อง 1.2/4/10) → ปิด
     (!it.is_free && (it.qty > FREE_MAX_QTY || (!!it.size.trim() && !isAllowedFreeSize(it.size, it.product))));
   const freeReason = (it: ItemDraft) =>
     isBagProduct(it.product) ? "ถุงกระดาษเป็นของแถม (ฟรี) เสมอ"
@@ -236,9 +237,12 @@ export default function ItemsEditor({
 
       <div className="mt-3 flex flex-wrap gap-2">
         <button type="button" className="btn-ghost" onClick={add}><Plus size={16} /> เพิ่มรายการ</button>
-        <button type="button" className="btn-ghost border-brand-200 text-brand-600 hover:bg-brand-50" onClick={addFree}>
-          <Gift size={16} /> เพิ่มของแถม (Free)
-        </button>
+        {/* Eveandboy (sizeAllow): ของแถมต้องเป็น 1.2/4/10ml แต่แคตตาล็อกมีแค่ 50/30 → ซ่อนปุ่มของแถม (กันทางตัน) */}
+        {!sizeAllow && (
+          <button type="button" className="btn-ghost border-brand-200 text-brand-600 hover:bg-brand-50" onClick={addFree}>
+            <Gift size={16} /> เพิ่มของแถม (Free)
+          </button>
+        )}
         <button type="button" className="btn-ghost border-amber-200 text-amber-700 hover:bg-amber-50" onClick={addBag}>
           <ShoppingBag size={16} /> แถมถุง
         </button>

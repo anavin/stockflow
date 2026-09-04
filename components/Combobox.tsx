@@ -88,11 +88,13 @@ export default function Combobox({
   // ไม่เอาแบบมีอยู่กลางคำ (พิมพ์ "dr" → Dream/Droseros เท่านั้น ไม่เอา Teenage Dream)
   // คงลำดับเดิมของ options (เช่น ขนาดเรียงน้อย→มาก ไม่ถูกเรียงตัวอักษรทับ)
   const filtered = useMemo(() => {
+    // ค่าปัจจุบันที่ไม่อยู่ในลิสต์ (เช่น แก้ออเดอร์เก่าที่สินค้าไม่อยู่ในแคตตาล็อกแล้ว) → ใส่ให้เลือกเห็น ไม่หาย
+    const effOpts = (!allowCustom && value && !options.includes(value)) ? [value, ...options] : options;
     const qq = query.trim().toLowerCase();
-    if (!qq) return options.slice(0, 300);
-    const idx = new Map(options.map((o, i) => [o, i]));
+    if (!qq) return effOpts.slice(0, 300);
+    const idx = new Map(effOpts.map((o, i) => [o, i]));
     const scored: { o: string; s: number }[] = [];
-    for (const o of options) {
+    for (const o of effOpts) {
       const nameHit = o.toLowerCase().startsWith(qq);
       const codeHit = (codes?.[o] || "").toLowerCase().startsWith(qq);
       if (nameHit) scored.push({ o, s: 0 });        // ชื่อขึ้นต้นตรง = มาก่อน
@@ -100,7 +102,7 @@ export default function Combobox({
     }
     scored.sort((a, b) => a.s - b.s || (idx.get(a.o)! - idx.get(b.o)!));
     return scored.slice(0, 300).map((x) => x.o);
-  }, [options, query, codes]);
+  }, [options, query, codes, allowCustom, value]);
 
   useEffect(() => setHi(0), [query, open]);
   // reset the search text every time the popup closes so reopening is clean
