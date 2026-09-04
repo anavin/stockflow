@@ -73,12 +73,12 @@ export default function StockIssue({ isAdmin, initialOrder, specOptions = [] }: 
   // ขั้น 2: กดยืนยัน → บันทึก SKU+Spec แล้วตัดสต๊อก
   async function submitIssue() {
     if (!preview?.order_no || busy) return;
-    // ขวดจริง (needs_sku) ต้องสแกน SKU ให้ครบทุกขวด — server บังคับตรงนี้ ถ้าไม่ครบจะตัดไม่ได้ → บล็อกตั้งแต่หน้าจอ
-    const incomplete = preview.items!.filter((it) => it.needs_sku && (form[it.line_no]?.skus?.length || 0) < it.qty);
+    // ต้องมี SKU ครบก่อนตัด — ขวดจริง (needs_sku=สแกน) + 4ml (assign_sku=กรอกตอนตัด) · server บังคับ requiresSku → บล็อกตั้งแต่หน้าจอ กัน tx ล้มทั้งใบ
+    const incomplete = preview.items!.filter((it) => (it.needs_sku || it.assign_sku) && (form[it.line_no]?.skus?.length || 0) < it.qty);
     if (incomplete.length) {
       alert(
-        `ต้องสแกน SKU ให้ครบทุกขวดก่อนตัดสต๊อก:\n` +
-        incomplete.map((it) => `• ${it.product} ${it.size} — ${(form[it.line_no]?.skus?.length || 0)}/${it.qty}`).join("\n"));
+        `ต้องใส่ SKU ให้ครบก่อนตัดสต๊อก:\n` +
+        incomplete.map((it) => `• ${it.product} ${it.size} — ${(form[it.line_no]?.skus?.length || 0)}/${it.qty}${it.assign_sku ? " (กรอกในช่อง 4ml)" : ""}`).join("\n"));
       return;
     }
     // ถุงต้องเลือกไซส์ (S/M) ก่อน ไม่งั้นระบบไม่รู้จะหักจากไซส์ไหน → ถุงจะไม่ถูกตัด
@@ -126,7 +126,7 @@ export default function StockIssue({ isAdmin, initialOrder, specOptions = [] }: 
       return;
     }
     const nk = (x?: string | null) => (x || "").toLowerCase().replace(/[^a-z0-9ก-๙]/g, "");
-    const nsz = (x?: string | null) => (x || "").toLowerCase().replace(/^[\s.]+|[\s.]+$/g, "");
+    const nsz = (x?: string | null) => (x || "").toLowerCase().replace(/\s+/g, "").replace(/^\.+|\.+$/g, "");   // ให้ตรงกับ server (stock.ts)
     // ทุกบรรทัดกลิ่น+ขนาดตรงกับที่สแกน (รวม non-serial) → แยกบรรทัดที่ต้องมี SKU
     const allMatch = preview.items!.filter((i) => nk(i.product) === nk(res.product) && nsz(i.size) === nsz(res.size));
     const serialLines = allMatch.filter((i) => i.needs_sku);

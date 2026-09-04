@@ -360,7 +360,7 @@ export default function OrderForm({ platform = "Shopee", products, sizes, provin
           <div className="grid gap-3 sm:grid-cols-2">
             <div className="sm:col-span-2">
               <label className="label">สาขา <span className="text-brand">*</span></label>
-              <Combobox value={f.branch} options={BRANCHES[pfCode] || []} placeholder="เลือก / พิมพ์สาขา"
+              <Combobox value={f.branch} options={BRANCHES[pfCode] || []} allowCustom={!isEveandboy} placeholder={isEveandboy ? "เลือกสาขา Eveandboy" : "เลือก / พิมพ์สาขา"}
                 onChange={(v) => { const m = EVEANDBOY_BRANCHES.find((b) => b.branch === v); set({ branch: v, ...(m ? { branch_code: m.code } : {}) }); }} />
               {(() => {
                 const addr = EVEANDBOY_BRANCHES.find((b) => b.branch === f.branch)?.address;

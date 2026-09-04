@@ -296,7 +296,7 @@ export async function confirmIssueByOrder(
       }
       // ── ตัดจาก SKU ที่มีจริงในคลังเท่านั้น (in_stock) · กลิ่น/ขนาดตรง · ครบตามจำนวน (เฉพาะขนาดที่ track สต๊อก) ──
       const nk = (s: string | null) => (s || "").toLowerCase().replace(/[^a-z0-9ก-๙]/g, "");
-      const nsz = (s: string | null) => (s || "").toLowerCase().replace(/^[\s.]+|[\s.]+$/g, "");   // btrim ' .' — "50 ml." = "50 ml"
+      const nsz = (s: string | null) => (s || "").toLowerCase().replace(/\s+/g, "").replace(/^\.+|\.+$/g, "");   // "50 ml"="50ml"="50 ml." · เก็บจุดไว้ (1.2 ≠ 12)
       const seenSku = new Set<string>();   // กัน SKU เดียวกันใช้ซ้ำข้ามบรรทัดในใบเดียว
       for (const e of norm) {
         const li = byLine.get(e.line_no);

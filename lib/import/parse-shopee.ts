@@ -234,7 +234,9 @@ export function rowsToOrders(rows: Record<string, any>[], products: string[] = [
         size = d.size;
         if (!d.matched) unmatchedItems += 1;
       }
-      const isFree = str(r.free) !== "";
+      // ของแถมเฉพาะค่าที่เป็น truthy จริง — กัน "0"/"no"/"ไม่ใช่" ในคอลัมน์ถูกนับเป็นของแถม
+      const freeCell = str(r.free).trim().toLowerCase();
+      const isFree = freeCell !== "" && !/^(0|no|n|false|ไม่ใช่|ไม่|-)$/.test(freeCell);
       const item: OrderItem = {
         line_no: ord.items.length + 1,
         product,

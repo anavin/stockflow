@@ -10,14 +10,14 @@ export const dynamic = "force-dynamic";
  * เปิดดูได้: GET /api/health  (ไม่ลับ — คืนแค่ชื่อคอลัมน์ที่ขาด ไม่มีข้อมูลลูกค้า)
  */
 const REQUIRED: Record<string, string[]> = {
-  orders: ["order_no", "platform", "doc_no", "stock_issued_at", "stock_issued_by", "shipped_at", "shipped_by", "returned_at", "return_status", "deleted_at", "subdistrict", "month_label", "order_date"],
+  orders: ["order_no", "platform", "doc_no", "stock_issued_at", "stock_issued_by", "shipped_at", "shipped_by", "returned_at", "return_status", "deleted_at", "subdistrict", "month_label", "order_date", "branch_code", "po_version"],
   order_items: ["order_no", "line_no", "product", "size", "is_free", "qty", "sku", "spec"],
   stock: ["product", "size", "qty"],
-  stock_unit: ["sku", "product", "size", "grade", "spec", "status", "order_no", "issued_at"],
+  stock_unit: ["sku", "product", "size", "grade", "spec", "status", "order_no", "issued_at", "assigned_at_issue"],
   order_returns: ["order_no", "line_no", "qty", "disposition", "voided_at"],
   damaged: ["product", "size", "qty"],
   material_item: ["ref_key", "category", "qty"],
-  material_move: ["item_id", "qty_change"],
+  material_move: ["item_id", "qty_change", "order_no"],
   scent_aliases: ["alias_key", "product"],
   fda_registrations: ["product", "fda_status", "expiry_date"],
   activity_log: ["action", "detail", "created_at"],
