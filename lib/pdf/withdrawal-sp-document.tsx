@@ -334,14 +334,14 @@ const ACS = "#eef1f4";     // accent tint อ่อน (พื้นการ์
 const dn = StyleSheet.create({
   page: { fontFamily: "NotoSansThai", fontSize: 9, color: C.ink, paddingTop: 30, paddingBottom: 46, paddingHorizontal: 38 },
   head: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start" },
-  headRight: { alignItems: "flex-end" },
+  headRight: { width: 250, alignItems: "flex-end" },
   brandWrap: { flexDirection: "row", alignItems: "center", gap: 14 },
   partner: { fontSize: 13, fontWeight: "bold", color: C.faint, letterSpacing: 1 },
   title: { fontSize: 19, fontWeight: "bold", color: AC, textAlign: "right", letterSpacing: 0.5 },
   titleEn: { fontSize: 8.5, color: C.muted, textAlign: "right", marginTop: 1, letterSpacing: 1.5 },
-  metaRow: { flexDirection: "row", marginTop: 3.5, justifyContent: "flex-end" },
+  metaRow: { flexDirection: "row", marginTop: 3.5, width: "100%" },
   metaL: { fontSize: 8, color: C.muted, textAlign: "right", width: 96 },
-  metaV: { fontSize: 8.5, fontWeight: "bold", width: 108, textAlign: "left", paddingLeft: 8 },
+  metaV: { fontSize: 8.5, fontWeight: "bold", flex: 1, textAlign: "left", paddingLeft: 8 },
   accentBar: { height: 2.4, backgroundColor: AC, marginTop: 10, marginBottom: 13 },
   infoRow: { flexDirection: "row", gap: 12, marginBottom: 14 },
   card: { flex: 1, borderWidth: 0.7, borderColor: C.border, borderRadius: 3 },
@@ -393,8 +393,8 @@ function WholesaleDocPage({ order, mode }: { order: OrderWithItems; mode: "issue
       {/* header: โลโก้ | หัวเรื่อง + meta */}
       <View style={dn.head}>
         <View style={dn.brandWrap}>
-          <Image src={LAB_PARFUMO_LOGO} style={{ height: 38, width: 38 * LAB_PARFUMO_AR }} />
-          {isEvb ? <Image src={EVEANDBOY_LOGO} style={{ height: 32, width: 32 * EVEANDBOY_AR }} /> : (partner ? <Text style={dn.partner}>{partner}</Text> : null)}
+          <Image src={LAB_PARFUMO_LOGO} style={{ height: 40, width: 40 * LAB_PARFUMO_AR }} />
+          {isEvb ? <Image src={EVEANDBOY_LOGO} style={{ height: 40, width: 40 * EVEANDBOY_AR }} /> : (partner ? <Text style={dn.partner}>{partner}</Text> : null)}
         </View>
         <View style={dn.headRight}>
           <Text style={dn.title}>{T(title)}</Text>
