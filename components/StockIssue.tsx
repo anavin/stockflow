@@ -118,7 +118,13 @@ export default function StockIssue({ isAdmin, initialOrder, specOptions = [] }: 
     const s = (code || "").trim(); if (!s || !preview?.order_no) return;
     if (Object.values(form).some((v) => (v?.skus || []).includes(s))) { scanBeep("warn"); setScanMsg({ type: "warn", text: `สแกนซ้ำ: ${s}` }); return; }
     const res = await resolveIssueSku(preview.order_no, s);
-    if (!res.ok || res.product == null) { scanBeep("error"); setScanMsg({ type: "error", text: res.error || "SKU ไม่ถูกต้อง" }); return; }
+    if (!res.ok || res.product == null) {
+      scanBeep("error");
+      // มีบรรทัด 4ml (assign ตอนตัด) ที่ยังไม่ครบ → แนะนำให้กรอกในช่องของบรรทัด 4ml แทน (ช่องบนใช้กับขวดที่รับเข้าคลังแล้ว)
+      const hasAssign = preview.items!.some((it) => it.assign_sku && (form[it.line_no]?.skus?.length || 0) < it.qty);
+      setScanMsg({ type: "error", text: (res.error || "SKU ไม่ถูกต้อง") + (hasAssign ? " · ถ้าเป็น SKU ของ 4ml ให้กรอกในช่องของบรรทัด 4ml ด้านล่าง" : "") });
+      return;
+    }
     const nk = (x?: string | null) => (x || "").toLowerCase().replace(/[^a-z0-9ก-๙]/g, "");
     const nsz = (x?: string | null) => (x || "").toLowerCase().replace(/^[\s.]+|[\s.]+$/g, "");
     // ทุกบรรทัดกลิ่น+ขนาดตรงกับที่สแกน (รวม non-serial) → แยกบรรทัดที่ต้องมี SKU

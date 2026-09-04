@@ -7,7 +7,8 @@ import { can } from "@/lib/auth/roles";
 import { logActivity } from "@/lib/activity";
 import { buildProductLabel, type OrderWithItems } from "@/lib/types";
 import { formatDocNo, monthLabel, ymdKey } from "@/lib/docno";
-import { isAllowedFreeSize, FREE_ALLOWED_SIZES, enabledPlatforms, platformBase, isBagProduct, PLATFORMS, canImportPlatform } from "@/lib/config";
+import { isAllowedFreeSize, FREE_ALLOWED_SIZES, enabledPlatforms, platformBase, isBagProduct, PLATFORMS, canImportPlatform, isWholesalePlatform } from "@/lib/config";
+import { EVEANDBOY_BY_KEY } from "@/lib/eveandboy-data";
 
 /** revalidate หน้ารายการ+ถังขยะใบเบิกของทุกแพลตฟอร์ม (route เป็น /[platform] — hardcode /shopee ครอบไม่ครบ) */
 function revalidateOrderLists() {
@@ -95,6 +96,15 @@ export async function saveOrder(input: OrderInput, opts?: { silent?: boolean }):
 
   // platform ต้องมีจริงในระบบ (กัน action call ตรงๆ ใส่ platform มั่ว → doc_no prefix เพี้ยน)
   if (!PLATFORMS.some((p) => p.code === o.platform)) return { ok: false, error: `แพลตฟอร์มไม่ถูกต้อง: ${o.platform}` };
+  // ค้าส่ง (CTW/Eveandboy/King Power) ต้องมีสาขา (defense — ฟอร์มบังคับอยู่แล้ว)
+  if (isWholesalePlatform(o.platform) && !(o.branch || "").trim()) return { ok: false, error: `เลือกสาขาปลายทาง (${o.platform})` };
+  // Eveandboy: สินค้า/ขนาดต้องอยู่ในแคตตาล็อก (จับด้วยกลิ่น+ml)
+  if (o.platform === "Eveandboy") {
+    const nkp = (s?: string | null) => (s || "").toLowerCase().replace(/[^a-z0-9ก-๙]/g, "");
+    const mlp = (s?: string | null) => (s || "").match(/[0-9]+(\.[0-9]+)?/)?.[0] ?? "";
+    const bad = o.items.find((it) => !isBagProduct(it.product) && !EVEANDBOY_BY_KEY[`${nkp(it.product)}|${mlp(it.size)}`]);
+    if (bad) return { ok: false, error: `"${bad.product} ${bad.size}" ไม่มีในแคตตาล็อก Eveandboy — เลือกจากรายการที่กำหนด` };
+  }
 
   // ของแถม (Free) ได้เฉพาะขนาดเล็ก — ไซต์ใหญ่ห้ามเป็นของแถม
   const badFree = o.items.find((it) => it.is_free && !isAllowedFreeSize(it.size, it.product));

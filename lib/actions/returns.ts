@@ -4,7 +4,7 @@ import { q, tx } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth/session";
 import { can } from "@/lib/auth/roles";
 import { logActivity } from "@/lib/activity";
-import { isStockTracked, enabledPlatforms, platformBase } from "@/lib/config";
+import { isStockTracked, assignsSku, enabledPlatforms, platformBase } from "@/lib/config";
 
 /** revalidate หน้ารายการใบเบิกทุกแพลตฟอร์ม (ป้ายสถานะคืนโชว์บนรายการ) */
 const revalidateAllOrderLists = () => { for (const p of enabledPlatforms()) revalidatePath(platformBase(p.code));  revalidateTag("dashboard"); };
@@ -130,7 +130,8 @@ export async function confirmReturn(orderNo: string, entries: ReturnEntry[], rea
         const tracked = isStockTracked(it.size);
 
         if (e.disposition === "restock") {
-          if (!tracked) throw new Error(`${it.product} (${it.size}): ขนาดตัวอย่างคืนเข้าสต๊อกไม่ได้ — ให้เลือก "ชำรุด"`);
+          // ตัวอย่างที่ไม่มี serial จริง (ไม่ track) หรือ 4ml (assign ตอนตัด = serial สร้างสดๆ) คืนเข้าสต๊อกไม่ได้ (กัน serial ผี)
+          if (!tracked || assignsSku(it.size)) throw new Error(`${it.product} (${it.size}): ขนาดตัวอย่างคืนเข้าสต๊อกไม่ได้ — ให้เลือก "ชำรุด" หรือ "ไม่นับ"`);
           if (!o.stock_issued_at) throw new Error("ออเดอร์นี้ยังไม่ได้ตัดสต๊อก คืนเข้าสต๊อกไม่ได้ (เลือกชำรุด หรือยกเลิกออเดอร์แทน)");
           const sku = await matchStockSku(run, it.product, it.size || "");
           const [row] = await run<{ qty: number }>(

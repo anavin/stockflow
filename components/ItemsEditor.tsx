@@ -119,8 +119,12 @@ export default function ItemsEditor({
     if (checked && !isAllowedFreeSize(it.size, it.product)) patch.size = ""; // ล้างไซต์ใหญ่ที่เป็นของแถมไม่ได้
     update(i, patch);
   }
-  // เปลี่ยนกลิ่น → ถ้าเป็นถุงกระดาษ ให้ติ๊กฟรีอัตโนมัติ
-  const setProduct = (i: number, v: string) => update(i, { product: v, ...(isBagProduct(v) ? { is_free: true } : {}) });
+  // เปลี่ยนกลิ่น → ถุงกระดาษติ๊กฟรีอัตโนมัติ · Eveandboy (sizeAllow) ล้างขนาดถ้าไม่เข้ากับกลิ่นใหม่ (กันคู่ที่ไม่มีในแคตตาล็อก)
+  const setProduct = (i: number, v: string) => {
+    const patch: Partial<ItemDraft> = { product: v, ...(isBagProduct(v) ? { is_free: true } : {}) };
+    if (sizeAllow && !isBagProduct(v) && !(sizeAllow[normKey(v)] || []).includes(items[i].size)) patch.size = "";
+    update(i, patch);
+  };
   // จำนวน > 30 = ของแถมไม่ได้ (ปิดปุ่ม Free + ยกเลิกถ้าติ๊กไว้)
   const FREE_MAX_QTY = 30;
   function setQty(i: number, v: number) {
@@ -243,9 +247,11 @@ export default function ItemsEditor({
             <Gift size={16} /> เพิ่มของแถม (Free)
           </button>
         )}
-        <button type="button" className="btn-ghost border-amber-200 text-amber-700 hover:bg-amber-50" onClick={addBag}>
-          <ShoppingBag size={16} /> แถมถุง
-        </button>
+        {!sizeAllow && (
+          <button type="button" className="btn-ghost border-amber-200 text-amber-700 hover:bg-amber-50" onClick={addBag}>
+            <ShoppingBag size={16} /> แถมถุง
+          </button>
+        )}
       </div>
     </div>
   );

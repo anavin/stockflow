@@ -297,9 +297,11 @@ export async function confirmIssueByOrder(
       // ── ตัดจาก SKU ที่มีจริงในคลังเท่านั้น (in_stock) · กลิ่น/ขนาดตรง · ครบตามจำนวน (เฉพาะขนาดที่ track สต๊อก) ──
       const nk = (s: string | null) => (s || "").toLowerCase().replace(/[^a-z0-9ก-๙]/g, "");
       const nsz = (s: string | null) => (s || "").toLowerCase().replace(/^[\s.]+|[\s.]+$/g, "");   // btrim ' .' — "50 ml." = "50 ml"
+      const seenSku = new Set<string>();   // กัน SKU เดียวกันใช้ซ้ำข้ามบรรทัดในใบเดียว
       for (const e of norm) {
         const li = byLine.get(e.line_no);
         if (!li) continue;
+        for (const sku of e.skus) { if (seenSku.has(sku)) throw new Error(`SKU "${sku}" ซ้ำในใบเบิกนี้ (ใช้ได้ครั้งเดียว)`); seenSku.add(sku); }
         // ขวดจริง (serial เดิม) และ 4 ml (assign ตอนตัด) = ต้องมี SKU ให้ครบตามจำนวน · 1.2 ml/ถุง = ไม่ต้อง
         const isAssign = assignsSku(li.size);   // 4 ml = กรอก SKU เอง (ไม่ต้องมีในคลังก่อน)
         if (requiresSku(li.size)) {
@@ -311,16 +313,14 @@ export async function confirmIssueByOrder(
           const [u] = await run<{ status: string; order_no: string | null; product: string; size: string }>(
             `select status, order_no, product, size from stock_unit where btrim(sku) = $1`, [sku]);
           if (isAssign) {
-            // 4 ml: assign SKU ตอนตัด — สร้าง stock_unit (issued) ถ้ายังไม่มี · ถ้ามีแล้วต้องยังไม่ถูกใช้
+            // 4 ml: assign SKU ตอนตัด — สร้าง stock_unit (issued) ใหม่เท่านั้น · ห้ามทับ SKU ที่มีอยู่ (กันไปแก้ขวดจริงในคลัง)
             if (!u) {
               await run(`insert into stock_unit (sku, product, size, status, order_no, issued_at, issued_by, received_at, received_by)
                          values ($1,$2,$3,'issued',$4,now(),$5,now(),$5)`, [sku, li.product, li.size || "", on, user.id]);
             } else if (u.status === "issued" && u.order_no === on) {
-              continue;   // ตัดซ้ำใบเดิม
-            } else if (u.status === "in_stock" || (u.status !== "issued")) {
-              await run(`update stock_unit set status='issued', product=$2, size=$3, order_no=$4, issued_at=now(), issued_by=$5 where btrim(sku)=$1`, [sku, li.product, li.size || "", on, user.id]);
+              continue;   // ตัดซ้ำใบเดิม (idempotent)
             } else {
-              throw new Error(`SKU "${sku}" ถูกใช้กับออเดอร์อื่นแล้ว (${u.order_no || "-"})`);
+              throw new Error(`SKU "${sku}" มีอยู่ในระบบแล้ว (ของในคลัง/ออเดอร์อื่น) — ใช้เลข SKU 4ml ที่ไม่ซ้ำ`);
             }
             continue;
           }
@@ -408,9 +408,9 @@ export async function reverseIssue(orderNo: string): Promise<{ ok: boolean; erro
       // guard ด้วย to_regclass เผื่อ prod ยังไม่มีตาราง stock_unit (ไม่ให้ tx abort)
       const [ur] = await run<{ ok: boolean }>(`select to_regclass('stock_unit') is not null as ok`);
       if (ur?.ok) {
-        // 4 ml (assign ตอนตัด): serial ถูกสร้างตอนตัด ไม่ใช่ของในคลังจริง → ลบทิ้ง (ไม่คืนเป็น in_stock)
-        await run(`delete from stock_unit where order_no = $1 and status = 'issued' and btrim(lower(size),' .') = any($2)`,
-          [on, ASSIGN_SKU_SIZES.map((s) => s.toLowerCase())]);
+        // 4 ml (assign ตอนตัด): serial ถูกสร้างตอนตัด ไม่ใช่ของในคลังจริง → ลบทิ้ง (จับด้วยเลข ml เผื่อ variant, รวม in_stock ที่ผูกใบนี้ กัน serial ผี)
+        await run(`delete from stock_unit where order_no = $1 and status in ('issued','in_stock') and (regexp_match(size,'([0-9]+([.][0-9]+)?)'))[1] = any($2)`,
+          [on, ASSIGN_SKU_SIZES.map((s) => (s.match(/[0-9]+(\.[0-9]+)?/) || [""])[0])]);
         // ขวดจริง: คืนสถานะกลับเป็น in_stock
         await run(`update stock_unit set status = 'in_stock', order_no = null, issued_at = null, issued_by = null
                    where order_no = $1 and status = 'issued'`, [on]);

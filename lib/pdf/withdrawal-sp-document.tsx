@@ -338,7 +338,8 @@ const POC = [20, 100, 175, 55, 55, 45, 40];
 
 function WholesalePage({ order }: { order: OrderWithItems }) {
   const all = [...(order.items ?? [])].filter((it) => (it.product || "").trim());
-  all.sort((a, b) => gradeRank(a.ptype) - gradeRank(b.ptype) || sizeRank(a.ptype, a.size) - sizeRank(b.ptype, b.size)
+  all.sort((a, b) => gradeRank(a.ptype) - gradeRank(b.ptype) || gradeKey(a.ptype).localeCompare(gradeKey(b.ptype))
+    || sizeRank(a.ptype, a.size) - sizeRank(b.ptype, b.size)
     || mlOf(b.size) - mlOf(a.size) || String(a.product || "").localeCompare(String(b.product || ""), "th"));
   const total = all.reduce((s, it) => s + (Number(it.qty) || 0), 0);
   // สรุปตาม Grade (เรียงตามลำดับเกรด)
@@ -421,7 +422,7 @@ function WholesalePage({ order }: { order: OrderWithItems }) {
 
       {/* table */}
       <View>
-        <View style={po.th}>
+        <View style={po.th} fixed>
           {["#", "BARCODE", "ชื่อสินค้า", "GRADE", "ขนาด", "เบิก", "หน่วย"].map((h, i) => (
             <Text key={i} style={[po.cell, po.hCell, { fontSize: fs - 0.5, width: POC[i], textAlign: i === 5 ? "right" : "left" }]}>{h}</Text>
           ))}
