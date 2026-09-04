@@ -8,7 +8,7 @@
  * names, order numbers) are Latin.
  */
 import { Document, Page, Text, View, StyleSheet, Font, Svg, Rect, Image } from "@react-pdf/renderer";
-import { LAB_PARFUMO_LOGO, LAB_PARFUMO_AR, EVEANDBOY_LOGO, EVEANDBOY_AR, KING_POWER_LOGO, KING_POWER_AR } from "./logos";
+import { LAB_PARFUMO_LOGO, LAB_PARFUMO_AR, EVEANDBOY_LOGO, EVEANDBOY_AR, KING_POWER_LOGO, KING_POWER_AR, CENTRAL_WORLD_LOGO, CENTRAL_WORLD_AR } from "./logos";
 import { code128 } from "./code128";
 import { COMPANY_NAME, COMPANY_NAME_EN, COMPANY_ADDRESS, isWholesalePlatform, platformName } from "@/lib/config";
 import { EVEANDBOY_BY_KEY, EVEANDBOY_BRANCHES } from "@/lib/eveandboy-data";
@@ -385,6 +385,7 @@ const DN_COL = [118, 302, 56, 52];   // Product Code / Name / Size / Qty (~528)
 function WholesaleDocPage({ order, mode }: { order: OrderWithItems; mode: "issue" | "delivery" }) {
   const isEvb = String(order.platform) === "Eveandboy";
   const isKp = String(order.platform) === "KingPower";
+  const isCtw = String(order.platform) === "CTW";
   const nkey = (x?: string | null) => (x || "").toLowerCase().replace(/[^a-z0-9ก-๙]/g, "");
   const evbOf = (it: OrderWithItems["items"][number]) => (isEvb ? EVEANDBOY_BY_KEY[`${nkey(it.product)}|${mlOf(it.size)}`] : undefined);
   const items = [...(order.items ?? [])].filter((it) => (it.product || "").trim());
@@ -408,6 +409,7 @@ function WholesaleDocPage({ order, mode }: { order: OrderWithItems; mode: "issue
           <Image src={LAB_PARFUMO_LOGO} style={{ height: 40, width: 40 * LAB_PARFUMO_AR }} />
           {isEvb ? <Image src={EVEANDBOY_LOGO} style={{ height: 40, width: 40 * EVEANDBOY_AR }} />
             : isKp ? <Image src={KING_POWER_LOGO} style={{ height: 40, width: 40 * KING_POWER_AR }} />
+            : isCtw ? <Image src={CENTRAL_WORLD_LOGO} style={{ width: 132, height: 132 / CENTRAL_WORLD_AR }} />
             : (partner ? <Text style={dn.partner}>{partner}</Text> : null)}
         </View>
         <View style={dn.headRight}>
