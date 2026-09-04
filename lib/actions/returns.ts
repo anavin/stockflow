@@ -208,20 +208,25 @@ export async function reverseReturn(returnId: number): Promise<{ ok: boolean; er
       const qty = Number(r.qty);
       if (r.disposition === "restock") {
         const sku = await matchStockSku(run, r.product, r.size || "");
-        const [row] = await run<{ qty: number }>(
-          `update stock set qty = qty - $3, updated_at = now() where product=$1 and size=$2 returning qty::float8 as qty`,
-          [sku.product, sku.size, qty]);
-        // ลง ledger เฉพาะเมื่อแถวเปลี่ยนจริง (กัน balance เพี้ยนถ้าแถวถูกลบไปแล้ว)
-        if (row) await run(`insert into stock_moves (product, size, qty_change, balance, reason, order_no, note, created_by)
-                   values ($1,$2,$3,$4,'adjust',$5,'ยกเลิกการคืน',$6)`, [sku.product, sku.size, -qty, row.qty, r.order_no, user.id]);
-        // ย้อน serial: หยิบ in_stock ของกลิ่น/ขนาดนี้ กลับเป็น issued ให้ออเดอร์ (สมดุลกับ qty ที่หักคืน)
-        // เลือก serial เดิมของออเดอร์นี้ก่อน (order_no=$1) → ยกเลิกการคืนได้ถูกขวด ไม่ไปหยิบขวดคนอื่น
-        await run(
+        // ย้อน serial ก่อน: หยิบ in_stock ของกลิ่น/ขนาดนี้ กลับเป็น issued ให้ออเดอร์ (serial เดิมของออเดอร์นี้ก่อน)
+        // เก็บจำนวนที่ย้อนได้จริง — เผื่อบางตัวถูก "ตัด/ขายใหม่" ไปแล้ว (ไม่เหลือ in_stock ให้ย้อน)
+        const back = await run<{ sku: string }>(
           `update stock_unit set status='issued', order_no=$1, issued_at=now(), issued_by=$5
             where sku in (select sku from stock_unit where status='in_stock'
               and regexp_replace(lower(btrim(product)),'[^a-z0-9ก-๙]','','g')=regexp_replace(lower(btrim($2)),'[^a-z0-9ก-๙]','','g')
               and btrim(lower(size),' .')=btrim(lower($3),' .')
-            order by (coalesce(order_no,'') = $1) desc, received_at desc limit $4)`, [r.order_no, r.product, r.size || "", Math.round(qty), user.id]);
+            order by (coalesce(order_no,'') = $1) desc, received_at desc limit $4)
+            returning sku`, [r.order_no, r.product, r.size || "", Math.round(qty), user.id]);
+        // หัก aggregate เท่าที่ย้อน serial ได้จริง (restock = ของ track serial เสมอ) — กัน stock ติดลบเมื่อ qty บางส่วนถูกขายใหม่ก่อนยกเลิกคืน
+        const backCnt = back.length;
+        if (backCnt > 0) {
+          const [row] = await run<{ qty: number }>(
+            `update stock set qty = qty - $3, updated_at = now() where product=$1 and size=$2 returning qty::float8 as qty`,
+            [sku.product, sku.size, backCnt]);
+          // ลง ledger เฉพาะเมื่อแถวเปลี่ยนจริง (กัน balance เพี้ยนถ้าแถวถูกลบไปแล้ว)
+          if (row) await run(`insert into stock_moves (product, size, qty_change, balance, reason, order_no, note, created_by)
+                     values ($1,$2,$3,$4,'adjust',$5,'ยกเลิกการคืน',$6)`, [sku.product, sku.size, -backCnt, row.qty, r.order_no, user.id]);
+        }
       } else if (r.disposition === "damaged") {
         const sku = await matchStockSku(run, r.product, r.size || "");
         const [row] = await run<{ qty: number }>(

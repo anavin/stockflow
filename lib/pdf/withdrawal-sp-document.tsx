@@ -92,12 +92,10 @@ const s = StyleSheet.create({
 
   th: { flexDirection: "row", backgroundColor: C.soft, borderTopWidth: 0.8, borderColor: C.border },
   tr: { flexDirection: "row", borderTopWidth: 0.5, borderColor: C.line, minHeight: 14 },
-  trLast: { borderBottomWidth: 0.8, borderColor: C.border },
   cell: { paddingVertical: 2.5, paddingHorizontal: 3, fontSize: 7.5 },
   hCell: { fontWeight: "bold", fontSize: 7, color: C.muted },
 
   foot: { flexDirection: "row", borderTopWidth: 0.8, borderBottomWidth: 0.8, borderColor: C.border, backgroundColor: C.soft },
-  blankCell: { paddingVertical: 2.5, paddingHorizontal: 3 },
   signRow: { flexDirection: "row", justifyContent: "space-between", marginTop: 14, paddingHorizontal: 4 },
   sign: { width: "30%", alignItems: "center" },
   signLine: { borderTopWidth: 0.6, borderColor: C.muted, width: "100%", marginBottom: 3 },

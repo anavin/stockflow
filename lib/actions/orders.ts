@@ -98,13 +98,7 @@ export async function saveOrder(input: OrderInput, opts?: { silent?: boolean }):
   if (!PLATFORMS.some((p) => p.code === o.platform)) return { ok: false, error: `แพลตฟอร์มไม่ถูกต้อง: ${o.platform}` };
   // ค้าส่ง (CTW/Eveandboy/King Power) ต้องมีสาขา (defense — ฟอร์มบังคับอยู่แล้ว)
   if (isWholesalePlatform(o.platform) && !(o.branch || "").trim()) return { ok: false, error: `เลือกสาขาปลายทาง (${o.platform})` };
-  // Eveandboy: สินค้า/ขนาดต้องอยู่ในแคตตาล็อก (จับด้วยกลิ่น+ml)
-  if (o.platform === "Eveandboy") {
-    const nkp = (s?: string | null) => (s || "").toLowerCase().replace(/[^a-z0-9ก-๙]/g, "");
-    const mlp = (s?: string | null) => (s || "").match(/[0-9]+(\.[0-9]+)?/)?.[0] ?? "";
-    const bad = o.items.find((it) => !isBagProduct(it.product) && !EVEANDBOY_BY_KEY[`${nkp(it.product)}|${mlp(it.size)}`]);
-    if (bad) return { ok: false, error: `"${bad.product} ${bad.size}" ไม่มีในแคตตาล็อก Eveandboy — เลือกจากรายการที่กำหนด` };
-  }
+  // (Eveandboy: ตรวจแคตตาล็อกย้ายเข้า tx ด้านล่าง — ตรวจเฉพาะออเดอร์ใหม่/รายการที่เปลี่ยน กันแก้ที่อยู่/โน้ตไม่ได้)
 
   // ของแถม (Free) ได้เฉพาะขนาดเล็ก — ไซต์ใหญ่ห้ามเป็นของแถม
   const badFree = o.items.find((it) => it.is_free && !isAllowedFreeSize(it.size, it.product));
@@ -134,15 +128,24 @@ export async function saveOrder(input: OrderInput, opts?: { silent?: boolean }):
       if (canon) o.order_no = canon.order_no;
       const [existing] = await run<{ doc_no: string | null; doc_date: string | null; stock_issued_at: string | null; shipped_at: string | null }>(
         `select doc_no, to_char(doc_date,'YYYY-MM-DD') as doc_date, stock_issued_at, shipped_at from orders where order_no = $1`, [o.order_no]);
+      const sig = (its: { product?: string | null; size?: string | null; is_free?: boolean; qty: number | string }[]) =>
+        its.map((it) => `${(it.product || "").trim()}|${(it.size || "").trim()}|${it.is_free ? 1 : 0}|${Number(it.qty) || 0}`).sort().join(";");
+      // รายการสินค้าเปลี่ยนจากที่เก็บไว้ไหม (ใช้ทั้งกันแก้หลังตัดสต๊อก + ตรวจแคตตาล็อก Eveandboy)
+      const prevItems = existing
+        ? await run<{ product: string; size: string; is_free: boolean; qty: number }>(`select product, size, is_free, qty from order_items where order_no = $1`, [o.order_no])
+        : [];
+      const itemsChanged = !existing || sig(prevItems) !== sig(o.items);
       // กันแก้ "รายการสินค้า" หลังตัดสต๊อก/ส่งแล้ว — ทำให้ยอดรับคืน/คืนสต๊อกเพี้ยน (แก้ที่อยู่/โน้ตยังได้)
-      if (existing && (existing.stock_issued_at || existing.shipped_at)) {
-        const prev = await run<{ product: string; size: string; is_free: boolean; qty: number }>(
-          `select product, size, is_free, qty from order_items where order_no = $1`, [o.order_no]);
-        const sig = (its: { product?: string | null; size?: string | null; is_free?: boolean; qty: number | string }[]) =>
-          its.map((it) => `${(it.product || "").trim()}|${(it.size || "").trim()}|${it.is_free ? 1 : 0}|${Number(it.qty) || 0}`).sort().join(";");
-        if (sig(prev) !== sig(o.items)) {
-          throw new Error("ใบเบิกนี้ตัดสต๊อก/ส่งแล้ว — แก้รายการสินค้าไม่ได้ (ต้องยกเลิกการตัดสต๊อกก่อน)");
-        }
+      if (existing && (existing.stock_issued_at || existing.shipped_at) && itemsChanged) {
+        throw new Error("ใบเบิกนี้ตัดสต๊อก/ส่งแล้ว — แก้รายการสินค้าไม่ได้ (ต้องยกเลิกการตัดสต๊อกก่อน)");
+      }
+      // Eveandboy: สินค้า/ขนาดต้องอยู่ในแคตตาล็อก (จับด้วยกลิ่น+ml) — ตรวจเฉพาะออเดอร์ใหม่/รายการที่เปลี่ยน
+      // (ออเดอร์เก่าที่มีสินค้าหลุดแคตตาล็อกภายหลัง ยังแก้ที่อยู่/โน้ตได้ ตราบใดไม่แตะรายการ)
+      if (o.platform === "Eveandboy" && itemsChanged) {
+        const nkp = (s?: string | null) => (s || "").toLowerCase().replace(/[^a-z0-9ก-๙]/g, "");
+        const mlp = (s?: string | null) => (s || "").match(/[0-9]+(\.[0-9]+)?/)?.[0] ?? "";
+        const bad = o.items.find((it) => !isBagProduct(it.product) && !EVEANDBOY_BY_KEY[`${nkp(it.product)}|${mlp(it.size)}`]);
+        if (bad) throw new Error(`"${bad.product} ${bad.size}" ไม่มีในแคตตาล็อก Eveandboy — เลือกจากรายการที่กำหนด`);
       }
       // ออเดอร์ใหม่ = วันนี้ (เวลาไทย) · ออเดอร์เดิม = คงวันที่ใบเบิกเดิม (แก้ไขไม่เปลี่ยนวัน)
       const storedDocDate = existing?.doc_date || bangkokToday();

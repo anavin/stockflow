@@ -22,7 +22,7 @@ export function rowsToOrders(rows: Record<string, any>[], products: string[] = [
   rows.forEach((raw, idx) => {
     const rowNo = idx + 2;
     const g = (k: string) => raw[k];
-    const orderNo = str(g("orderNumber"));
+    const orderNo = str(g("orderNumber")).replace(/\s+/g, "");   // ตัดช่องว่างในเลขออเดอร์ ให้ตรงกับที่กรอกเอง
     const itemName = str(g("itemName"));
     const sku = str(g("sellerSku"));
     const hasItem = !!(itemName || sku);

@@ -174,7 +174,7 @@ export function rowsToOrders(rows: Record<string, any>[], products: string[] = [
       if (f && str(v) !== "" && str(r[f]) === "") r[f] = v;
     }
 
-    const orderNo = str(r.order_no);
+    const orderNo = str(r.order_no).replace(/\s+/g, "");   // ตัดช่องว่างในเลขออเดอร์ ให้ตรงกับที่กรอกเอง (กัน PK ซ้ำคนละช่องว่าง)
     // ข้อมูลสินค้าดิบ: บาง export ไม่มีคอลัมน์กลิ่นชัดเจน (ชื่อสินค้า=title, ชื่อตัวเลือก=size/กลิ่น)
     const title = str(r.product_label);
     const skuRaw = str(r.sku);
