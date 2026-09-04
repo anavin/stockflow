@@ -56,7 +56,8 @@ export default async function EditOrderPage({ params }: { params: Promise<{ plat
           <a href={`/print/pdf/${encodeURIComponent(decoded)}`} target="_blank" rel="noreferrer" className="btn-ghost">
             <Printer size={16} /> พิมพ์ใบเบิก (PDF)
           </a>
-          {isWholesalePlatform(pf.code) && (
+          {/* ใบส่งของ — เฉพาะหลังตัดสต๊อกหรือส่งแล้ว (กันออกใบส่งก่อนของออกจริง) */}
+          {isWholesalePlatform(pf.code) && (order.stock_issued_at || order.shipped_at) && (
             <a href={`/api/delivery/${encodeURIComponent(decoded)}`} target="_blank" rel="noreferrer" className="btn-ghost">
               <Printer size={16} /> ใบส่งของ (PDF)
             </a>

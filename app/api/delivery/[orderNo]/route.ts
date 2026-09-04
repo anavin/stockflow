@@ -16,6 +16,9 @@ export async function GET(_req: Request, ctx: { params: Promise<{ orderNo: strin
   const { orderNo } = await ctx.params;
   const order = await getOrder(decodeURIComponent(orderNo));
   if (!order) return NextResponse.json({ error: "not found" }, { status: 404 });
+  // กันออกใบส่งของก่อนของออกจริง — ต้องตัดสต๊อกหรือส่งแล้วเท่านั้น
+  if (!order.stock_issued_at && !order.shipped_at)
+    return NextResponse.json({ error: "ออกใบส่งของได้หลังตัดสต๊อกหรือส่งแล้วเท่านั้น" }, { status: 409 });
 
   try {
     const buffer = await renderToBuffer(DeliveryNoteDocument({ order }) as any);
