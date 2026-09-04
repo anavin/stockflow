@@ -1299,3 +1299,34 @@ export async function countActivityLog(opts: ActivityFilter = {}): Promise<numbe
     return r?.n ?? 0;
   } catch { return 0; }
 }
+
+// ---- ค้าส่ง: catalog + สาขา (จัดการในระบบ แทนไฟล์ static) ----------------------
+export type WholesaleCatalogRow = { id: number; platform: string; product: string; size: string; barcode: string | null; code: string | null; item_name: string | null; grade: string | null; active: boolean; sort: number };
+export type WholesaleBranchRow = { id: number; platform: string; branch: string; code: string | null; address: string | null; active: boolean; sort: number };
+const wnk = (s?: string | null) => (s || "").toLowerCase().replace(/[^a-z0-9ก-๙]/g, "");
+const wml = (s?: string | null) => (s || "").match(/[0-9]+(\.[0-9]+)?/)?.[0] ?? "";
+
+export async function listWholesaleCatalog(platform: string): Promise<WholesaleCatalogRow[]> {
+  try { return await q<WholesaleCatalogRow>(`select id, platform, product, size, barcode, code, item_name, grade, active, sort from wholesale_catalog where platform = $1 order by sort, product, size`, [platform]); }
+  catch (e) { return orMissing(e, []); }
+}
+export async function listWholesaleBranches(platform: string): Promise<WholesaleBranchRow[]> {
+  try { return await q<WholesaleBranchRow>(`select id, platform, branch, code, address, active, sort from wholesale_branch where platform = $1 order by sort, branch`, [platform]); }
+  catch (e) { return orMissing(e, []); }
+}
+
+// รูปที่ตัวอ่าน (ฟอร์ม/บันทึก/PDF) ใช้ — byKey (normalize(scent)+"|"+ml) + ขนาดต่อกลิ่น (เฉพาะ active)
+export type WholesaleCatItem = { code: string; barcode: string; item_name: string; grade: string | null };
+export type WholesaleCat = { byKey: Record<string, WholesaleCatItem>; sizesByScent: Record<string, string[]> };
+export async function getWholesaleCatalog(platform: string): Promise<WholesaleCat> {
+  const rows = (await listWholesaleCatalog(platform)).filter((r) => r.active);
+  const byKey: Record<string, WholesaleCatItem> = {};
+  const sizesByScent: Record<string, string[]> = {};
+  for (const r of rows) {
+    byKey[`${wnk(r.product)}|${wml(r.size)}`] = { code: r.code || r.barcode || "", barcode: r.barcode || "", item_name: r.item_name || r.product, grade: r.grade };
+    const k = wnk(r.product);
+    (sizesByScent[k] ??= []); if (!sizesByScent[k].includes(r.size)) sizesByScent[k].push(r.size);
+  }
+  for (const k in sizesByScent) sizesByScent[k].sort((a, b) => parseFloat(b) - parseFloat(a));
+  return { byKey, sizesByScent };
+}
