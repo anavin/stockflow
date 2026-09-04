@@ -64,8 +64,6 @@ export function resolvePlatform(param?: string): Platform | null {
 }
 /** path ฐานของแพลตฟอร์ม เช่น "Shopee" → "/shopee" */
 export const platformBase = (code: string) => `/${code.toLowerCase()}`;
-
-export const DEFAULT_UNIT = "ขวด";
 export const CUSTOMER_TYPES = ["ลูกค้าใหม่", "ลูกค้าเก่า"] as const;
 
 /** วันเริ่ม "รอบปัจจุบัน" ของแดชบอร์ด — ตัวเลขตัดสต๊อก/รอตัด/ออร์เดอร์บนหน้าหลัก
@@ -83,7 +81,6 @@ export function productKey(s?: string | null): string {
 
 /** ขนาดที่ track สต๊อก — ตัดสต๊อกทุกขนาดที่เป็น "x ml" (รวมตัวอย่าง 1.2/4 ml และ variant
  *  เช่น "4 ml.", "1.2 ml (45 หลอด)"). ขนาดที่ไม่มีหน่วย ml = ไม่ตัด */
-export const STOCK_TRACKED_SIZES = ["1.2 ml", "4 ml", "10 ml", "30 ml", "50 ml", "90 ml", "100 ml"];
 export function isStockTracked(size?: string | null): boolean {
   return /\d\s*ml/i.test((size || "").trim());
 }

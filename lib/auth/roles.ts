@@ -2,8 +2,6 @@
 // 4 บทบาท: admin (เจ้าของ) · creator (สร้างใบเบิก) · picker (จัดของ/ตัดสต๊อก) · stock (คลัง)
 import type { Role } from "./constants";
 
-export const ROLES = ["admin", "creator", "picker", "stock"] as const;
-
 export const ROLE_LABELS: Record<string, string> = {
   admin: "แอดมิน / เจ้าของ",
   creator: "ฝ่ายขาย / สร้างใบเบิก",

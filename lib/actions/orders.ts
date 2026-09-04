@@ -621,34 +621,38 @@ export async function markShipped(orderNo: string, dateStr?: string): Promise<Sh
   const code = (orderNo || "").trim();
   if (!code) return { ok: false, error: "ไม่มี Order No." };
   const backdate = /^\d{4}-\d{2}-\d{2}$/.test(dateStr || "");
-  const [o] = await q<{ order_no: string; platform: string | null; receiver: string | null; username: string | null; province: string | null; shipped_at: string | null; stock_issued_at: string | null; item_count: number }>(
-    `select o.order_no, o.platform, o.receiver, o.username, o.province, o.shipped_at, o.stock_issued_at,
-            (select count(*)::int from order_items i where i.order_no = o.order_no) as item_count
-     from orders o
-     where o.deleted_at is null and upper(btrim(o.order_no)) = upper(btrim($1))
-     limit 1`, [code]);
-  if (!o) return { ok: false, error: `ไม่พบออเดอร์ ${code}` };
-  const info = { order_no: o.order_no, platform: o.platform, receiver: o.receiver || o.username, province: o.province, item_count: o.item_count };
-  if (o.shipped_at) return { ok: true, already: true, at: o.shipped_at, issued: !!o.stock_issued_at, order: info };
-  // เคลมแบบ atomic — set เฉพาะตอน shipped_at ยัง null → สแกนซ้ำ/แข่งกันรัวๆ อีก request จะได้ 0 แถว
-  // (order_no เป็น PK มีแถวเดียว จึงไม่มีทางบันทึกส่งซ้ำ/นับซ้ำ)
-  const [u] = backdate
-    ? await q<{ shipped_at: string }>(
-        `update orders set shipped_at = (($2 || ' 12:00:00')::timestamp at time zone 'Asia/Bangkok'), shipped_by = $3
-         where order_no = $1 and shipped_at is null returning shipped_at`,
-        [o.order_no, dateStr, user.id])
-    : await q<{ shipped_at: string }>(
-        `update orders set shipped_at = now(), shipped_by = $2
-         where order_no = $1 and shipped_at is null returning shipped_at`,
-        [o.order_no, user.id]);
-  if (!u) {
-    // อีก request เคลมไปก่อนแล้ว (แข่งกันสแกน) → รายงานเป็น "ซ้ำ" ไม่บันทึก/นับส่งเพิ่ม
-    const [again] = await q<{ shipped_at: string | null }>(`select shipped_at from orders where order_no = $1`, [o.order_no]);
-    return { ok: true, already: true, at: again?.shipped_at ?? null, issued: !!o.stock_issued_at, order: info };
+  try {
+    const [o] = await q<{ order_no: string; platform: string | null; receiver: string | null; username: string | null; province: string | null; shipped_at: string | null; stock_issued_at: string | null; item_count: number }>(
+      `select o.order_no, o.platform, o.receiver, o.username, o.province, o.shipped_at, o.stock_issued_at,
+              (select count(*)::int from order_items i where i.order_no = o.order_no) as item_count
+       from orders o
+       where o.deleted_at is null and upper(btrim(o.order_no)) = upper(btrim($1))
+       limit 1`, [code]);
+    if (!o) return { ok: false, error: `ไม่พบออเดอร์ ${code}` };
+    const info = { order_no: o.order_no, platform: o.platform, receiver: o.receiver || o.username, province: o.province, item_count: o.item_count };
+    if (o.shipped_at) return { ok: true, already: true, at: o.shipped_at, issued: !!o.stock_issued_at, order: info };
+    // เคลมแบบ atomic — set เฉพาะตอน shipped_at ยัง null → สแกนซ้ำ/แข่งกันรัวๆ อีก request จะได้ 0 แถว
+    // (order_no เป็น PK มีแถวเดียว จึงไม่มีทางบันทึกส่งซ้ำ/นับซ้ำ)
+    const [u] = backdate
+      ? await q<{ shipped_at: string }>(
+          `update orders set shipped_at = (($2 || ' 12:00:00')::timestamp at time zone 'Asia/Bangkok'), shipped_by = $3
+           where order_no = $1 and shipped_at is null returning shipped_at`,
+          [o.order_no, dateStr, user.id])
+      : await q<{ shipped_at: string }>(
+          `update orders set shipped_at = now(), shipped_by = $2
+           where order_no = $1 and shipped_at is null returning shipped_at`,
+          [o.order_no, user.id]);
+    if (!u) {
+      // อีก request เคลมไปก่อนแล้ว (แข่งกันสแกน) → รายงานเป็น "ซ้ำ" ไม่บันทึก/นับส่งเพิ่ม
+      const [again] = await q<{ shipped_at: string | null }>(`select shipped_at from orders where order_no = $1`, [o.order_no]);
+      return { ok: true, already: true, at: again?.shipped_at ?? null, issued: !!o.stock_issued_at, order: info };
+    }
+    await logActivity("ship", `${o.order_no} · ${o.platform || "Shopee"}${backdate ? " · ย้อนหลัง " + dateStr : ""}`);
+    revalidateOrderLists();
+    return { ok: true, already: false, at: u.shipped_at, issued: !!o.stock_issued_at, order: info };
+  } catch (e: any) {
+    return { ok: false, error: e?.message || "บันทึกการส่งไม่สำเร็จ (ระบบขัดข้อง ลองใหม่)" };
   }
-  await logActivity("ship", `${o.order_no} · ${o.platform || "Shopee"}${backdate ? " · ย้อนหลัง " + dateStr : ""}`);
-  revalidateOrderLists();
-  return { ok: true, already: false, at: u.shipped_at, issued: !!o.stock_issued_at, order: info };
 }
 
 /** ยกเลิกการส่ง (สแกนผิด) — admin/คลัง ยกเลิกได้ทุกใบ · picker ยกเลิกเฉพาะที่ตัวเองสแกนภายใน 24 ชม. */

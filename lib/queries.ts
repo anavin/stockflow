@@ -11,6 +11,14 @@ const BKK_TODAY = `(date_trunc('day', now() at time zone 'Asia/Bangkok') at time
 const bkkTodayRange = (col: string) => `${col} >= ${BKK_TODAY} and ${col} < ${BKK_TODAY} + interval '1 day'`;
 const bkkDayRange = (col: string, param: string) => `${col} >= (${param}::date::timestamp at time zone 'Asia/Bangkok') and ${col} < (${param}::date::timestamp at time zone 'Asia/Bangkok') + interval '1 day'`;
 
+// กลืน error เฉพาะ "ตาราง/คอลัมน์ยังไม่มี" (prod ยังไม่รัน SQL) — error อื่น (DB หลุด/timeout/บั๊ก) โยนต่อ
+// กัน DB blip โชว์ 0/ว่าง เหมือนข้อมูลจริง (พนักงานตัดสินใจผิด) — ใช้กับ aggregate/หน้าที่สำคัญ
+function orMissing<T>(e: any, fallback: T): T {
+  const code = e?.code;
+  if (code === "42P01" || code === "42703" || /does not exist/i.test(String(e?.message || ""))) return fallback;
+  throw e;
+}
+
 /** PGlite returns `date`/`timestamptz` columns as JS Date objects while pg (with
  * our type parsers) returns strings. Normalize date-only fields to "YYYY-MM-DD"
  * strings so the UI + PDF are driver-agnostic. */
@@ -310,7 +318,7 @@ export async function fdaExpirySummary(): Promise<FdaExpirySummary> {
          count(*)::int as total
        from fda_registrations, (select (now() at time zone 'Asia/Bangkok')::date as d) t`);
     return r ?? { expired: 0, d10: 0, d15: 0, d30: 0, total: 0 };
-  } catch { return { expired: 0, d10: 0, d15: 0, d30: 0, total: 0 }; }
+  } catch (e) { return orMissing(e, { expired: 0, d10: 0, d15: 0, d30: 0, total: 0 }); }
 }
 
 export type UnitMismatch = { product: string; size: string; units: number; qty: number };
@@ -774,7 +782,7 @@ export async function dashboardStats(platform?: string): Promise<DashStats> {
       skus: s.skus ?? 0, low: s.low ?? 0, negative: s.negative ?? 0,
       periodActive: !!s.periodActive,
     };
-  } catch (e) { console.error("[dashboardStats]", (e as any)?.message); return empty; }
+  } catch (e) { console.error("[dashboardStats]", (e as any)?.message); return orMissing(e, empty); }
 }
 
 /** กลิ่นที่เบิกมากสุด (ผลรวมจำนวนจากใบเบิกที่ยังไม่ลบ) — สำหรับกราฟบนหน้าภาพรวม */
@@ -822,7 +830,7 @@ export async function stockSummary(): Promise<{ skus: number; low: number; issue
     const [b] = await q<{ n: number }>(`select count(*)::int n from stock where qty > 0 and qty <= 10`);
     const [c] = await q<{ n: number }>(`select count(*)::int n from orders where deleted_at is null and stock_issued_at is not null`);
     return { skus: a?.n ?? 0, low: b?.n ?? 0, issuedOrders: c?.n ?? 0 };
-  } catch { return { skus: 0, low: 0, issuedOrders: 0 }; }
+  } catch (e) { return orMissing(e, { skus: 0, low: 0, issuedOrders: 0 }); }
 }
 
 export type UserRow = { id: number; username: string; full_name: string; role: string; is_active: boolean; last_login_at: string | null; created_at: string };
