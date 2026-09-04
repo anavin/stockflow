@@ -11,7 +11,7 @@ import ItemsEditor, { emptyItem, itemErrorOf, hasItemError, type ItemDraft, type
 import type { CustomerSuggestion, CustomerHistory, PastOrder } from "@/lib/actions/orders";
 import { saveOrder, orderExists, customerHistory, type OrderInput } from "@/lib/actions/orders";
 import { CUSTOMER_TYPES, platformColor, isWholesalePlatform, platformName } from "@/lib/config";
-import { EVEANDBOY_BRANCHES } from "@/lib/eveandboy-data";
+import { EVEANDBOY_BRANCHES, EVEANDBOY_SIZES_BY_SCENT } from "@/lib/eveandboy-data";
 import type { OrderWithItems } from "@/lib/types";
 import type { PostcodeRow } from "@/lib/queries";
 import { Save, Printer, CheckCircle2, AlertTriangle, History, Check, Wallet, Truck, MapPin } from "lucide-react";
@@ -475,7 +475,16 @@ export default function OrderForm({ platform = "Shopee", products, sizes, provin
       {/* items */}
       <section className="card p-5">
         <h2 className="mb-4 text-sm font-semibold text-ink">รายการสินค้า</h2>
-        <ItemsEditor items={items} onChange={onItemsChange} products={products} sizes={sizes} errors={itemErrors} productCodes={productCodes} productTypes={productTypes} discontinued={discontinued} platform={initial?.platform || platform} />
+        {(() => {
+          // Eveandboy: เลือกได้เฉพาะสินค้า/ขนาดในแคตตาล็อก (จากไฟล์) เท่านั้น
+          const evbNk = (s: string) => (s || "").toLowerCase().replace(/[^a-z0-9ก-๙]/g, "");
+          const evbProducts = isEveandboy ? products.filter((p) => EVEANDBOY_SIZES_BY_SCENT[evbNk(p)]) : products;
+          return (
+            <ItemsEditor items={items} onChange={onItemsChange} products={evbProducts} sizes={sizes} errors={itemErrors}
+              productCodes={productCodes} productTypes={productTypes} discontinued={discontinued} platform={pfCode}
+              sizeAllow={isEveandboy ? EVEANDBOY_SIZES_BY_SCENT : undefined} />
+          );
+        })()}
       </section>
 
       {/* extras */}

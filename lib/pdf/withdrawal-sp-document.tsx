@@ -10,7 +10,7 @@
 import { Document, Page, Text, View, StyleSheet, Font, Svg, Rect } from "@react-pdf/renderer";
 import { code128 } from "./code128";
 import { COMPANY_NAME, COMPANY_NAME_EN, COMPANY_ADDRESS, isWholesalePlatform, platformName } from "@/lib/config";
-import { EVEANDBOY_NAMES, EVEANDBOY_BRANCHES } from "@/lib/eveandboy-data";
+import { EVEANDBOY_BY_KEY, EVEANDBOY_BRANCHES } from "@/lib/eveandboy-data";
 import { NOTO_SANS_THAI_REGULAR, NOTO_SANS_THAI_BOLD } from "./fonts";
 import type { OrderWithItems } from "@/lib/types";
 
@@ -353,8 +353,11 @@ function WholesalePage({ order }: { order: OrderWithItems }) {
   const bcH = n > 38 ? 26 : 34;
   const cell = { fontSize: fs, paddingVertical: pv };
   const isEvb = String(order.platform) === "Eveandboy";
-  // Eveandboy: ชื่อสินค้าใช้ชื่อระบบ Eveandboy (map จาก barcode/ITEMID) · ที่อยู่สาขาจากไฟล์
-  const nameOf = (it: OrderWithItems["items"][number]) => (isEvb && it.barcode && EVEANDBOY_NAMES[String(it.barcode)]) || it.product;
+  // Eveandboy: barcode + ชื่อสินค้า ดึงจากไฟล์ Eveandboy โดยตรง (จับด้วยกลิ่น+ขนาด) ไม่พึ่ง product_barcodes
+  const nkey = (x?: string | null) => (x || "").toLowerCase().replace(/[^a-z0-9ก-๙]/g, "");
+  const evbOf = (it: OrderWithItems["items"][number]) => (isEvb ? EVEANDBOY_BY_KEY[`${nkey(it.product)}|${mlOf(it.size)}`] : undefined);
+  const nameOf = (it: OrderWithItems["items"][number]) => evbOf(it)?.item_name || it.product;
+  const barcodeOf = (it: OrderWithItems["items"][number]) => evbOf(it)?.barcode || it.barcode || null;
   const branchAddr = isEvb ? (EVEANDBOY_BRANCHES.find((b) => b.branch === order.branch)?.address || "") : "";
 
   // แถวตาราง: แทรกหัวเกรดเมื่อเกรดเปลี่ยน
@@ -370,7 +373,7 @@ function WholesalePage({ order }: { order: OrderWithItems }) {
     rows.push(
       <View key={`i${it.id ?? idx}`} style={po.tr} wrap={false}>
         <Text style={[po.cell, cell, { width: POC[0], color: C.faint }]}>{idx}</Text>
-        <Text style={[po.cell, cell, { width: POC[1] }]}>{T(it.barcode)}</Text>
+        <Text style={[po.cell, cell, { width: POC[1] }]}>{T(barcodeOf(it))}</Text>
         <Text style={[po.cell, cell, { width: POC[2], fontWeight: "bold" }]}>{T(nameOf(it))}</Text>
         <Text style={[po.cell, cell, { width: POC[3], color: C.muted }]}>{T(it.ptype)}</Text>
         <Text style={[po.cell, cell, { width: POC[4] }]}>{T(it.size)}</Text>

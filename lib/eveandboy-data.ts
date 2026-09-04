@@ -1,5 +1,5 @@
 // สร้างอัตโนมัติจาก EVEANDBOY PRODUCT NAME and BRANCH.xlsx (scripts/gen-eveandboy.mjs) — อย่าแก้มือ
-// ชื่อสินค้าแบบ Eveandboy (key = barcode/ITEMID) — ใช้แสดงในใบเบิก Eveandboy
+// ชื่อสินค้าแบบ Eveandboy (key = barcode/ITEMID)
 export const EVEANDBOY_NAMES: Record<string, string> = {
   "8857128011300": "LAB PARFUMO-Dream Island Eau De Parfum//50ML",
   "8857128011287": "LAB PARFUMO-Never Blue Eau De Parfum//50ML",
@@ -17,6 +17,113 @@ export const EVEANDBOY_NAMES: Record<string, string> = {
   "8857128011997": "LAB PARFUMO-VirginX Eau de Perfum//30ML",
   "8857128011898": "LAB PARFUMO-Vivid Eau de Parfum//30ML",
   "8857128011843": "LAB PARFUMO-Zeus Eau de Parfum//30ML"
+};
+// map (กลิ่น+ขนาด ml) → {barcode, ชื่อ Eveandboy} — key = normalize(scent)+"|"+ml เช่น "dreamisland|50"
+export type EvbItem = { barcode: string; item_name: string };
+export const EVEANDBOY_BY_KEY: Record<string, EvbItem> = {
+  "dreamisland|50": {
+    "barcode": "8857128011300",
+    "item_name": "LAB PARFUMO-Dream Island Eau De Parfum//50ML"
+  },
+  "neverblue|50": {
+    "barcode": "8857128011287",
+    "item_name": "LAB PARFUMO-Never Blue Eau De Parfum//50ML"
+  },
+  "secretofpeach|50": {
+    "barcode": "8857128011119",
+    "item_name": "LAB PARFUMO-Secret of Peach Eau De Parfum//50ML"
+  },
+  "senorita|50": {
+    "barcode": "8857128011171",
+    "item_name": "LAB PARFUMO-Senorita Eau De Parfum//50ML"
+  },
+  "vivid|50": {
+    "barcode": "8857128011065",
+    "item_name": "LAB PARFUMO-Vivid Eau De Parfum//50ML"
+  },
+  "zeus|50": {
+    "barcode": "8857128011027",
+    "item_name": "LAB PARFUMO-Zeus Eau De Parfum//50ML"
+  },
+  "dreamisland|30": {
+    "barcode": "8857128011874",
+    "item_name": "LAB PARFUMO-Dream Island Eau de Parfum//30ML"
+  },
+  "labelle|30": {
+    "barcode": "8857128011904",
+    "item_name": "LAB PARFUMO-La Belle Eau de Parfum//30ML"
+  },
+  "neverblue|30": {
+    "barcode": "8857128011836",
+    "item_name": "LAB PARFUMO-Never Blue Eau de Parfum//30ML"
+  },
+  "persist|30": {
+    "barcode": "8857128011881",
+    "item_name": "LAB PARFUMO-Persist Eau de Parfum//30ML"
+  },
+  "secretofpeach|30": {
+    "barcode": "8857128011850",
+    "item_name": "LAB PARFUMO-Secret of Peach Eau de Parfum//30ML"
+  },
+  "senorita|30": {
+    "barcode": "8857128011867",
+    "item_name": "LAB PARFUMO-Senorita Eau de Parfum//30ML"
+  },
+  "sicilia|30": {
+    "barcode": "8857128011911",
+    "item_name": "LAB PARFUMO-Sicilia Eau de Parfum//30ML"
+  },
+  "virginx|30": {
+    "barcode": "8857128011997",
+    "item_name": "LAB PARFUMO-VirginX Eau de Perfum//30ML"
+  },
+  "vivid|30": {
+    "barcode": "8857128011898",
+    "item_name": "LAB PARFUMO-Vivid Eau de Parfum//30ML"
+  },
+  "zeus|30": {
+    "barcode": "8857128011843",
+    "item_name": "LAB PARFUMO-Zeus Eau de Parfum//30ML"
+  }
+};
+// ขนาดที่ Eveandboy มีต่อกลิ่น (key = normalize(scent)) — ใช้จำกัดตัวเลือกในฟอร์ม (เลือกได้เฉพาะที่มี)
+export const EVEANDBOY_SIZES_BY_SCENT: Record<string, string[]> = {
+  "dreamisland": [
+    "50 ml",
+    "30 ml"
+  ],
+  "neverblue": [
+    "50 ml",
+    "30 ml"
+  ],
+  "secretofpeach": [
+    "50 ml",
+    "30 ml"
+  ],
+  "senorita": [
+    "50 ml",
+    "30 ml"
+  ],
+  "vivid": [
+    "50 ml",
+    "30 ml"
+  ],
+  "zeus": [
+    "50 ml",
+    "30 ml"
+  ],
+  "labelle": [
+    "30 ml"
+  ],
+  "persist": [
+    "30 ml"
+  ],
+  "sicilia": [
+    "30 ml"
+  ],
+  "virginx": [
+    "30 ml"
+  ]
 };
 // สาขา Eveandboy (dropdown + ที่อยู่บนใบเบิก)
 export type EvbBranch = { branch: string; code: string; name: string; address: string };

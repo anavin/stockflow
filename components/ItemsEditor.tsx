@@ -60,6 +60,7 @@ export default function ItemsEditor({
   productTypes,
   discontinued,
   platform,
+  sizeAllow,
 }: {
   items: ItemDraft[];
   onChange: (items: ItemDraft[]) => void;
@@ -70,6 +71,7 @@ export default function ItemsEditor({
   productTypes?: Record<string, string>;
   discontinued?: Record<string, string[]>;
   platform?: string;
+  sizeAllow?: Record<string, string[]>;   // จำกัดขนาดต่อกลิ่น (key = normalize ชื่อ) — Eveandboy เลือกได้เฉพาะที่มี
 }) {
   // CTW โอนสาขา = เบิกถุงกระดาษทีละมาก → เพิ่มได้ถึง 80 ใบ (ปกติ/แพลตฟอร์มอื่น 30)
   const qtyMaxOf = (it: ItemDraft) => (isBagProduct(it.product) && platform === "CTW" ? 80 : 30);
@@ -103,6 +105,7 @@ export default function ItemsEditor({
   const sizesNormal = [...sizes].sort((a, b) => rank(a) - rank(b));
   // ตัดขนาดที่ "เลิกผลิต" ของกลิ่นนั้นออกจากตัวเลือก
   const sizeOptionsFor = (it: ItemDraft) => {
+    if (sizeAllow) return isBagProduct(it.product) ? BAG_SIZES : (sizeAllow[normKey(it.product)] || []);   // Eveandboy: เฉพาะขนาดที่มี
     const base = isBagProduct(it.product) ? BAG_SIZES : (it.is_free ? sizesFree : sizesNormal);
     const blocked = discontinued?.[normKey(it.product)];
     return blocked?.length ? base.filter((sz) => !blocked.includes(normKey(sz))) : base;
@@ -158,7 +161,7 @@ export default function ItemsEditor({
               <tr key={i} className={`border-t border-line align-top ${it.is_free ? "bg-brand-50/50" : ""}`}>
                 <td className="px-3 py-2 text-muted">{i + 1}</td>
                 <td className="px-3 py-2">
-                  <Combobox value={it.product} onChange={(v) => setProduct(i, v)} options={products} placeholder="เลือกกลิ่น" invalid={errors[i]?.product} codes={productCodes} />
+                  <Combobox value={it.product} onChange={(v) => setProduct(i, v)} options={products} allowCustom={!sizeAllow} placeholder="เลือกกลิ่น" invalid={errors[i]?.product} codes={productCodes} />
                   {productTypes?.[it.product] && <div className="mt-1 text-[11px] text-muted">Grade: <span className="font-medium text-ink">{productTypes[it.product]}</span></div>}
                   {errMsg(errors[i]) && (
                     <div className="mt-1 flex items-center gap-1 text-[11px] text-red-600"><AlertTriangle size={12} /> {errMsg(errors[i])}</div>
@@ -167,7 +170,7 @@ export default function ItemsEditor({
                 <td className="px-3 py-2">
                   <Combobox value={it.size} onChange={(v) => update(i, { size: v })}
                     options={sizeOptionsFor(it)}
-                    allowCustom={!it.is_free && !isBagProduct(it.product)} placeholder={isBagProduct(it.product) ? "ขนาดถุง (ถ้ามี)" : "ขนาด"} invalid={errors[i]?.size} />
+                    allowCustom={!sizeAllow && !it.is_free && !isBagProduct(it.product)} placeholder={isBagProduct(it.product) ? "ขนาดถุง (ถ้ามี)" : "ขนาด"} invalid={errors[i]?.size} />
                   {!isBagProduct(it.product) && it.is_free && it.size && !isAllowedFreeSize(it.size) && (
                     <div className="mt-1 flex items-center gap-1 text-[11px] text-red-600">
                       <AlertTriangle size={12} /> ของแถมได้เฉพาะ 1.2/4/10 ml
@@ -208,12 +211,12 @@ export default function ItemsEditor({
                 <Trash2 size={16} />
               </button>
             </div>
-            <Combobox value={it.product} onChange={(v) => setProduct(i, v)} options={products} placeholder="เลือกกลิ่น" invalid={errors[i]?.product} codes={productCodes} />
+            <Combobox value={it.product} onChange={(v) => setProduct(i, v)} options={products} allowCustom={!sizeAllow} placeholder="เลือกกลิ่น" invalid={errors[i]?.product} codes={productCodes} />
             {productTypes?.[it.product] && <div className="text-[11px] text-muted">Grade: <span className="font-medium text-ink">{productTypes[it.product]}</span></div>}
             <div className="grid grid-cols-2 gap-2">
               <Combobox value={it.size} onChange={(v) => update(i, { size: v })}
                 options={sizeOptionsFor(it)}
-                allowCustom={!it.is_free && !isBagProduct(it.product)} placeholder={isBagProduct(it.product) ? "ขนาดถุง (ถ้ามี)" : "ขนาด"} invalid={errors[i]?.size} />
+                allowCustom={!sizeAllow && !it.is_free && !isBagProduct(it.product)} placeholder={isBagProduct(it.product) ? "ขนาดถุง (ถ้ามี)" : "ขนาด"} invalid={errors[i]?.size} />
               <QtySelect value={it.qty} onChange={(v) => setQty(i, v)} invalid={errors[i]?.qty} max={qtyMaxOf(it)} />
             </div>
             {errMsg(errors[i]) && (
