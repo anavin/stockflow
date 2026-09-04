@@ -379,7 +379,7 @@ const dn = StyleSheet.create({
   footer: { position: "absolute", bottom: 22, left: 38, right: 38, flexDirection: "row", justifyContent: "space-between", borderTopWidth: 0.6, borderColor: C.line, paddingTop: 5 },
   footText: { fontSize: 6.8, color: C.faint },
 });
-const DN_COL = [118, 302, 56, 52];   // Product Code / Name / Size / Qty (~528)
+const DN_COL = [106, 244, 48, 58, 46];   // Product Code / Name / Grade / Size / Qty (~502)
 
 // layout เดียวใช้ทั้งใบเบิก (mode 'issue') และใบส่งของ (mode 'delivery') — ต่างแค่หัวเรื่อง/meta/ช่องเซ็น
 function WholesaleDocPage({ order, mode }: { order: OrderWithItems; mode: "issue" | "delivery" }) {
@@ -388,7 +388,9 @@ function WholesaleDocPage({ order, mode }: { order: OrderWithItems; mode: "issue
   const isCtw = String(order.platform) === "CTW";
   const nkey = (x?: string | null) => (x || "").toLowerCase().replace(/[^a-z0-9ก-๙]/g, "");
   const evbOf = (it: OrderWithItems["items"][number]) => (isEvb ? EVEANDBOY_BY_KEY[`${nkey(it.product)}|${mlOf(it.size)}`] : undefined);
-  const items = [...(order.items ?? [])].filter((it) => (it.product || "").trim());
+  // เรียงขนาดใหญ่ → เล็ก (50-30-10-4-1.2) · ขนาดเท่ากันเรียงตามชื่อ
+  const items = [...(order.items ?? [])].filter((it) => (it.product || "").trim())
+    .sort((a, b) => (mlOf(b.size) - mlOf(a.size)) || String(a.product || "").localeCompare(String(b.product || "")));
   const total = items.reduce((s, it) => s + (Number(it.qty) || 0), 0);
   const addr = isEvb ? (EVEANDBOY_BRANCHES.find((b) => b.branch === order.branch)?.address || "") : "";
   const partner = platformName(order.platform).toUpperCase();
@@ -448,16 +450,17 @@ function WholesaleDocPage({ order, mode }: { order: OrderWithItems; mode: "issue
       {/* table */}
       <View style={dn.tableWrap}>
         <View style={dn.th} fixed>
-          {["Product Code", "Name", "Size", "Qty"].map((h, i) => (
-            <Text key={i} style={[dn.thCell, { width: DN_COL[i], textAlign: i === 3 ? "right" : "left" }]}>{h}</Text>
+          {["Product Code", "Name", "Grade", "Size", "Qty"].map((h, i) => (
+            <Text key={i} style={[dn.thCell, { width: DN_COL[i], textAlign: i === 4 ? "right" : "left" }]}>{h}</Text>
           ))}
         </View>
         {items.map((it, i) => (
           <View key={it.id ?? i} style={dn.tr} wrap={false}>
             <Text style={[dn.cell, { width: DN_COL[0], letterSpacing: 0.3 }]}>{T(evbOf(it)?.barcode || it.barcode)}</Text>
             <Text style={[dn.cell, { width: DN_COL[1], fontWeight: "bold" }]}>{T(evbOf(it)?.item_name || it.product)}</Text>
-            <Text style={[dn.cell, { width: DN_COL[2], color: C.muted }]}>{T(it.size)}</Text>
-            <Text style={[dn.cell, { width: DN_COL[3], textAlign: "right", fontWeight: "bold" }]}>{Number(it.qty) || 0}</Text>
+            <Text style={[dn.cell, { width: DN_COL[2], color: C.muted }]}>{T(it.ptype)}</Text>
+            <Text style={[dn.cell, { width: DN_COL[3], color: C.muted }]}>{T(it.size)}</Text>
+            <Text style={[dn.cell, { width: DN_COL[4], textAlign: "right", fontWeight: "bold" }]}>{Number(it.qty) || 0}</Text>
           </View>
         ))}
       </View>
