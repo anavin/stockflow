@@ -31,6 +31,12 @@ export default async function StockPage({ searchParams }: { searchParams: Promis
           <Link href="/stock/issue" className="btn-primary"><ScanLine size={16} /> ตัดสต๊อก (สแกน)</Link>
         </div>
       </div>
+      {sum.low > 0 && (
+        <Link href="/stock?low=1" className="mb-4 flex items-center gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 hover:bg-amber-100">
+          <AlertTriangle size={20} className="shrink-0 text-amber-600" />
+          <div className="text-sm"><b className="text-amber-700">ใกล้หมด {sum.low.toLocaleString()} รายการ</b><div className="text-xs text-amber-600/80">คงเหลือ ≤ 10 — เตรียมเติมสต๊อก · กดเพื่อกรองเฉพาะที่ใกล้หมด</div></div>
+        </Link>
+      )}
       {mismatches.length > 0 && (
         <div className="mb-4 rounded-xl border border-amber-200 bg-amber-50 p-4">
           <p className="flex items-center gap-2 text-sm font-semibold text-amber-800">
