@@ -370,7 +370,7 @@ const dn = StyleSheet.create({
   cell: { paddingVertical: 4.5, paddingHorizontal: 8, fontSize: 8.5 },
   totalWrap: { flexDirection: "row", justifyContent: "flex-end", marginTop: 8 },
   totalBox: { flexDirection: "row", alignItems: "center", backgroundColor: ACS, borderLeftWidth: 2.4, borderLeftColor: AC, paddingVertical: 5, paddingHorizontal: 12 },
-  signRow: { flexDirection: "row", gap: 10, marginTop: 30 },
+  signRow: { flexDirection: "row", gap: 10, marginTop: 12 },
   signBox: { flex: 1, borderWidth: 0.7, borderColor: C.border, borderRadius: 3, overflow: "hidden", minHeight: 104 },
   signBar: { backgroundColor: ACS, paddingVertical: 4, paddingHorizontal: 8, fontSize: 8.5, fontWeight: "bold", color: AC },
   signBody: { paddingVertical: 7, paddingHorizontal: 8 },
@@ -467,8 +467,11 @@ function WholesaleDocPage({ order, mode }: { order: OrderWithItems; mode: "issue
         </View>
       </View>
 
+      {/* spacer ดันช่องเซ็นลงล่างสุดของหน้า (เหนือ footer) — เอกสารสั้นจะไม่ลอยกลางหน้า */}
+      <View style={{ flexGrow: 1, minHeight: 24 }} />
+
       {/* signatures (3 ช่อง — แถบหัว) */}
-      <View style={dn.signRow}>
+      <View style={dn.signRow} wrap={false}>
         {signs.map(([bar, cap], i) => (
           <View key={i} style={dn.signBox}>
             <Text style={dn.signBar}>{bar}</Text>
