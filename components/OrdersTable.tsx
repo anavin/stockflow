@@ -145,8 +145,9 @@ export default function OrdersTable({ orders, platform = "Shopee" }: { orders: O
                 const checked = sel.has(o.order_no);
                 // ประเภทการส่ง (จากแท็กในหมายเหตุ) → แถบสีซ้าย + ป้าย + พื้นแต้มสีจาง
                 const note = o.note || "";
-                const isExpress = note.includes("ส่งด่วน");
-                const isNow = note.includes("ส่งทันที");
+                // จับเฉพาะแท็กที่เป็น token จริง (ขอบเว้นวรรค) — กันจับคำที่ฝังใน ("จัดส่งด่วนพิเศษ")
+                const isExpress = new RegExp("(^|\\s)ส่งด่วน(\\s|$)").test(note);
+                const isNow = new RegExp("(^|\\s)ส่งทันที(\\s|$)").test(note);
                 const rowTint = checked ? "bg-brand-50/40" : isExpress ? "bg-red-50/40" : isNow ? "bg-orange-50/40" : "";
                 const stripe = isExpress ? "border-red-500" : isNow ? "border-orange-500" : "border-transparent";
                 return (

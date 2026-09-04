@@ -3,6 +3,7 @@ import { renderToBuffer } from "@react-pdf/renderer";
 import { getOrder } from "@/lib/queries";
 import { getCurrentUser } from "@/lib/auth/session";
 import { can } from "@/lib/auth/roles";
+import { isWholesalePlatform } from "@/lib/config";
 import { DeliveryNoteDocument } from "@/lib/pdf/withdrawal-sp-document";
 
 export const runtime = "nodejs";
@@ -16,6 +17,9 @@ export async function GET(_req: Request, ctx: { params: Promise<{ orderNo: strin
   const { orderNo } = await ctx.params;
   const order = await getOrder(decodeURIComponent(orderNo));
   if (!order) return NextResponse.json({ error: "not found" }, { status: 404 });
+  // ใบส่งของมีเฉพาะค้าส่ง (CTW/Eveandboy/King Power) — กันเรียก URL ตรงกับออเดอร์ปลีก
+  if (!isWholesalePlatform(order.platform))
+    return NextResponse.json({ error: "ใบส่งของมีเฉพาะแพลตฟอร์มค้าส่ง" }, { status: 400 });
   // กันออกใบส่งของก่อนของออกจริง — ต้องตัดสต๊อกหรือส่งแล้วเท่านั้น
   if (!order.stock_issued_at && !order.shipped_at)
     return NextResponse.json({ error: "ออกใบส่งของได้หลังตัดสต๊อกหรือส่งแล้วเท่านั้น" }, { status: 409 });

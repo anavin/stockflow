@@ -511,11 +511,12 @@ export default function OrderForm({ platform = "Shopee", products, sizes, provin
                 { tag: "ส่งด่วน", dot: "bg-red-500", on: "border-red-300 bg-red-50 text-red-700", off: "border-line bg-white text-muted hover:border-red-200 hover:text-red-600" },
                 { tag: "ส่งทันที", dot: "bg-orange-500", on: "border-orange-300 bg-orange-50 text-orange-700", off: "border-line bg-white text-muted hover:border-orange-200 hover:text-orange-600" },
               ].map(({ tag, dot, on, off }) => {
-                const active = f.note.includes(tag);
+                const tagRe = new RegExp(`(^|\\s)${tag}(?=\\s|$)`, "g");   // จับเฉพาะแท็ก token จริง (กันชนคำที่ฝังใน)
+                const active = tagRe.test(f.note);
                 return (
                   <button key={tag} type="button"
                     onClick={() => set({ note: active
-                      ? f.note.replace(tag, "").replace(/\s{2,}/g, " ").trim()          // เอาออก
+                      ? f.note.replace(new RegExp(`(^|\\s)${tag}(?=\\s|$)`, "g"), " ").replace(/\s{2,}/g, " ").trim()   // เอาออก (เฉพาะแท็ก)
                       : (f.note.trim() ? `${f.note.trim()} ${tag}` : tag) })}          // เติมต่อท้าย ไม่ทับของเดิม
                     className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium transition-all ${active ? on : off}`}>
                     <span className={`h-1.5 w-1.5 rounded-full ${active ? dot : "bg-slate-300"}`} />

@@ -27,7 +27,15 @@ function registerFontOnce() {
       { src: NOTO_SANS_THAI_BOLD, fontWeight: "bold" },
     ],
   });
-  Font.registerHyphenationCallback((w) => [w]);
+  // ตัดคำไทยให้ขึ้นบรรทัดใหม่ได้ (ไทยไม่มีเว้นวรรค → ถ้าไม่ตัด ข้อความยาวเช่นหมายเหตุจะล้นกรอบ/ทับพาเนลอีกใบ)
+  // ใช้ Intl.Segmenter ตัดตามคำ · runtime ที่ไม่มี Segmenter → คืน [w] เหมือนเดิม (ปลอดภัย ไม่ตัด)
+  // หมายเหตุ: react-pdf จะเติม hyphen ตรงจุดตัด — ยอมรับได้ ดีกว่าข้อความล้นทับกันอ่านไม่ออก
+  const thaiSeg = (Intl as any)?.Segmenter ? new (Intl as any).Segmenter("th", { granularity: "word" }) : null;
+  Font.registerHyphenationCallback((w) => {
+    if (!w || !thaiSeg || !/[฀-๿]/.test(w)) return [w];
+    const parts = Array.from(thaiSeg.segment(w), (x: any) => x.segment as string);
+    return parts.length ? parts : [w];
+  });
   fontRegistered = true;
 }
 
@@ -172,9 +180,13 @@ function Panel({ order, copyLabel, full = false }: { order: OrderWithItems; copy
   const cStyle = { fontSize: cfs, paddingVertical: pv };
   // ประเภทการส่ง (ดึงจากแท็กในหมายเหตุ) — โชว์เป็นชิปสีในช่องหมายเหตุ
   const noteText = order.note || "";
-  const isExpress = noteText.includes("ส่งด่วน");
-  const isNow = noteText.includes("ส่งทันที");
-  const restNote = noteText.replace("ส่งด่วน", "").replace("ส่งทันที", "").replace(/\s{2,}/g, " ").trim();
+  // จับเฉพาะแท็กที่เป็น token จริง (ขอบเว้นวรรค/ต้น-ท้าย) — กันจับคำที่ฝังใน ("จัดส่งด่วนพิเศษ" ไม่ใช่แท็ก)
+  const hasTag = (t: string) => new RegExp(`(^|\\s)${t}(\\s|$)`).test(noteText);
+  const isExpress = hasTag("ส่งด่วน");
+  const isNow = hasTag("ส่งทันที");
+  const restNote = ["ส่งด่วน", "ส่งทันที"]
+    .reduce((s2, t) => s2.replace(new RegExp(`(^|\\s)${t}(?=\\s|$)`, "g"), " "), noteText)
+    .replace(/\s{2,}/g, " ").trim();
 
   return (
     <View style={full ? s.panelFull : s.panel}>
@@ -397,7 +409,7 @@ function WholesaleDocPage({ order, mode }: { order: OrderWithItems; mode: "issue
         <View style={dn.brandWrap}>
           <Image src={LAB_PARFUMO_LOGO} style={{ height: 40, width: 40 * LAB_PARFUMO_AR }} />
           {isEvb ? <Image src={EVEANDBOY_LOGO} style={{ height: 40, width: 40 * EVEANDBOY_AR }} />
-            : isKp ? <Image src={KING_POWER_LOGO} style={{ height: 30, width: 30 * KING_POWER_AR }} />
+            : isKp ? <Image src={KING_POWER_LOGO} style={{ height: 40, width: 40 * KING_POWER_AR }} />
             : (partner ? <Text style={dn.partner}>{partner}</Text> : null)}
         </View>
         <View style={dn.headRight}>
