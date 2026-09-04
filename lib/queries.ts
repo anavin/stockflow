@@ -5,6 +5,12 @@ import type { Order, OrderItem, OrderRow, OrderWithItems } from "./types";
 import { LABEL_COMPONENTS, gradeToLabelKey, labelSpecFor, bulkRef, labelRef, mnorm } from "./materials";
 import { PERIOD_START } from "./config";
 
+// ── ช่วงวัน "เวลาไทย" แบบไม่ wrap คอลัมน์ timestamp → index (created_at/shipped_at/stock_issued_at) ใช้ได้ (perf)
+// BKK_TODAY = เที่ยงคืนวันนี้ (ไทย) เป็น instant (timestamptz) · พิสูจน์แล้วให้ผลเท่ากับ (col at time zone 'Asia/Bangkok')::date = …
+const BKK_TODAY = `(date_trunc('day', now() at time zone 'Asia/Bangkok') at time zone 'Asia/Bangkok')`;
+const bkkTodayRange = (col: string) => `${col} >= ${BKK_TODAY} and ${col} < ${BKK_TODAY} + interval '1 day'`;
+const bkkDayRange = (col: string, param: string) => `${col} >= (${param}::date::timestamp at time zone 'Asia/Bangkok') and ${col} < (${param}::date::timestamp at time zone 'Asia/Bangkok') + interval '1 day'`;
+
 /** PGlite returns `date`/`timestamptz` columns as JS Date objects while pg (with
  * our type parsers) returns strings. Normalize date-only fields to "YYYY-MM-DD"
  * strings so the UI + PDF are driver-agnostic. */
@@ -406,8 +412,8 @@ export type ShipRow = { order_no: string; doc_no: string | null; platform: strin
 export async function listShippedByDay(dateStr?: string, platform?: string): Promise<ShipRow[]> {
   try {
     const params: any[] = [];
-    let cond = `(o.shipped_at at time zone 'Asia/Bangkok')::date = (now() at time zone 'Asia/Bangkok')::date`;
-    if (dateStr) { params.push(dateStr); cond = `(o.shipped_at at time zone 'Asia/Bangkok')::date = $${params.length}::date`; }
+    let cond = bkkTodayRange("o.shipped_at");
+    if (dateStr) { params.push(dateStr); cond = bkkDayRange("o.shipped_at", `$${params.length}`); }
     const pc = platform ? (params.push(platform), ` and o.platform = $${params.length}`) : "";
     return await q<ShipRow>(
       `select o.order_no, o.doc_no, o.platform, coalesce(o.receiver, o.username) as receiver, o.province,
@@ -424,8 +430,8 @@ export type PlatformCount = { platform: string; count: number };
 export async function shippedCountsByPlatform(dateStr?: string): Promise<PlatformCount[]> {
   try {
     const params: any[] = [];
-    let cond = `(shipped_at at time zone 'Asia/Bangkok')::date = (now() at time zone 'Asia/Bangkok')::date`;
-    if (dateStr) { params.push(dateStr); cond = `(shipped_at at time zone 'Asia/Bangkok')::date = $1::date`; }
+    let cond = bkkTodayRange("shipped_at");
+    if (dateStr) { params.push(dateStr); cond = bkkDayRange("shipped_at", "$1"); }
     return await q<PlatformCount>(
       `select coalesce(platform,'Shopee') as platform, count(*)::int as count
        from orders where deleted_at is null and shipped_at is not null and ${cond}
@@ -447,7 +453,7 @@ export async function dailyIssueStatus(platform?: string, days = 14): Promise<Da
               count(stock_issued_at)::int as issued
        from orders
        where deleted_at is null${pc}
-         and (created_at at time zone 'Asia/Bangkok')::date >= ((now() at time zone 'Asia/Bangkok')::date - ($1::int - 1))
+         and created_at >= ${BKK_TODAY} - (($1::int - 1) * interval '1 day')
          and abs((created_at at time zone 'Asia/Bangkok')::date - coalesce(doc_date, order_date)) <= 1
        group by 1
        order by day desc limit $1`,
@@ -749,11 +755,11 @@ export async function dashboardStats(platform?: string): Promise<DashStats> {
       `select
          (select count(*)::int from orders where deleted_at is null${pc}${period}) as "ordersTotal",
          (select count(*)::int from orders where deleted_at is null${pc}
-            and (created_at at time zone 'Asia/Bangkok')::date = (now() at time zone 'Asia/Bangkok')::date
+            and ${bkkTodayRange("created_at")}
             and abs((created_at at time zone 'Asia/Bangkok')::date - coalesce(doc_date, order_date)) <= 1) as "ordersToday",
          (select count(*)::int from orders where deleted_at is null${pc} and to_char(doc_date,'YYYY-MM') = to_char((now() at time zone 'Asia/Bangkok')::date,'YYYY-MM')) as "ordersMonth",
          (select count(*)::int from orders where deleted_at is null${pc}${period} and stock_issued_at is not null) as "issuedTotal",
-         (select count(*)::int from orders where deleted_at is null${pc} and (stock_issued_at at time zone 'Asia/Bangkok')::date = (now() at time zone 'Asia/Bangkok')::date) as "issuedToday",
+         (select count(*)::int from orders where deleted_at is null${pc} and ${bkkTodayRange("stock_issued_at")}) as "issuedToday",
          (select count(*)::int from stock) as skus,
          (select count(*)::int from stock where qty > 0 and qty <= 10) as low,
          (select count(*)::int from stock where qty < 0) as negative,
@@ -1194,8 +1200,8 @@ export async function platformDaily(days = 14): Promise<PlatformDailyRow[]> {
               count(*)::int as orders
          from orders
         where deleted_at is null
-          and (created_at at time zone 'Asia/Bangkok')::date >= ((now() at time zone 'Asia/Bangkok')::date - ($1::int - 1))
-          and (created_at at time zone 'Asia/Bangkok')::date <= (now() at time zone 'Asia/Bangkok')::date
+          and created_at >= ${BKK_TODAY} - (($1::int - 1) * interval '1 day')
+          and created_at < ${BKK_TODAY} + interval '1 day'
           and abs((created_at at time zone 'Asia/Bangkok')::date - coalesce(doc_date, order_date)) <= 1
         group by 1, 2`, [String(days)]);
   } catch { return []; }
@@ -1280,7 +1286,7 @@ export async function listMaterialMoves(opts: { category?: string; date?: string
     if (opts.category) { params.push(opts.category); where.push(`i.category = $${params.length}`); }
     if (opts.ref) { params.push(opts.ref); where.push(`i.ref_key = $${params.length}`); }
     if (opts.q) { params.push(`%${opts.q.trim()}%`); where.push(`(i.label ilike $${params.length} or i.scent ilike $${params.length})`); }
-    if (opts.date) { params.push(opts.date); where.push(`(m.created_at at time zone 'Asia/Bangkok')::date = $${params.length}::date`); }
+    if (opts.date) { params.push(opts.date); where.push(bkkDayRange("m.created_at", `$${params.length}`)); }
     const limit = Math.min(opts.limit ?? 300, 1000);
     return await q<MaterialMoveRow>(
       `select m.id, i.category, i.label, i.scent, m.qty_change::float8 as qty_change, m.balance::float8 as balance,
@@ -1299,8 +1305,8 @@ function activityWhere(opts: ActivityFilter, params: any[]): string {
   if (opts.user) { params.push(`%${opts.user.trim()}%`); where.push(`username ilike $${params.length}`); }
   if (opts.action) { params.push(opts.action); where.push(`action = $${params.length}`); }
   const from = opts.from || opts.date, to = opts.to || opts.date;   // date = วันเดียว (เข้ากันได้กับของเดิม)
-  if (from) { params.push(from); where.push(`(created_at at time zone 'Asia/Bangkok')::date >= $${params.length}::date`); }
-  if (to) { params.push(to); where.push(`(created_at at time zone 'Asia/Bangkok')::date <= $${params.length}::date`); }
+  if (from) { params.push(from); where.push(`created_at >= ($${params.length}::date::timestamp at time zone 'Asia/Bangkok')`); }
+  if (to) { params.push(to); where.push(`created_at < ($${params.length}::date::timestamp at time zone 'Asia/Bangkok') + interval '1 day'`); }
   return where.length ? "where " + where.join(" and ") : "";
 }
 export async function listActivityLog(opts: ActivityFilter & { limit?: number; offset?: number } = {}): Promise<ActivityRow[]> {

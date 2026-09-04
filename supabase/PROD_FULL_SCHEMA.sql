@@ -1,7 +1,7 @@
 -- ════════════════════════════════════════════════════════════════════════
 -- PROD_FULL_SCHEMA.sql — schema เต็มของ platform-withdrawals (สร้างอัตโนมัติ)
 -- สร้างจาก: scripts/gen-prod-schema.mjs (รวม migrations/*.sql เรียงลำดับ)
--- อัปเดตล่าสุด: 2026-09-04 · 43 migrations
+-- อัปเดตล่าสุด: 2026-09-04 · 44 migrations
 --
 -- ⚠️ อย่าแก้ไฟล์นี้ตรง ๆ — แก้ที่ migrations/ แล้วรัน `npm run gen:prod-schema`
 -- วิธีใช้บน prod: Supabase → SQL Editor → วางทั้งไฟล์ → Run (idempotent รันซ้ำปลอดภัย)
@@ -1240,4 +1240,12 @@ create index if not exists idx_products_namenorm on products (
 create index if not exists idx_pbc_scentnorm on product_barcodes (
   (regexp_replace(lower(btrim(scent)),'[^a-z0-9ก-๙]','','g')),
   (btrim(lower(size),' .')));
+
+-- ───────────────────────────────────────────────────────────────────────
+-- ▼ 0044_stock_unit_skutrim_index.sql
+-- ───────────────────────────────────────────────────────────────────────
+-- Performance: UNITS_UNION ใช้ `not exists (... where btrim(s.sku) = btrim(oi.sku))`
+-- ซึ่ง btrim(sku) ทำให้ unique index บน stock_unit.sku ใช้ไม่ได้ → seq scan ต่อแถว oi
+-- เพิ่ม functional index บน btrim(sku) (immutable) → subquery ใช้ index ได้
+create index if not exists idx_stock_unit_skutrim on stock_unit (btrim(sku));
 
