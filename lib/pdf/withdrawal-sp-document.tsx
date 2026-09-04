@@ -297,189 +297,9 @@ function OrderPageHalf({ order }: { order: OrderWithItems }) {
 }
 
 // ════════════ ใบเบิกแบบ PO (ค้าส่ง: CTW / Eveandboy / King Power) — A4 เต็มแผ่น ════════════
-const po = StyleSheet.create({
-  page: { fontFamily: "NotoSansThai", fontSize: 8, color: C.ink, paddingVertical: 22, paddingHorizontal: 26 },
-  head: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", borderBottomWidth: 1.2, borderBottomColor: C.ink, paddingBottom: 6, marginBottom: 8 },
-  company: { fontSize: 12, fontWeight: "bold" },
-  addr: { fontSize: 6.8, color: C.muted, marginTop: 2, maxWidth: 300 },
-  docTitle: { fontSize: 13, fontWeight: "bold", textAlign: "right" },
-  docSub: { fontSize: 8, color: C.muted, textAlign: "right", marginTop: 1 },
-  infoRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 8 },
-  field: { flexDirection: "row", marginBottom: 2.5 },
-  fLabel: { color: C.muted, width: 70, fontSize: 8 },
-  fVal: { fontWeight: "bold", fontSize: 9 },
-  bcBox: { borderWidth: 0.8, borderColor: C.border, borderRadius: 3, padding: 6, alignItems: "center" },
-  bcCap: { fontSize: 6.5, color: C.muted, marginTop: 2 },
-  th: { flexDirection: "row", backgroundColor: C.soft, borderTopWidth: 0.8, borderBottomWidth: 0.8, borderColor: C.ink },
-  gradeRow: { flexDirection: "row", backgroundColor: "#efece7", borderBottomWidth: 0.5, borderColor: C.border },
-  tr: { flexDirection: "row", borderBottomWidth: 0.4, borderColor: C.line },
-  cell: { paddingVertical: 3, paddingHorizontal: 4 },
-  hCell: { fontWeight: "bold", color: C.muted },
-  foot: { flexDirection: "row", borderTopWidth: 1, borderColor: C.ink, paddingTop: 3, marginTop: 1 },
-  sumWrap: { flexDirection: "row", gap: 10, marginTop: 12 },
-  box: { borderWidth: 0.8, borderColor: C.border, borderRadius: 3, flex: 1 },
-  boxHead: { backgroundColor: C.soft, paddingVertical: 3, paddingHorizontal: 6, borderBottomWidth: 0.5, borderColor: C.border, fontSize: 8, fontWeight: "bold" },
-  signRow: { flexDirection: "row", justifyContent: "space-between", marginTop: 34, paddingHorizontal: 6 },
-  sign: { width: "30%", alignItems: "center" },
-  signLine: { borderTopWidth: 0.6, borderColor: C.muted, width: "100%", marginBottom: 3 },
-  signLabel: { fontSize: 8, color: C.muted },
-  signDate: { fontSize: 7, color: C.faint, marginTop: 4 },
-});
-// เรียง Grade: EDP → EDP+ → PARFUM → EDT · ขนาดในเกรด: EDT 90-50-30-10, อื่นๆ 50-30-10-4 (ขนาดอื่นต่อท้าย ใหญ่ก่อน)
-const GRADE_ORDER = ["EDP", "EDP+", "PARFUM", "EDT"];
-const gradeKey = (g?: string | null) => String(g || "อื่นๆ").trim().toUpperCase() || "อื่นๆ";
-const gradeRank = (g?: string | null) => { const i = GRADE_ORDER.indexOf(gradeKey(g)); return i < 0 ? 99 : i; };
-const sizeRank = (g?: string | null, sz?: string | null) => {
-  const ml = mlOf(sz); const ord = gradeKey(g) === "EDT" ? [90, 50, 30, 10] : [50, 30, 10, 4];
-  const i = ord.indexOf(ml); return i >= 0 ? i : 50 - ml / 1000;   // ขนาดนอกลิสต์ → ต่อท้าย เรียงใหญ่ก่อน
-};
-// column widths for PO table (# / BARCODE / ชื่อสินค้า / GRADE / ขนาด / เบิก / หน่วย) ~535pt
-const POC = [20, 100, 175, 55, 55, 45, 40];
-
-function WholesalePage({ order }: { order: OrderWithItems }) {
-  const all = [...(order.items ?? [])].filter((it) => (it.product || "").trim());
-  all.sort((a, b) => gradeRank(a.ptype) - gradeRank(b.ptype) || gradeKey(a.ptype).localeCompare(gradeKey(b.ptype))
-    || sizeRank(a.ptype, a.size) - sizeRank(b.ptype, b.size)
-    || mlOf(b.size) - mlOf(a.size) || String(a.product || "").localeCompare(String(b.product || ""), "th"));
-  const total = all.reduce((s, it) => s + (Number(it.qty) || 0), 0);
-  // สรุปตาม Grade (เรียงตามลำดับเกรด)
-  const gmap = new Map<string, { lines: number; qty: number }>();
-  for (const it of all) { const k = gradeKey(it.ptype); const g = gmap.get(k) || { lines: 0, qty: 0 }; g.lines += 1; g.qty += Number(it.qty) || 0; gmap.set(k, g); }
-  const grades = [...gmap.entries()].sort((a, b) => gradeRank(a[0]) - gradeRank(b[0]));
-
-  // density: ย่อเมื่อรายการเยอะ (ย่อลงอีก ~1-2 สเต็ปจากเดิม)
-  const n = all.length;
-  const fs = n > 55 ? 6.2 : n > 38 ? 7 : n > 24 ? 7.6 : 8.3;
-  const pv = n > 38 ? 2 : n > 24 ? 2.6 : 3.4;
-  const bcH = n > 38 ? 26 : 34;
-  const cell = { fontSize: fs, paddingVertical: pv };
-  const isEvb = String(order.platform) === "Eveandboy";
-  // Eveandboy: barcode + ชื่อสินค้า ดึงจากไฟล์ Eveandboy โดยตรง (จับด้วยกลิ่น+ขนาด) ไม่พึ่ง product_barcodes
-  const nkey = (x?: string | null) => (x || "").toLowerCase().replace(/[^a-z0-9ก-๙]/g, "");
-  const evbOf = (it: OrderWithItems["items"][number]) => (isEvb ? EVEANDBOY_BY_KEY[`${nkey(it.product)}|${mlOf(it.size)}`] : undefined);
-  const nameOf = (it: OrderWithItems["items"][number]) => evbOf(it)?.item_name || it.product;
-  const barcodeOf = (it: OrderWithItems["items"][number]) => evbOf(it)?.barcode || it.barcode || null;
-  const branchAddr = isEvb ? (EVEANDBOY_BRANCHES.find((b) => b.branch === order.branch)?.address || "") : "";
-
-  // แถวตาราง: แทรกหัวเกรดเมื่อเกรดเปลี่ยน
-  const rows: any[] = [];
-  let curGrade = " "; let idx = 0;
-  for (const it of all) {
-    const gk = gradeKey(it.ptype);
-    if (gk !== curGrade) {
-      curGrade = gk;
-      rows.push(<View key={`g${gk}`} style={po.gradeRow}><Text style={[po.cell, { fontSize: fs, fontWeight: "bold" }]}>{gk}</Text></View>);
-    }
-    idx += 1;
-    rows.push(
-      <View key={`i${it.id ?? idx}`} style={po.tr} wrap={false}>
-        <Text style={[po.cell, cell, { width: POC[0], color: C.faint }]}>{idx}</Text>
-        <Text style={[po.cell, cell, { width: POC[1] }]}>{T(barcodeOf(it))}</Text>
-        <Text style={[po.cell, cell, { width: POC[2], fontWeight: "bold" }]}>{T(nameOf(it))}</Text>
-        <Text style={[po.cell, cell, { width: POC[3], color: C.muted }]}>{T(it.ptype)}</Text>
-        <Text style={[po.cell, cell, { width: POC[4] }]}>{T(it.size)}</Text>
-        <Text style={[po.cell, cell, { width: POC[5], textAlign: "right", fontWeight: "bold" }]}>{Number(it.qty) || 0}</Text>
-        <Text style={[po.cell, cell, { width: POC[6] }]}>{T(it.unit)}</Text>
-      </View>,
-    );
-  }
-
-  return (
-    <Page size="A4" style={po.page}>
-      {/* header: บริษัท + ที่อยู่ | ใบเบิกสินค้า/ต้นฉบับ */}
-      <View style={po.head}>
-        <View>
-          <Text style={po.company}>{T(COMPANY_NAME)}</Text>
-          <Text style={po.addr}>{COMPANY_ADDRESS}</Text>
-        </View>
-        <View>
-          <Text style={po.docTitle}>{T("ใบเบิกสินค้า")}</Text>
-          <Text style={po.docSub}>ต้นฉบับ · {platformName(order.platform)}</Text>
-        </View>
-      </View>
-
-      {/* info: PO Order No./วันที่/Branch/รหัสสาขา + barcode */}
-      <View style={po.infoRow}>
-        <View>
-          <View style={po.field}><Text style={po.fLabel}>PO Order No. :</Text><Text style={po.fVal}>{T(order.order_no)}</Text></View>
-          <View style={po.field}><Text style={po.fLabel}>วันที่ :</Text><Text style={po.fVal}>{fmtDate(order.doc_date)}</Text></View>
-          <View style={po.field}><Text style={po.fLabel}>Branch :</Text><Text style={[po.fVal, { maxWidth: 260 }]}>{T(order.branch)}</Text></View>
-          <View style={po.field}><Text style={po.fLabel}>รหัสสาขา :</Text><Text style={po.fVal}>{T(order.branch_code)}</Text></View>
-          {isEvb && <View style={po.field}><Text style={po.fLabel}>PO Version :</Text><Text style={po.fVal}>{T(order.po_version)}</Text></View>}
-        </View>
-        <View style={po.bcBox}>
-          <Barcode value={order.order_no} width={185} height={bcH} />
-          <Text style={po.bcCap}>PO Order No. {T(order.order_no)}</Text>
-        </View>
-      </View>
-
-      {/* ที่อยู่สาขา (เต็มความกว้าง — Eveandboy) · เติม space ท้าย 2 ตัว กัน react-pdf drop glyph ท้าย run (เลขไปรษณีย์หาย) */}
-      {branchAddr ? (
-        <View style={{ width: "100%", marginBottom: 8 }}>
-          <Text style={{ fontSize: 7, color: C.muted }}>{`ที่อยู่สาขา : ${branchAddr}  `}</Text>
-        </View>
-      ) : null}
-
-      {/* table */}
-      <View>
-        <View style={po.th} fixed>
-          {["#", "BARCODE", "ชื่อสินค้า", "GRADE", "ขนาด", "เบิก", "หน่วย"].map((h, i) => (
-            <Text key={i} style={[po.cell, po.hCell, { fontSize: fs - 0.5, width: POC[i], textAlign: i === 5 ? "right" : "left" }]}>{h}</Text>
-          ))}
-        </View>
-        {rows}
-        <View style={po.foot}>
-          <Text style={[po.cell, cell, { width: POC[0] + POC[1] + POC[2] + POC[3] + POC[4], textAlign: "right", fontWeight: "bold" }]}>รวมทั้งสิ้น</Text>
-          <Text style={[po.cell, cell, { width: POC[5], textAlign: "right", fontWeight: "bold" }]}>{total}</Text>
-          <Text style={[po.cell, cell, { width: POC[6] }]}>ชิ้น</Text>
-        </View>
-      </View>
-
-      {/* สรุปตาม Grade + หมายเหตุ */}
-      <View style={po.sumWrap}>
-        <View style={[po.box, { maxWidth: 240 }]}>
-          <Text style={po.boxHead}>สรุปตาม Grade</Text>
-          <View style={[po.th, { borderTopWidth: 0 }]}>
-            <Text style={[po.cell, po.hCell, { fontSize: 7, width: 120 }]}>GRADE</Text>
-            <Text style={[po.cell, po.hCell, { fontSize: 7, width: 60, textAlign: "right" }]}>รายการ</Text>
-            <Text style={[po.cell, po.hCell, { fontSize: 7, width: 60, textAlign: "right" }]}>จำนวน</Text>
-          </View>
-          {grades.map(([g, v]) => (
-            <View key={g} style={po.tr}>
-              <Text style={[po.cell, { fontSize: 8, width: 120, fontWeight: "bold" }]}>{g}</Text>
-              <Text style={[po.cell, { fontSize: 8, width: 60, textAlign: "right" }]}>{v.lines}</Text>
-              <Text style={[po.cell, { fontSize: 8, width: 60, textAlign: "right" }]}>{v.qty}</Text>
-            </View>
-          ))}
-          <View style={[po.foot, { marginTop: 0 }]}>
-            <Text style={[po.cell, { fontSize: 8, width: 120, fontWeight: "bold" }]}>รวมทั้งสิ้น</Text>
-            <Text style={[po.cell, { fontSize: 8, width: 60, textAlign: "right", fontWeight: "bold" }]}>{all.length}</Text>
-            <Text style={[po.cell, { fontSize: 8, width: 60, textAlign: "right", fontWeight: "bold" }]}>{total}</Text>
-          </View>
-        </View>
-        <View style={po.box}>
-          <Text style={po.boxHead}>หมายเหตุ</Text>
-          <Text style={[po.cell, { fontSize: 8, minHeight: 60 }]}>{order.note || ""}</Text>
-        </View>
-      </View>
-
-      {/* signatures — ผู้เบิก / ผู้จ่าย / ผู้รับ (ไม่มีผู้ตรวจ) */}
-      <View style={po.signRow}>
-        {["ผู้เบิก", "ผู้จ่ายสินค้า", "ผู้รับ"].map((lbl) => (
-          <View key={lbl} style={po.sign}>
-            <View style={po.signLine} />
-            <Text style={po.signLabel}>{`( ${lbl} )`}</Text>
-            <Text style={po.signDate}>____ / ____ / ____</Text>
-          </View>
-        ))}
-      </View>
-    </Page>
-  );
-}
-
-// ค้าส่ง (CTW/Eveandboy/King Power) = ใบเบิกแบบ PO เต็มแผ่น · อื่นๆ = 2 ชุดต่อหน้า
+// ค้าส่ง (CTW/Eveandboy/King Power) = ใบเบิกรูปแบบเดียวกับใบส่งของ · อื่นๆ = 2 ชุดต่อหน้า
 function OrderPage({ order }: { order: OrderWithItems }) {
-  return isWholesalePlatform(order.platform) ? <WholesalePage order={order} /> : <OrderPageHalf order={order} />;
+  return isWholesalePlatform(order.platform) ? <WholesaleDocPage order={order} mode="issue" /> : <OrderPageHalf order={order} />;
 }
 
 export function WithdrawalDocument({ order }: { order: OrderWithItems }) {
@@ -497,6 +317,133 @@ export function WithdrawalDocumentMulti({ orders }: { orders: OrderWithItems[] }
   return (
     <Document title={`ใบเบิก ${orders.length} ใบ`} author="Lab Parfumo">
       {orders.map((o) => <OrderPage key={o.order_no} order={o} />)}
+    </Document>
+  );
+}
+
+// ════════════ ใบส่งของ / Delivery Note (ค้าส่ง — Eveandboy/CTW/King Power) ════════════
+const MON_EN = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+const fmtDateEN = (d?: any) => {
+  if (!d) return "";
+  const [y, m, dd] = String(d).slice(0, 10).split("-");
+  return y && m && dd ? `${+dd} ${MON_EN[+m - 1]} ${y}` : String(d).slice(0, 10);
+};
+const dn = StyleSheet.create({
+  page: { fontFamily: "NotoSansThai", fontSize: 9, color: C.ink, paddingVertical: 28, paddingHorizontal: 34 },
+  head: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 6 },
+  brandWrap: { flexDirection: "row", alignItems: "center", gap: 16 },
+  brand: { fontSize: 15, fontWeight: "bold", letterSpacing: 0.5 },
+  brandSub: { fontSize: 6, color: C.muted, marginTop: 1 },
+  partner: { fontSize: 13, fontWeight: "bold", color: C.faint, letterSpacing: 1 },
+  title: { fontSize: 16, fontWeight: "bold", textAlign: "right" },
+  titleEn: { fontSize: 10, color: C.muted, textAlign: "right", marginTop: 1 },
+  metaRow: { flexDirection: "row", marginTop: 6, justifyContent: "flex-end" },
+  metaL: { fontSize: 8.5, color: C.muted, textAlign: "right", width: 110 },
+  metaV: { fontSize: 8.5, fontWeight: "bold", width: 120, textAlign: "left", paddingLeft: 6 },
+  company: { fontSize: 10, fontWeight: "bold", marginTop: 10 },
+  companyAddr: { fontSize: 8, color: C.muted, marginTop: 2, maxWidth: 300 },
+  hr: { borderBottomWidth: 1, borderBottomColor: C.ink, marginVertical: 10 },
+  toRow: { flexDirection: "row", marginBottom: 2 },
+  toL: { fontSize: 8.5, color: C.muted, width: 80 },
+  toV: { fontSize: 9, fontWeight: "bold" },
+  th: { flexDirection: "row", backgroundColor: "#dfe7f3", borderWidth: 0.6, borderColor: C.border, marginTop: 12 },
+  tr: { flexDirection: "row", borderLeftWidth: 0.6, borderRightWidth: 0.6, borderBottomWidth: 0.6, borderColor: C.border },
+  cell: { paddingVertical: 4, paddingHorizontal: 5, fontSize: 8.5 },
+  hCell: { fontWeight: "bold", fontSize: 8.5 },
+  totalRow: { flexDirection: "row", justifyContent: "flex-end", marginTop: 8, paddingRight: 60 },
+  sign: { flexDirection: "row", marginTop: 40, gap: 0 },
+  signBox: { flex: 1, borderWidth: 0.6, borderColor: C.border, padding: 8, minHeight: 96 },
+  signHead: { fontSize: 8.5, fontWeight: "bold", marginBottom: 8 },
+  signLine: { fontSize: 8, color: C.muted, marginBottom: 12 },
+});
+const DN_COL = [120, 300, 58, 50];   // Product Code / Name / Size / Qty (~528)
+
+// layout เดียวใช้ทั้งใบเบิก (mode 'issue') และใบส่งของ (mode 'delivery') — ต่างแค่หัวเรื่อง/meta/ช่องเซ็น
+function WholesaleDocPage({ order, mode }: { order: OrderWithItems; mode: "issue" | "delivery" }) {
+  const isEvb = String(order.platform) === "Eveandboy";
+  const nkey = (x?: string | null) => (x || "").toLowerCase().replace(/[^a-z0-9ก-๙]/g, "");
+  const evbOf = (it: OrderWithItems["items"][number]) => (isEvb ? EVEANDBOY_BY_KEY[`${nkey(it.product)}|${mlOf(it.size)}`] : undefined);
+  const items = [...(order.items ?? [])].filter((it) => (it.product || "").trim());
+  const total = items.reduce((s, it) => s + (Number(it.qty) || 0), 0);
+  const addr = isEvb ? (EVEANDBOY_BRANCHES.find((b) => b.branch === order.branch)?.address || order.branch_code || "") : (order.branch_code || "");
+  const partner = platformName(order.platform).toUpperCase();
+  const isDelivery = mode === "delivery";
+  const title = isDelivery ? "ใบส่งของ" : "ใบเบิกสินค้า";
+  const titleEn = isDelivery ? "Delivery Note" : "Goods Issue Form";
+  const meta: [string, string][] = isDelivery
+    ? [["Delivery Number :", " "], ["Delivery Date :", fmtDateEN(order.doc_date)], ["PO Order Number :", T(order.order_no)]]
+    : [["เลขที่ใบเบิก :", T(order.doc_no)], ["วันที่ :", fmtDateEN(order.doc_date)], ["PO Order No. :", T(order.order_no)]];
+  const signs: [string, string][] = isDelivery
+    ? [["Sender: LAB PARFUMO", "From"], [" ", "Approved by"], [`Recipient: ${partner}`, "Received by"]]
+    : [[" ", "ผู้เบิก"], [" ", "ผู้จ่ายสินค้า"], [" ", "ผู้รับ"]];
+  return (
+    <Page size="A4" style={dn.page}>
+      {/* header: LAB PARFUMO + คู่ค้า | หัวเรื่อง + meta */}
+      <View style={dn.head}>
+        <View style={dn.brandWrap}>
+          <View>
+            <Text style={dn.brand}>LAB PARFUMO</Text>
+            <Text style={dn.brandSub}>Create Your Own Charm</Text>
+          </View>
+          <Text style={dn.partner}>{partner}</Text>
+        </View>
+        <View>
+          <Text style={dn.title}>{T(title)}</Text>
+          <Text style={dn.titleEn}>{titleEn}</Text>
+          {meta.map(([l, v], i) => (
+            <View key={i} style={dn.metaRow}><Text style={dn.metaL}>{l}</Text><Text style={dn.metaV}>{v || " "}</Text></View>
+          ))}
+        </View>
+      </View>
+
+      {/* company */}
+      <Text style={dn.company}>{T(COMPANY_NAME)}</Text>
+      <Text style={dn.companyAddr}>{COMPANY_ADDRESS}  </Text>
+
+      <View style={dn.hr} />
+
+      {/* delivery to / branch */}
+      <View style={dn.toRow}><Text style={dn.toL}>{isDelivery ? "Delivery To :" : "ส่งไปที่ :"}</Text><Text style={dn.toV}>{partner}</Text></View>
+      <View style={dn.toRow}><Text style={dn.toL}>Branch :</Text><Text style={dn.toV}>{T(order.branch)}</Text></View>
+      {addr ? <Text style={{ fontSize: 8, color: C.muted, marginBottom: 2 }}>{`Address : ${addr}  `}</Text> : <View style={dn.toRow}><Text style={dn.toL}>Address :</Text><Text style={dn.toV}>{T(order.branch_code)}</Text></View>}
+      <View style={dn.toRow}><Text style={dn.toL}>Phone :</Text><Text style={dn.toV}>{T(order.phone)}</Text></View>
+
+      {/* table: Product Code / Name / Size / Qty */}
+      <View style={dn.th} fixed>
+        {["Product Code", "Name", "Size", "Qty"].map((h, i) => (
+          <Text key={i} style={[dn.cell, dn.hCell, { width: DN_COL[i], textAlign: i === 3 ? "right" : "left" }]}>{h}</Text>
+        ))}
+      </View>
+      {items.map((it, i) => (
+        <View key={it.id ?? i} style={dn.tr} wrap={false}>
+          <Text style={[dn.cell, { width: DN_COL[0] }]}>{T(evbOf(it)?.barcode || it.barcode)}</Text>
+          <Text style={[dn.cell, { width: DN_COL[1] }]}>{T(evbOf(it)?.item_name || it.product)}</Text>
+          <Text style={[dn.cell, { width: DN_COL[2] }]}>{T(it.size)}</Text>
+          <Text style={[dn.cell, { width: DN_COL[3], textAlign: "right" }]}>{Number(it.qty) || 0}</Text>
+        </View>
+      ))}
+      <View style={dn.totalRow}><Text style={{ fontSize: 9, fontWeight: "bold", marginRight: 24 }}>Total</Text><Text style={{ fontSize: 9, fontWeight: "bold" }}>{total}</Text></View>
+
+      {/* signatures (3 ช่อง) */}
+      <View style={dn.sign}>
+        {signs.map(([head, label], i) => (
+          <View key={i} style={dn.signBox}>
+            <Text style={dn.signHead}>{head}</Text>
+            <Text style={dn.signHead}>{label}</Text>
+            <Text style={dn.signLine}>Name:</Text><Text style={dn.signLine}>Date:</Text><Text style={dn.signLine}>Signature:</Text>
+          </View>
+        ))}
+      </View>
+    </Page>
+  );
+}
+
+/** ใบส่งของ (Delivery Note) — ค้าส่ง */
+export function DeliveryNoteDocument({ order }: { order: OrderWithItems }) {
+  registerFontOnce();
+  return (
+    <Document title={`ใบส่งของ ${order.order_no}`} author="Lab Parfumo">
+      <WholesaleDocPage order={order} mode="delivery" />
     </Document>
   );
 }

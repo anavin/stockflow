@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getOrder, getProducts, getSizes, getProvinces, getPostcodes, getProductCodes, getProductTypes, getBlockedSizesForOrder } from "@/lib/queries";
-import { resolvePlatform, platformBase, platformColor, platformTint } from "@/lib/config";
+import { resolvePlatform, platformBase, platformColor, platformTint, isWholesalePlatform } from "@/lib/config";
 import OrderForm from "@/components/OrderForm";
 import CtwPushButton from "@/components/CtwPushButton";
 import ReverseIssueButton from "@/components/ReverseIssueButton";
@@ -56,6 +56,11 @@ export default async function EditOrderPage({ params }: { params: Promise<{ plat
           <a href={`/print/pdf/${encodeURIComponent(decoded)}`} target="_blank" rel="noreferrer" className="btn-ghost">
             <Printer size={16} /> พิมพ์ใบเบิก (PDF)
           </a>
+          {isWholesalePlatform(pf.code) && (
+            <a href={`/api/delivery/${encodeURIComponent(decoded)}`} target="_blank" rel="noreferrer" className="btn-ghost">
+              <Printer size={16} /> ใบส่งของ (PDF)
+            </a>
+          )}
         </div>
       </div>
       <div className="mb-1 flex items-center gap-2">
