@@ -57,7 +57,8 @@ export default async function StockPage({ searchParams }: { searchParams: Promis
           </div>
         </div>
       )}
-      <StockManager rows={rows} products={products} sizes={sizes} initialLow={low === "1"} isAdmin={isAdmin} discontinued={discontinued} skuMap={skuMap} closedSkus={closedSkus} emptyScents={emptyScents} />
+      {/* key ผูกกับ ?low → กดการ์ด "ใกล้หมด" ตอนอยู่หน้านี้ ให้ remount ใช้ initialLow ใหม่ (ไม่งั้น filter ไม่เปลี่ยน) */}
+      <StockManager key={low === "1" ? "low" : "all"} rows={rows} products={products} sizes={sizes} initialLow={low === "1"} isAdmin={isAdmin} discontinued={discontinued} skuMap={skuMap} closedSkus={closedSkus} emptyScents={emptyScents} />
     </div>
   );
 }
