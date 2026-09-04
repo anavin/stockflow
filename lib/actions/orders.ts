@@ -120,10 +120,11 @@ export async function saveOrder(input: OrderInput, opts?: { silent?: boolean }):
   // ล็อก "วันที่ใบเบิก" = วันที่สร้างจริงในระบบ (เวลาไทย) — ไม่ให้ backdate จากฟอร์ม (ค่าที่ฟอร์มส่งมาไม่ถูกใช้)
   const bangkokToday = () => new Date(Date.now() + 7 * 3600 * 1000).toISOString().slice(0, 10);
 
-  // แคตตาล็อกค้าส่ง (Eveandboy/King Power) จาก DB — ดึงก่อน tx (เป็น reference read) เพื่อตรวจสินค้า
-  const wsCatByKey = (o.platform === "Eveandboy" || o.platform === "KingPower") ? (await getWholesaleCatalog(o.platform)).byKey : null;
-
   try {
+    // แคตตาล็อกค้าส่ง (Eveandboy/King Power) จาก DB — ดึงใน try (กัน DB error โผล่ดิบ) · ว่าง = ไม่จำกัด (เหมือน CTW)
+    const wsCat = (o.platform === "Eveandboy" || o.platform === "KingPower") ? (await getWholesaleCatalog(o.platform)).byKey : null;
+    const wsCatByKey = wsCat && Object.keys(wsCat).length ? wsCat : null;
+
     const outDoc = await tx(async (run) => {
       // ใช้ PK เดิมถ้ามีใบเลขนี้อยู่แล้ว (ต่างแค่ตัวพิมพ์/ช่องว่าง) — กันสร้างซ้ำคนละ case (import เก็บพิมพ์เล็ก, สร้างเองพิมพ์ใหญ่)
       const [canon] = await run<{ order_no: string }>(

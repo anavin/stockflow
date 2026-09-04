@@ -1306,14 +1306,15 @@ export type WholesaleBranchRow = { id: number; platform: string; branch: string;
 const wnk = (s?: string | null) => (s || "").toLowerCase().replace(/[^a-z0-9ก-๙]/g, "");
 const wml = (s?: string | null) => (s || "").match(/[0-9]+(\.[0-9]+)?/)?.[0] ?? "";
 
-export async function listWholesaleCatalog(platform: string): Promise<WholesaleCatalogRow[]> {
+// cache tag "reference" — bump() ใน wholesale.ts revalidate ให้ตอนแก้ (ตรงกับ getProducts/getSizes)
+export const listWholesaleCatalog = unstable_cache(async (platform: string): Promise<WholesaleCatalogRow[]> => {
   try { return await q<WholesaleCatalogRow>(`select id, platform, product, size, barcode, code, item_name, grade, active, sort from wholesale_catalog where platform = $1 order by sort, product, size`, [platform]); }
   catch (e) { return orMissing(e, []); }
-}
-export async function listWholesaleBranches(platform: string): Promise<WholesaleBranchRow[]> {
+}, ["ws:catalog"], { tags: ["reference"], revalidate: 300 });
+export const listWholesaleBranches = unstable_cache(async (platform: string): Promise<WholesaleBranchRow[]> => {
   try { return await q<WholesaleBranchRow>(`select id, platform, branch, code, address, active, sort from wholesale_branch where platform = $1 order by sort, branch`, [platform]); }
   catch (e) { return orMissing(e, []); }
-}
+}, ["ws:branch"], { tags: ["reference"], revalidate: 300 });
 
 // รูปที่ตัวอ่าน (ฟอร์ม/บันทึก/PDF) ใช้ — byKey (normalize(scent)+"|"+ml) + ขนาดต่อกลิ่น (เฉพาะ active)
 export type WholesaleCatItem = { code: string; barcode: string; item_name: string; grade: string | null };
@@ -1346,5 +1347,7 @@ export async function getOrderFormCatalog(platform: string): Promise<{ branches:
     platform === "Eveandboy" ? listWholesaleBranches("Eveandboy") : Promise.resolve([] as WholesaleBranchRow[]),
     isWs ? getWholesaleCatalog(platform) : Promise.resolve(null),
   ]);
-  return { branches: branches.filter((b) => b.active), catalogSizes: cat ? cat.sizesByScent : null };
+  // catalog ว่าง → null (ฟอร์มไม่จำกัด = fallback สินค้าทั้งหมด) กัน catalog ยังไม่ seed แล้วเลือกสินค้าไม่ได้เลย
+  const catalogSizes = cat && Object.keys(cat.sizesByScent).length ? cat.sizesByScent : null;
+  return { branches: branches.filter((b) => b.active), catalogSizes };
 }
