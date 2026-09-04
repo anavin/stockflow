@@ -339,8 +339,9 @@ const dn = StyleSheet.create({
   partner: { fontSize: 13, fontWeight: "bold", color: C.faint, letterSpacing: 1 },
   title: { fontSize: 19, fontWeight: "bold", color: AC, textAlign: "right", letterSpacing: 0.5 },
   titleEn: { fontSize: 8.5, color: C.muted, textAlign: "right", marginTop: 1, letterSpacing: 1.5 },
+  metaWrap: { width: 178, alignSelf: "flex-end", marginTop: 6 },
   metaRow: { flexDirection: "row", marginTop: 3.5, width: "100%" },
-  metaL: { fontSize: 8, color: C.muted, textAlign: "right", width: 96 },
+  metaL: { fontSize: 8, color: C.muted, textAlign: "right", width: 74 },
   metaV: { fontSize: 8.5, fontWeight: "bold", flex: 1, textAlign: "right", paddingLeft: 8 },
   accentBar: { height: 2.4, backgroundColor: AC, marginTop: 10, marginBottom: 13 },
   infoRow: { flexDirection: "row", gap: 12, marginBottom: 14 },
@@ -399,9 +400,11 @@ function WholesaleDocPage({ order, mode }: { order: OrderWithItems; mode: "issue
         <View style={dn.headRight}>
           <Text style={dn.title}>{T(title)}</Text>
           <Text style={dn.titleEn}>{titleEn}</Text>
-          {meta.map(([l, v], i) => (
-            <View key={i} style={dn.metaRow}><Text style={dn.metaL}>{l}</Text><Text style={dn.metaV}>{v || " "}</Text></View>
-          ))}
+          <View style={dn.metaWrap}>
+            {meta.map(([l, v], i) => (
+              <View key={i} style={dn.metaRow}><Text style={dn.metaL}>{l}</Text><Text style={dn.metaV}>{v || " "}</Text></View>
+            ))}
+          </View>
         </View>
       </View>
 
