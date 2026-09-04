@@ -138,6 +138,14 @@ export default function StockIssue({ isAdmin, initialOrder, specOptions = [] }: 
     setScanMsg({ type: "ok", text: `✓ ${res.product} ${res.size}${target.is_free ? " (แถม)" : ""} (${have}/${target.qty})` });
   }
 
+  // กรอก/สแกน SKU ลงบรรทัด (4 ml = assign ตอนตัด, กรอกเอง ไม่ต้องมีในคลัง) — ตรวจซ้ำ + ไม่เกิน qty
+  function addLineSku(it: IssueItemPreview, code: string) {
+    const s = (code || "").trim(); if (!s) return;
+    if (Object.values(form).some((v) => (v?.skus || []).includes(s))) { scanBeep("warn"); setScanMsg({ type: "warn", text: `SKU ซ้ำ: ${s}` }); return; }
+    if ((form[it.line_no]?.skus?.length || 0) >= it.qty) { scanBeep("warn"); setScanMsg({ type: "warn", text: `${it.product} ${it.size} ครบ ${it.qty} แล้ว` }); return; }
+    addSerial(it.line_no, s); scanBeep("ok"); setScanMsg({ type: "ok", text: `✓ ${it.product} ${it.size} — ${s}` });
+  }
+
   // มาจากปุ่ม "ตัดสต๊อก" ในหน้าใบเบิก (/stock/issue?order=XXX) → ดึงรายการให้อัตโนมัติ
   useEffect(() => {
     if (initialOrder) lookup(initialOrder);
@@ -209,24 +217,27 @@ export default function StockIssue({ isAdmin, initialOrder, specOptions = [] }: 
                 <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
                   <div>
                     <div className="mb-1 flex items-center justify-between">
-                      <span className="text-[11px] text-muted">SKU รายชิ้นที่สแกน</span>
+                      <span className="text-[11px] text-muted">SKU รายชิ้น{it.assign_sku ? " (กรอกตอนตัด)" : "ที่สแกน"}</span>
                       {it.needs_sku && <span className={`text-[11px] font-medium tabular-nums ${(form[it.line_no]?.skus?.length || 0) >= it.qty ? "text-green-600" : "text-amber-600"}`}>{form[it.line_no]?.skus?.length || 0}/{it.qty}</span>}
                     </div>
-                    {(form[it.line_no]?.skus?.length || 0) > 0 ? (
-                      <div className="flex flex-wrap gap-1">
+                    {(form[it.line_no]?.skus?.length || 0) > 0 && (
+                      <div className="mb-1 flex flex-wrap gap-1">
                         {form[it.line_no].skus.map((s) => (
                           <span key={s} className="inline-flex items-center gap-1 rounded-md bg-brand-50 px-2 py-0.5 font-mono text-xs text-brand-700">
                             {s}<button type="button" onClick={() => removeSerial(it.line_no, s)} className="text-brand-600 hover:text-red-500" title="เอาออก"><X size={11} /></button>
                           </span>
                         ))}
                       </div>
-                    ) : it.needs_sku ? (
-                      <p className="text-[11px] text-faint">ยังไม่ได้สแกน — สแกน SKU ในช่องด้านบน</p>
-                    ) : it.tracked ? (
-                      <p className="text-[11px] text-faint">ตัดตามจำนวน {it.qty} · ไม่ต้องมี SKU{it.is_bag ? " (ถุงกระดาษ)" : ` (ตัวอย่าง ${it.size})`}</p>
-                    ) : (
-                      <p className="text-[11px] text-faint">ไม่ตัดสต๊อก (ไม่ต้องมี SKU)</p>
                     )}
+                    {it.assign_sku ? (
+                      (form[it.line_no]?.skus?.length || 0) < it.qty && (
+                        <input className="input h-8 font-mono text-xs" placeholder={`กรอก/สแกน SKU 4ml แล้ว Enter (${form[it.line_no]?.skus?.length || 0}/${it.qty})`}
+                          onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); const el = e.target as HTMLInputElement; addLineSku(it, el.value); el.value = ""; } }} />
+                      )
+                    ) : (form[it.line_no]?.skus?.length || 0) > 0 ? null
+                      : it.needs_sku ? <p className="text-[11px] text-faint">ยังไม่ได้สแกน — สแกน SKU ในช่องด้านบน</p>
+                      : it.tracked ? <p className="text-[11px] text-faint">ตัดตามจำนวน {it.qty} · ไม่ต้องมี SKU{it.is_bag ? " (ถุงกระดาษ)" : ` (ตัวอย่าง ${it.size})`}</p>
+                      : <p className="text-[11px] text-faint">ไม่ตัดสต๊อก (ไม่ต้องมี SKU)</p>}
                   </div>
                   {(() => {
                     const cur = form[it.line_no]?.spec || "";

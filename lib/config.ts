@@ -88,18 +88,28 @@ export function isStockTracked(size?: string | null): boolean {
   return /\d\s*ml/i.test((size || "").trim());
 }
 
-/** ขนาดตัวอย่าง/แถม — ตัดสต๊อกตามจำนวน แต่ไม่ได้ทำ SKU รายชิ้น (มาเป็นแพ็ค) → ไม่ต้องสแกน SKU */
+/** ขนาดที่ไม่ได้รับเข้าเป็น serial ก่อน (มาเป็นแพ็ค) — 1.2/4 ml */
 export const NON_SERIAL_SIZES = ["1.2 ml", "4 ml"];
+/** ขนาดที่ "assign SKU ตอนตัดสต๊อก" — บังคับใส่ SKU ตอนตัด (กรอกเอง) แต่ระบบไม่ได้รับ serial ไว้ก่อน */
+export const ASSIGN_SKU_SIZES = ["4 ml"];
 const mlToken = (s?: string | null) => (s || "").toLowerCase().match(/[0-9]+(\.[0-9]+)?/)?.[0] ?? "";
+const sizeIn = (list: string[], size?: string | null) => list.some((s) => mlToken(s) === mlToken(size));
 /** ตัดสต๊อกไหม — ขนาด ml ทุกอัน + ถุงกระดาษ (Size S/M มีสต๊อกของตัวเอง ต้องตัดด้วย) */
 export function cutsStock(product?: string | null, size?: string | null): boolean {
   return isStockTracked(size) || isBagProduct(product);
 }
-/** ต้องสแกน SKU รายชิ้น (serial) ไหม — เฉพาะขวดจริงที่ track สต๊อก และไม่ใช่ขนาดตัวอย่าง
- *  ถุงกระดาษ/ของแถมไม่มี ml = ไม่ต้องมี SKU · 1.2/4 ml = ตัดสต๊อกแต่ไม่ serial */
+/** ต้องสแกน SKU รายชิ้นจากคลัง (serial ที่รับเข้าแล้ว) — ขวดจริง 10/30/50/90/100 ml */
 export function needsSerialSku(size?: string | null): boolean {
   if (!isStockTracked(size)) return false;
-  return !NON_SERIAL_SIZES.some((s) => mlToken(s) === mlToken(size));
+  return !sizeIn(NON_SERIAL_SIZES, size);
+}
+/** assign SKU ตอนตัด (กรอกเอง ไม่ต้องมีในคลังก่อน) — 4 ml */
+export function assignsSku(size?: string | null): boolean {
+  return isStockTracked(size) && sizeIn(ASSIGN_SKU_SIZES, size);
+}
+/** ต้องมี SKU ไหม (บังคับ) — ขวดจริง (serial เดิม) หรือ 4 ml (กรอกเอง) · 1.2 ml = ตัดตามจำนวน ไม่ต้องมี */
+export function requiresSku(size?: string | null): boolean {
+  return needsSerialSku(size) || assignsSku(size);
 }
 
 /** ของแถม (Free) ให้ได้เฉพาะขนาดเล็กเท่านั้น — ไซต์ใหญ่ห้ามเป็นของแถม */
