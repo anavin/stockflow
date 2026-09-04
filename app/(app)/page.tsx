@@ -42,7 +42,8 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
   const base = pf ? platformBase(pf) : "/shopee";                    // ลิงก์ "ดูทั้งหมด"/สร้างใบเบิก
   const { s, lowStock, recent, top, trend, daily, fda, ship, overview, daily14 } = await getDashboardData(pf);
   const platforms = enabledPlatforms();
-  const fdaAlert = fda.expired + fda.d10 + fda.d15 + fda.d30;
+  // หน้าหลักโชว์เฉพาะที่ "ใกล้จะหมดอายุ/ต้องต่ออายุ" (≤10/≤30 วัน) — ไม่โชว์ที่หมดอายุแล้ว (ดูที่หน้า /fda)
+  const fdaAlert = fda.d10 + fda.d15 + fda.d30;
 
   const fulfill = s.ordersTotal > 0 ? s.issuedTotal / s.ordersTotal : 0;
   const normal = Math.max(0, s.skus - s.low - s.negative);
@@ -82,13 +83,13 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
       {/* ── alert: สต๊อกติดลบ / ใกล้หมด / อย.ใกล้หมดอายุ ── */}
       {(s.negative > 0 || s.low > 0 || fdaAlert > 0) && (
         <div className="mb-5 flex flex-wrap gap-3">
-          {(fda.expired > 0 || fda.d10 > 0) && (
+          {fda.d10 > 0 && (
             <Link href="/fda" className="flex flex-1 min-w-[240px] items-center gap-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3 hover:bg-red-100">
               <ShieldAlert size={20} className="shrink-0 text-red-600" />
-              <div className="text-sm"><b className="text-red-700">อย. {fda.expired > 0 ? `หมดอายุ ${fda.expired}` : `ใกล้หมด ${fda.d10}`} รายการ</b><div className="text-xs text-red-600/80">{fda.expired > 0 ? "เกินวันสิ้นสุด — ต่ออายุด่วน" : "เหลือ ≤ 10 วัน — เตรียมต่ออายุ"}</div></div>
+              <div className="text-sm"><b className="text-red-700">อย. ใกล้หมดอายุ {fda.d10} รายการ</b><div className="text-xs text-red-600/80">เหลือ ≤ 10 วัน — ต่ออายุด่วน</div></div>
             </Link>
           )}
-          {fda.expired === 0 && fda.d10 === 0 && (fda.d15 > 0 || fda.d30 > 0) && (
+          {fda.d10 === 0 && (fda.d15 > 0 || fda.d30 > 0) && (
             <Link href="/fda" className="flex flex-1 min-w-[240px] items-center gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 hover:bg-amber-100">
               <ShieldAlert size={20} className="shrink-0 text-amber-600" />
               <div className="text-sm"><b className="text-amber-700">อย. ใกล้หมดอายุ {fda.d15 + fda.d30} รายการ</b><div className="text-xs text-amber-600/80">เหลือ ≤ 30 วัน — เตรียมต่ออายุ</div></div>
