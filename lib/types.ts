@@ -44,6 +44,8 @@ export type Order = {
   tracking_no?: string | null;
   // CTW (โอนสาขา)
   branch?: string | null;
+  branch_code?: string | null;
+  po_version?: string | null;
   ctw_received_at?: string | null;
   ctw_received_by?: string | null;
   created_by?: number | null;

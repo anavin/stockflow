@@ -10,7 +10,7 @@ import type { PostcodeHit } from "@/lib/actions/orders";
 import ItemsEditor, { emptyItem, itemErrorOf, hasItemError, type ItemDraft, type ItemError } from "./ItemsEditor";
 import type { CustomerSuggestion, CustomerHistory, PastOrder } from "@/lib/actions/orders";
 import { saveOrder, orderExists, customerHistory, type OrderInput } from "@/lib/actions/orders";
-import { CUSTOMER_TYPES, platformColor } from "@/lib/config";
+import { CUSTOMER_TYPES, platformColor, isWholesalePlatform, platformName } from "@/lib/config";
 import type { OrderWithItems } from "@/lib/types";
 import type { PostcodeRow } from "@/lib/queries";
 import { Save, Printer, CheckCircle2, AlertTriangle, History, Check, Wallet, Truck } from "lucide-react";
@@ -20,7 +20,12 @@ const cleanPhone = (v: string) => v.replace(/[^0-9\-+ ]/g, "");
 // ตัวเลือกสำหรับใบเบิก Office (ร้านขาย/จัดส่งเอง)
 const PAYMENT_METHODS = ["Cash", "K Shop", "K Shop Credit Card", "Omise"];
 const CARRIERS = ["ไปรษณีย์ไทย", "Flash Express", "J&T Express", "Kerry", "Shopee Express", "Lalamove", "Grab", "รับเอง"];
-const CTW_BRANCHES = ["01_CTW - Central World"];   // สาขา CTW (พิมพ์เพิ่มเองได้)
+// สาขาปลายทางต่อช่องค้าส่ง (พิมพ์เพิ่มเองได้) — เพิ่มรายการจริงภายหลังได้
+const BRANCHES: Record<string, string[]> = {
+  CTW: ["01_CTW - Central World"],
+  Eveandboy: [],
+  KingPower: [],
+};
 const cleanMoney = (v: string) => v.replace(/[^0-9.]/g, "");
 const cleanOrderNo = (v: string) => v.replace(/\s+/g, "").toUpperCase();
 
@@ -45,8 +50,11 @@ export default function OrderForm({ platform = "Shopee", products, sizes, provin
   const router = useRouter();
   const base = `/${platform.toLowerCase()}`;   // path ฐานของแพลตฟอร์ม (กลับหน้ารายการ)
   const editing = !!initial;
-  const isOffice = (initial?.platform || platform) === "Office";   // Office = ร้านขาย/จัดส่งเอง → มีราคา/ชำระเงิน/ขนส่ง
-  const isCTW = (initial?.platform || platform) === "CTW";         // CTW = โอนสาขา → มีช่องสาขา ไม่ต้องมีลูกค้า/ที่อยู่
+  const pfCode = initial?.platform || platform;
+  const isOffice = pfCode === "Office";   // Office = ร้านขาย/จัดส่งเอง → มีราคา/ชำระเงิน/ขนส่ง
+  const isWholesale = isWholesalePlatform(pfCode);   // CTW/Eveandboy/King Power = ค้าส่ง → มีช่องสาขา ไม่ต้องมีลูกค้า/ที่อยู่
+  const isCTW = pfCode === "CTW";                     // CTW = โอนสาขา (มีปุ่มส่งไป CTW)
+  const isEveandboy = pfCode === "Eveandboy";         // Eveandboy = มี PO Order Version (กรอกเอง)
 
   const [f, setF] = useState({
     order_no: initial?.order_no ?? "",
@@ -69,6 +77,8 @@ export default function OrderForm({ platform = "Shopee", products, sizes, provin
     box_scent: initial?.box_scent ?? "",
     order_date: initial?.order_date ?? "",
     branch: initial?.branch ?? "",
+    branch_code: initial?.branch_code ?? "",
+    po_version: initial?.po_version ?? "",
     price: initial?.price?.toString() ?? "",
     discount: initial?.discount?.toString() ?? "",
     payment_method: initial?.payment_method ?? "",
@@ -243,8 +253,8 @@ export default function OrderForm({ platform = "Shopee", products, sizes, provin
 
     // บังคับช่องจำเป็นสำหรับจัดส่ง — ผู้รับ / จังหวัด (ที่อยู่ไม่บังคับ)
     // CTW = โอนสาขา ไม่ต้องมีผู้รับ/จังหวัด (ใช้ช่องสาขาแทน)
-    const fErr = isCTW ? { receiver: false, province: false } : { receiver: !f.receiver.trim(), province: !f.province.trim() };
-    if (isCTW && !f.branch.trim()) { setError("เลือกสาขาปลายทาง (CTW)"); return; }
+    const fErr = isWholesale ? { receiver: false, province: false } : { receiver: !f.receiver.trim(), province: !f.province.trim() };
+    if (isWholesale && !f.branch.trim()) { setError(`เลือกสาขาปลายทาง (${platformName(pfCode)})`); return; }
     if (fErr.receiver || fErr.province) {
       setFieldErrors(fErr);
       const miss = [fErr.receiver && "ผู้รับ", fErr.province && "จังหวัด"].filter(Boolean).join(" / ");
@@ -342,14 +352,26 @@ export default function OrderForm({ platform = "Shopee", products, sizes, provin
         )}
       </section>
 
-      {/* recipient (CTW = สาขา · อื่นๆ = ลูกค้า/ที่อยู่) */}
+      {/* recipient (ค้าส่ง = สาขา · อื่นๆ = ลูกค้า/ที่อยู่) */}
       <section className="card p-5">
-        <h2 className="mb-4 text-sm font-semibold text-ink">{isCTW ? "สาขาปลายทาง (CTW)" : "ผู้รับ & ที่อยู่จัดส่ง"}</h2>
-        {isCTW ? (
-          <div className="max-w-md">
-            <label className="label">สาขา CTW <span className="text-brand">*</span></label>
-            <Combobox value={f.branch} onChange={(v) => set({ branch: v })} options={CTW_BRANCHES} placeholder="เลือก / พิมพ์สาขา" />
-            <p className="mt-1.5 text-xs text-faint">โอนสาขา — ไม่ต้องกรอกลูกค้า/ที่อยู่ · ตัดสต๊อกเสร็จแล้วกด “ส่งไป CTW”</p>
+        <h2 className="mb-4 text-sm font-semibold text-ink">{isWholesale ? `สาขาปลายทาง (${platformName(pfCode)})` : "ผู้รับ & ที่อยู่จัดส่ง"}</h2>
+        {isWholesale ? (
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="sm:col-span-2">
+              <label className="label">สาขา <span className="text-brand">*</span></label>
+              <Combobox value={f.branch} onChange={(v) => set({ branch: v })} options={BRANCHES[pfCode] || []} placeholder="เลือก / พิมพ์สาขา" />
+            </div>
+            <div>
+              <label className="label">รหัสสาขา</label>
+              <input className="input" value={f.branch_code} onChange={(e) => set({ branch_code: e.target.value })} placeholder="เช่น 01" />
+            </div>
+            {isEveandboy && (
+              <div>
+                <label className="label">PO Order Version</label>
+                <input className="input" value={f.po_version} onChange={(e) => set({ po_version: e.target.value })} placeholder="กรอกเอง (ถ้ามี)" />
+              </div>
+            )}
+            <p className="mt-0.5 text-xs text-faint sm:col-span-2">ค้าส่ง — ไม่ต้องกรอกลูกค้า/ที่อยู่ · ตัดสต๊อกด้วยการสแกน SKU เหมือนเดิม{isCTW ? " · เสร็จแล้วกด “ส่งไป CTW”" : ""}</p>
           </div>
         ) : (
         <>

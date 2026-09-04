@@ -6,8 +6,9 @@ export const APP_KEY = "platform_withdrawals";
 export const APP_TITLE = "ระบบเบิกสินค้า — Lab Parfumo";
 export const COMPANY_NAME = "บริษัท ทัช ไดเวอร์เจนซ์ จำกัด";
 export const COMPANY_NAME_EN = "Touch Divergence Co., Ltd.";
+export const COMPANY_ADDRESS = "288/31 หมู่ที่ 12 ต.ราชาเทวะ อ.บางพลี จ.สมุทรปราการ 10540 · 081-234-1438";
 
-export type PlatformCode = "Shopee" | "Lazada" | "Tiktok" | "Line" | "Website" | "Office" | "CTW";
+export type PlatformCode = "Shopee" | "Lazada" | "Tiktok" | "Line" | "Website" | "Office" | "CTW" | "Eveandboy" | "KingPower";
 
 /**
  * Platforms — `enabled` = โผล่ในเมนู/สร้างใบเบิกได้; `canImport` = มี parser ไฟล์ export เฉพาะ
@@ -23,10 +24,16 @@ export const PLATFORMS: { code: PlatformCode; name: string; prefix: string; enab
   { code: "Website", name: "Website", prefix: "WEB", enabled: true, canImport: false, canCreate: true },
   { code: "Office", name: "Office", prefix: "OFF", enabled: true, canImport: false, canCreate: true },
   { code: "CTW", name: "CTW (Central World)", prefix: "WPO", enabled: true, canImport: false, canCreate: true },   // ใบเบิกโอนสาขา — คลังกลางสร้างเอง → ตัดสต๊อก → ส่งไป CTW
+  { code: "Eveandboy", name: "Eveandboy", prefix: "EVB", enabled: true, canImport: false, canCreate: true },      // ค้าส่งหน้าร้าน — ใบเบิกแบบ PO (มี PO Order Version)
+  { code: "KingPower", name: "King Power", prefix: "KP", enabled: true, canImport: false, canCreate: true },       // ค้าส่งหน้าร้าน — ใบเบิกแบบ PO
 ];
 
 export type Platform = (typeof PLATFORMS)[number];
 export const enabledPlatforms = () => PLATFORMS.filter((p) => p.enabled);
+
+/** ช่องค้าส่ง/โอนสาขา — ใช้ฟอร์มแบบ "สาขา (Branch)" + ใบเบิกแบบ PO เต็มแผ่น (ไม่ใช่ลูกค้า/ที่อยู่) */
+export const WHOLESALE_PLATFORMS: PlatformCode[] = ["CTW", "Eveandboy", "KingPower"];
+export const isWholesalePlatform = (code?: string | null) => WHOLESALE_PLATFORMS.includes(code as PlatformCode);
 
 /** สีประจำแพลตฟอร์ม (สีแบรนด์จริง) — ใช้เป็นจุดเน้นนำทาง (แถบหัว/เมนู/ป้าย/แท็บ) ไม่ใช่ธีมทั้งหน้า.
  *  โทนหลักของแอปยังเป็น teal (--brand). สีคงที่ทั้ง light/dark. */
@@ -38,6 +45,8 @@ export const PLATFORM_COLORS: Record<string, string> = {
   Website: "#2563eb",  // ฟ้า
   Office: "#475569",   // เทา
   CTW: "#9333ea",      // ม่วง (สาขา Central World)
+  Eveandboy: "#ec4899", // ชมพู (Eveandboy)
+  KingPower: "#b8860b", // ทอง (King Power)
 };
 /** สีเดี่ยวของแพลตฟอร์ม (fallback เทากลางถ้าไม่รู้จัก) — ใช้กับแถบ/จุด/พื้นแท็บ */
 export const platformColor = (code?: string) => PLATFORM_COLORS[code || ""] || "#94a0b1";
