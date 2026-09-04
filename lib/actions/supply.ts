@@ -91,12 +91,6 @@ export async function batchMaterial(mode: "receive" | "issue", lines: { desc: It
   revalidatePath("/stock/bulk"); revalidatePath("/stock/labels"); revalidatePath("/stock/packaging"); revalidatePath("/stock/materials/moves");
   return { ok: true, done: valid.length };
 }
-export async function adjustMaterial(desc: ItemDesc, target: number): Promise<{ ok: boolean; error?: string; balance?: number }> {
-  const g = await gate(); if ("error" in g) return { ok: false, error: g.error };
-  try { const bal = await apply(desc, Number(target) || 0, "adjust", "ปรับยอด (นับได้จริง)", g.user.id); await logActivity("material.adjust", `${desc.label} → ${Number(target) || 0} ${desc.unit || "ชิ้น"}`); revalidate(desc.category); return { ok: true, balance: bal }; }
-  catch (e: any) { return { ok: false, error: e?.message || "ปรับยอดไม่สำเร็จ" }; }
-}
-
 /** ตั้งจุดสั่งซื้อ (แจ้งเตือน "ใกล้หมด" เมื่อคงเหลือ ≤ จุดนี้) — ต้องมี material_item ก่อน (สร้าง lazy) */
 export async function setReorderPoint(desc: ItemDesc, point: number | null): Promise<{ ok: boolean; error?: string }> {
   const g = await gate(); if ("error" in g) return { ok: false, error: g.error };

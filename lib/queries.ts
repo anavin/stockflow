@@ -433,20 +433,6 @@ export async function listShippedByDay(dateStr?: string, platform?: string): Pro
   } catch { return []; }
 }
 
-export type PlatformCount = { platform: string; count: number };
-/** จำนวนที่ส่งในวันหนึ่ง แยกตามแพลตฟอร์ม (สำหรับแถบสรุป) */
-export async function shippedCountsByPlatform(dateStr?: string): Promise<PlatformCount[]> {
-  try {
-    const params: any[] = [];
-    let cond = bkkTodayRange("shipped_at");
-    if (dateStr) { params.push(dateStr); cond = bkkDayRange("shipped_at", "$1"); }
-    return await q<PlatformCount>(
-      `select coalesce(platform,'Shopee') as platform, count(*)::int as count
-       from orders where deleted_at is null and shipped_at is not null and ${cond}
-       group by 1 order by count desc`, params);
-  } catch { return []; }
-}
-
 export type DailyIssue = { day: string; orders: number; issued: number; pending: number };
 /** รายวัน: ออร์เดอร์ที่เข้ามา (ตามวันที่ใบเบิก) เทียบกับที่ตัดสต๊อกแล้ว */
 export async function dailyIssueStatus(platform?: string, days = 14): Promise<DailyIssue[]> {
@@ -687,29 +673,6 @@ export async function getStockMoves(opts: { orderNo?: string; product?: string; 
 }
 
 /** Order + items with current stock level per item (สำหรับหน้า preview ก่อนตัดสต๊อก). */
-export async function getOrderWithStock(orderNo: string): Promise<(OrderWithItems & { stock_issued_at: string | null; itemsStock: (OrderItem & { stock: number })[] }) | null> {
-  const order = await getOrder(orderNo);
-  if (!order) return null;
-  const [meta] = await q<{ stock_issued_at: string | null }>(`select stock_issued_at from orders where order_no = $1`, [orderNo]);
-  // ยอดคงเหลือทุกบรรทัดในครั้งเดียว (เดิม N+1 = 1 query/บรรทัด) — unnest + lateral join stock
-  // จับคู่แบบ normalize (keep อักษรไทย) ให้ตรงกับตอนตัดสต๊อกจริง — ไม่งั้น preview โชว์ 0 ทั้งที่ตัดจริงเจอ
-  const prods = order.items.map((it) => it.product);
-  const sizes = order.items.map((it) => it.size);
-  const sr = await q<{ idx: number; qty: number }>(
-    `select t.idx::int as idx, coalesce(s.qty,0)::float8 as qty
-     from unnest($1::text[], $2::text[]) with ordinality as t(product, size, idx)
-     left join lateral (
-       select qty from stock
-       where size = t.size and regexp_replace(lower(product),'[^a-z0-9ก-๙]','','g') = regexp_replace(lower(t.product),'[^a-z0-9ก-๙]','','g')
-       order by (product = t.product) desc limit 1
-     ) s on true`,
-    [prods, sizes],
-  );
-  const stockByIdx = new Map(sr.map((r) => [Number(r.idx), Number(r.qty)]));
-  const itemsStock = order.items.map((it, i) => ({ ...it, stock: stockByIdx.get(i + 1) ?? 0 }));
-  return { ...order, stock_issued_at: meta?.stock_issued_at ?? null, itemsStock };
-}
-
 export type IssuedOrderRow = { order_no: string; doc_no: string | null; platform: string | null; receiver: string | null; province: string | null; item_count: number; total_qty: number; stock_issued_at: string; issued_by: string | null };
 export async function listIssuedOrders(opts: { search?: string; platform?: string; limit?: number } = {}): Promise<IssuedOrderRow[]> {
   const params: any[] = [];

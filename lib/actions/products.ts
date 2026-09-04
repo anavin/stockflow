@@ -101,78 +101,11 @@ export async function deleteScentBarcode(id: number): Promise<{ ok: boolean; err
   return { ok: true };
 }
 
-export async function setProductBarcode(id: number, barcode: string): Promise<{ ok: boolean; error?: string }> {
-  const g = await gate(); if ("error" in g) return { ok: false, error: g.error };
-  await q(`update products set barcode = $2 where id = $1`, [id, (barcode || "").trim() || null]);
-  await logActivity("scent.manage", `ตั้งบาร์โค้ดกลิ่น (id ${id})`);
-  revalidatePath("/products"); revalidateTag("reference");
-  return { ok: true };
-}
-
 export async function setProductType(id: number, ptype: string): Promise<{ ok: boolean; error?: string }> {
   const g = await gate(); if ("error" in g) return { ok: false, error: g.error };
   await q(`update products set ptype = $2 where id = $1`, [id, (ptype || "").trim() || null]);
   await logActivity("scent.manage", `ตั้งเกรดกลิ่น (id ${id}) → ${(ptype || "").trim() || "—"}`);
   revalidatePath("/products"); revalidateTag("reference");
-  return { ok: true };
-}
-
-export async function setProductCode(id: number, code: string): Promise<{ ok: boolean; error?: string }> {
-  const g = await gate(); if ("error" in g) return { ok: false, error: g.error };
-  await q(`update products set code = $2 where id = $1`, [id, (code || "").trim() || null]);
-  await logActivity("scent.manage", `ตั้งรหัสกลิ่น (id ${id})`);
-  revalidatePath("/products"); revalidateTag("reference");
-  return { ok: true };
-}
-
-export async function renameProduct(id: number, name: string): Promise<{ ok: boolean; error?: string }> {
-  const g = await gate(); if ("error" in g) return { ok: false, error: g.error };
-  const n = (name || "").trim();
-  if (!n) return { ok: false, error: "กรอกชื่อกลิ่น" };
-  const [dup] = await q(`select 1 from products where lower(btrim(name)) = lower(btrim($1)) and id <> $2`, [n, id]);
-  if (dup) return { ok: false, error: "มีกลิ่นนี้อยู่แล้ว" };
-  const [cur] = await q<{ name: string }>(`select name from products where id = $1`, [id]);
-  if (!cur) return { ok: false, error: "ไม่พบกลิ่น" };
-  const oldName = cur.name;
-  // เปลี่ยนชื่อ + sync ทุกตารางที่อ้างชื่อกลิ่น (จับด้วยชื่อเก่าแบบ normalize → กวาดสะกดผิดเก่าไปด้วย)
-  // $1 = ชื่อเก่า (ใช้หา), $2 = ชื่อใหม่
-  const NK = `regexp_replace(lower(btrim($1)),'[^a-z0-9ก-๙]','','g')`;
-  const COL = (c: string) => `regexp_replace(lower(btrim(${c})),'[^a-z0-9ก-๙]','','g')`;
-  try {
-    await tx(async (run) => {
-      await run(`update products set name = $2 where id = $1`, [id, n]);
-      await run(`update order_items set product = $2 where ${COL("product")} = ${NK}`, [oldName, n]);
-      await run(`update stock_moves  set product = $2 where ${COL("product")} = ${NK}`, [oldName, n]);
-      await run(`update stock_unit   set product = $2 where ${COL("product")} = ${NK}`, [oldName, n]);
-      // stock: PK (product,size) → รวม qty เข้าชื่อใหม่ แล้วลบชื่อเก่าทิ้ง (กันชนคีย์ซ้ำ)
-      await run(`insert into stock (product, size, qty)
-                 select $2, size, sum(qty) from stock where ${COL("product")} = ${NK} and product <> $2
-                 group by size
-                 on conflict (product, size) do update set qty = stock.qty + excluded.qty, updated_at = now()`, [oldName, n]);
-      await run(`delete from stock where ${COL("product")} = ${NK} and product <> $2`, [oldName, n]);
-    });
-  } catch (e: any) {
-    return { ok: false, error: e?.message || "เปลี่ยนชื่อไม่สำเร็จ" };
-  }
-  // ตารางเสริม (อาจยังไม่มีบน prod) — best effort แยกจาก transaction หลัก
-  for (const [tbl, col] of [["product_barcodes", "scent"], ["discontinued_sku", "scent"], ["closed_sku", "scent"]] as const) {
-    try { await q(`update ${tbl} set ${col} = $2 where ${COL(col)} = ${NK}`, [oldName, n]); } catch { /* ไม่มีตาราง = ข้าม */ }
-  }
-  // material_item (คลังวัตถุดิบ bulk+label) — เปลี่ยน scent + ref_key ให้ตรง (กันสต๊อกกลายเป็นการ์ดซ้ำหลัง rename)
-  try {
-    await q(
-      `update material_item mi set scent = $2,
-              ref_key = regexp_replace(lower(btrim($2)),'[^a-z0-9ก-๙]','','g') || '|' || split_part(mi.ref_key,'|',2),
-              updated_at = now()
-       where mi.category in ('bulk','label') and ${COL("mi.scent")} = ${NK}
-         and not exists (select 1 from material_item x where x.category = mi.category
-           and x.ref_key = regexp_replace(lower(btrim($2)),'[^a-z0-9ก-๙]','','g') || '|' || split_part(mi.ref_key,'|',2))`,
-      [oldName, n]);
-  } catch { /* ไม่มีตาราง = ข้าม */ }
-  await logActivity("scent.manage", `เปลี่ยนชื่อกลิ่น "${oldName}" → "${n}"`);
-  revalidatePath("/products"); revalidateTag("reference");
-  revalidatePath("/stock");
-  revalidateNewForms();
   return { ok: true };
 }
 
