@@ -10,6 +10,7 @@
 import { Document, Page, Text, View, StyleSheet, Font, Svg, Rect } from "@react-pdf/renderer";
 import { code128 } from "./code128";
 import { COMPANY_NAME, COMPANY_NAME_EN, COMPANY_ADDRESS, isWholesalePlatform, platformName } from "@/lib/config";
+import { EVEANDBOY_NAMES, EVEANDBOY_BRANCHES } from "@/lib/eveandboy-data";
 import { NOTO_SANS_THAI_REGULAR, NOTO_SANS_THAI_BOLD } from "./fonts";
 import type { OrderWithItems } from "@/lib/types";
 
@@ -352,6 +353,9 @@ function WholesalePage({ order }: { order: OrderWithItems }) {
   const bcH = n > 38 ? 26 : 34;
   const cell = { fontSize: fs, paddingVertical: pv };
   const isEvb = String(order.platform) === "Eveandboy";
+  // Eveandboy: ชื่อสินค้าใช้ชื่อระบบ Eveandboy (map จาก barcode/ITEMID) · ที่อยู่สาขาจากไฟล์
+  const nameOf = (it: OrderWithItems["items"][number]) => (isEvb && it.barcode && EVEANDBOY_NAMES[String(it.barcode)]) || it.product;
+  const branchAddr = isEvb ? (EVEANDBOY_BRANCHES.find((b) => b.branch === order.branch)?.address || "") : "";
 
   // แถวตาราง: แทรกหัวเกรดเมื่อเกรดเปลี่ยน
   const rows: any[] = [];
@@ -367,7 +371,7 @@ function WholesalePage({ order }: { order: OrderWithItems }) {
       <View key={`i${it.id ?? idx}`} style={po.tr} wrap={false}>
         <Text style={[po.cell, cell, { width: POC[0], color: C.faint }]}>{idx}</Text>
         <Text style={[po.cell, cell, { width: POC[1] }]}>{T(it.barcode)}</Text>
-        <Text style={[po.cell, cell, { width: POC[2], fontWeight: "bold" }]}>{T(it.product)}</Text>
+        <Text style={[po.cell, cell, { width: POC[2], fontWeight: "bold" }]}>{T(nameOf(it))}</Text>
         <Text style={[po.cell, cell, { width: POC[3], color: C.muted }]}>{T(it.ptype)}</Text>
         <Text style={[po.cell, cell, { width: POC[4] }]}>{T(it.size)}</Text>
         <Text style={[po.cell, cell, { width: POC[5], textAlign: "right", fontWeight: "bold" }]}>{Number(it.qty) || 0}</Text>
@@ -395,7 +399,7 @@ function WholesalePage({ order }: { order: OrderWithItems }) {
         <View>
           <View style={po.field}><Text style={po.fLabel}>PO Order No. :</Text><Text style={po.fVal}>{T(order.order_no)}</Text></View>
           <View style={po.field}><Text style={po.fLabel}>วันที่ :</Text><Text style={po.fVal}>{fmtDate(order.doc_date)}</Text></View>
-          <View style={po.field}><Text style={po.fLabel}>Branch :</Text><Text style={po.fVal}>{T(order.branch)}</Text></View>
+          <View style={po.field}><Text style={po.fLabel}>Branch :</Text><Text style={[po.fVal, { maxWidth: 260 }]}>{T(order.branch)}</Text></View>
           <View style={po.field}><Text style={po.fLabel}>รหัสสาขา :</Text><Text style={po.fVal}>{T(order.branch_code)}</Text></View>
           {isEvb && <View style={po.field}><Text style={po.fLabel}>PO Version :</Text><Text style={po.fVal}>{T(order.po_version)}</Text></View>}
         </View>
@@ -404,6 +408,13 @@ function WholesalePage({ order }: { order: OrderWithItems }) {
           <Text style={po.bcCap}>PO Order No. {T(order.order_no)}</Text>
         </View>
       </View>
+
+      {/* ที่อยู่สาขา (เต็มความกว้าง — Eveandboy) · เติม space ท้าย 2 ตัว กัน react-pdf drop glyph ท้าย run (เลขไปรษณีย์หาย) */}
+      {branchAddr ? (
+        <View style={{ width: "100%", marginBottom: 8 }}>
+          <Text style={{ fontSize: 7, color: C.muted }}>{`ที่อยู่สาขา : ${branchAddr}  `}</Text>
+        </View>
+      ) : null}
 
       {/* table */}
       <View>

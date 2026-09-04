@@ -12,7 +12,8 @@
     "gen:staging": "node scripts/gen-staging-sql.mjs",
     "cf:build": "opennextjs-cloudflare build",
     "cf:preview": "opennextjs-cloudflare build && opennextjs-cloudflare preview",
-    "cf:deploy": "opennextjs-cloudflare build && opennextjs-cloudflare deploy"
+    "cf:deploy": "opennextjs-cloudflare build && opennextjs-cloudflare deploy",
+    "gen:eveandboy": "node scripts/gen-eveandboy.mjs"
   },
   "dependencies": {
     "@electric-sql/pglite": "^0.2.17",

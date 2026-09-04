@@ -11,6 +11,7 @@ import ItemsEditor, { emptyItem, itemErrorOf, hasItemError, type ItemDraft, type
 import type { CustomerSuggestion, CustomerHistory, PastOrder } from "@/lib/actions/orders";
 import { saveOrder, orderExists, customerHistory, type OrderInput } from "@/lib/actions/orders";
 import { CUSTOMER_TYPES, platformColor, isWholesalePlatform, platformName } from "@/lib/config";
+import { EVEANDBOY_BRANCHES } from "@/lib/eveandboy-data";
 import type { OrderWithItems } from "@/lib/types";
 import type { PostcodeRow } from "@/lib/queries";
 import { Save, Printer, CheckCircle2, AlertTriangle, History, Check, Wallet, Truck } from "lucide-react";
@@ -23,7 +24,7 @@ const CARRIERS = ["ไปรษณีย์ไทย", "Flash Express", "J&T Exp
 // สาขาปลายทางต่อช่องค้าส่ง (พิมพ์เพิ่มเองได้) — เพิ่มรายการจริงภายหลังได้
 const BRANCHES: Record<string, string[]> = {
   CTW: ["01_CTW - Central World"],
-  Eveandboy: [],
+  Eveandboy: EVEANDBOY_BRANCHES.map((b) => b.branch),
   KingPower: [],
 };
 const cleanMoney = (v: string) => v.replace(/[^0-9.]/g, "");
@@ -359,7 +360,8 @@ export default function OrderForm({ platform = "Shopee", products, sizes, provin
           <div className="grid gap-3 sm:grid-cols-2">
             <div className="sm:col-span-2">
               <label className="label">สาขา <span className="text-brand">*</span></label>
-              <Combobox value={f.branch} onChange={(v) => set({ branch: v })} options={BRANCHES[pfCode] || []} placeholder="เลือก / พิมพ์สาขา" />
+              <Combobox value={f.branch} options={BRANCHES[pfCode] || []} placeholder="เลือก / พิมพ์สาขา"
+                onChange={(v) => { const m = EVEANDBOY_BRANCHES.find((b) => b.branch === v); set({ branch: v, ...(m ? { branch_code: m.code } : {}) }); }} />
             </div>
             <div>
               <label className="label">รหัสสาขา</label>
