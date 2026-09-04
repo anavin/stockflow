@@ -352,9 +352,9 @@ const dn = StyleSheet.create({
   kv: { flexDirection: "row", marginTop: 2.5 },
   kvL: { fontSize: 7.8, color: C.muted, width: 46 },
   kvV: { fontSize: 8.2, fontWeight: "bold", flex: 1 },
-  tableWrap: { borderWidth: 0.7, borderColor: AC, borderRadius: 3, overflow: "hidden" },
-  th: { flexDirection: "row", backgroundColor: AC },
-  thCell: { paddingVertical: 5, paddingHorizontal: 8, fontSize: 8, fontWeight: "bold", color: "#ffffff", letterSpacing: 0.3 },
+  tableWrap: { borderWidth: 0.7, borderColor: C.border, borderRadius: 3, overflow: "hidden" },
+  th: { flexDirection: "row", backgroundColor: "#f1f4f7", borderBottomWidth: 1.2, borderBottomColor: AC },
+  thCell: { paddingVertical: 5, paddingHorizontal: 8, fontSize: 8, fontWeight: "bold", color: AC, letterSpacing: 0.3 },
   tr: { flexDirection: "row", borderTopWidth: 0.5, borderColor: C.line },
   cell: { paddingVertical: 4.5, paddingHorizontal: 8, fontSize: 8.5 },
   totalWrap: { flexDirection: "row", justifyContent: "flex-end", marginTop: 8 },
@@ -435,7 +435,7 @@ function WholesaleDocPage({ order, mode }: { order: OrderWithItems; mode: "issue
           ))}
         </View>
         {items.map((it, i) => (
-          <View key={it.id ?? i} style={[dn.tr, i % 2 === 1 ? { backgroundColor: "#faf9f7" } : {}]} wrap={false}>
+          <View key={it.id ?? i} style={dn.tr} wrap={false}>
             <Text style={[dn.cell, { width: DN_COL[0], letterSpacing: 0.3 }]}>{T(evbOf(it)?.barcode || it.barcode)}</Text>
             <Text style={[dn.cell, { width: DN_COL[1], fontWeight: "bold" }]}>{T(evbOf(it)?.item_name || it.product)}</Text>
             <Text style={[dn.cell, { width: DN_COL[2], color: C.muted }]}>{T(it.size)}</Text>
