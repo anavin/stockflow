@@ -368,6 +368,9 @@ const dn = StyleSheet.create({
   thCell: { paddingVertical: 5, paddingHorizontal: 8, fontSize: 8, fontWeight: "bold", color: AC, letterSpacing: 0.3 },
   tr: { flexDirection: "row", borderTopWidth: 0.5, borderColor: C.line },
   cell: { paddingVertical: 4.5, paddingHorizontal: 8, fontSize: 8.5 },
+  grpRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", backgroundColor: "#e9edf2", borderTopWidth: 0.5, borderColor: C.border, paddingVertical: 3, paddingHorizontal: 8 },
+  grpLabel: { fontSize: 7.5, fontWeight: "bold", color: AC, letterSpacing: 0.5 },
+  grpQty: { fontSize: 7, color: C.muted },
   totalWrap: { flexDirection: "row", justifyContent: "flex-end", marginTop: 8 },
   totalBox: { flexDirection: "row", alignItems: "center", backgroundColor: ACS, borderLeftWidth: 2.4, borderLeftColor: AC, paddingVertical: 5, paddingHorizontal: 12 },
   signRow: { flexDirection: "row", gap: 10, marginTop: 12 },
@@ -388,10 +391,22 @@ function WholesaleDocPage({ order, mode }: { order: OrderWithItems; mode: "issue
   const isCtw = String(order.platform) === "CTW";
   const nkey = (x?: string | null) => (x || "").toLowerCase().replace(/[^a-z0-9ก-๙]/g, "");
   const evbOf = (it: OrderWithItems["items"][number]) => (isEvb ? EVEANDBOY_BY_KEY[`${nkey(it.product)}|${mlOf(it.size)}`] : undefined);
-  // เรียงขนาดใหญ่ → เล็ก (50-30-10-4-1.2) · ขนาดเท่ากันเรียงตามชื่อ
+  // จัดกลุ่มตามเกรด (EDP → EDP+ → PARFUM → อื่นๆ) · ในกลุ่มเรียงขนาดใหญ่→เล็ก · ขนาดเท่ากันเรียงตามชื่อ
+  const GRADE_ORDER = ["EDP", "EDP+", "PARFUM", "EAU DE PARFUM"];
+  const gnorm = (g?: string | null) => (g || "").trim().toUpperCase();
+  const grank = (g?: string | null) => { const i = GRADE_ORDER.indexOf(gnorm(g)); return i < 0 ? 99 : i; };
   const items = [...(order.items ?? [])].filter((it) => (it.product || "").trim())
-    .sort((a, b) => (mlOf(b.size) - mlOf(a.size)) || String(a.product || "").localeCompare(String(b.product || "")));
+    .sort((a, b) => (grank(a.ptype) - grank(b.ptype)) || gnorm(a.ptype).localeCompare(gnorm(b.ptype))
+      || (mlOf(b.size) - mlOf(a.size)) || String(a.product || "").localeCompare(String(b.product || "")));
   const total = items.reduce((s, it) => s + (Number(it.qty) || 0), 0);
+  // แบ่งเป็นกลุ่มตามเกรด (แถวเรียงไว้แล้ว → กลุ่มต่อเนื่อง)
+  const groups: { grade: string; items: typeof items; qty: number }[] = [];
+  for (const it of items) {
+    const g = (it.ptype || "").trim() || "ไม่ระบุเกรด";
+    let grp = groups[groups.length - 1];
+    if (!grp || grp.grade !== g) { grp = { grade: g, items: [], qty: 0 }; groups.push(grp); }
+    grp.items.push(it); grp.qty += Number(it.qty) || 0;
+  }
   const addr = isEvb ? (EVEANDBOY_BRANCHES.find((b) => b.branch === order.branch)?.address || "") : "";
   const partner = platformName(order.platform).toUpperCase();
   const isDelivery = mode === "delivery";
@@ -454,13 +469,22 @@ function WholesaleDocPage({ order, mode }: { order: OrderWithItems; mode: "issue
             <Text key={i} style={[dn.thCell, { width: DN_COL[i], textAlign: i === 4 ? "right" : "left" }]}>{h}</Text>
           ))}
         </View>
-        {items.map((it, i) => (
-          <View key={it.id ?? i} style={dn.tr} wrap={false}>
-            <Text style={[dn.cell, { width: DN_COL[0], letterSpacing: 0.3 }]}>{T(evbOf(it)?.barcode || it.barcode)}</Text>
-            <Text style={[dn.cell, { width: DN_COL[1], fontWeight: "bold" }]}>{T(evbOf(it)?.item_name || it.product)}</Text>
-            <Text style={[dn.cell, { width: DN_COL[2], color: C.muted }]}>{T(it.ptype)}</Text>
-            <Text style={[dn.cell, { width: DN_COL[3], color: C.muted }]}>{T(it.size)}</Text>
-            <Text style={[dn.cell, { width: DN_COL[4], textAlign: "right", fontWeight: "bold" }]}>{Number(it.qty) || 0}</Text>
+        {groups.map((g) => (
+          <View key={g.grade}>
+            {/* แถบหัวกลุ่มเกรด + ยอดรวมของเกรด */}
+            <View style={dn.grpRow} wrap={false}>
+              <Text style={dn.grpLabel}>{`เกรด ${g.grade}`}</Text>
+              <Text style={dn.grpQty}>{`${g.qty} ชิ้น`}</Text>
+            </View>
+            {g.items.map((it, i) => (
+              <View key={it.id ?? i} style={dn.tr} wrap={false}>
+                <Text style={[dn.cell, { width: DN_COL[0], letterSpacing: 0.3 }]}>{T(evbOf(it)?.barcode || it.barcode)}</Text>
+                <Text style={[dn.cell, { width: DN_COL[1], fontWeight: "bold" }]}>{T(evbOf(it)?.item_name || it.product)}</Text>
+                <Text style={[dn.cell, { width: DN_COL[2], color: C.muted }]}>{T(it.ptype)}</Text>
+                <Text style={[dn.cell, { width: DN_COL[3], color: C.muted }]}>{T(it.size)}</Text>
+                <Text style={[dn.cell, { width: DN_COL[4], textAlign: "right", fontWeight: "bold" }]}>{Number(it.qty) || 0}</Text>
+              </View>
+            ))}
           </View>
         ))}
       </View>
