@@ -12,6 +12,7 @@ import type { CustomerSuggestion, CustomerHistory, PastOrder } from "@/lib/actio
 import { saveOrder, orderExists, customerHistory, type OrderInput } from "@/lib/actions/orders";
 import { CUSTOMER_TYPES, platformColor, isWholesalePlatform, platformName } from "@/lib/config";
 import { EVEANDBOY_BRANCHES, EVEANDBOY_SIZES_BY_SCENT } from "@/lib/eveandboy-data";
+import { KINGPOWER_SIZES_BY_SCENT } from "@/lib/kingpower-data";
 import type { OrderWithItems } from "@/lib/types";
 import type { PostcodeRow } from "@/lib/queries";
 import { Save, Printer, CheckCircle2, AlertTriangle, History, Check, Wallet, Truck, MapPin } from "lucide-react";
@@ -56,6 +57,7 @@ export default function OrderForm({ platform = "Shopee", products, sizes, provin
   const isWholesale = isWholesalePlatform(pfCode);   // CTW/Eveandboy/King Power = ค้าส่ง → มีช่องสาขา ไม่ต้องมีลูกค้า/ที่อยู่
   const isCTW = pfCode === "CTW";                     // CTW = โอนสาขา (มีปุ่มส่งไป CTW)
   const isEveandboy = pfCode === "Eveandboy";         // Eveandboy = มี PO Order Version (กรอกเอง)
+  const isKingPower = pfCode === "KingPower";         // King Power = จำกัดสินค้าตาม catalog (สาขา/รหัสพิมพ์เอง)
 
   const [f, setF] = useState({
     order_no: initial?.order_no ?? "",
@@ -476,13 +478,14 @@ export default function OrderForm({ platform = "Shopee", products, sizes, provin
       <section className="card p-5">
         <h2 className="mb-4 text-sm font-semibold text-ink">รายการสินค้า</h2>
         {(() => {
-          // Eveandboy: เลือกได้เฉพาะสินค้า/ขนาดในแคตตาล็อก (จากไฟล์) เท่านั้น
-          const evbNk = (s: string) => (s || "").toLowerCase().replace(/[^a-z0-9ก-๙]/g, "");
-          const evbProducts = isEveandboy ? products.filter((p) => EVEANDBOY_SIZES_BY_SCENT[evbNk(p)]) : products;
+          // Eveandboy / King Power: เลือกได้เฉพาะสินค้า/ขนาดในแคตตาล็อก (จากไฟล์) เท่านั้น
+          const catNk = (s: string) => (s || "").toLowerCase().replace(/[^a-z0-9ก-๙]/g, "");
+          const catalog = isEveandboy ? EVEANDBOY_SIZES_BY_SCENT : isKingPower ? KINGPOWER_SIZES_BY_SCENT : undefined;
+          const catProducts = catalog ? products.filter((p) => catalog[catNk(p)]) : products;
           return (
-            <ItemsEditor items={items} onChange={onItemsChange} products={evbProducts} sizes={sizes} errors={itemErrors}
+            <ItemsEditor items={items} onChange={onItemsChange} products={catProducts} sizes={sizes} errors={itemErrors}
               productCodes={productCodes} productTypes={productTypes} discontinued={discontinued} platform={pfCode}
-              sizeAllow={isEveandboy ? EVEANDBOY_SIZES_BY_SCENT : undefined} />
+              sizeAllow={catalog} />
           );
         })()}
       </section>

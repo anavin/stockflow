@@ -12,6 +12,7 @@ import { LAB_PARFUMO_LOGO, LAB_PARFUMO_AR, EVEANDBOY_LOGO, EVEANDBOY_AR, KING_PO
 import { code128 } from "./code128";
 import { COMPANY_NAME, COMPANY_NAME_EN, COMPANY_ADDRESS, isWholesalePlatform, platformName, isBagProduct } from "@/lib/config";
 import { EVEANDBOY_BY_KEY, EVEANDBOY_BRANCHES } from "@/lib/eveandboy-data";
+import { KINGPOWER_BY_KEY } from "@/lib/kingpower-data";
 import { NOTO_SANS_THAI_REGULAR, NOTO_SANS_THAI_BOLD } from "./fonts";
 import type { OrderWithItems } from "@/lib/types";
 
@@ -390,7 +391,13 @@ function WholesaleDocPage({ order, mode }: { order: OrderWithItems; mode: "issue
   const isKp = String(order.platform) === "KingPower";
   const isCtw = String(order.platform) === "CTW";
   const nkey = (x?: string | null) => (x || "").toLowerCase().replace(/[^a-z0-9ก-๙]/g, "");
-  const evbOf = (it: OrderWithItems["items"][number]) => (isEvb ? EVEANDBOY_BY_KEY[`${nkey(it.product)}|${mlOf(it.size)}`] : undefined);
+  // แคตตาล็อกค้าส่ง: Eveandboy → {code=barcode, name}, King Power → {code=ARTICLE, name} · ใช้แสดง Product Code/Name บนใบ
+  const catOf = (it: OrderWithItems["items"][number]): { code: string; name: string } | undefined => {
+    const key = `${nkey(it.product)}|${mlOf(it.size)}`;
+    if (isEvb) { const e = EVEANDBOY_BY_KEY[key]; return e ? { code: e.barcode, name: e.item_name } : undefined; }
+    if (isKp) { const k = KINGPOWER_BY_KEY[key]; return k ? { code: k.code, name: k.item_name } : undefined; }
+    return undefined;
+  };
   // จัดกลุ่มตามเกรด (EDP → EDP+ → PARFUM → อื่นๆ) · ในกลุ่มเรียงขนาดใหญ่→เล็ก · ขนาดเท่ากันเรียงตามชื่อ
   // ของที่ไม่ใช่น้ำหอม (ถุงกระดาษ ฯลฯ) หรือไม่มีเกรด → หมวด "อื่นๆ" (อยู่ท้ายสุด)
   const OTHER = "อื่นๆ";
@@ -481,8 +488,8 @@ function WholesaleDocPage({ order, mode }: { order: OrderWithItems; mode: "issue
             </View>
             {g.items.map((it, i) => (
               <View key={it.id ?? i} style={dn.tr} wrap={false}>
-                <Text style={[dn.cell, { width: DN_COL[0], letterSpacing: 0.3 }]}>{T(evbOf(it)?.barcode || it.barcode)}</Text>
-                <Text style={[dn.cell, { width: DN_COL[1], fontWeight: "bold" }]}>{T(evbOf(it)?.item_name || it.product)}</Text>
+                <Text style={[dn.cell, { width: DN_COL[0], letterSpacing: 0.3 }]}>{T(catOf(it)?.code || it.barcode)}</Text>
+                <Text style={[dn.cell, { width: DN_COL[1], fontWeight: "bold" }]}>{T(catOf(it)?.name || it.product)}</Text>
                 <Text style={[dn.cell, { width: DN_COL[2], color: C.muted }]}>{T(it.ptype)}</Text>
                 <Text style={[dn.cell, { width: DN_COL[3], color: C.muted }]}>{T(it.size)}</Text>
                 <Text style={[dn.cell, { width: DN_COL[4], textAlign: "right", fontWeight: "bold" }]}>{Number(it.qty) || 0}</Text>

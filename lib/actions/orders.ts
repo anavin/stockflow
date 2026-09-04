@@ -7,8 +7,9 @@ import { can } from "@/lib/auth/roles";
 import { logActivity } from "@/lib/activity";
 import { buildProductLabel, type OrderWithItems } from "@/lib/types";
 import { formatDocNo, monthLabel, ymdKey } from "@/lib/docno";
-import { isAllowedFreeSize, FREE_ALLOWED_SIZES, enabledPlatforms, platformBase, isBagProduct, PLATFORMS, canImportPlatform, isWholesalePlatform } from "@/lib/config";
+import { isAllowedFreeSize, FREE_ALLOWED_SIZES, enabledPlatforms, platformBase, isBagProduct, PLATFORMS, canImportPlatform, isWholesalePlatform, platformName } from "@/lib/config";
 import { EVEANDBOY_BY_KEY } from "@/lib/eveandboy-data";
+import { KINGPOWER_BY_KEY } from "@/lib/kingpower-data";
 
 /** revalidate หน้ารายการ+ถังขยะใบเบิกของทุกแพลตฟอร์ม (route เป็น /[platform] — hardcode /shopee ครอบไม่ครบ) */
 function revalidateOrderLists() {
@@ -139,13 +140,14 @@ export async function saveOrder(input: OrderInput, opts?: { silent?: boolean }):
       if (existing && (existing.stock_issued_at || existing.shipped_at) && itemsChanged) {
         throw new Error("ใบเบิกนี้ตัดสต๊อก/ส่งแล้ว — แก้รายการสินค้าไม่ได้ (ต้องยกเลิกการตัดสต๊อกก่อน)");
       }
-      // Eveandboy: สินค้า/ขนาดต้องอยู่ในแคตตาล็อก (จับด้วยกลิ่น+ml) — ตรวจเฉพาะออเดอร์ใหม่/รายการที่เปลี่ยน
+      // Eveandboy / King Power: สินค้า/ขนาดต้องอยู่ในแคตตาล็อก (จับด้วยกลิ่น+ml) — ตรวจเฉพาะออเดอร์ใหม่/รายการที่เปลี่ยน
       // (ออเดอร์เก่าที่มีสินค้าหลุดแคตตาล็อกภายหลัง ยังแก้ที่อยู่/โน้ตได้ ตราบใดไม่แตะรายการ)
-      if (o.platform === "Eveandboy" && itemsChanged) {
+      const catalog = o.platform === "Eveandboy" ? EVEANDBOY_BY_KEY : o.platform === "KingPower" ? KINGPOWER_BY_KEY : null;
+      if (catalog && itemsChanged) {
         const nkp = (s?: string | null) => (s || "").toLowerCase().replace(/[^a-z0-9ก-๙]/g, "");
         const mlp = (s?: string | null) => (s || "").match(/[0-9]+(\.[0-9]+)?/)?.[0] ?? "";
-        const bad = o.items.find((it) => !isBagProduct(it.product) && !EVEANDBOY_BY_KEY[`${nkp(it.product)}|${mlp(it.size)}`]);
-        if (bad) throw new Error(`"${bad.product} ${bad.size}" ไม่มีในแคตตาล็อก Eveandboy — เลือกจากรายการที่กำหนด`);
+        const bad = o.items.find((it) => !isBagProduct(it.product) && !catalog[`${nkp(it.product)}|${mlp(it.size)}`]);
+        if (bad) throw new Error(`"${bad.product} ${bad.size}" ไม่มีในแคตตาล็อก ${platformName(o.platform)} — เลือกจากรายการที่กำหนด`);
       }
       // ออเดอร์ใหม่ = วันนี้ (เวลาไทย) · ออเดอร์เดิม = คงวันที่ใบเบิกเดิม (แก้ไขไม่เปลี่ยนวัน)
       const storedDocDate = existing?.doc_date || bangkokToday();
