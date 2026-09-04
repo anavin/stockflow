@@ -1330,3 +1330,21 @@ export async function getWholesaleCatalog(platform: string): Promise<WholesaleCa
   for (const k in sizesByScent) sizesByScent[k].sort((a, b) => parseFloat(b) - parseFloat(a));
   return { byKey, sizesByScent };
 }
+
+// สร้าง WsData (catalog + ที่อยู่สาขา) สำหรับส่งเข้าเอกสาร PDF (ค้าส่ง)
+export async function getWsData(platform: string): Promise<{ catalog: Record<string, { code: string; barcode: string; item_name: string }>; branchAddr: Record<string, string> }> {
+  const [cat, branches] = await Promise.all([getWholesaleCatalog(platform), listWholesaleBranches(platform)]);
+  const branchAddr: Record<string, string> = {};
+  for (const b of branches) if (b.active && b.address) branchAddr[b.branch] = b.address;
+  return { catalog: cat.byKey, branchAddr };
+}
+
+// props ค้าส่งสำหรับ OrderForm — สาขา (Eveandboy) + ขนาดต่อกลิ่นในแคตตาล็อก (Eveandboy/King Power)
+export async function getOrderFormCatalog(platform: string): Promise<{ branches: WholesaleBranchRow[]; catalogSizes: Record<string, string[]> | null }> {
+  const isWs = platform === "Eveandboy" || platform === "KingPower";
+  const [branches, cat] = await Promise.all([
+    platform === "Eveandboy" ? listWholesaleBranches("Eveandboy") : Promise.resolve([] as WholesaleBranchRow[]),
+    isWs ? getWholesaleCatalog(platform) : Promise.resolve(null),
+  ]);
+  return { branches: branches.filter((b) => b.active), catalogSizes: cat ? cat.sizesByScent : null };
+}

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getProducts, getSizes, getProvinces, getPostcodes, getProductCodes, getProductTypes, getBlockedSizesForOrder } from "@/lib/queries";
+import { getProducts, getSizes, getProvinces, getPostcodes, getProductCodes, getProductTypes, getBlockedSizesForOrder, getOrderFormCatalog } from "@/lib/queries";
 import { resolvePlatform, platformBase, canCreatePlatform, platformColor, platformTint } from "@/lib/config";
 import OrderForm from "@/components/OrderForm";
 import { ChevronLeft } from "lucide-react";
@@ -14,8 +14,8 @@ export default async function NewOrderPage({ params }: { params: Promise<{ platf
   if (!pf) notFound();
   if (!canCreatePlatform(pf.code)) notFound();   // เฉพาะแพลตฟอร์มที่ canCreate:true (CTW = คลังกลางสร้างเอง)
   const base = platformBase(pf.code);
-  const [products, sizes, provinces, postcodes, productCodes, productTypes, discontinued] = await Promise.all([
-    getProducts(), getSizes(), getProvinces(), getPostcodes(), getProductCodes(), getProductTypes(), getBlockedSizesForOrder(),
+  const [products, sizes, provinces, postcodes, productCodes, productTypes, discontinued, wsCat] = await Promise.all([
+    getProducts(), getSizes(), getProvinces(), getPostcodes(), getProductCodes(), getProductTypes(), getBlockedSizesForOrder(), getOrderFormCatalog(pf.code),
   ]);
 
   const pfColor = platformColor(pf.code);
@@ -32,7 +32,7 @@ export default async function NewOrderPage({ params }: { params: Promise<{ platf
           <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: pfColor }} /> {pf.name}
         </span>
       </div>
-      <OrderForm platform={pf.code} products={products} sizes={sizes} provinces={provinces} postcodes={postcodes} productCodes={productCodes} productTypes={productTypes} discontinued={discontinued} />
+      <OrderForm platform={pf.code} products={products} sizes={sizes} provinces={provinces} postcodes={postcodes} productCodes={productCodes} productTypes={productTypes} discontinued={discontinued} branches={wsCat.branches} catalogSizes={wsCat.catalogSizes} />
     </div>
   );
 }

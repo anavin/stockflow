@@ -11,8 +11,7 @@ import ItemsEditor, { emptyItem, itemErrorOf, hasItemError, type ItemDraft, type
 import type { CustomerSuggestion, CustomerHistory, PastOrder } from "@/lib/actions/orders";
 import { saveOrder, orderExists, customerHistory, type OrderInput } from "@/lib/actions/orders";
 import { CUSTOMER_TYPES, platformColor, isWholesalePlatform, platformName } from "@/lib/config";
-import { EVEANDBOY_BRANCHES, EVEANDBOY_SIZES_BY_SCENT } from "@/lib/eveandboy-data";
-import { KINGPOWER_SIZES_BY_SCENT } from "@/lib/kingpower-data";
+type BranchOpt = { branch: string; code: string | null; address: string | null };
 import type { OrderWithItems } from "@/lib/types";
 import type { PostcodeRow } from "@/lib/queries";
 import { Save, Printer, CheckCircle2, AlertTriangle, History, Check, Wallet, Truck, MapPin } from "lucide-react";
@@ -22,12 +21,6 @@ const cleanPhone = (v: string) => v.replace(/[^0-9\-+ ]/g, "");
 // ตัวเลือกสำหรับใบเบิก Office (ร้านขาย/จัดส่งเอง)
 const PAYMENT_METHODS = ["Cash", "K Shop", "K Shop Credit Card", "Omise"];
 const CARRIERS = ["ไปรษณีย์ไทย", "Flash Express", "J&T Express", "Kerry", "Shopee Express", "Lalamove", "Grab", "รับเอง"];
-// สาขาปลายทางต่อช่องค้าส่ง (พิมพ์เพิ่มเองได้) — เพิ่มรายการจริงภายหลังได้
-const BRANCHES: Record<string, string[]> = {
-  CTW: ["01_CTW - Central World"],
-  Eveandboy: EVEANDBOY_BRANCHES.map((b) => b.branch),
-  KingPower: [],
-};
 const cleanMoney = (v: string) => v.replace(/[^0-9.]/g, "");
 const cleanOrderNo = (v: string) => v.replace(/\s+/g, "").toUpperCase();
 
@@ -41,6 +34,8 @@ type Props = {
   productCodes?: Record<string, string>;
   productTypes?: Record<string, string>;
   discontinued?: Record<string, string[]>;
+  branches?: BranchOpt[];                          // สาขาค้าส่ง (Eveandboy) จาก DB
+  catalogSizes?: Record<string, string[]> | null;  // ขนาดต่อกลิ่นในแคตตาล็อก (Eveandboy/King Power) จาก DB
 };
 
 function todayStr() {
@@ -48,11 +43,13 @@ function todayStr() {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
-export default function OrderForm({ platform = "Shopee", products, sizes, provinces, postcodes, initial, productCodes, productTypes, discontinued }: Props) {
+export default function OrderForm({ platform = "Shopee", products, sizes, provinces, postcodes, initial, productCodes, productTypes, discontinued, branches = [], catalogSizes = null }: Props) {
   const router = useRouter();
   const base = `/${platform.toLowerCase()}`;   // path ฐานของแพลตฟอร์ม (กลับหน้ารายการ)
   const editing = !!initial;
   const pfCode = initial?.platform || platform;
+  // สาขาปลายทางต่อช่องค้าส่ง — CTW คงที่, Eveandboy จาก DB, King Power พิมพ์เอง
+  const BRANCHES: Record<string, string[]> = { CTW: ["01_CTW - Central World"], Eveandboy: branches.map((b) => b.branch), KingPower: [] };
   const isOffice = pfCode === "Office";   // Office = ร้านขาย/จัดส่งเอง → มีราคา/ชำระเงิน/ขนส่ง
   const isWholesale = isWholesalePlatform(pfCode);   // CTW/Eveandboy/King Power = ค้าส่ง → มีช่องสาขา ไม่ต้องมีลูกค้า/ที่อยู่
   const isCTW = pfCode === "CTW";                     // CTW = โอนสาขา (มีปุ่มส่งไป CTW)
@@ -363,9 +360,9 @@ export default function OrderForm({ platform = "Shopee", products, sizes, provin
             <div className="sm:col-span-2">
               <label className="label">สาขา <span className="text-brand">*</span></label>
               <Combobox value={f.branch} options={BRANCHES[pfCode] || []} allowCustom={!isEveandboy} placeholder={isEveandboy ? "เลือกสาขา Eveandboy" : "เลือก / พิมพ์สาขา"}
-                onChange={(v) => { const m = EVEANDBOY_BRANCHES.find((b) => b.branch === v); set({ branch: v, ...(m ? { branch_code: m.code } : {}) }); }} />
+                onChange={(v) => { const m = branches.find((b) => b.branch === v); set({ branch: v, ...(m?.code ? { branch_code: m.code } : {}) }); }} />
               {(() => {
-                const addr = EVEANDBOY_BRANCHES.find((b) => b.branch === f.branch)?.address;
+                const addr = branches.find((b) => b.branch === f.branch)?.address;
                 return addr ? (
                   <div className="mt-1.5 flex items-start gap-1.5 rounded-lg border border-line bg-soft px-3 py-2 text-xs text-muted">
                     <MapPin size={13} className="mt-0.5 shrink-0 text-brand" /><span>{addr}</span>
@@ -480,7 +477,7 @@ export default function OrderForm({ platform = "Shopee", products, sizes, provin
         {(() => {
           // Eveandboy / King Power: เลือกได้เฉพาะสินค้า/ขนาดในแคตตาล็อก (จากไฟล์) เท่านั้น
           const catNk = (s: string) => (s || "").toLowerCase().replace(/[^a-z0-9ก-๙]/g, "");
-          const catalog = isEveandboy ? EVEANDBOY_SIZES_BY_SCENT : isKingPower ? KINGPOWER_SIZES_BY_SCENT : undefined;
+          const catalog = catalogSizes || undefined;
           const catProducts = catalog ? products.filter((p) => catalog[catNk(p)]) : products;
           return (
             <ItemsEditor items={items} onChange={onItemsChange} products={catProducts} sizes={sizes} errors={itemErrors}

@@ -11,8 +11,9 @@ import { Document, Page, Text, View, StyleSheet, Font, Svg, Rect, Image } from "
 import { LAB_PARFUMO_LOGO, LAB_PARFUMO_AR, EVEANDBOY_LOGO, EVEANDBOY_AR, KING_POWER_LOGO, KING_POWER_AR, CENTRAL_WORLD_LOGO, CENTRAL_WORLD_AR } from "./logos";
 import { code128 } from "./code128";
 import { COMPANY_NAME, COMPANY_NAME_EN, COMPANY_ADDRESS, isWholesalePlatform, platformName, isBagProduct } from "@/lib/config";
-import { EVEANDBOY_BY_KEY, EVEANDBOY_BRANCHES } from "@/lib/eveandboy-data";
-import { KINGPOWER_BY_KEY } from "@/lib/kingpower-data";
+// ข้อมูลค้าส่ง (catalog byKey + ที่อยู่สาขา) — ส่งจาก server ที่ดึงจาก DB (wholesale_catalog/branch)
+export type WsData = { catalog: Record<string, { code: string; barcode: string; item_name: string }>; branchAddr: Record<string, string> };
+const EMPTY_WS: WsData = { catalog: {}, branchAddr: {} };
 import { NOTO_SANS_THAI_REGULAR, NOTO_SANS_THAI_BOLD } from "./fonts";
 import type { OrderWithItems } from "@/lib/types";
 
@@ -310,25 +311,25 @@ function OrderPageHalf({ order }: { order: OrderWithItems }) {
 
 // ════════════ ใบเบิกแบบ PO (ค้าส่ง: CTW / Eveandboy / King Power) — A4 เต็มแผ่น ════════════
 // ค้าส่ง (CTW/Eveandboy/King Power) = ใบเบิกรูปแบบเดียวกับใบส่งของ · อื่นๆ = 2 ชุดต่อหน้า
-function OrderPage({ order }: { order: OrderWithItems }) {
-  return isWholesalePlatform(order.platform) ? <WholesaleDocPage order={order} mode="issue" /> : <OrderPageHalf order={order} />;
+function OrderPage({ order, ws }: { order: OrderWithItems; ws: WsData }) {
+  return isWholesalePlatform(order.platform) ? <WholesaleDocPage order={order} mode="issue" ws={ws} /> : <OrderPageHalf order={order} />;
 }
 
-export function WithdrawalDocument({ order }: { order: OrderWithItems }) {
+export function WithdrawalDocument({ order, ws = EMPTY_WS }: { order: OrderWithItems; ws?: WsData }) {
   registerFontOnce();
   return (
     <Document title={`ใบเบิก ${order.doc_no || order.order_no}`} author="Lab Parfumo">
-      <OrderPage order={order} />
+      <OrderPage order={order} ws={ws} />
     </Document>
   );
 }
 
 /** ใบเบิกหลายใบในไฟล์เดียว (1 ออร์เดอร์ = 1 หน้า) — สำหรับพิมพ์ที่เลือกทีเดียว */
-export function WithdrawalDocumentMulti({ orders }: { orders: OrderWithItems[] }) {
+export function WithdrawalDocumentMulti({ orders, wsByPlatform = {} }: { orders: OrderWithItems[]; wsByPlatform?: Record<string, WsData> }) {
   registerFontOnce();
   return (
     <Document title={`ใบเบิก ${orders.length} ใบ`} author="Lab Parfumo">
-      {orders.map((o) => <OrderPage key={o.order_no} order={o} />)}
+      {orders.map((o) => <OrderPage key={o.order_no} order={o} ws={wsByPlatform[o.platform || ""] ?? EMPTY_WS} />)}
     </Document>
   );
 }
@@ -386,17 +387,15 @@ const dn = StyleSheet.create({
 const DN_COL = [106, 244, 48, 58, 46];   // Product Code / Name / Grade / Size / Qty (~502)
 
 // layout เดียวใช้ทั้งใบเบิก (mode 'issue') และใบส่งของ (mode 'delivery') — ต่างแค่หัวเรื่อง/meta/ช่องเซ็น
-function WholesaleDocPage({ order, mode }: { order: OrderWithItems; mode: "issue" | "delivery" }) {
+function WholesaleDocPage({ order, mode, ws = EMPTY_WS }: { order: OrderWithItems; mode: "issue" | "delivery"; ws?: WsData }) {
   const isEvb = String(order.platform) === "Eveandboy";
   const isKp = String(order.platform) === "KingPower";
   const isCtw = String(order.platform) === "CTW";
   const nkey = (x?: string | null) => (x || "").toLowerCase().replace(/[^a-z0-9ก-๙]/g, "");
   // แคตตาล็อกค้าส่ง: Eveandboy → {code=barcode, name}, King Power → {code=ARTICLE, name} · ใช้แสดง Product Code/Name บนใบ
   const catOf = (it: OrderWithItems["items"][number]): { code: string; name: string } | undefined => {
-    const key = `${nkey(it.product)}|${mlOf(it.size)}`;
-    if (isEvb) { const e = EVEANDBOY_BY_KEY[key]; return e ? { code: e.barcode, name: e.item_name } : undefined; }
-    if (isKp) { const k = KINGPOWER_BY_KEY[key]; return k ? { code: k.code, name: k.item_name } : undefined; }
-    return undefined;
+    const e = ws.catalog[`${nkey(it.product)}|${mlOf(it.size)}`];
+    return e ? { code: e.code, name: e.item_name } : undefined;
   };
   // จัดกลุ่มตามเกรด (EDP → EDP+ → PARFUM → อื่นๆ) · ในกลุ่มเรียงขนาดใหญ่→เล็ก · ขนาดเท่ากันเรียงตามชื่อ
   // ของที่ไม่ใช่น้ำหอม (ถุงกระดาษ ฯลฯ) หรือไม่มีเกรด → หมวด "อื่นๆ" (อยู่ท้ายสุด)
@@ -417,7 +416,7 @@ function WholesaleDocPage({ order, mode }: { order: OrderWithItems; mode: "issue
     if (!grp || grp.grade !== g) { grp = { grade: g, items: [], qty: 0 }; groups.push(grp); }
     grp.items.push(it); grp.qty += Number(it.qty) || 0;
   }
-  const addr = isEvb ? (EVEANDBOY_BRANCHES.find((b) => b.branch === order.branch)?.address || "") : "";
+  const addr = ws.branchAddr[order.branch || ""] || "";
   const partner = platformName(order.platform).toUpperCase();
   const isDelivery = mode === "delivery";
   const title = isDelivery ? "ใบส่งของ" : "ใบเบิกสินค้า";
@@ -534,11 +533,11 @@ function WholesaleDocPage({ order, mode }: { order: OrderWithItems; mode: "issue
 }
 
 /** ใบส่งของ (Delivery Note) — ค้าส่ง */
-export function DeliveryNoteDocument({ order }: { order: OrderWithItems }) {
+export function DeliveryNoteDocument({ order, ws = EMPTY_WS }: { order: OrderWithItems; ws?: WsData }) {
   registerFontOnce();
   return (
     <Document title={`ใบส่งของ ${order.order_no}`} author="Lab Parfumo">
-      <WholesaleDocPage order={order} mode="delivery" />
+      <WholesaleDocPage order={order} mode="delivery" ws={ws} />
     </Document>
   );
 }

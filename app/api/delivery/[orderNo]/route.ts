@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { renderToBuffer } from "@react-pdf/renderer";
-import { getOrder } from "@/lib/queries";
+import { getOrder, getWsData } from "@/lib/queries";
 import { getCurrentUser } from "@/lib/auth/session";
 import { can } from "@/lib/auth/roles";
 import { isWholesalePlatform } from "@/lib/config";
@@ -25,7 +25,8 @@ export async function GET(_req: Request, ctx: { params: Promise<{ orderNo: strin
     return NextResponse.json({ error: "ออกใบส่งของได้หลังตัดสต๊อกหรือส่งแล้วเท่านั้น" }, { status: 409 });
 
   try {
-    const buffer = await renderToBuffer(DeliveryNoteDocument({ order }) as any);
+    const ws = await getWsData(order.platform!);
+    const buffer = await renderToBuffer(DeliveryNoteDocument({ order, ws }) as any);
     const filename = `ใบส่งของ-${order.order_no}.pdf`;
     return new NextResponse(buffer as any, {
       headers: {

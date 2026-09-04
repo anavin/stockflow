@@ -8,8 +8,7 @@ import { logActivity } from "@/lib/activity";
 import { buildProductLabel, type OrderWithItems } from "@/lib/types";
 import { formatDocNo, monthLabel, ymdKey } from "@/lib/docno";
 import { isAllowedFreeSize, FREE_ALLOWED_SIZES, enabledPlatforms, platformBase, isBagProduct, PLATFORMS, canImportPlatform, isWholesalePlatform, platformName } from "@/lib/config";
-import { EVEANDBOY_BY_KEY } from "@/lib/eveandboy-data";
-import { KINGPOWER_BY_KEY } from "@/lib/kingpower-data";
+import { getWholesaleCatalog } from "@/lib/queries";
 
 /** revalidate หน้ารายการ+ถังขยะใบเบิกของทุกแพลตฟอร์ม (route เป็น /[platform] — hardcode /shopee ครอบไม่ครบ) */
 function revalidateOrderLists() {
@@ -121,6 +120,9 @@ export async function saveOrder(input: OrderInput, opts?: { silent?: boolean }):
   // ล็อก "วันที่ใบเบิก" = วันที่สร้างจริงในระบบ (เวลาไทย) — ไม่ให้ backdate จากฟอร์ม (ค่าที่ฟอร์มส่งมาไม่ถูกใช้)
   const bangkokToday = () => new Date(Date.now() + 7 * 3600 * 1000).toISOString().slice(0, 10);
 
+  // แคตตาล็อกค้าส่ง (Eveandboy/King Power) จาก DB — ดึงก่อน tx (เป็น reference read) เพื่อตรวจสินค้า
+  const wsCatByKey = (o.platform === "Eveandboy" || o.platform === "KingPower") ? (await getWholesaleCatalog(o.platform)).byKey : null;
+
   try {
     const outDoc = await tx(async (run) => {
       // ใช้ PK เดิมถ้ามีใบเลขนี้อยู่แล้ว (ต่างแค่ตัวพิมพ์/ช่องว่าง) — กันสร้างซ้ำคนละ case (import เก็บพิมพ์เล็ก, สร้างเองพิมพ์ใหญ่)
@@ -142,11 +144,10 @@ export async function saveOrder(input: OrderInput, opts?: { silent?: boolean }):
       }
       // Eveandboy / King Power: สินค้า/ขนาดต้องอยู่ในแคตตาล็อก (จับด้วยกลิ่น+ml) — ตรวจเฉพาะออเดอร์ใหม่/รายการที่เปลี่ยน
       // (ออเดอร์เก่าที่มีสินค้าหลุดแคตตาล็อกภายหลัง ยังแก้ที่อยู่/โน้ตได้ ตราบใดไม่แตะรายการ)
-      const catalog = o.platform === "Eveandboy" ? EVEANDBOY_BY_KEY : o.platform === "KingPower" ? KINGPOWER_BY_KEY : null;
-      if (catalog && itemsChanged) {
+      if (wsCatByKey && itemsChanged) {
         const nkp = (s?: string | null) => (s || "").toLowerCase().replace(/[^a-z0-9ก-๙]/g, "");
         const mlp = (s?: string | null) => (s || "").match(/[0-9]+(\.[0-9]+)?/)?.[0] ?? "";
-        const bad = o.items.find((it) => !isBagProduct(it.product) && !catalog[`${nkp(it.product)}|${mlp(it.size)}`]);
+        const bad = o.items.find((it) => !isBagProduct(it.product) && !wsCatByKey[`${nkp(it.product)}|${mlp(it.size)}`]);
         if (bad) throw new Error(`"${bad.product} ${bad.size}" ไม่มีในแคตตาล็อก ${platformName(o.platform)} — เลือกจากรายการที่กำหนด`);
       }
       // ออเดอร์ใหม่ = วันนี้ (เวลาไทย) · ออเดอร์เดิม = คงวันที่ใบเบิกเดิม (แก้ไขไม่เปลี่ยนวัน)

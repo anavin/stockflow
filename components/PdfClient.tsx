@@ -1,11 +1,12 @@
 "use client";
 import { useEffect, useState } from "react";
 import { pdf } from "@react-pdf/renderer";
-import { WithdrawalDocument, WithdrawalDocumentMulti } from "@/lib/pdf/withdrawal-sp-document";
+import { WithdrawalDocument, WithdrawalDocumentMulti, type WsData } from "@/lib/pdf/withdrawal-sp-document";
 import type { OrderWithItems } from "@/lib/types";
 
-/** สร้าง PDF ใบเบิกในเบราว์เซอร์ (client-side) — เลี่ยงบั๊ก fontkit shape ไทยเพี้ยนบน Cloudflare Workers */
-export default function PdfClient({ order, orders, filename }: { order?: OrderWithItems; orders?: OrderWithItems[]; filename: string }) {
+/** สร้าง PDF ใบเบิกในเบราว์เซอร์ (client-side) — เลี่ยงบั๊ก fontkit shape ไทยเพี้ยนบน Cloudflare Workers
+ *  ws / wsByPlatform = ข้อมูลค้าส่ง (catalog+สาขา) ที่ server ดึงจาก DB ส่งมา */
+export default function PdfClient({ order, orders, filename, ws, wsByPlatform }: { order?: OrderWithItems; orders?: OrderWithItems[]; filename: string; ws?: WsData; wsByPlatform?: Record<string, WsData> }) {
   const [url, setUrl] = useState<string | null>(null);
   const [err, setErr] = useState("");
 
@@ -14,7 +15,7 @@ export default function PdfClient({ order, orders, filename }: { order?: OrderWi
     let alive = true;
     (async () => {
       try {
-        const doc = orders ? <WithdrawalDocumentMulti orders={orders} /> : <WithdrawalDocument order={order!} />;
+        const doc = orders ? <WithdrawalDocumentMulti orders={orders} wsByPlatform={wsByPlatform} /> : <WithdrawalDocument order={order!} ws={ws} />;
         const blob = await pdf(doc).toBlob();
         if (!alive) return;
         objectUrl = URL.createObjectURL(blob);
