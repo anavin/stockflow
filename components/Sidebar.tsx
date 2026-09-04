@@ -4,7 +4,7 @@ import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { PLATFORMS, enabledPlatforms, platformBase, platformColor, platformTint } from "@/lib/config";
 import { can, ROLE_LABELS, roleList, isAdmin } from "@/lib/auth/roles";
-import { Package, PlusCircle, Upload, List, LogOut, Menu, X, Trash2, Users, ScanLine, Boxes, LayoutDashboard, BarChart3, FlaskConical, ScanBarcode, ShieldCheck, Truck, Droplets, Sticker, PackageOpen, History, ScrollText, ClipboardCheck, Undo2, PackageX } from "lucide-react";
+import { Package, PlusCircle, Upload, List, LogOut, Menu, X, Trash2, Users, ScanLine, Boxes, LayoutDashboard, BarChart3, FlaskConical, ScanBarcode, ShieldCheck, Truck, Droplets, Sticker, PackageOpen, History, ScrollText, ClipboardCheck, Undo2, PackageX, Store } from "lucide-react";
 
 export default function Sidebar({ user }: { user: { full_name: string; username: string; role: string } }) {
   const pathname = usePathname();
@@ -31,6 +31,7 @@ export default function Sidebar({ user }: { user: { full_name: string; username:
   // กลุ่ม "คลังวัตถุดิบ" — กลิ่น(master)/น้ำหอม/สติ๊กเกอร์/ขวด/รับเข้า·เบิก/ประวัติ
   const materialNav = [
     ...(can.manageScents(role) ? [{ href: "/products", label: "จัดการกลิ่น", icon: FlaskConical, exact: true }] : []),
+    ...(can.manageScents(role) ? [{ href: "/wholesale", label: "จัดการค้าส่ง", icon: Store, exact: true }] : []),
     ...(can.viewStock(role) ? [{ href: "/stock/bulk", label: "น้ำหอม (ยังไม่บรรจุ)", icon: Droplets, exact: true }] : []),
     ...(can.viewStock(role) ? [{ href: "/stock/labels", label: "สติ๊กเกอร์ & การ์ด", icon: Sticker, exact: true }] : []),
     ...(can.viewStock(role) ? [{ href: "/stock/packaging", label: "ขวด & แพ็คเกจ", icon: Package, exact: true }] : []),
