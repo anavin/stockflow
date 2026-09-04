@@ -121,9 +121,16 @@ export default function StockIssue({ isAdmin, initialOrder, specOptions = [] }: 
     if (!res.ok || res.product == null) { scanBeep("error"); setScanMsg({ type: "error", text: res.error || "SKU ไม่ถูกต้อง" }); return; }
     const nk = (x?: string | null) => (x || "").toLowerCase().replace(/[^a-z0-9ก-๙]/g, "");
     const nsz = (x?: string | null) => (x || "").toLowerCase().replace(/^[\s.]+|[\s.]+$/g, "");
-    // ทุกบรรทัดที่ต้องมี SKU และกลิ่น+ขนาดตรงกับที่สแกน → เลือกบรรทัดแรกที่ยังไม่ครบ
-    const matches = preview.items!.filter((i) => i.needs_sku && nk(i.product) === nk(res.product) && nsz(i.size) === nsz(res.size));
-    const target = matches.find((i) => (form[i.line_no]?.skus?.length || 0) < i.qty);
+    // ทุกบรรทัดกลิ่น+ขนาดตรงกับที่สแกน (รวม non-serial) → แยกบรรทัดที่ต้องมี SKU
+    const allMatch = preview.items!.filter((i) => nk(i.product) === nk(res.product) && nsz(i.size) === nsz(res.size));
+    const serialLines = allMatch.filter((i) => i.needs_sku);
+    // กลิ่น/ขนาดนี้ไม่ต้องมี SKU (ตัวอย่าง 1.2/4 ml หรือถุง) — ตัดตามจำนวนอยู่แล้ว
+    if (serialLines.length === 0) {
+      scanBeep("warn");
+      setScanMsg({ type: "warn", text: allMatch.length ? `${res.product} ${res.size} ตัดตามจำนวนอยู่แล้ว — ไม่ต้องสแกน SKU` : `ไม่มี ${res.product} ${res.size} ในใบเบิกนี้` });
+      return;
+    }
+    const target = serialLines.find((i) => (form[i.line_no]?.skus?.length || 0) < i.qty);
     if (!target) { scanBeep("warn"); setScanMsg({ type: "warn", text: `${res.product} ${res.size} ครบทุกบรรทัดแล้ว` }); return; }
     addSerial(target.line_no, s);
     const have = (form[target.line_no]?.skus?.length || 0) + 1;
