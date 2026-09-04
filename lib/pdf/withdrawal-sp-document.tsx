@@ -341,7 +341,7 @@ const dn = StyleSheet.create({
   titleEn: { fontSize: 8.5, color: C.muted, textAlign: "right", marginTop: 1, letterSpacing: 1.5 },
   metaRow: { flexDirection: "row", marginTop: 3.5, width: "100%" },
   metaL: { fontSize: 8, color: C.muted, textAlign: "right", width: 96 },
-  metaV: { fontSize: 8.5, fontWeight: "bold", flex: 1, textAlign: "left", paddingLeft: 8 },
+  metaV: { fontSize: 8.5, fontWeight: "bold", flex: 1, textAlign: "right", paddingLeft: 8 },
   accentBar: { height: 2.4, backgroundColor: AC, marginTop: 10, marginBottom: 13 },
   infoRow: { flexDirection: "row", gap: 12, marginBottom: 14 },
   card: { flex: 1, borderWidth: 0.7, borderColor: C.border, borderRadius: 3 },
