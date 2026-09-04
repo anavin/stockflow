@@ -12,6 +12,7 @@ export type OrderItem = {
   product_label?: string;
   sku?: string | null;
   ptype?: string | null;   // ประเภทน้ำหอม (จาก products) — ใช้โชว์/เรียงในใบพิมพ์
+  barcode?: string | null; // บาร์โค้ดสินค้า (product_barcodes) — คอลัมน์ BARCODE ในใบเบิกแบบ PO
 };
 
 export type Order = {

@@ -9,7 +9,7 @@
  */
 import { Document, Page, Text, View, StyleSheet, Font, Svg, Rect } from "@react-pdf/renderer";
 import { code128 } from "./code128";
-import { COMPANY_NAME, COMPANY_NAME_EN } from "@/lib/config";
+import { COMPANY_NAME, COMPANY_NAME_EN, COMPANY_ADDRESS, isWholesalePlatform, platformName } from "@/lib/config";
 import { NOTO_SANS_THAI_REGULAR, NOTO_SANS_THAI_BOLD } from "./fonts";
 import type { OrderWithItems } from "@/lib/types";
 
@@ -295,18 +295,176 @@ function OrderPageHalf({ order }: { order: OrderWithItems }) {
   );
 }
 
-// A4 portrait เต็มแผ่น 1 ใบ — สำหรับใบเบิก CTW ที่มีรายการเยอะ
-function OrderPageFull({ order }: { order: OrderWithItems }) {
+// ════════════ ใบเบิกแบบ PO (ค้าส่ง: CTW / Eveandboy / King Power) — A4 เต็มแผ่น ════════════
+const po = StyleSheet.create({
+  page: { fontFamily: "NotoSansThai", fontSize: 8, color: C.ink, paddingVertical: 22, paddingHorizontal: 26 },
+  head: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", borderBottomWidth: 1.2, borderBottomColor: C.ink, paddingBottom: 6, marginBottom: 8 },
+  company: { fontSize: 12, fontWeight: "bold" },
+  addr: { fontSize: 6.8, color: C.muted, marginTop: 2, maxWidth: 300 },
+  docTitle: { fontSize: 13, fontWeight: "bold", textAlign: "right" },
+  docSub: { fontSize: 8, color: C.muted, textAlign: "right", marginTop: 1 },
+  infoRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 8 },
+  field: { flexDirection: "row", marginBottom: 2.5 },
+  fLabel: { color: C.muted, width: 70, fontSize: 8 },
+  fVal: { fontWeight: "bold", fontSize: 9 },
+  bcBox: { borderWidth: 0.8, borderColor: C.border, borderRadius: 3, padding: 6, alignItems: "center" },
+  bcCap: { fontSize: 6.5, color: C.muted, marginTop: 2 },
+  th: { flexDirection: "row", backgroundColor: C.soft, borderTopWidth: 0.8, borderBottomWidth: 0.8, borderColor: C.ink },
+  gradeRow: { flexDirection: "row", backgroundColor: "#efece7", borderBottomWidth: 0.5, borderColor: C.border },
+  tr: { flexDirection: "row", borderBottomWidth: 0.4, borderColor: C.line },
+  cell: { paddingVertical: 3, paddingHorizontal: 4 },
+  hCell: { fontWeight: "bold", color: C.muted },
+  foot: { flexDirection: "row", borderTopWidth: 1, borderColor: C.ink, paddingTop: 3, marginTop: 1 },
+  sumWrap: { flexDirection: "row", gap: 10, marginTop: 12 },
+  box: { borderWidth: 0.8, borderColor: C.border, borderRadius: 3, flex: 1 },
+  boxHead: { backgroundColor: C.soft, paddingVertical: 3, paddingHorizontal: 6, borderBottomWidth: 0.5, borderColor: C.border, fontSize: 8, fontWeight: "bold" },
+  signRow: { flexDirection: "row", justifyContent: "space-between", marginTop: 34, paddingHorizontal: 6 },
+  sign: { width: "30%", alignItems: "center" },
+  signLine: { borderTopWidth: 0.6, borderColor: C.muted, width: "100%", marginBottom: 3 },
+  signLabel: { fontSize: 8, color: C.muted },
+  signDate: { fontSize: 7, color: C.faint, marginTop: 4 },
+});
+// เรียง Grade: EDP → EDP+ → PARFUM → EDT · ขนาดในเกรด: EDT 90-50-30-10, อื่นๆ 50-30-10-4 (ขนาดอื่นต่อท้าย ใหญ่ก่อน)
+const GRADE_ORDER = ["EDP", "EDP+", "PARFUM", "EDT"];
+const gradeKey = (g?: string | null) => String(g || "อื่นๆ").trim().toUpperCase() || "อื่นๆ";
+const gradeRank = (g?: string | null) => { const i = GRADE_ORDER.indexOf(gradeKey(g)); return i < 0 ? 99 : i; };
+const sizeRank = (g?: string | null, sz?: string | null) => {
+  const ml = mlOf(sz); const ord = gradeKey(g) === "EDT" ? [90, 50, 30, 10] : [50, 30, 10, 4];
+  const i = ord.indexOf(ml); return i >= 0 ? i : 50 - ml / 1000;   // ขนาดนอกลิสต์ → ต่อท้าย เรียงใหญ่ก่อน
+};
+// column widths for PO table (# / BARCODE / ชื่อสินค้า / GRADE / ขนาด / เบิก / หน่วย) ~535pt
+const POC = [20, 100, 175, 55, 55, 45, 40];
+
+function WholesalePage({ order }: { order: OrderWithItems }) {
+  const all = [...(order.items ?? [])].filter((it) => (it.product || "").trim());
+  all.sort((a, b) => gradeRank(a.ptype) - gradeRank(b.ptype) || sizeRank(a.ptype, a.size) - sizeRank(b.ptype, b.size)
+    || mlOf(b.size) - mlOf(a.size) || String(a.product || "").localeCompare(String(b.product || ""), "th"));
+  const total = all.reduce((s, it) => s + (Number(it.qty) || 0), 0);
+  // สรุปตาม Grade (เรียงตามลำดับเกรด)
+  const gmap = new Map<string, { lines: number; qty: number }>();
+  for (const it of all) { const k = gradeKey(it.ptype); const g = gmap.get(k) || { lines: 0, qty: 0 }; g.lines += 1; g.qty += Number(it.qty) || 0; gmap.set(k, g); }
+  const grades = [...gmap.entries()].sort((a, b) => gradeRank(a[0]) - gradeRank(b[0]));
+
+  // density: ย่อเมื่อรายการเยอะ (ย่อลงอีก ~1-2 สเต็ปจากเดิม)
+  const n = all.length;
+  const fs = n > 55 ? 6.2 : n > 38 ? 7 : n > 24 ? 7.6 : 8.3;
+  const pv = n > 38 ? 2 : n > 24 ? 2.6 : 3.4;
+  const bcH = n > 38 ? 26 : 34;
+  const cell = { fontSize: fs, paddingVertical: pv };
+  const isEvb = String(order.platform) === "Eveandboy";
+
+  // แถวตาราง: แทรกหัวเกรดเมื่อเกรดเปลี่ยน
+  const rows: any[] = [];
+  let curGrade = " "; let idx = 0;
+  for (const it of all) {
+    const gk = gradeKey(it.ptype);
+    if (gk !== curGrade) {
+      curGrade = gk;
+      rows.push(<View key={`g${gk}`} style={po.gradeRow}><Text style={[po.cell, { fontSize: fs, fontWeight: "bold" }]}>{gk}</Text></View>);
+    }
+    idx += 1;
+    rows.push(
+      <View key={`i${it.id ?? idx}`} style={po.tr} wrap={false}>
+        <Text style={[po.cell, cell, { width: POC[0], color: C.faint }]}>{idx}</Text>
+        <Text style={[po.cell, cell, { width: POC[1] }]}>{T(it.barcode)}</Text>
+        <Text style={[po.cell, cell, { width: POC[2], fontWeight: "bold" }]}>{T(it.product)}</Text>
+        <Text style={[po.cell, cell, { width: POC[3], color: C.muted }]}>{T(it.ptype)}</Text>
+        <Text style={[po.cell, cell, { width: POC[4] }]}>{T(it.size)}</Text>
+        <Text style={[po.cell, cell, { width: POC[5], textAlign: "right", fontWeight: "bold" }]}>{Number(it.qty) || 0}</Text>
+        <Text style={[po.cell, cell, { width: POC[6] }]}>{T(it.unit)}</Text>
+      </View>,
+    );
+  }
+
   return (
-    <Page size="A4" style={s.page}>
-      <Panel order={order} copyLabel="" full />
+    <Page size="A4" style={po.page}>
+      {/* header: บริษัท + ที่อยู่ | ใบเบิกสินค้า/ต้นฉบับ */}
+      <View style={po.head}>
+        <View>
+          <Text style={po.company}>{T(COMPANY_NAME)}</Text>
+          <Text style={po.addr}>{COMPANY_ADDRESS}</Text>
+        </View>
+        <View>
+          <Text style={po.docTitle}>{T("ใบเบิกสินค้า")}</Text>
+          <Text style={po.docSub}>ต้นฉบับ · {platformName(order.platform)}</Text>
+        </View>
+      </View>
+
+      {/* info: PO Order No./วันที่/Branch/รหัสสาขา + barcode */}
+      <View style={po.infoRow}>
+        <View>
+          <View style={po.field}><Text style={po.fLabel}>PO Order No. :</Text><Text style={po.fVal}>{T(order.order_no)}</Text></View>
+          <View style={po.field}><Text style={po.fLabel}>วันที่ :</Text><Text style={po.fVal}>{fmtDate(order.doc_date)}</Text></View>
+          <View style={po.field}><Text style={po.fLabel}>Branch :</Text><Text style={po.fVal}>{T(order.branch)}</Text></View>
+          <View style={po.field}><Text style={po.fLabel}>รหัสสาขา :</Text><Text style={po.fVal}>{T(order.branch_code)}</Text></View>
+          {isEvb && <View style={po.field}><Text style={po.fLabel}>PO Version :</Text><Text style={po.fVal}>{T(order.po_version)}</Text></View>}
+        </View>
+        <View style={po.bcBox}>
+          <Barcode value={order.order_no} width={185} height={bcH} />
+          <Text style={po.bcCap}>PO Order No. {T(order.order_no)}</Text>
+        </View>
+      </View>
+
+      {/* table */}
+      <View>
+        <View style={po.th}>
+          {["#", "BARCODE", "ชื่อสินค้า", "GRADE", "ขนาด", "เบิก", "หน่วย"].map((h, i) => (
+            <Text key={i} style={[po.cell, po.hCell, { fontSize: fs - 0.5, width: POC[i], textAlign: i === 5 ? "right" : "left" }]}>{h}</Text>
+          ))}
+        </View>
+        {rows}
+        <View style={po.foot}>
+          <Text style={[po.cell, cell, { width: POC[0] + POC[1] + POC[2] + POC[3] + POC[4], textAlign: "right", fontWeight: "bold" }]}>รวมทั้งสิ้น</Text>
+          <Text style={[po.cell, cell, { width: POC[5], textAlign: "right", fontWeight: "bold" }]}>{total}</Text>
+          <Text style={[po.cell, cell, { width: POC[6] }]}>ชิ้น</Text>
+        </View>
+      </View>
+
+      {/* สรุปตาม Grade + หมายเหตุ */}
+      <View style={po.sumWrap}>
+        <View style={[po.box, { maxWidth: 240 }]}>
+          <Text style={po.boxHead}>สรุปตาม Grade</Text>
+          <View style={[po.th, { borderTopWidth: 0 }]}>
+            <Text style={[po.cell, po.hCell, { fontSize: 7, width: 120 }]}>GRADE</Text>
+            <Text style={[po.cell, po.hCell, { fontSize: 7, width: 60, textAlign: "right" }]}>รายการ</Text>
+            <Text style={[po.cell, po.hCell, { fontSize: 7, width: 60, textAlign: "right" }]}>จำนวน</Text>
+          </View>
+          {grades.map(([g, v]) => (
+            <View key={g} style={po.tr}>
+              <Text style={[po.cell, { fontSize: 8, width: 120, fontWeight: "bold" }]}>{g}</Text>
+              <Text style={[po.cell, { fontSize: 8, width: 60, textAlign: "right" }]}>{v.lines}</Text>
+              <Text style={[po.cell, { fontSize: 8, width: 60, textAlign: "right" }]}>{v.qty}</Text>
+            </View>
+          ))}
+          <View style={[po.foot, { marginTop: 0 }]}>
+            <Text style={[po.cell, { fontSize: 8, width: 120, fontWeight: "bold" }]}>รวมทั้งสิ้น</Text>
+            <Text style={[po.cell, { fontSize: 8, width: 60, textAlign: "right", fontWeight: "bold" }]}>{all.length}</Text>
+            <Text style={[po.cell, { fontSize: 8, width: 60, textAlign: "right", fontWeight: "bold" }]}>{total}</Text>
+          </View>
+        </View>
+        <View style={po.box}>
+          <Text style={po.boxHead}>หมายเหตุ</Text>
+          <Text style={[po.cell, { fontSize: 8, minHeight: 60 }]}>{order.note || ""}</Text>
+        </View>
+      </View>
+
+      {/* signatures — ผู้เบิก / ผู้จ่าย / ผู้รับ (ไม่มีผู้ตรวจ) */}
+      <View style={po.signRow}>
+        {["ผู้เบิก", "ผู้จ่ายสินค้า", "ผู้รับ"].map((lbl) => (
+          <View key={lbl} style={po.sign}>
+            <View style={po.signLine} />
+            <Text style={po.signLabel}>{`( ${lbl} )`}</Text>
+            <Text style={po.signDate}>____ / ____ / ____</Text>
+          </View>
+        ))}
+      </View>
     </Page>
   );
 }
 
-// CTW = เต็มแผ่น A4 (รายการเยอะ) · แพลตฟอร์มอื่น = 2 ชุดต่อหน้า
+// ค้าส่ง (CTW/Eveandboy/King Power) = ใบเบิกแบบ PO เต็มแผ่น · อื่นๆ = 2 ชุดต่อหน้า
 function OrderPage({ order }: { order: OrderWithItems }) {
-  return String(order.platform) === "CTW" ? <OrderPageFull order={order} /> : <OrderPageHalf order={order} />;
+  return isWholesalePlatform(order.platform) ? <WholesalePage order={order} /> : <OrderPageHalf order={order} />;
 }
 
 export function WithdrawalDocument({ order }: { order: OrderWithItems }) {

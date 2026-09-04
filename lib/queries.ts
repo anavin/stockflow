@@ -596,9 +596,14 @@ export async function getOrder(orderNo: string, opts: { includeDeleted?: boolean
   );
   if (!order) return null;
   const items = await q<OrderItem>(
-    `select id, line_no, product, size, is_free, qty::float8 as qty, unit, product_label, sku,
-            (select p.ptype from products p where p.name = order_items.product limit 1) as ptype
-     from order_items where order_no = $1 order by line_no, id`,
+    `select oi.id, oi.line_no, oi.product, oi.size, oi.is_free, oi.qty::float8 as qty, oi.unit, oi.product_label, oi.sku,
+            (select p.ptype from products p where p.name = oi.product limit 1) as ptype,
+            -- บาร์โค้ดสินค้า (กลิ่น+ขนาด) จาก product_barcodes — ใช้ในใบเบิกแบบ PO (คอลัมน์ BARCODE)
+            (select b.barcode from product_barcodes b
+               where regexp_replace(lower(btrim(b.scent)),'[^a-z0-9ก-๙]','','g') = regexp_replace(lower(btrim(oi.product)),'[^a-z0-9ก-๙]','','g')
+                 and btrim(lower(b.size),' .') = btrim(lower(coalesce(oi.size,'')),' .')
+               limit 1) as barcode
+     from order_items oi where oi.order_no = $1 order by oi.line_no, oi.id`,
     [orderNo],
   );
   return { ...normOrder(order), items };
