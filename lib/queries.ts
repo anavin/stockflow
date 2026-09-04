@@ -272,10 +272,10 @@ export async function getFdaScentKeys(): Promise<string[]> {
 export async function listFda(): Promise<FdaRow[]> {
   const sel = `select id, seq, product, grade, reg_no, issue_date, expiry_date, fda_status, prod_status,
               name_en, name_th, brand,
-              case when expiry_date is null then null else (expiry_date - current_date)::int end as days_left`;
+              case when expiry_date is null then null else (expiry_date - (now() at time zone 'Asia/Bangkok')::date)::int end as days_left`;
   // เรียง 3 ระดับ: ปกติ(0) → เลิกผลิต แต่ อย.คงอยู่(1) → สิ้นอายุ/หมดอายุ(2 ล่างสุดจริง) · ในกลุ่มเรียงใกล้หมดอายุก่อน
   const ord = `order by (case
-                          when (fda_status like '%สิ้นอาย%') or (fda_status like '%ยกเลิก%') or (expiry_date is not null and expiry_date < current_date) then 2
+                          when (fda_status like '%สิ้นอาย%') or (fda_status like '%ยกเลิก%') or (expiry_date is not null and expiry_date < (now() at time zone 'Asia/Bangkok')::date) then 2
                           when prod_status like '%เลิก%' then 1
                           else 0 end) asc,
                         expiry_date asc nulls last, seq nulls last, product`;
@@ -297,12 +297,12 @@ export async function fdaExpirySummary(): Promise<FdaExpirySummary> {
   try {
     const [r] = await q<FdaExpirySummary>(
       `select
-         count(*) filter (where expiry_date is not null and expiry_date < current_date)::int as expired,
-         count(*) filter (where (expiry_date - current_date) between 0 and 10)::int as d10,
-         count(*) filter (where (expiry_date - current_date) between 11 and 15)::int as d15,
-         count(*) filter (where (expiry_date - current_date) between 16 and 30)::int as d30,
+         count(*) filter (where expiry_date is not null and expiry_date < d)::int as expired,
+         count(*) filter (where (expiry_date - d) between 0 and 10)::int as d10,
+         count(*) filter (where (expiry_date - d) between 11 and 15)::int as d15,
+         count(*) filter (where (expiry_date - d) between 16 and 30)::int as d30,
          count(*)::int as total
-       from fda_registrations`);
+       from fda_registrations, (select (now() at time zone 'Asia/Bangkok')::date as d) t`);
     return r ?? { expired: 0, d10: 0, d15: 0, d30: 0, total: 0 };
   } catch { return { expired: 0, d10: 0, d15: 0, d30: 0, total: 0 }; }
 }
@@ -597,7 +597,9 @@ export async function getOrder(orderNo: string, opts: { includeDeleted?: boolean
   if (!order) return null;
   const items = await q<OrderItem>(
     `select oi.id, oi.line_no, oi.product, oi.size, oi.is_free, oi.qty::float8 as qty, oi.unit, oi.product_label, oi.sku,
-            (select p.ptype from products p where p.name = oi.product limit 1) as ptype,
+            (select p.ptype from products p
+               where regexp_replace(lower(btrim(p.name)),'[^a-z0-9ก-๙]','','g') = regexp_replace(lower(btrim(oi.product)),'[^a-z0-9ก-๙]','','g')
+               limit 1) as ptype,
             -- บาร์โค้ดสินค้า (กลิ่น+ขนาด) จาก product_barcodes — ใช้ในใบเบิกแบบ PO (คอลัมน์ BARCODE)
             (select b.barcode from product_barcodes b
                where regexp_replace(lower(btrim(b.scent)),'[^a-z0-9ก-๙]','','g') = regexp_replace(lower(btrim(oi.product)),'[^a-z0-9ก-๙]','','g')
@@ -753,7 +755,7 @@ export async function dashboardStats(platform?: string): Promise<DashStats> {
          (select count(*)::int from orders where deleted_at is null${pc}${period} and stock_issued_at is not null) as "issuedTotal",
          (select count(*)::int from orders where deleted_at is null${pc} and (stock_issued_at at time zone 'Asia/Bangkok')::date = (now() at time zone 'Asia/Bangkok')::date) as "issuedToday",
          (select count(*)::int from stock) as skus,
-         (select count(*)::int from stock where qty >= 0 and qty <= 10) as low,
+         (select count(*)::int from stock where qty > 0 and qty <= 10) as low,
          (select count(*)::int from stock where qty < 0) as negative,
          ${P ? `(current_date >= date '${P}')` : "false"} as "periodActive"`,
       params,
@@ -810,7 +812,8 @@ export async function ordersTrend(months = 6, platform?: string): Promise<MonthP
 export async function stockSummary(): Promise<{ skus: number; low: number; issuedOrders: number }> {
   try {
     const [a] = await q<{ n: number }>(`select count(*)::int n from (select distinct oi.product, oi.size from order_items oi join orders o on o.order_no=oi.order_no where o.deleted_at is null and coalesce(oi.product,'')<>'' and oi.size ~* 'ml' and oi.product !~ 'ถุง' union select product,size from stock) t`);
-    const [b] = await q<{ n: number }>(`select count(*)::int n from stock where qty <= 10`);
+    // "ใกล้หมด" = qty 1..10 (0 = "หมด", ติดลบ = คนละหมวด) — ตรงกับ statusOf/StockManager filter/dashboardStats
+    const [b] = await q<{ n: number }>(`select count(*)::int n from stock where qty > 0 and qty <= 10`);
     const [c] = await q<{ n: number }>(`select count(*)::int n from orders where deleted_at is null and stock_issued_at is not null`);
     return { skus: a?.n ?? 0, low: b?.n ?? 0, issuedOrders: c?.n ?? 0 };
   } catch { return { skus: 0, low: 0, issuedOrders: 0 }; }

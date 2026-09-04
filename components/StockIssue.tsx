@@ -108,7 +108,8 @@ export default function StockIssue({ isAdmin, initialOrder, specOptions = [] }: 
   const setSpec = (line: number, v: string) => setForm((f) => ({ ...f, [line]: { ...f[line], spec: v } }));
   const addSerial = (line: number, v: string) => {
     const s = (v || "").trim(); if (!s) return;
-    setForm((f) => { const cur = f[line]?.skus || []; if (cur.includes(s)) return f; return { ...f, [line]: { ...f[line], skus: [...cur, s] } }; });
+    const cap = preview?.items?.find((it) => it.line_no === line)?.qty ?? Infinity;   // กันสแกนเกินจำนวน (เช็คใน functional update กัน race ตอนสแกนเร็ว)
+    setForm((f) => { const cur = f[line]?.skus || []; if (cur.includes(s) || cur.length >= cap) return f; return { ...f, [line]: { ...f[line], skus: [...cur, s] } }; });
   };
   const removeSerial = (line: number, s: string) => setForm((f) => ({ ...f, [line]: { ...f[line], skus: (f[line]?.skus || []).filter((x) => x !== s) } }));
 

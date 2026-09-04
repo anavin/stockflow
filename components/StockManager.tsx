@@ -8,7 +8,7 @@ const CameraScan = dynamic(() => import("./CameraScan"), { ssr: false });
 import { receiveStock, receiveUnitsBatch, adjustStock, resolveSku } from "@/lib/actions/stock";
 import type { StockRow } from "@/lib/queries";
 import { PERFUME_TYPES } from "@/lib/types";
-import { PackagePlus, CheckCircle2, Search, History, FileUp, FileDown, Lock, Check, RotateCcw, ClipboardCheck, ChevronDown, ChevronRight, ScanBarcode, X, Plus, Camera } from "lucide-react";
+import { PackagePlus, CheckCircle2, Search, History, FileUp, FileDown, Lock, Check, RotateCcw, ClipboardCheck, ChevronDown, ChevronRight, ScanBarcode, X, Plus, Camera, AlertTriangle } from "lucide-react";
 
 type Status = "all" | "normal" | "low" | "out" | "neg";
 const keyOf = (r: StockRow) => `${r.product}|${r.size}`;
@@ -45,7 +45,7 @@ export default function StockManager({ rows, products, sizes, initialLow, isAdmi
       if (grade === "__none__" ? !!r.grade : grade && r.grade !== grade) return false;
       if (size && r.size !== size) return false;
       if (status === "normal" && !(r.qty > 10)) return false;
-      if (status === "low" && !(r.qty >= 0 && r.qty <= 10)) return false;
+      if (status === "low" && !(r.qty > 0 && r.qty <= 10)) return false;   // ใกล้หมด = 1..10 (0 = "หมด" ดูที่ status out)
       if (status === "out" && r.qty !== 0) return false;
       if (status === "neg" && !(r.qty < 0)) return false;
       return true;
@@ -71,7 +71,7 @@ export default function StockManager({ rows, products, sizes, initialLow, isAdmi
     const real = [...m.entries()].map(([product, rs]) => ({
       product, grade: rs[0].grade, rows: rs, empty: false,
       total: rs.reduce((s, r) => s + r.qty, 0),
-      low: rs.filter((r) => r.qty >= 0 && r.qty <= 10).length,
+      low: rs.filter((r) => r.qty > 0 && r.qty <= 10).length,
       neg: rs.some((r) => r.qty < 0),
     }));
     const t = search.trim().toLowerCase();
@@ -89,6 +89,7 @@ export default function StockManager({ rows, products, sizes, initialLow, isAdmi
       || a.product.localeCompare(b.product, "en"));
   }, [sorted, emptyScents, search, grade, size, status]);
   const emptyCount = useMemo(() => groups.filter((g) => g.empty).length, [groups]);
+  const lowCount = useMemo(() => rows.filter((r) => r.qty > 0 && r.qty <= 10).length, [rows]);   // ใกล้หมด = 1..10 (ตรงกับ statusOf/stockSummary/dashboard)
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
   const toggleGroup = (g: string) => setCollapsed((s) => { const n = new Set(s); n.has(g) ? n.delete(g) : n.add(g); return n; });
   const collapseAll = () => setCollapsed(new Set(groups.map((g) => g.product)));
@@ -237,6 +238,14 @@ export default function StockManager({ rows, products, sizes, initialLow, isAdmi
 
   return (
     <div className="space-y-4">
+      {/* การ์ดใกล้หมด — กดแล้วกรองในหน้าเดิมทันที (ไม่ nav/ไม่ remount → ไม่เสีย batch/นับที่ค้าง) */}
+      {lowCount > 0 && status !== "low" && (
+        <button type="button" onClick={() => setStatus("low")}
+          className="flex w-full items-center gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-left hover:bg-amber-100">
+          <AlertTriangle size={20} className="shrink-0 text-amber-600" />
+          <div className="text-sm"><b className="text-amber-700">ใกล้หมด {lowCount.toLocaleString()} รายการ</b><div className="text-xs text-amber-600/80">คงเหลือ ≤ 10 — เตรียมเติมสต๊อก · กดเพื่อกรองเฉพาะที่ใกล้หมด</div></div>
+        </button>
+      )}
       {!isAdmin && (
         <div className="card flex items-center gap-2 p-4 text-sm text-muted">
           <Lock size={16} className="text-faint" /> โหมดดูอย่างเดียว — ปรับสต๊อก/รับเข้า/นำเข้าไฟล์ ทำได้เฉพาะผู้ดูแลระบบ (admin)

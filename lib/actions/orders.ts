@@ -23,7 +23,7 @@ const itemSchema = z.object({
   product: z.string().trim().min(1, "เลือกสินค้า"),
   size: z.string().trim().default(""),
   is_free: z.boolean().default(false),
-  qty: z.coerce.number().min(0).default(1),
+  qty: z.coerce.number().int().min(1).default(1),   // จำนวนต้องเป็นจำนวนเต็ม ≥ 1 (กัน import/action call ส่ง 0 หรือทศนิยม)
   unit: z.string().trim().default("ขวด"),
   sku: z.string().trim().nullable().optional(),
 });

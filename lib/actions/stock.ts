@@ -693,7 +693,7 @@ export async function adjustStock(product: string, size: string, newQty: number,
   try {
     await tx(async (run) => {
       const m = await matchStockSku(run, product.trim(), size.trim());   // จับแถวจริง กันสร้างซ้ำจากชื่อ/ขนาดต่างฟอร์แมต
-      const [cur] = await run<{ qty: number }>(`select qty::float8 as qty from stock where product = $1 and size = $2`, [m.product, m.size]);
+      const [cur] = await run<{ qty: number }>(`select qty::float8 as qty from stock where product = $1 and size = $2 for update`, [m.product, m.size]);   // ล็อกแถว กัน read-modify แข่งกัน → diff/balance ใน ledger เพี้ยน
       const old = cur?.qty ?? 0;
       const diff = target - old;
       await run(

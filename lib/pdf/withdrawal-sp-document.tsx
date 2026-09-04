@@ -394,7 +394,7 @@ function WholesaleDocPage({ order, mode }: { order: OrderWithItems; mode: "issue
   // จัดกลุ่มตามเกรด (EDP → EDP+ → PARFUM → อื่นๆ) · ในกลุ่มเรียงขนาดใหญ่→เล็ก · ขนาดเท่ากันเรียงตามชื่อ
   // ของที่ไม่ใช่น้ำหอม (ถุงกระดาษ ฯลฯ) หรือไม่มีเกรด → หมวด "อื่นๆ" (อยู่ท้ายสุด)
   const OTHER = "อื่นๆ";
-  const GRADE_ORDER = ["EDP", "EDP+", "PARFUM", "EAU DE PARFUM"];
+  const GRADE_ORDER = ["EDP", "EDP+", "EDT", "PARFUM", "EAU DE PARFUM"];
   const gLabel = (it: OrderWithItems["items"][number]) =>
     (isBagProduct(it.product) || !(it.ptype || "").trim()) ? OTHER : (it.ptype || "").trim();
   const gRank = (label: string) => label === OTHER ? 100 : (GRADE_ORDER.indexOf(label.toUpperCase()) < 0 ? 99 : GRADE_ORDER.indexOf(label.toUpperCase()));
@@ -475,7 +475,7 @@ function WholesaleDocPage({ order, mode }: { order: OrderWithItems; mode: "issue
         {groups.map((g) => (
           <View key={g.grade}>
             {/* แถบหัวกลุ่มเกรด + ยอดรวมของเกรด */}
-            <View style={dn.grpRow} wrap={false}>
+            <View style={dn.grpRow} wrap={false} minPresenceAhead={40}>
               <Text style={dn.grpLabel}>{g.grade === OTHER ? OTHER : `เกรด ${g.grade}`}</Text>
               <Text style={dn.grpQty}>{`${g.qty} ชิ้น`}</Text>
             </View>

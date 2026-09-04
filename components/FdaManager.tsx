@@ -25,6 +25,28 @@ const daysText = (d: number | null) => d == null ? "—" : d < 0 ? `เกิน
 const dstr = (s: string | null) => (s ? String(s).slice(0, 10) : "—");
 const emptyForm: FdaPatch = { product: "", grade: "", reg_no: "", issue_date: "", expiry_date: "", fda_status: "คงอยู่", prod_status: "จำหน่าย", name_th: "" };
 
+// ⚠️ ต้องเป็น module-level component — ถ้านิยามในตัว render ของ FdaManager ทุก keystroke จะ remount → focus หลุด
+function FdaFields({ form, setF }: { form: FdaPatch; setF: (p: Partial<FdaPatch>) => void }) {
+  return (
+    <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
+      <div><label className="label">กลิ่น <span className="text-brand">*</span></label><input className="input h-9" value={form.product ?? ""} onChange={(e) => setF({ product: e.target.value })} /></div>
+      <div><label className="label">Grade</label><input className="input h-9" value={form.grade ?? ""} onChange={(e) => setF({ grade: e.target.value })} placeholder="EDP / EDP+ / PARFUM" /></div>
+      <div className="col-span-2"><label className="label">เลขที่จดแจ้ง อย.</label><input className="input h-9 font-mono" value={form.reg_no ?? ""} onChange={(e) => setF({ reg_no: e.target.value })} /></div>
+      <div><label className="label">ออกให้ ณ วันที่</label><input type="date" className="input h-9" value={form.issue_date ?? ""} onChange={(e) => setF({ issue_date: e.target.value })} /></div>
+      <div><label className="label">วันที่สิ้นสุด</label><input type="date" className="input h-9" value={form.expiry_date ?? ""} onChange={(e) => setF({ expiry_date: e.target.value })} /></div>
+      <div><label className="label">สถานะ อย.</label>
+        <select className="input h-9" value={form.fda_status ?? ""} onChange={(e) => setF({ fda_status: e.target.value })}>
+          <option value="คงอยู่">คงอยู่</option><option value="สิ้นอายุ">สิ้นอายุ</option><option value="">—</option>
+        </select></div>
+      <div><label className="label">สถานะผลิต</label>
+        <select className="input h-9" value={form.prod_status ?? ""} onChange={(e) => setF({ prod_status: e.target.value })}>
+          <option value="จำหน่าย">จำหน่าย</option><option value="เลิกผลิต">เลิกผลิต</option><option value="">—</option>
+        </select></div>
+      <div className="col-span-2 md:col-span-4"><label className="label">ชื่อภาษาไทย</label><input className="input h-9" value={form.name_th ?? ""} onChange={(e) => setF({ name_th: e.target.value })} /></div>
+    </div>
+  );
+}
+
 export default function FdaManager({ rows, summary, canEdit }: { rows: FdaRow[]; summary: FdaExpirySummary; canEdit: boolean }) {
   const router = useRouter();
   const [search, setSearch] = useState("");
@@ -104,25 +126,6 @@ export default function FdaManager({ rows, summary, canEdit }: { rows: FdaRow[];
   ];
   const cols = canEdit ? 10 : 9;
 
-  const Fields = () => (
-    <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
-      <div><label className="label">กลิ่น <span className="text-brand">*</span></label><input className="input h-9" value={form.product ?? ""} onChange={(e) => setF({ product: e.target.value })} /></div>
-      <div><label className="label">Grade</label><input className="input h-9" value={form.grade ?? ""} onChange={(e) => setF({ grade: e.target.value })} placeholder="EDP / EDP+ / PARFUM" /></div>
-      <div className="col-span-2"><label className="label">เลขที่จดแจ้ง อย.</label><input className="input h-9 font-mono" value={form.reg_no ?? ""} onChange={(e) => setF({ reg_no: e.target.value })} /></div>
-      <div><label className="label">ออกให้ ณ วันที่</label><input type="date" className="input h-9" value={form.issue_date ?? ""} onChange={(e) => setF({ issue_date: e.target.value })} /></div>
-      <div><label className="label">วันที่สิ้นสุด</label><input type="date" className="input h-9" value={form.expiry_date ?? ""} onChange={(e) => setF({ expiry_date: e.target.value })} /></div>
-      <div><label className="label">สถานะ อย.</label>
-        <select className="input h-9" value={form.fda_status ?? ""} onChange={(e) => setF({ fda_status: e.target.value })}>
-          <option value="คงอยู่">คงอยู่</option><option value="สิ้นอายุ">สิ้นอายุ</option><option value="">—</option>
-        </select></div>
-      <div><label className="label">สถานะผลิต</label>
-        <select className="input h-9" value={form.prod_status ?? ""} onChange={(e) => setF({ prod_status: e.target.value })}>
-          <option value="จำหน่าย">จำหน่าย</option><option value="เลิกผลิต">เลิกผลิต</option><option value="">—</option>
-        </select></div>
-      <div className="col-span-2 md:col-span-4"><label className="label">ชื่อภาษาไทย</label><input className="input h-9" value={form.name_th ?? ""} onChange={(e) => setF({ name_th: e.target.value })} /></div>
-    </div>
-  );
-
   return (
     <div className="space-y-4">
       {/* การ์ดแจ้งเตือน */}
@@ -172,7 +175,7 @@ export default function FdaManager({ rows, summary, canEdit }: { rows: FdaRow[];
       {adding && (
         <div className="card border border-brand-200 p-4">
           <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold text-ink"><Plus size={16} /> เพิ่มรายการ อย.</h3>
-          <Fields />
+          <FdaFields form={form} setF={setF} />
           <div className="mt-3 flex justify-end gap-2">
             <button type="button" onClick={cancel} className="btn-ghost">ยกเลิก</button>
             <button type="button" onClick={save} disabled={busy} className="btn-primary">{busy ? "กำลังบันทึก…" : "บันทึก"}</button>
@@ -208,7 +211,7 @@ export default function FdaManager({ rows, summary, canEdit }: { rows: FdaRow[];
                   <tr key={r.id} className={`border-t border-line align-top ${editing ? "bg-brand-50/40" : m.row}`}>
                     {editing ? (
                       <td colSpan={cols} className="px-3 py-3">
-                        <Fields />
+                        <FdaFields form={form} setF={setF} />
                         <div className="mt-3 flex justify-end gap-2">
                           <button type="button" onClick={cancel} className="btn-ghost"><X size={14} /> ยกเลิก</button>
                           <button type="button" onClick={save} disabled={busy} className="btn-primary"><Check size={14} /> {busy ? "…" : "บันทึก"}</button>

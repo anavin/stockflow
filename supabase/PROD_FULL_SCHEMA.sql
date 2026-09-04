@@ -1,7 +1,7 @@
 -- ════════════════════════════════════════════════════════════════════════
 -- PROD_FULL_SCHEMA.sql — schema เต็มของ platform-withdrawals (สร้างอัตโนมัติ)
 -- สร้างจาก: scripts/gen-prod-schema.mjs (รวม migrations/*.sql เรียงลำดับ)
--- อัปเดตล่าสุด: 2026-09-04 · 42 migrations
+-- อัปเดตล่าสุด: 2026-09-04 · 43 migrations
 --
 -- ⚠️ อย่าแก้ไฟล์นี้ตรง ๆ — แก้ที่ migrations/ แล้วรัน `npm run gen:prod-schema`
 -- วิธีใช้บน prod: Supabase → SQL Editor → วางทั้งไฟล์ → Run (idempotent รันซ้ำปลอดภัย)
@@ -1223,4 +1223,21 @@ alter table orders add column if not exists branch_code text;
 -- 4ml (assign): แยกว่า unit ถูก "สร้างตอนตัดสต๊อก" (assign) vs "ตัดจากของในคลังจริง"
 -- ตอนยกเลิกตัดสต๊อก: อันที่ assign สร้างใหม่ → ลบทิ้ง · อันที่ตัดจากคลัง → คืนสถานะ in_stock
 alter table stock_unit add column if not exists assigned_at_issue boolean not null default false;
+
+-- ───────────────────────────────────────────────────────────────────────
+-- ▼ 0043_norm_indexes.sql
+-- ───────────────────────────────────────────────────────────────────────
+-- Performance: index รองรับการ normalize กลิ่น/ขนาด ที่ query hot ใช้ (regexp_replace + btrim)
+-- เดิมไม่มี index ตรงรูปนี้ → listStock/stockSummary/mismatch/velocity ฯลฯ seq scan โตตามจำนวนข้อมูล
+-- ฟังก์ชันทั้งหมด (regexp_replace/lower/btrim) เป็น IMMUTABLE → สร้าง expression index ได้
+create index if not exists idx_stock_norm on stock (
+  (regexp_replace(lower(btrim(product)),'[^a-z0-9ก-๙]','','g')),
+  (btrim(lower(size),' .')));
+create index if not exists idx_order_items_prodnorm on order_items (
+  (regexp_replace(lower(btrim(product)),'[^a-z0-9ก-๙]','','g')));
+create index if not exists idx_products_namenorm on products (
+  (regexp_replace(lower(btrim(name)),'[^a-z0-9ก-๙]','','g')));
+create index if not exists idx_pbc_scentnorm on product_barcodes (
+  (regexp_replace(lower(btrim(scent)),'[^a-z0-9ก-๙]','','g')),
+  (btrim(lower(size),' .')));
 

@@ -70,7 +70,7 @@ export async function lookupOrderForReturn(orderNo: string): Promise<ReturnLooku
   const serialRows = await q<{ sku: string; product: string; size: string }>(
     `select sku, product, size from stock_unit where order_no = $1 and status = 'issued' order by issued_at`, [key]).catch(() => []);
   const nk = (s: string | null) => (s || "").toLowerCase().replace(/[^a-z0-9ก-๙]/g, "");
-  const nsz = (s: string | null) => (s || "").toLowerCase().replace(/^[\s.]+|[\s.]+$/g, "");
+  const nsz = (s: string | null) => (s || "").toLowerCase().replace(/\s+/g, "").replace(/^\.+|\.+$/g, "");   // ให้ตรงกับ stock.ts/StockIssue ("50 ml"="50ml", เก็บจุด 1.2≠12)
   const serialsByKey = new Map<string, string[]>();
   for (const r of serialRows) {
     const k = nk(r.product) + "|" + nsz(r.size);
