@@ -112,19 +112,23 @@ export default function StockIssue({ isAdmin, initialOrder, specOptions = [] }: 
   };
   const removeSerial = (line: number, s: string) => setForm((f) => ({ ...f, [line]: { ...f[line], skus: (f[line]?.skus || []).filter((x) => x !== s) } }));
 
-  // สแกน SKU 1 ตัว → ตรวจ (มีในคลัง + ตรงกลิ่น/ขนาดใบเบิก + ไม่ซ้ำ + ไม่เกิน qty) → เพิ่มให้บรรทัดที่ตรงอัตโนมัติ
+  // สแกน SKU 1 ตัว → ตรวจ (มีในคลัง + ตรงกลิ่น/ขนาดใบเบิก + ไม่ซ้ำ) → เพิ่มให้ "บรรทัดที่ยังไม่ครบ" อัตโนมัติ
+  // รองรับกลิ่น+ขนาดเดียวกันหลายบรรทัด (เช่น ขาย 1 + แถม Free 1) → เติมบรรทัดแรกที่ยังไม่ครบก่อน
   async function scanForIssue(code: string) {
     const s = (code || "").trim(); if (!s || !preview?.order_no) return;
-    // สแกนซ้ำ (ทุกบรรทัด)
     if (Object.values(form).some((v) => (v?.skus || []).includes(s))) { scanBeep("warn"); setScanMsg({ type: "warn", text: `สแกนซ้ำ: ${s}` }); return; }
     const res = await resolveIssueSku(preview.order_no, s);
-    if (!res.ok || res.line_no == null) { scanBeep("error"); setScanMsg({ type: "error", text: res.error || "SKU ไม่ถูกต้อง" }); return; }
-    const it = preview.items!.find((i) => i.line_no === res.line_no);
-    const have = form[res.line_no]?.skus?.length || 0;
-    if (it && have >= it.qty) { scanBeep("warn"); setScanMsg({ type: "warn", text: `${res.product} ${res.size} ครบ ${it.qty} แล้ว` }); return; }
-    addSerial(res.line_no, s);
+    if (!res.ok || res.product == null) { scanBeep("error"); setScanMsg({ type: "error", text: res.error || "SKU ไม่ถูกต้อง" }); return; }
+    const nk = (x?: string | null) => (x || "").toLowerCase().replace(/[^a-z0-9ก-๙]/g, "");
+    const nsz = (x?: string | null) => (x || "").toLowerCase().replace(/^[\s.]+|[\s.]+$/g, "");
+    // ทุกบรรทัดที่ต้องมี SKU และกลิ่น+ขนาดตรงกับที่สแกน → เลือกบรรทัดแรกที่ยังไม่ครบ
+    const matches = preview.items!.filter((i) => i.needs_sku && nk(i.product) === nk(res.product) && nsz(i.size) === nsz(res.size));
+    const target = matches.find((i) => (form[i.line_no]?.skus?.length || 0) < i.qty);
+    if (!target) { scanBeep("warn"); setScanMsg({ type: "warn", text: `${res.product} ${res.size} ครบทุกบรรทัดแล้ว` }); return; }
+    addSerial(target.line_no, s);
+    const have = (form[target.line_no]?.skus?.length || 0) + 1;
     scanBeep("ok");
-    setScanMsg({ type: "ok", text: `✓ ${res.product} ${res.size} (${have + 1}/${it?.qty ?? "?"})` });
+    setScanMsg({ type: "ok", text: `✓ ${res.product} ${res.size}${target.is_free ? " (แถม)" : ""} (${have}/${target.qty})` });
   }
 
   // มาจากปุ่ม "ตัดสต๊อก" ในหน้าใบเบิก (/stock/issue?order=XXX) → ดึงรายการให้อัตโนมัติ
