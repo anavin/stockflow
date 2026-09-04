@@ -2143,8 +2143,10 @@ create table if not exists public.stock_unit (
   received_at timestamptz not null default now(),
   received_by int,
   issued_at   timestamptz,
-  issued_by   int
+  issued_by   int,
+  assigned_at_issue boolean not null default false  -- 4ml ที่ assign สร้างตอนตัด (ยกเลิก=ลบ) vs ตัดจากคลังจริง (ยกเลิก=คืน)
 );
+alter table public.stock_unit add column if not exists assigned_at_issue boolean not null default false;
 create index if not exists idx_stock_unit_ps     on public.stock_unit (lower(btrim(product)), status);
 create index if not exists idx_stock_unit_order  on public.stock_unit (order_no);
 create index if not exists idx_stock_unit_status on public.stock_unit (status);

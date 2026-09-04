@@ -4,7 +4,7 @@ import { q, tx } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth/session";
 import { can, isAdmin } from "@/lib/auth/roles";
 import { logActivity } from "@/lib/activity";
-import { isStockTracked, needsSerialSku, assignsSku, requiresSku, cutsStock, ASSIGN_SKU_SIZES } from "@/lib/config";
+import { isStockTracked, needsSerialSku, assignsSku, requiresSku, cutsStock } from "@/lib/config";
 import { getActiveSpecRules, getScentBarcodes, stockGapFor } from "@/lib/queries";
 
 // ---- auto-select spec ตามขนาด + Grade (จากตาราง spec_rules) --------------------
@@ -313,14 +313,19 @@ export async function confirmIssueByOrder(
           const [u] = await run<{ status: string; order_no: string | null; product: string; size: string }>(
             `select status, order_no, product, size from stock_unit where btrim(sku) = $1`, [sku]);
           if (isAssign) {
-            // 4 ml: assign SKU ตอนตัด — สร้าง stock_unit (issued) ใหม่เท่านั้น · ห้ามทับ SKU ที่มีอยู่ (กันไปแก้ขวดจริงในคลัง)
+            // 4 ml: มีในคลัง (กลิ่น/ขนาดตรง) → ตัดออกเหมือนขวด · ไม่มีในระบบ → assign สร้าง unit ใหม่ (mark assigned_at_issue)
             if (!u) {
-              await run(`insert into stock_unit (sku, product, size, status, order_no, issued_at, issued_by, received_at, received_by)
-                         values ($1,$2,$3,'issued',$4,now(),$5,now(),$5)`, [sku, li.product, li.size || "", on, user.id]);
+              await run(`insert into stock_unit (sku, product, size, status, order_no, assigned_at_issue, issued_at, issued_by, received_at, received_by)
+                         values ($1,$2,$3,'issued',$4,true,now(),$5,now(),$5)`, [sku, li.product, li.size || "", on, user.id]);
             } else if (u.status === "issued" && u.order_no === on) {
               continue;   // ตัดซ้ำใบเดิม (idempotent)
+            } else if (u.status === "in_stock") {
+              // ตัดจากของในคลังจริง — กลิ่น/ขนาดต้องตรง (กันไปแย่ง SKU ขวดจริง/กลิ่นอื่น)
+              if (nk(u.product) !== nk(li.product) || nsz(u.size) !== nsz(li.size))
+                throw new Error(`SKU "${sku}" เป็น ${u.product} ${u.size} ไม่ตรงกับรายการ ${li.product} ${li.size}`);
+              await run(`update stock_unit set status='issued', order_no=$2, issued_at=now(), issued_by=$3 where btrim(sku)=$1`, [sku, on, user.id]);
             } else {
-              throw new Error(`SKU "${sku}" มีอยู่ในระบบแล้ว (ของในคลัง/ออเดอร์อื่น) — ใช้เลข SKU 4ml ที่ไม่ซ้ำ`);
+              throw new Error(`SKU "${sku}" ตัดไม่ได้ (สถานะ ${u.status}${u.order_no ? " · ออเดอร์ " + u.order_no : ""})`);
             }
             continue;
           }
@@ -408,10 +413,9 @@ export async function reverseIssue(orderNo: string): Promise<{ ok: boolean; erro
       // guard ด้วย to_regclass เผื่อ prod ยังไม่มีตาราง stock_unit (ไม่ให้ tx abort)
       const [ur] = await run<{ ok: boolean }>(`select to_regclass('stock_unit') is not null as ok`);
       if (ur?.ok) {
-        // 4 ml (assign ตอนตัด): serial ถูกสร้างตอนตัด ไม่ใช่ของในคลังจริง → ลบทิ้ง (จับด้วยเลข ml เผื่อ variant, รวม in_stock ที่ผูกใบนี้ กัน serial ผี)
-        await run(`delete from stock_unit where order_no = $1 and status in ('issued','in_stock') and (regexp_match(size,'([0-9]+([.][0-9]+)?)'))[1] = any($2)`,
-          [on, ASSIGN_SKU_SIZES.map((s) => (s.match(/[0-9]+(\.[0-9]+)?/) || [""])[0])]);
-        // ขวดจริง: คืนสถานะกลับเป็น in_stock
+        // 4 ml ที่ assign สร้างใหม่ตอนตัด (ไม่ใช่ของในคลังจริง) → ลบทิ้ง กัน serial ผี
+        await run(`delete from stock_unit where order_no = $1 and assigned_at_issue = true`, [on]);
+        // ที่เหลือ (ขวดจริง + 4ml ที่ตัดจากของในคลัง) → คืนสถานะกลับเป็น in_stock
         await run(`update stock_unit set status = 'in_stock', order_no = null, issued_at = null, issued_by = null
                    where order_no = $1 and status = 'issued'`, [on]);
       }

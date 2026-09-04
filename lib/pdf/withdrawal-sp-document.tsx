@@ -334,6 +334,7 @@ const ACS = "#eef1f4";     // accent tint อ่อน (พื้นการ์
 const dn = StyleSheet.create({
   page: { fontFamily: "NotoSansThai", fontSize: 9, color: C.ink, paddingTop: 30, paddingBottom: 46, paddingHorizontal: 38 },
   head: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start" },
+  headRight: { alignItems: "flex-end" },
   brandWrap: { flexDirection: "row", alignItems: "center", gap: 14 },
   partner: { fontSize: 13, fontWeight: "bold", color: C.faint, letterSpacing: 1 },
   title: { fontSize: 19, fontWeight: "bold", color: AC, textAlign: "right", letterSpacing: 0.5 },
@@ -392,10 +393,10 @@ function WholesaleDocPage({ order, mode }: { order: OrderWithItems; mode: "issue
       {/* header: โลโก้ | หัวเรื่อง + meta */}
       <View style={dn.head}>
         <View style={dn.brandWrap}>
-          <Image src={LAB_PARFUMO_LOGO} style={{ height: 40, width: 40 * LAB_PARFUMO_AR }} />
-          {isEvb ? <Image src={EVEANDBOY_LOGO} style={{ height: 22, width: 22 * EVEANDBOY_AR }} /> : (partner ? <Text style={dn.partner}>{partner}</Text> : null)}
+          <Image src={LAB_PARFUMO_LOGO} style={{ height: 38, width: 38 * LAB_PARFUMO_AR }} />
+          {isEvb ? <Image src={EVEANDBOY_LOGO} style={{ height: 32, width: 32 * EVEANDBOY_AR }} /> : (partner ? <Text style={dn.partner}>{partner}</Text> : null)}
         </View>
-        <View>
+        <View style={dn.headRight}>
           <Text style={dn.title}>{T(title)}</Text>
           <Text style={dn.titleEn}>{titleEn}</Text>
           {meta.map(([l, v], i) => (
