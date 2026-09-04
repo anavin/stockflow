@@ -10,7 +10,7 @@
 import { Document, Page, Text, View, StyleSheet, Font, Svg, Rect, Image } from "@react-pdf/renderer";
 import { LAB_PARFUMO_LOGO, LAB_PARFUMO_AR, EVEANDBOY_LOGO, EVEANDBOY_AR, KING_POWER_LOGO, KING_POWER_AR, CENTRAL_WORLD_LOGO, CENTRAL_WORLD_AR } from "./logos";
 import { code128 } from "./code128";
-import { COMPANY_NAME, COMPANY_NAME_EN, COMPANY_ADDRESS, isWholesalePlatform, platformName } from "@/lib/config";
+import { COMPANY_NAME, COMPANY_NAME_EN, COMPANY_ADDRESS, isWholesalePlatform, platformName, isBagProduct } from "@/lib/config";
 import { EVEANDBOY_BY_KEY, EVEANDBOY_BRANCHES } from "@/lib/eveandboy-data";
 import { NOTO_SANS_THAI_REGULAR, NOTO_SANS_THAI_BOLD } from "./fonts";
 import type { OrderWithItems } from "@/lib/types";
@@ -392,17 +392,20 @@ function WholesaleDocPage({ order, mode }: { order: OrderWithItems; mode: "issue
   const nkey = (x?: string | null) => (x || "").toLowerCase().replace(/[^a-z0-9ก-๙]/g, "");
   const evbOf = (it: OrderWithItems["items"][number]) => (isEvb ? EVEANDBOY_BY_KEY[`${nkey(it.product)}|${mlOf(it.size)}`] : undefined);
   // จัดกลุ่มตามเกรด (EDP → EDP+ → PARFUM → อื่นๆ) · ในกลุ่มเรียงขนาดใหญ่→เล็ก · ขนาดเท่ากันเรียงตามชื่อ
+  // ของที่ไม่ใช่น้ำหอม (ถุงกระดาษ ฯลฯ) หรือไม่มีเกรด → หมวด "อื่นๆ" (อยู่ท้ายสุด)
+  const OTHER = "อื่นๆ";
   const GRADE_ORDER = ["EDP", "EDP+", "PARFUM", "EAU DE PARFUM"];
-  const gnorm = (g?: string | null) => (g || "").trim().toUpperCase();
-  const grank = (g?: string | null) => { const i = GRADE_ORDER.indexOf(gnorm(g)); return i < 0 ? 99 : i; };
+  const gLabel = (it: OrderWithItems["items"][number]) =>
+    (isBagProduct(it.product) || !(it.ptype || "").trim()) ? OTHER : (it.ptype || "").trim();
+  const gRank = (label: string) => label === OTHER ? 100 : (GRADE_ORDER.indexOf(label.toUpperCase()) < 0 ? 99 : GRADE_ORDER.indexOf(label.toUpperCase()));
   const items = [...(order.items ?? [])].filter((it) => (it.product || "").trim())
-    .sort((a, b) => (grank(a.ptype) - grank(b.ptype)) || gnorm(a.ptype).localeCompare(gnorm(b.ptype))
+    .sort((a, b) => (gRank(gLabel(a)) - gRank(gLabel(b))) || gLabel(a).localeCompare(gLabel(b))
       || (mlOf(b.size) - mlOf(a.size)) || String(a.product || "").localeCompare(String(b.product || "")));
   const total = items.reduce((s, it) => s + (Number(it.qty) || 0), 0);
   // แบ่งเป็นกลุ่มตามเกรด (แถวเรียงไว้แล้ว → กลุ่มต่อเนื่อง)
   const groups: { grade: string; items: typeof items; qty: number }[] = [];
   for (const it of items) {
-    const g = (it.ptype || "").trim() || "ไม่ระบุเกรด";
+    const g = gLabel(it);
     let grp = groups[groups.length - 1];
     if (!grp || grp.grade !== g) { grp = { grade: g, items: [], qty: 0 }; groups.push(grp); }
     grp.items.push(it); grp.qty += Number(it.qty) || 0;
@@ -473,7 +476,7 @@ function WholesaleDocPage({ order, mode }: { order: OrderWithItems; mode: "issue
           <View key={g.grade}>
             {/* แถบหัวกลุ่มเกรด + ยอดรวมของเกรด */}
             <View style={dn.grpRow} wrap={false}>
-              <Text style={dn.grpLabel}>{`เกรด ${g.grade}`}</Text>
+              <Text style={dn.grpLabel}>{g.grade === OTHER ? OTHER : `เกรด ${g.grade}`}</Text>
               <Text style={dn.grpQty}>{`${g.qty} ชิ้น`}</Text>
             </View>
             {g.items.map((it, i) => (
