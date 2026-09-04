@@ -14,7 +14,7 @@ import { CUSTOMER_TYPES, platformColor, isWholesalePlatform, platformName } from
 import { EVEANDBOY_BRANCHES } from "@/lib/eveandboy-data";
 import type { OrderWithItems } from "@/lib/types";
 import type { PostcodeRow } from "@/lib/queries";
-import { Save, Printer, CheckCircle2, AlertTriangle, History, Check, Wallet, Truck } from "lucide-react";
+import { Save, Printer, CheckCircle2, AlertTriangle, History, Check, Wallet, Truck, MapPin } from "lucide-react";
 
 // เบอร์โทร: เก็บเฉพาะตัวเลข + - เว้นวรรค (กันพิมพ์ตัวอักษร)
 const cleanPhone = (v: string) => v.replace(/[^0-9\-+ ]/g, "");
@@ -362,6 +362,14 @@ export default function OrderForm({ platform = "Shopee", products, sizes, provin
               <label className="label">สาขา <span className="text-brand">*</span></label>
               <Combobox value={f.branch} options={BRANCHES[pfCode] || []} placeholder="เลือก / พิมพ์สาขา"
                 onChange={(v) => { const m = EVEANDBOY_BRANCHES.find((b) => b.branch === v); set({ branch: v, ...(m ? { branch_code: m.code } : {}) }); }} />
+              {(() => {
+                const addr = EVEANDBOY_BRANCHES.find((b) => b.branch === f.branch)?.address;
+                return addr ? (
+                  <div className="mt-1.5 flex items-start gap-1.5 rounded-lg border border-line bg-soft px-3 py-2 text-xs text-muted">
+                    <MapPin size={13} className="mt-0.5 shrink-0 text-brand" /><span>{addr}</span>
+                  </div>
+                ) : null;
+              })()}
             </div>
             <div>
               <label className="label">รหัสสาขา</label>
