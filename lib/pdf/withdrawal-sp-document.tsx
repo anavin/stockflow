@@ -7,7 +7,8 @@
  * column is titled "สินค้า (EDP)" instead of "รายการ". Dynamic values (scent
  * names, order numbers) are Latin.
  */
-import { Document, Page, Text, View, StyleSheet, Font, Svg, Rect } from "@react-pdf/renderer";
+import { Document, Page, Text, View, StyleSheet, Font, Svg, Rect, Image } from "@react-pdf/renderer";
+import { LAB_PARFUMO_LOGO, LAB_PARFUMO_AR, EVEANDBOY_LOGO, EVEANDBOY_AR } from "./logos";
 import { code128 } from "./code128";
 import { COMPANY_NAME, COMPANY_NAME_EN, COMPANY_ADDRESS, isWholesalePlatform, platformName } from "@/lib/config";
 import { EVEANDBOY_BY_KEY, EVEANDBOY_BRANCHES } from "@/lib/eveandboy-data";
@@ -381,11 +382,8 @@ function WholesaleDocPage({ order, mode }: { order: OrderWithItems; mode: "issue
       {/* header: LAB PARFUMO + คู่ค้า | หัวเรื่อง + meta */}
       <View style={dn.head}>
         <View style={dn.brandWrap}>
-          <View>
-            <Text style={dn.brand}>LAB PARFUMO</Text>
-            <Text style={dn.brandSub}>Create Your Own Charm</Text>
-          </View>
-          <Text style={dn.partner}>{partner}</Text>
+          <Image src={LAB_PARFUMO_LOGO} style={{ height: 36, width: 36 * LAB_PARFUMO_AR }} />
+          {isEvb ? <Image src={EVEANDBOY_LOGO} style={{ height: 24, width: 24 * EVEANDBOY_AR }} /> : (partner ? <Text style={dn.partner}>{partner}</Text> : null)}
         </View>
         <View>
           <Text style={dn.title}>{T(title)}</Text>
