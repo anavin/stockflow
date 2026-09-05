@@ -103,7 +103,7 @@ export default function WholesaleManager({ catalog, branches, products, sizes, c
           <table className="w-full text-sm">
             <thead className="bg-soft text-left text-xs text-muted">
               {isBranch ? (
-                <tr><th className="px-3 py-3">สาขา</th><th className="px-3 py-3">รหัส</th><th className="px-3 py-3">ที่อยู่</th><th className="px-3 py-3">สถานะ</th>{canEdit && <th className="px-3 py-3 text-right">จัดการ</th>}</tr>
+                <tr><th className="w-px whitespace-nowrap px-3 py-3">สาขา</th><th className="w-px whitespace-nowrap px-3 py-3">รหัส</th><th className="px-3 py-3">ที่อยู่</th><th className="w-px whitespace-nowrap px-3 py-3">สถานะ</th>{canEdit && <th className="w-px whitespace-nowrap px-3 py-3 text-right">จัดการ</th>}</tr>
               ) : (
                 <tr><th className="px-3 py-3">กลิ่น</th><th className="px-3 py-3">ขนาด</th><th className="px-3 py-3">Product Code</th><th className="px-3 py-3">Barcode</th><th className="px-3 py-3">ชื่อบนใบเบิก</th><th className="px-3 py-3">เกรด</th><th className="px-3 py-3">สถานะ</th>{canEdit && <th className="px-3 py-3 text-right">จัดการ</th>}</tr>
               )}
@@ -115,11 +115,11 @@ export default function WholesaleManager({ catalog, branches, products, sizes, c
                     <tr key={r.id} className="border-t border-line bg-brand-50/40"><td colSpan={9} className="px-3 py-3"><BranchFields f={bf} set={setBf} /><RowActions busy={busy} onSave={saveBr} onCancel={cancel} /></td></tr>
                   ) : (
                     <tr key={r.id} className={`border-t border-line ${r.active ? "" : "opacity-50"}`}>
-                      <td className="px-3 py-2.5 font-medium text-ink">{r.branch}</td>
-                      <td className="px-3 py-2.5 font-mono text-xs">{r.code || "—"}</td>
-                      <td className="px-3 py-2.5 max-w-[320px] text-xs text-muted">{r.address || "—"}</td>
-                      <td className="px-3 py-2.5">{r.active ? <span className="chip-ok">ใช้งาน</span> : <span className="chip-danger">ปิด</span>}</td>
-                      {canEdit && <td className="px-3 py-2.5 text-right"><RowBtns onEdit={() => startEditBranch(r)} onDel={() => del("branch", r.id, r.branch)} /></td>}
+                      <td className="w-px whitespace-nowrap px-3 py-2.5 align-top font-medium text-ink">{r.branch}</td>
+                      <td className="w-px whitespace-nowrap px-3 py-2.5 align-top font-mono text-xs">{r.code || "—"}</td>
+                      <td className="px-3 py-2.5 align-top text-xs text-muted">{r.address || "—"}</td>
+                      <td className="w-px whitespace-nowrap px-3 py-2.5 align-top">{r.active ? <span className="chip-ok">ใช้งาน</span> : <span className="chip-danger">ปิด</span>}</td>
+                      {canEdit && <td className="w-px whitespace-nowrap px-3 py-2.5 text-right align-top"><RowBtns onEdit={() => startEditBranch(r)} onDel={() => del("branch", r.id, r.branch)} /></td>}
                     </tr>
                   ))
                 : (filtered as WholesaleCatalogRow[]).map((r) => editId === r.id && canEdit ? (
