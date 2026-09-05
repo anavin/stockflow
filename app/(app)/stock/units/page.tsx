@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { requireStock } from "@/lib/auth/require-user";
 import { can } from "@/lib/auth/roles";
-import { listUnits, unitCounts, countUnits, stockGapFor, getOrderBrief, getActiveSpecRules } from "@/lib/queries";
+import { listUnits, unitCounts, countUnits, stockGapFor, getOrderBrief } from "@/lib/queries";
 import { resolvePlatform, enabledPlatforms } from "@/lib/config";
 import { PlatformDot, PlatformBadge } from "@/components/PlatformBadge";
 import UnitsManager from "@/components/UnitsManager";
@@ -9,19 +9,6 @@ import { ChevronLeft, ChevronRight, ScanBarcode, Search, FileDown } from "lucide
 
 export const dynamic = "force-dynamic";
 const PAGE_SIZE = 200;
-
-// เติมสเป็กจากกติกา (spec_rules) เมื่อค่าที่บันทึกว่าง — จับ size+grade (normalize) → spec
-const specKey = (s?: string | null) => (s || "").toLowerCase().replace(/[^0-9a-z]/g, "");
-function deriveSpec(size: string, grade: string | null, rules: { sizes: string; grades: string; spec: string }[]): string {
-  const sz = specKey(size); const gr = (grade || "").trim().toLowerCase();
-  if (!sz || !gr) return "";
-  for (const r of rules) {
-    const sizes = r.sizes.split(",").map(specKey).filter(Boolean);
-    const grades = r.grades.split(",").map((x) => x.trim().toLowerCase()).filter(Boolean);
-    if (sizes.includes(sz) && grades.includes(gr)) return r.spec;
-  }
-  return "";
-}
 
 export default async function UnitsPage({ searchParams }: { searchParams: Promise<{ q?: string; status?: string; product?: string; size?: string; platform?: string; page?: string; day?: string }> }) {
   const me = await requireStock();
@@ -33,11 +20,9 @@ export default async function UnitsPage({ searchParams }: { searchParams: Promis
   const filter = { search: q, status: statusFilter, product, size, platform: pf, day };
   const pageNum = Math.max(1, Number(page) || 1);
   const offset = (pageNum - 1) * PAGE_SIZE;
-  const [units0, counts, total, specRules] = await Promise.all([
-    listUnits({ ...filter, limit: PAGE_SIZE, offset }), unitCounts(), countUnits(filter), getActiveSpecRules(),
+  const [units, counts, total] = await Promise.all([
+    listUnits({ ...filter, limit: PAGE_SIZE, offset }), unitCounts(), countUnits(filter),
   ]);
-  // เติมสเป็กที่ว่างจากกติกา (ครอบทุกขนาด/ทุกตาราง โดยไม่ต้องแก้ข้อมูล)
-  const units = units0.map((u) => ({ ...u, spec: (u.spec && u.spec.trim()) ? u.spec : deriveSpec(u.size, u.grade, specRules) }));
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
   // ค้นด้วย Order No. ที่ยังไม่มี SKU รายชิ้น → ดึงสรุปออเดอร์มาโชว์ (ตัดสต๊อก/ส่งแล้ว)
   const orderBrief = q && units.length === 0 ? await getOrderBrief(q) : null;

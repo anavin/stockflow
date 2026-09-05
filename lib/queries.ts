@@ -208,19 +208,33 @@ function unitsWhere(opts: UnitsFilter, params: any[]): string {
   }
   return where.length ? "where " + where.join(" and ") : "";
 }
-/** ติดตาม SKU รายชิ้น — ค้นด้วย SKU/กลิ่น/order + สถานะ; join orders เพื่อรู้ผู้ซื้อ · แบ่งหน้า */
+// เติมสเป็กจากกติกา (spec_rules) เมื่อค่าที่บันทึกว่าง — จับ size+grade (normalize) → spec
+const _specKey = (s?: string | null) => (s || "").toLowerCase().replace(/[^0-9a-z]/g, "");
+function _deriveSpec(size: string, grade: string | null, rules: { sizes: string; grades: string; spec: string }[]): string {
+  const sz = _specKey(size); const gr = (grade || "").trim().toLowerCase();
+  if (!sz || !gr) return "";
+  for (const r of rules) {
+    if (r.sizes.split(",").map(_specKey).includes(sz) && r.grades.split(",").map((x) => x.trim().toLowerCase()).includes(gr)) return r.spec;
+  }
+  return "";
+}
+/** ติดตาม SKU รายชิ้น — ค้นด้วย SKU/กลิ่น/order + สถานะ; join orders เพื่อรู้ผู้ซื้อ · แบ่งหน้า
+ *  เติมสเป็กที่ว่างจากกติกา (spec_rules) ให้ทุกจุดที่ใช้ (หน้า + Export) ตรงกัน */
 export async function listUnits(opts: UnitsFilter & { limit?: number; offset?: number } = {}): Promise<UnitRow[]> {
   const params: any[] = [];
   const where = unitsWhere(opts, params);
   const limit = Math.min(opts.limit ?? 200, 500);
   const offset = Math.max(0, opts.offset ?? 0);
   try {
-    return await q<UnitRow>(
+    const rows = await q<UnitRow>(
       `select u.sku, u.product, u.size, u.grade, u.spec, u.barcode, u.status, u.order_no, o.platform,
               o.shop_name as buyer, o.receiver, o.phone, u.received_at, u.issued_at, o.shipped_at, u.source
        from (${UNITS_UNION}) u left join orders o on o.order_no = u.order_no
        ${where}
        order by u.ord desc limit ${limit} offset ${offset}`, params);
+    const rules = await getActiveSpecRules();
+    if (!rules.length) return rows;
+    return rows.map((u) => (u.spec && u.spec.trim()) ? u : { ...u, spec: _deriveSpec(u.size, u.grade, rules) });
   } catch { return []; }
 }
 export async function countUnits(opts: UnitsFilter = {}): Promise<number> {
