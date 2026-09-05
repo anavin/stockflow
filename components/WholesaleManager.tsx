@@ -39,25 +39,31 @@ export default function WholesaleManager({ catalog, branches, products, sizes, c
 
   async function saveCat() {
     setBusy(true); setErr(""); setMsg("");
-    const res = await saveCatalogItem({ ...cf, platform });
-    setBusy(false);
-    if (!res.ok) { setErr(res.error || "บันทึกไม่สำเร็จ"); return; }
-    setMsg("บันทึกแล้ว"); cancel(); router.refresh();
+    try {
+      const res = await saveCatalogItem({ ...cf, platform });
+      if (!res.ok) { setErr(res.error || "บันทึกไม่สำเร็จ"); return; }
+      setMsg("บันทึกแล้ว"); cancel(); router.refresh();
+    } catch { setErr("บันทึกไม่สำเร็จ (ระบบขัดข้อง ลองใหม่)"); }
+    finally { setBusy(false); }
   }
   async function saveBr() {
     setBusy(true); setErr(""); setMsg("");
-    const res = await saveBranch({ ...bf, platform: "Eveandboy" });
-    setBusy(false);
-    if (!res.ok) { setErr(res.error || "บันทึกไม่สำเร็จ"); return; }
-    setMsg("บันทึกแล้ว"); cancel(); router.refresh();
+    try {
+      const res = await saveBranch({ ...bf, platform: "Eveandboy" });
+      if (!res.ok) { setErr(res.error || "บันทึกไม่สำเร็จ"); return; }
+      setMsg("บันทึกแล้ว"); cancel(); router.refresh();
+    } catch { setErr("บันทึกไม่สำเร็จ (ระบบขัดข้อง ลองใหม่)"); }
+    finally { setBusy(false); }
   }
   async function del(kind: "cat" | "branch", id: number, label: string) {
     if (!confirm(`ลบ "${label}"?`)) return;
-    setBusy(true);
-    const res = kind === "cat" ? await deleteCatalogItem(id) : await deleteBranch(id);
-    setBusy(false);
-    if (!res.ok) { setErr(res.error || "ลบไม่สำเร็จ"); return; }
-    router.refresh();
+    setBusy(true); setErr(""); setMsg("");
+    try {
+      const res = kind === "cat" ? await deleteCatalogItem(id) : await deleteBranch(id);
+      if (!res.ok) { setErr(res.error || "ลบไม่สำเร็จ"); return; }
+      router.refresh();
+    } catch { setErr("ลบไม่สำเร็จ (ระบบขัดข้อง ลองใหม่)"); }
+    finally { setBusy(false); }
   }
 
   const TABS: { k: Tab; label: string }[] = [

@@ -42,10 +42,12 @@ export default function UnitsManager({ units, canEdit, reconcile }: { units: Uni
     if (!list.length) return;
     if (!confirm(`ลบ SKU ${list.length} รายการที่เลือก?\nที่ "อยู่คลัง" จะหักยอดคงเหลือลงตามจำนวน · ที่ "ตัดออกแล้ว" จะล้างประวัติเฉยๆ`)) return;
     setBusy(true);
-    const res = await bulkDeleteUnits(list);
-    setBusy(false);
-    if (!res.ok) { alert(res.error || "ลบไม่สำเร็จ"); return; }
-    setSel(new Set()); router.refresh();
+    try {
+      const res = await bulkDeleteUnits(list);
+      if (!res.ok) { alert(res.error || "ลบไม่สำเร็จ"); return; }
+      setSel(new Set()); router.refresh();
+    } catch { alert("ลบไม่สำเร็จ (ระบบขัดข้อง ลองใหม่)"); }
+    finally { setBusy(false); }
   }
 
   function startEdit(sku: string) { setEditSku(sku); setEditVal(sku); }
@@ -55,10 +57,12 @@ export default function UnitsManager({ units, canEdit, reconcile }: { units: Uni
     const n = editVal.trim();
     if (!n || n === oldSku) { cancelEdit(); return; }
     setBusy(true);
-    const res = await updateUnitSku(oldSku, n);
-    setBusy(false);
-    if (!res.ok) { alert(res.error || "แก้ไขไม่สำเร็จ"); return; }
-    cancelEdit(); router.refresh();
+    try {
+      const res = await updateUnitSku(oldSku, n);
+      if (!res.ok) { alert(res.error || "แก้ไขไม่สำเร็จ"); return; }
+      cancelEdit(); router.refresh();
+    } catch { alert("แก้ไขไม่สำเร็จ (ระบบขัดข้อง ลองใหม่)"); }
+    finally { setBusy(false); }
   }
 
   async function del(u: UnitRow) {
@@ -67,10 +71,12 @@ export default function UnitsManager({ units, canEdit, reconcile }: { units: Uni
       : `ลบ SKU "${u.sku}" (${u.product} ${u.size}) ออกจากคลัง? ยอดคงเหลือจะลด 1`;
     if (!confirm(warn)) return;
     setBusy(true);
-    const res = await deleteUnit(u.sku);
-    setBusy(false);
-    if (!res.ok) { alert(res.error || "ลบไม่สำเร็จ"); return; }
-    router.refresh();
+    try {
+      const res = await deleteUnit(u.sku);
+      if (!res.ok) { alert(res.error || "ลบไม่สำเร็จ"); return; }
+      router.refresh();
+    } catch { alert("ลบไม่สำเร็จ (ระบบขัดข้อง ลองใหม่)"); }
+    finally { setBusy(false); }
   }
 
   const cols = (canEdit ? 9 : 8) + (canEdit ? 1 : 0);   // +Spec +checkbox

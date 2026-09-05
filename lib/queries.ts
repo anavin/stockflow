@@ -179,6 +179,7 @@ const UNITS_UNION = `
   select su.sku, su.product, su.size, su.grade, su.spec, su.barcode, su.status, su.order_no,
          su.received_at, su.issued_at, su.id as ord, 'unit' as source
     from stock_unit su
+   where not exists (select 1 from orders o where o.order_no = su.order_no and o.deleted_at is not null)
   union all
   select oi.sku, oi.product, oi.size, p.ptype as grade, oi.spec, null::text as barcode,
          'issued' as status, oi.order_no,

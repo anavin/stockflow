@@ -52,9 +52,13 @@ export default function BulkStock({ rows, canEdit, fdaKeys = [] }: { rows: BulkR
 
   async function addOem(e: React.FormEvent) {
     e.preventDefault(); if (!oem.scent.trim()) return;
-    setBusy(true); const r = await addBulkScent(oem.scent, oem.brand, oem.grade || null); setBusy(false);
-    if (!r.ok) { alert(r.error); return; }
-    setOem({ ...oem, scent: "" }); router.refresh();
+    setBusy(true);
+    try {
+      const r = await addBulkScent(oem.scent, oem.brand, oem.grade || null);
+      if (!r.ok) { alert(r.error); return; }
+      setOem({ ...oem, scent: "" }); router.refresh();
+    } catch { alert("เพิ่มไม่สำเร็จ (ระบบขัดข้อง ลองใหม่)"); }
+    finally { setBusy(false); }
   }
   function exportCsv() {
     downloadCsv("น้ำหอมยังไม่บรรจุ", ["Grade", "กลิ่น", "Brand", "ปริมาตร (ml)", "จุดสั่งซื้อ", "หมายเหตุ"],
@@ -152,9 +156,13 @@ function NoteInline({ row, canEdit }: { row: BulkRow; canEdit: boolean }) {
 
   async function save() {
     if (val.trim() === orig.trim()) { setEditing(false); return; }
-    setBusy(true); const r = await setMaterialNote(descOf(row), val); setBusy(false);
-    if (!r.ok) { alert(r.error); setVal(orig); setEditing(false); return; }
-    setEditing(false); router.refresh();
+    setBusy(true);
+    try {
+      const r = await setMaterialNote(descOf(row), val);
+      if (!r.ok) { alert(r.error); setVal(orig); setEditing(false); return; }
+      setEditing(false); router.refresh();
+    } catch { alert("บันทึกหมายเหตุไม่สำเร็จ (ระบบขัดข้อง)"); setVal(orig); setEditing(false); }
+    finally { setBusy(false); }
   }
 
   if (editing) {
