@@ -964,9 +964,12 @@ export async function listIssuedToday(): Promise<IssuedTodayRow[]> {
 /** สรุปหน้าตัดสต๊อก: ตัดแล้ววันนี้ + รอตัด (ยังไม่ตัด) */
 export async function issueTodayStats(): Promise<{ cutToday: number; pending: number }> {
   try {
+    // "รอตัด" นับเฉพาะรอบปัจจุบัน (ตั้งแต่ PERIOD_START) — ข้อมูลเก่า/นำเข้าไม่นับ · เหมือน dashboard
+    const P = PERIOD_START;
+    const period = P ? ` and (current_date < date '${P}' or coalesce(doc_date, order_date) >= date '${P}')` : "";
     const [r] = await q<{ cut_today: number; pending: number }>(
       `select count(*) filter (where ${bkkTodayRange("stock_issued_at")})::int as cut_today,
-              count(*) filter (where stock_issued_at is null)::int as pending
+              count(*) filter (where stock_issued_at is null${period})::int as pending
        from orders where deleted_at is null`);
     return { cutToday: r?.cut_today ?? 0, pending: r?.pending ?? 0 };
   } catch { return { cutToday: 0, pending: 0 }; }
@@ -1371,7 +1374,11 @@ const wml = (s?: string | null) => (s || "").match(/[0-9]+(\.[0-9]+)?/)?.[0] ?? 
 
 // cache tag "reference" — bump() ใน wholesale.ts revalidate ให้ตอนแก้ (ตรงกับ getProducts/getSizes)
 export const listWholesaleCatalog = unstable_cache(async (platform: string): Promise<WholesaleCatalogRow[]> => {
-  try { return await q<WholesaleCatalogRow>(`select id, platform, product, size, barcode, code, item_name, grade, active, sort from wholesale_catalog where platform = $1 order by sort, product, size`, [platform]); }
+  try { return await q<WholesaleCatalogRow>(`select c.id, c.platform, c.product, c.size, c.barcode, c.code, c.item_name,
+              coalesce(nullif(btrim(c.grade),''), p.ptype) as grade, c.active, c.sort
+       from wholesale_catalog c
+       left join products p on lower(btrim(p.name)) = lower(btrim(c.product))
+       where c.platform = $1 order by c.sort, c.product, c.size`, [platform]); }
   catch (e) { return orMissing(e, []); }
 }, ["ws:catalog"], { tags: ["reference"], revalidate: 300 });
 export const listWholesaleBranches = unstable_cache(async (platform: string): Promise<WholesaleBranchRow[]> => {

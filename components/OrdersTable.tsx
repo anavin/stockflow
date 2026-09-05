@@ -135,9 +135,9 @@ export default function OrdersTable({ orders, platform = "Shopee" }: { orders: O
                 <th className="whitespace-nowrap px-4 py-3">วันที่</th>
                 <th className="px-4 py-3">ผู้รับ</th>
                 <th className="px-4 py-3">จังหวัด</th>
-                <th className="px-4 py-3">สถานะ</th>
-                <th className="px-4 py-3 text-center">รายการ</th>
-                <th className="px-4 py-3 text-right">จัดการ</th>
+                <th className="w-px whitespace-nowrap px-4 py-3">สถานะ</th>
+                <th className="w-px px-3 py-3 text-center">รายการ</th>
+                <th className="w-px whitespace-nowrap px-4 py-3 text-right">จัดการ</th>
               </tr>
             </thead>
             <tbody>
@@ -165,20 +165,20 @@ export default function OrdersTable({ orders, platform = "Shopee" }: { orders: O
                       {isNow && <span className="ml-1.5 inline-flex items-center gap-0.5 rounded-full border border-orange-200 bg-orange-50 px-2 py-0.5 align-middle text-[10px] font-semibold text-orange-700"><Clock size={10} /> ส่งทันที</span>}
                     </td>
                     <td className="px-4 py-3 text-muted">{o.province || "—"}</td>
-                    <td className="px-4 py-3"><StatusChip order={o} /></td>
-                    <td className="px-4 py-3 text-center">
+                    <td className="w-px whitespace-nowrap px-4 py-3"><StatusChip order={o} /></td>
+                    <td className="w-px px-3 py-3 text-center">
                       <span className="chip bg-brand-50 text-brand-600">{o.item_count}</span>
                     </td>
-                    <td className="px-4 py-3">
+                    <td className="w-px whitespace-nowrap px-4 py-3">
                       <div className="flex items-center justify-end gap-1">
                         {isCtw && (o.ctw_received_at ? (
-                          <span className="inline-flex items-center gap-1 rounded-md bg-purple-50 px-2 py-1 text-xs font-medium text-purple-700 whitespace-nowrap" title="ส่งไป CTW แล้ว">
+                          <span className="inline-flex items-center gap-1 rounded-md bg-red-50 px-2 py-1 text-xs font-medium text-red-700 whitespace-nowrap" title="ส่งไป CTW แล้ว">
                             <CheckCircle2 size={14} /> ส่ง CTW แล้ว
                           </span>
                         ) : o.stock_issued_at ? (
                           <button onClick={() => onPush(o.order_no)} disabled={busy === o.order_no}
                             className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium text-white disabled:opacity-50 whitespace-nowrap"
-                            style={{ backgroundColor: "#9333ea" }} title="ส่งใบเบิกนี้ไป CTW">
+                            style={{ backgroundColor: "#dc2626" }} title="ส่งใบเบิกนี้ไป CTW">
                             <Send size={14} /> {busy === o.order_no ? "กำลังส่ง…" : "ส่งไป CTW"}
                           </button>
                         ) : (
