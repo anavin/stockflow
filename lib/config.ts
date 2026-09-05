@@ -44,7 +44,7 @@ export const PLATFORM_COLORS: Record<string, string> = {
   Line: "#06c755",     // เขียว
   Website: "#2563eb",  // ฟ้า
   Office: "#475569",   // เทา
-  CTW: "#9333ea",      // ม่วง (สาขา Central World)
+  CTW: "#dc2626",      // แดง (Central World)
   Eveandboy: "#ec4899", // ชมพู (Eveandboy)
   KingPower: "#b8860b", // ทอง (King Power)
 };
