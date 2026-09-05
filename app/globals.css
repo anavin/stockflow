@@ -3,7 +3,8 @@
 @tailwind utilities;
 
 :root {
-  --font-sans: "IBM Plex Sans Thai", "Sarabun", system-ui, sans-serif;
+  /* Sarabun เป็นหลัก (มีหัว อ่านง่าย มาตรฐานเอกสารไทย) · IBM Plex Sans Thai เป็นตัวสำรอง */
+  --font-sans: "Sarabun", "IBM Plex Sans Thai", system-ui, sans-serif;
   color-scheme: light;
 
   /* App accent = fixed professional teal (calm, easy on the eyes).
@@ -13,6 +14,13 @@
   --brand-600: 15 118 110;  /* teal-700 #0f766e */
   --brand-50: 240 253 250;  /* teal-50  #f0fdfa */
 }
+
+/* ขนาดตัวอักษรฐานทั้งระบบ — Tailwind text-* ใช้ rem จึงขยายตามสัดส่วนทั้งแอป
+   ค่าเริ่มต้น 17px (กลาง) · ผู้ใช้สลับได้ที่ปุ่ม ก/กก/กกก (เก็บใน localStorage → data-fontsize) */
+html { font-size: 17px; }
+html[data-fontsize="sm"] { font-size: 16px; }   /* ก — เล็ก (เดิม) */
+html[data-fontsize="md"] { font-size: 17px; }   /* กก — กลาง (ค่าเริ่มต้น) */
+html[data-fontsize="lg"] { font-size: 19px; }   /* กกก — ใหญ่ */
 
 html, body {
   background: #f5f7fa;
@@ -67,6 +75,7 @@ html, body {
    Safari-safe recipe (จาก CTW): flow ปกติ top-down, ห้าม fixed-size flex box,
    .print-area overflow ต้อง visible ไม่งั้น PDF ออกมาว่าง. ใบเบิก = A4 แนวนอน. */
 @media print {
+  html { font-size: 16px !important; }   /* คงขนาดฐานเดิมตอนพิมพ์ — เลย์เอาต์ใบเบิก/ใบส่งของ A4 ไม่เพี้ยนตามขนาดที่ผู้ใช้เลือก */
   html, body { background: #fff !important; }
   .no-print { display: none !important; }
   @page { size: A4 landscape; margin: 8mm; }

@@ -17,8 +17,14 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link
-          href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&family=Sarabun:wght@400;500;600;700&display=swap"
+          href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;600;700&family=IBM+Plex+Sans+Thai:wght@400;500;600;700&display=swap"
           rel="stylesheet"
+        />
+        {/* ใช้ขนาดตัวอักษรที่ผู้ใช้เลือกไว้ ตั้งแต่ก่อนวาดหน้า (กันจอกระพริบ) */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){try{var v=localStorage.getItem('sf_fontsize');if(v){document.documentElement.setAttribute('data-fontsize',v);}}catch(e){}})();`,
+          }}
         />
       </head>
       <body className="min-h-screen"><EnvBanner />{children}</body>

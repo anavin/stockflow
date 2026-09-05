@@ -5,6 +5,7 @@ import { useState } from "react";
 import { PLATFORMS, enabledPlatforms, platformBase, platformColor, platformTint } from "@/lib/config";
 import { can, ROLE_LABELS, roleList, isAdmin } from "@/lib/auth/roles";
 import { Package, PlusCircle, Upload, List, LogOut, Menu, X, Trash2, Users, ScanLine, Boxes, LayoutDashboard, BarChart3, FlaskConical, ScanBarcode, ShieldCheck, Truck, Droplets, Sticker, PackageOpen, History, ScrollText, ClipboardCheck, Undo2, PackageX, Store } from "lucide-react";
+import FontSizeToggle from "@/components/FontSizeToggle";
 
 export default function Sidebar({ user }: { user: { full_name: string; username: string; role: string } }) {
   const pathname = usePathname();
@@ -121,6 +122,7 @@ export default function Sidebar({ user }: { user: { full_name: string; username:
       </nav>
 
       <div className="border-t border-line p-3">
+        <FontSizeToggle />
         <div className="mb-2 px-2">
           <div className="text-sm font-medium text-ink">{user.full_name || user.username}</div>
           <div className="text-[11px] text-muted">@{user.username} · {roleList(user.role).map((r) => ROLE_LABELS[r] || r).join(" · ") || user.role}</div>
