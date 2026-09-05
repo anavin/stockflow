@@ -5,6 +5,7 @@ import { lookupOrderForReturn, confirmReturn, type ReturnLookup, type ReturnItem
 import { PlatformBadge, PlatformDot } from "./PlatformBadge";
 import type { ReturnTodayRow } from "@/lib/queries";
 import { scanBeep } from "@/lib/scan-feedback";
+import { assignsSku } from "@/lib/config";
 import { ScanLine, Camera, Undo2, PackageCheck, X, CheckCircle2, RotateCcw, Trash2, ClipboardList } from "lucide-react";
 
 const CameraScan = dynamic(() => import("./CameraScan"), { ssr: false });
@@ -32,7 +33,7 @@ export default function ReturnScanner({ todayReturns = [] }: { todayReturns?: Re
   function initForm(items: ReturnItemPreview[], issued: boolean): Form {
     const f: Form = {};
     for (const it of items) {
-      const canRestock = it.tracked && issued;
+      const canRestock = it.tracked && issued && !assignsSku(it.size);   // 4ml คืนเข้าสต๊อกไม่ได้ (server reject) → default = ชำรุด/ไม่นับ
       f[it.line_no] = { qty: it.remaining, disp: canRestock ? "restock" : it.is_free ? "none" : "damaged" };
     }
     return f;
@@ -116,7 +117,7 @@ export default function ReturnScanner({ todayReturns = [] }: { todayReturns?: Re
             <div className="space-y-2">
               {preview.items!.map((it) => {
                 const v = form[it.line_no] || { qty: 0, disp: "none" as Disp };
-                const canRestock = it.tracked && preview.issued;
+                const canRestock = it.tracked && preview.issued && !assignsSku(it.size);
                 const full = it.remaining <= 0;
                 return (
                   <div key={it.line_no} className={`rounded-lg border border-line p-3 ${full ? "opacity-60" : ""}`}>
