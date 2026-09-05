@@ -2022,7 +2022,8 @@ create table if not exists public.spec_rules (
 insert into public.spec_rules (sizes, grades, spec, sort)
 select * from (values
   ('10 ml','EDP','ฝาสีเงิน',1), ('10 ml','EDP+,PARFUM','ฝาสีดำ',2),
-  ('50 ml','EDP','สี่เหลี่ยม',3), ('30 ml,50 ml','EDP+,PARFUM','ลูกเต๋า',4)
+  ('50 ml','EDP','สี่เหลี่ยม',3), ('30 ml,50 ml','EDP+,PARFUM','ลูกเต๋า',4),
+  ('4 ml','EDP,EDP+,PARFUM,EDT','ซองซิป',5)
 ) as v(sizes, grades, spec, sort)
 where not exists (select 1 from public.spec_rules);
 
