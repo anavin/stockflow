@@ -1001,9 +1001,10 @@ export async function listIssuedToday(): Promise<IssuedTodayRow[]> {
 /** สรุปหน้าตัดสต๊อก: ตัดแล้ววันนี้ + รอตัด (ยังไม่ตัด) */
 export async function issueTodayStats(): Promise<{ cutToday: number; pending: number }> {
   try {
-    // "รอตัด" นับเฉพาะรอบปัจจุบัน (ตั้งแต่ PERIOD_START) — ข้อมูลเก่า/นำเข้าไม่นับ · เหมือน dashboard
+    // "รอตัด" นับเฉพาะรอบปัจจุบัน (ตั้งแต่ PERIOD_START) — ข้อมูลเก่า/นำเข้าไม่นับ
+    // ใช้ coalesce(order_date, doc_date) ให้ตรงกับ listOrders/หน้า /orders (drill-down เลขต้องตรง)
     const P = PERIOD_START;
-    const period = P ? ` and (current_date < date '${P}' or coalesce(doc_date, order_date) >= date '${P}')` : "";
+    const period = P ? ` and (current_date < date '${P}' or coalesce(order_date, doc_date) >= date '${P}')` : "";
     const [r] = await q<{ cut_today: number; pending: number }>(
       `select count(*) filter (where ${bkkTodayRange("stock_issued_at")})::int as cut_today,
               count(*) filter (where stock_issued_at is null${period})::int as pending

@@ -14,7 +14,10 @@ export default function Sidebar({ user }: { user: { full_name: string; username:
   const role = user.role;
   // เมนูขึ้นตามสิทธิ์ — สร้างใบเบิก vs จัดของ/ตัดสต๊อก แยกกัน
   const dashNav = can.viewDashboard(role)
-    ? [{ href: "/", label: "หน้าหลัก", icon: LayoutDashboard, exact: true }]
+    ? [
+        { href: "/", label: "หน้าหลัก", icon: LayoutDashboard, exact: true },
+        { href: "/orders", label: "ใบเบิกทุกแพลตฟอร์ม", icon: List, exact: true },
+      ]
     : [];
   // 1 ลิงก์/แพลตฟอร์มที่เปิดใช้ → หน้ารายการใบเบิก (สร้าง/นำเข้า/ถังขยะ อยู่ในหน้านั้น)
   const orderNav = can.createOrders(role)

@@ -222,9 +222,10 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
         <section className="card flex flex-col p-4">
           <div className="mb-2 flex shrink-0 flex-wrap items-center justify-between gap-2">
             <h2 className="flex items-center gap-2 text-xs font-semibold text-ink"><CalendarCheck size={14} className="text-brand" /> ออร์เดอร์รายวัน · ตัดสต๊อกแล้วกี่ใบ</h2>
-            <span className="text-[11px] text-muted">{pf ? "5 วันล่าสุด (ตามวันที่สั่งซื้อ)" : "5 วันล่าสุด · ทุกแพลตฟอร์ม — เลือกแพลตฟอร์มด้านบนเพื่อคลิกดูรายการ"}</span>
+            <span className="text-[11px] text-muted">5 วันล่าสุด{pf ? " (ตามวันที่สั่งซื้อ)" : " · ทุกแพลตฟอร์ม"}</span>
           </div>
-          <DailyIssueTable data={daily} base={base} linkable={!!pf} />
+          {/* โหมดรวม (ไม่เลือกแพลตฟอร์ม) drill ไปหน้า /orders รวมทุกแพลตฟอร์ม · เลือกแพลตฟอร์มแล้ว drill ไปหน้านั้น */}
+          <DailyIssueTable data={daily} base={pf ? base : "/orders"} linkable />
         </section>
 
         {/* low stock (ย่อเล็ก) */}

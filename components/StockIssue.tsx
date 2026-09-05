@@ -1,6 +1,8 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import dynamic from "next/dynamic";
+import StatCard from "./StatCard";
+import { PERIOD_START } from "@/lib/config";
 import { lookupOrderForIssue, confirmIssueByOrder, reverseIssue, resolveIssueSku, type IssueResult, type IssueLookup, type IssueItemPreview } from "@/lib/actions/stock";
 import { resetOrderIssue } from "@/lib/actions/reset";
 import { PlatformBadge, PlatformDot } from "./PlatformBadge";
@@ -283,14 +285,10 @@ export default function StockIssue({ isAdmin, initialOrder, specOptions = [], to
       {/* ขวา: สรุป + ผลลัพธ์วันนี้ (จาก DB) */}
       <div className="space-y-3 lg:col-span-2">
         <div className="grid grid-cols-2 gap-3">
-          <div className="card bg-green-50 p-4 text-center">
-            <div className="text-3xl font-bold text-green-700">{(stats?.cutToday ?? 0).toLocaleString()}</div>
-            <div className="mt-0.5 text-xs font-medium text-green-700/80">ตัดแล้ววันนี้</div>
-          </div>
-          <div className="card bg-amber-50 p-4 text-center">
-            <div className="text-3xl font-bold text-amber-700">{(stats?.pending ?? 0).toLocaleString()}</div>
-            <div className="mt-0.5 text-xs font-medium text-amber-700/80">รอตัดสต๊อก</div>
-          </div>
+          <StatCard value={stats?.cutToday ?? 0} label="ตัดแล้ววันนี้" tone="green"
+            href="/stock/issued" title="ดูใบที่ตัดสต๊อกแล้ว" />
+          <StatCard value={stats?.pending ?? 0} label="รอตัดสต๊อก" tone="amber"
+            href={`/orders?issued=no${PERIOD_START ? `&from=${PERIOD_START}` : ""}`} title="ดูรายการที่ยังรอตัดสต๊อก (ทุกแพลตฟอร์ม)" />
         </div>
 
         {log.length > 0 && (

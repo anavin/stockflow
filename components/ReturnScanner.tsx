@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import { lookupOrderForReturn, confirmReturn, type ReturnLookup, type ReturnItemPreview } from "@/lib/actions/returns";
 import { PlatformBadge, PlatformDot } from "./PlatformBadge";
+import StatCard from "./StatCard";
 import type { ReturnTodayRow } from "@/lib/queries";
 import { scanBeep } from "@/lib/scan-feedback";
 import { assignsSku, isBagProduct } from "@/lib/config";
@@ -193,14 +194,10 @@ export default function ReturnScanner({ todayReturns = [] }: { todayReturns?: Re
           return (
             <>
               <div className="grid grid-cols-2 gap-3">
-                <div className="card bg-green-50 p-4 text-center">
-                  <div className="text-3xl font-bold text-green-700">{ordersToday.toLocaleString()}</div>
-                  <div className="mt-0.5 text-xs font-medium text-green-700/80">คืนวันนี้ (ออเดอร์)</div>
-                </div>
-                <div className="card bg-red-50 p-4 text-center">
-                  <div className="text-3xl font-bold text-red-700">{damagedToday.toLocaleString()}</div>
-                  <div className="mt-0.5 text-xs font-medium text-red-700/80">ชำรุดวันนี้ (ชิ้น)</div>
-                </div>
+                <StatCard value={ordersToday} label="คืนวันนี้ (ออเดอร์)" tone="green"
+                  href="/returns/history" title="ดูประวัติการรับคืน" />
+                <StatCard value={damagedToday} label="ชำรุดวันนี้ (ชิ้น)" tone="red"
+                  href="/stock/damaged" title="ดูสต๊อกของชำรุด" />
               </div>
 
               {log.length > 0 && (
