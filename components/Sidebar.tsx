@@ -96,16 +96,11 @@ export default function Sidebar({ user }: { user: { full_name: string; username:
         </div>
       </div>
 
-      {orderNav.length > 0 && (
-        <div className="px-3">
-          <div className="flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-semibold text-muted">
-            <Package size={14} /> ใบเบิกสินค้า
-          </div>
-        </div>
-      )}
-
       <nav className="mt-2 flex-1 space-y-0.5 overflow-y-auto px-3">
         {navItems(dashNav)}
+        {orderNav.length > 0 && (
+          <div className="px-3 pb-1 pt-4 text-[11px] font-semibold uppercase tracking-wide text-faint">ใบเบิกรายแพลตฟอร์ม</div>
+        )}
         {platformNav(orderNav)}
         {section("สินค้าสำเร็จรูป", finishedNav)}
         {section("คลังวัตถุดิบ", materialNav)}

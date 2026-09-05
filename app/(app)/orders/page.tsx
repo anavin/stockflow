@@ -1,28 +1,30 @@
 import Link from "next/link";
 import { requireDashboard } from "@/lib/auth/require-user";
 import { listOrders, countOrders } from "@/lib/queries";
-import { platformColor } from "@/lib/config";
+import { platformColor, platformName, resolvePlatform } from "@/lib/config";
+import AllOrdersFilters from "@/components/AllOrdersFilters";
 import { ClipboardList, ChevronLeft, ChevronRight, ArrowLeft, PackageCheck, Truck } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
 const PAGE_SIZE = 50;
 
-// รายการออร์เดอร์ "รวมทุกแพลตฟอร์ม" — ปลายทางของ drill-down การ์ดรายวันบนแดชบอร์ดโหมดรวม
-// (หน้า /[platform] ดูได้ทีละแพลตฟอร์ม · หน้านี้กรองด้วย from/to/issued/shipped เหมือนกันแต่ไม่ผูกแพลตฟอร์ม)
+// รายการออร์เดอร์ "รวมทุกแพลตฟอร์ม" — ปลายทางของ drill-down การ์ดรายวันบนแดชบอร์ดโหมดรวม + มีฟิลเตอร์ของตัวเอง
+// (หน้า /[platform] ดูได้ทีละแพลตฟอร์ม · หน้านี้กรองแพลตฟอร์ม/ค้นหา/สถานะ/ช่วงวันที่ ได้ในที่เดียว)
 export default async function AllOrdersPage({ searchParams }: {
-  searchParams: Promise<{ from?: string; to?: string; issued?: string; shipped?: string; q?: string; page?: string }>;
+  searchParams: Promise<{ platform?: string; from?: string; to?: string; issued?: string; shipped?: string; q?: string; page?: string }>;
 }) {
   await requireDashboard();
-  const { from, to, issued, shipped, q, page } = await searchParams;
+  const { platform, from, to, issued, shipped, q, page } = await searchParams;
+  const pf = resolvePlatform(platform)?.code;   // undefined = ทุกแพลตฟอร์ม
   const iss = issued === "yes" || issued === "no" ? issued : undefined;
   const shp = shipped === "yes" || shipped === "no" ? shipped : undefined;
   const pageNum = Math.max(1, Number(page) || 1);
   const offset = (pageNum - 1) * PAGE_SIZE;
 
   const [orders, total] = await Promise.all([
-    listOrders({ search: q, from, to, issued: iss, shipped: shp, limit: PAGE_SIZE, offset }),
-    countOrders({ search: q, from, to, issued: iss, shipped: shp }),
+    listOrders({ platform: pf, search: q, from, to, issued: iss, shipped: shp, limit: PAGE_SIZE, offset }),
+    countOrders({ platform: pf, search: q, from, to, issued: iss, shipped: shp }),
   ]);
 
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
@@ -32,11 +34,12 @@ export default async function AllOrdersPage({ searchParams }: {
   const fmtDay = (d?: string | null) => (d ? new Date(d + "T00:00:00").toLocaleDateString("th-TH", { day: "numeric", month: "short", year: "2-digit" }) : "");
   const dateLabel = from && to ? (from === to ? fmtDay(from) : `${fmtDay(from)}–${fmtDay(to)}`) : from ? `ตั้งแต่ ${fmtDay(from)}` : to ? `ถึง ${fmtDay(to)}` : "";
   const statusLabel = iss === "no" ? "รอตัดสต๊อก" : iss === "yes" ? "ตัดสต๊อกแล้ว" : shp === "no" ? "ค้างส่ง" : shp === "yes" ? "ส่งแล้ว" : "";
+  const summary = [pf ? platformName(pf) : "", dateLabel, statusLabel].filter(Boolean).join(" · ") || "ทั้งหมด";
 
   // คง query ปัจจุบันไว้ตอนเปลี่ยนหน้า
   const qs = (p: number) => {
     const sp = new URLSearchParams();
-    if (q) sp.set("q", q); if (from) sp.set("from", from); if (to) sp.set("to", to);
+    if (q) sp.set("q", q); if (pf) sp.set("platform", pf); if (from) sp.set("from", from); if (to) sp.set("to", to);
     if (iss) sp.set("issued", iss); if (shp) sp.set("shipped", shp);
     if (p > 1) sp.set("page", String(p));
     const s = sp.toString();
@@ -44,46 +47,51 @@ export default async function AllOrdersPage({ searchParams }: {
   };
 
   return (
-    <div className="mx-auto max-w-4xl px-4 py-6 md:px-8">
+    <div className="mx-auto max-w-5xl px-4 py-6 md:px-8">
       <Link href="/" className="mb-3 inline-flex items-center gap-1 text-xs font-medium text-muted hover:text-brand-600"><ArrowLeft size={13} /> กลับภาพรวม</Link>
-      <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h1 className="flex items-center gap-2 text-xl font-bold text-ink"><ClipboardList size={20} className="text-brand" /> ออร์เดอร์ทุกแพลตฟอร์ม</h1>
-          <p className="mt-0.5 text-sm text-muted">
-            {[dateLabel, statusLabel].filter(Boolean).join(" · ") || "ทั้งหมด"}
-            {" · "}<b className="text-ink">{total.toLocaleString()}</b> ออร์เดอร์
-            {total > 0 && <span className="text-faint"> · แสดง {rowFrom.toLocaleString()}–{rowTo.toLocaleString()}</span>}
-          </p>
-        </div>
-        {(dateLabel || statusLabel || q) && (
-          <Link href="/orders" className="btn-ghost text-xs">ล้างตัวกรอง</Link>
-        )}
+      <div className="mb-4">
+        <h1 className="flex items-center gap-2 text-xl font-bold text-ink"><ClipboardList size={20} className="text-brand" /> ออร์เดอร์ทุกแพลตฟอร์ม</h1>
+        <p className="mt-0.5 text-sm text-muted">
+          {summary}{" · "}<b className="text-ink">{total.toLocaleString()}</b> ออร์เดอร์
+          {total > 0 && <span className="text-faint"> · แสดง {rowFrom.toLocaleString()}–{rowTo.toLocaleString()}</span>}
+        </p>
       </div>
+
+      <AllOrdersFilters q={q} platform={pf} issued={iss} shipped={shp} from={from} to={to} />
 
       {orders.length === 0 ? (
         <div className="card p-10 text-center text-sm text-muted">ไม่พบออร์เดอร์ตามตัวกรองนี้</div>
       ) : (
-        <section className="card divide-y divide-line/70 p-2">
-          {orders.map((o) => (
-            <Link key={o.order_no} href={`/${(o.platform || "Shopee").toLowerCase()}/${encodeURIComponent(o.order_no)}`}
-              className="flex items-center justify-between gap-3 rounded-lg px-3 py-2.5 hover:bg-soft">
-              <div className="min-w-0">
-                <div className="flex items-center gap-1.5">
+        <section className="card overflow-hidden">
+          {/* หัวคอลัมน์ (เดสก์ท็อป) */}
+          <div className="hidden grid-cols-[minmax(9rem,auto)_1fr_auto] items-center gap-3 border-b border-line bg-soft/60 px-4 py-2 text-[11px] font-medium text-muted sm:grid">
+            <span>เลขที่ / ใบเบิก</span>
+            <span>ผู้รับ · จังหวัด</span>
+            <span className="text-right">สถานะ · รายการ</span>
+          </div>
+          <div className="divide-y divide-line/70">
+            {orders.map((o) => (
+              <Link key={o.order_no} href={`/${(o.platform || "Shopee").toLowerCase()}/${encodeURIComponent(o.order_no)}`}
+                className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-0.5 px-4 py-2.5 hover:bg-soft sm:grid-cols-[minmax(9rem,auto)_1fr_auto]">
+                {/* คอลัมน์ 1: จุดสี + เลขที่ + ใบเบิก */}
+                <div className="flex min-w-0 items-center gap-2">
                   <span className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: platformColor(o.platform) }} title={o.platform || ""} />
                   <span className="truncate font-mono text-xs text-ink">{o.order_no}</span>
-                  {o.doc_no && <span className="shrink-0 text-[11px] text-faint">· {o.doc_no}</span>}
+                  {o.doc_no && <span className="hidden shrink-0 text-[11px] text-faint lg:inline">{o.doc_no}</span>}
                 </div>
-                <div className="truncate text-xs text-muted">{o.receiver || o.username || "—"}{o.province ? ` · ${o.province}` : ""}</div>
-              </div>
-              <div className="flex shrink-0 items-center gap-1.5">
-                {o.stock_issued_at
-                  ? <span className="chip inline-flex items-center gap-1 bg-green-50 text-green-700"><PackageCheck size={12} /> ตัดแล้ว</span>
-                  : <span className="chip bg-amber-50 text-amber-700">รอตัด</span>}
-                {o.shipped_at && <span className="chip inline-flex items-center gap-1 bg-green-50 text-green-700"><Truck size={12} /> ส่งแล้ว</span>}
-                <span className="chip bg-brand-50 text-brand-600">{o.item_count} รายการ</span>
-              </div>
-            </Link>
-          ))}
+                {/* คอลัมน์ 2: ผู้รับ · จังหวัด (เติมช่องกลาง) — มือถือดันลงบรรทัดสองเต็มความกว้าง */}
+                <div className="col-span-2 truncate text-xs text-muted sm:col-span-1 sm:order-none order-last">{o.receiver || o.username || "—"}{o.province ? ` · ${o.province}` : ""}</div>
+                {/* คอลัมน์ 3: สถานะ + จำนวนรายการ */}
+                <div className="flex shrink-0 items-center justify-end gap-1.5">
+                  {o.stock_issued_at
+                    ? <span className="chip inline-flex items-center gap-1 bg-green-50 text-green-700"><PackageCheck size={12} /> ตัดแล้ว</span>
+                    : <span className="chip bg-amber-50 text-amber-700">รอตัด</span>}
+                  {o.shipped_at && <span className="chip inline-flex items-center gap-1 bg-green-50 text-green-700"><Truck size={12} /> ส่งแล้ว</span>}
+                  <span className="chip bg-brand-50 text-brand-600">{o.item_count}</span>
+                </div>
+              </Link>
+            ))}
+          </div>
         </section>
       )}
 
