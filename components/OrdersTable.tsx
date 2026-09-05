@@ -48,20 +48,24 @@ export default function OrdersTable({ orders, platform = "Shopee" }: { orders: O
   async function onPush(orderNo: string) {
     if (!confirm(`ส่งใบเบิก ${orderNo} ไปยังระบบ CTW?\n\nระบบ CTW จะรับรายการ + SKU ไปเข้าสต๊อกสาขา`)) return;
     setBusy(orderNo);
-    const res = await pushToCtw(orderNo);
-    setBusy(null);
-    if (!res.ok) { alert(res.error || "ส่งไม่สำเร็จ"); return; }
-    router.refresh();
+    try {
+      const res = await pushToCtw(orderNo);
+      if (!res.ok) { alert(res.error || "ส่งไม่สำเร็จ"); return; }
+      router.refresh();
+    } catch { alert("ส่งไม่สำเร็จ (ระบบขัดข้อง ลองใหม่)"); }
+    finally { setBusy(null); }
   }
 
   async function onDelete(orderNo: string) {
     if (!confirm(`ย้ายใบเบิก Order No. ${orderNo} ไปถังขยะ?`)) return;
     setBusy(orderNo);
-    const res = await deleteOrder(orderNo);
-    setBusy(null);
-    if (!res.ok) { alert(res.error); return; }
-    setSel((prev) => { const n = new Set(prev); n.delete(orderNo); return n; });
-    router.refresh();
+    try {
+      const res = await deleteOrder(orderNo);
+      if (!res.ok) { alert(res.error); return; }
+      setSel((prev) => { const n = new Set(prev); n.delete(orderNo); return n; });
+      router.refresh();
+    } catch { alert("ลบไม่สำเร็จ (ระบบขัดข้อง ลองใหม่)"); }
+    finally { setBusy(null); }
   }
 
   async function onBulkDelete() {
@@ -69,11 +73,13 @@ export default function OrdersTable({ orders, platform = "Shopee" }: { orders: O
     if (list.length === 0) return;
     if (!confirm(`ย้ายใบเบิก ${list.length} รายการที่เลือก ไปถังขยะ?`)) return;
     setBulkBusy(true);
-    const res = await bulkDeleteOrders(list);
-    setBulkBusy(false);
-    if (!res.ok) { alert(res.error); return; }
-    setSel(new Set());
-    router.refresh();
+    try {
+      const res = await bulkDeleteOrders(list);
+      if (!res.ok) { alert(res.error); return; }
+      setSel(new Set());
+      router.refresh();
+    } catch { alert("ลบไม่สำเร็จ (ระบบขัดข้อง ลองใหม่)"); }
+    finally { setBulkBusy(false); }
   }
 
   function onBulkPrint() {

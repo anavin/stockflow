@@ -1201,7 +1201,7 @@ export async function leadTimeStats(): Promise<LeadTime> {
   try {
     const [r] = await q<LeadTime>(
       `select round(avg(extract(epoch from (shipped_at - coalesce(order_date,doc_date)::timestamptz))/86400)::numeric,1)::float8 as avg_order_to_ship,
-              round(avg(extract(epoch from (shipped_at - stock_issued_at))/86400) filter (where stock_issued_at is not null)::numeric,1)::float8 as avg_issue_to_ship,
+              round(avg(extract(epoch from (shipped_at - stock_issued_at))/86400) filter (where stock_issued_at is not null and shipped_at >= stock_issued_at)::numeric,1)::float8 as avg_issue_to_ship,
               count(*) filter (where stock_issued_at is null)::int as shipped_not_issued,
               count(*)::int as shipped
        from orders where deleted_at is null and shipped_at is not null and coalesce(order_date,doc_date) is not null`);

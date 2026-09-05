@@ -98,10 +98,14 @@ export default function ShipScanner({ date, isToday, rows: initialRows, pendingR
   }
 
   async function undo(orderNo: string) {
-    if (!confirm(`ยกเลิกการส่งของ ${orderNo}?`)) return;
-    const res = await unshipOrder(orderNo);
-    if (!res.ok) { alert(res.error); return; }
-    setRows((r) => r.filter((x) => x.order_no !== orderNo));
+    if (busy || !confirm(`ยกเลิกการส่งของ ${orderNo}?`)) return;
+    setBusy(true);
+    try {
+      const res = await unshipOrder(orderNo);
+      if (!res.ok) { alert(res.error); return; }
+      setRows((r) => r.filter((x) => x.order_no !== orderNo));
+    } catch { alert("ยกเลิกไม่สำเร็จ (ระบบขัดข้อง ลองใหม่)"); }
+    finally { setBusy(false); }
   }
 
   // บันทึก "ส่งแล้ว" แบบมือ (กรณีลืมสแกนตอนแพ็ค แต่ของส่งออกไปแล้ว) — ไม่ต้องสแกน

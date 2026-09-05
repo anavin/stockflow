@@ -75,7 +75,9 @@ export default function ReturnScanner({ todayReturns = [] }: { todayReturns?: Re
     const summary = [restockN > 0 ? `คืนเข้าสต๊อกขาย ${restockN}` : "", damagedN > 0 ? `ชำรุด ${damagedN}` : ""].filter(Boolean).join(" · ");
     if (!confirm(`ยืนยันรับคืน ${preview.order_no}?\n${summary}\n\n${restockN > 0 ? "⚠ ของที่ 'คืนสต๊อก' จะกลับไปเป็นสินค้าขายได้ทันที — ถ้าชำรุดให้เลือก 'ชำรุด'" : ""}`)) return;
     setBusy(true); setErr(null);
-    const res = await confirmReturn(preview.order_no, entries, reason, note);
+    let res: Awaited<ReturnType<typeof confirmReturn>>;
+    try { res = await confirmReturn(preview.order_no, entries, reason, note); }
+    catch { setBusy(false); setErr("รับคืนไม่สำเร็จ (ระบบขัดข้อง ลองใหม่)"); return; }
     setBusy(false);
     if (!res.ok) { setErr(res.error || "รับคืนไม่สำเร็จ"); return; }
     setLog((l) => [{ order_no: res.order_no!, platform: preview.platform, restocked: res.restocked || 0, damaged: res.damaged || 0, skipped: res.skipped || 0, at: Date.now() }, ...l]);

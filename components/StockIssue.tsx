@@ -30,18 +30,25 @@ export default function StockIssue({ isAdmin, initialOrder, specOptions = [], to
   const inputRef = useRef<HTMLInputElement>(null);
   const skuRef = useRef<HTMLInputElement>(null);
 
+  const [reversing, setReversing] = useState<string | null>(null);   // กันกดยกเลิกซ้ำ
   async function onReverse(orderNo: string, idx: number) {
-    if (!confirm(`ยกเลิกการตัดสต๊อกของ ${orderNo}? (คืนสต๊อกกลับ)`)) return;
-    const res = await reverseIssue(orderNo);
-    if (!res.ok) { alert(res.error); return; }
-    setLog((l) => l.map((e, i) => (i === idx ? { ...e, reversed: true } : e)));
+    if (reversing || !confirm(`ยกเลิกการตัดสต๊อกของ ${orderNo}? (คืนสต๊อกกลับ)`)) return;
+    setReversing(orderNo);
+    try {
+      const res = await reverseIssue(orderNo);
+      if (!res.ok) { alert(res.error); return; }
+      setLog((l) => l.map((e, i) => (i === idx ? { ...e, reversed: true } : e)));
+    } catch { alert("ยกเลิกไม่สำเร็จ (ระบบขัดข้อง ลองใหม่)"); }
+    finally { setReversing(null); }
   }
 
   // รีเซ็ตใบที่ตัน (ตัดแล้ว+ส่งแล้ว/มีการคืน) แล้วดึงรายการมาตัดใหม่ทันที — แอดมินเท่านั้น
   async function onResetAndCut(orderNo: string) {
     if (!confirm(`รีเซ็ตใบเบิก ${orderNo} กลับ "รอตัดสต๊อก"?\n\nยกเลิกการคืน + ยกเลิกการส่ง + คืนสต๊อก/SKU/ถุงทั้งหมด แล้วดึงรายการมาตัดใหม่ทันที`)) return;
     setBusy(true);
-    const res = await resetOrderIssue(orderNo);
+    let res: Awaited<ReturnType<typeof resetOrderIssue>>;
+    try { res = await resetOrderIssue(orderNo); }
+    catch { setBusy(false); alert("รีเซ็ตไม่สำเร็จ (ระบบขัดข้อง ลองใหม่)"); return; }
     setBusy(false);
     if (!res.ok) { alert(res.error); return; }
     lookup(orderNo);   // โหลดรายการมาตัดต่อได้เลย

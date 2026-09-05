@@ -278,6 +278,7 @@ export default function OrderForm({ platform = "Shopee", products, sizes, provin
     // เพราะถ้าเปิดหลัง await saveOrder เบราว์เซอร์จะถือว่าไม่ใช่การคลิกแล้ว บล็อกทันที
     const printWin = thenPrint ? window.open("about:blank", "_blank") : null;
 
+    try {
     // เตือน Order No. ซ้ำ (สร้างใหม่) — ยืนยันก่อนเขียนทับ
     if (!editing) {
       const dup = await orderExists(f.order_no);
@@ -312,6 +313,7 @@ export default function OrderForm({ platform = "Shopee", products, sizes, provin
     } else {
       setTimeout(() => { router.push(base); router.refresh(); }, 700);   // สร้างใหม่ → กลับหน้ารายการ
     }
+    } catch { printWin?.close(); setBusy(false); setError("บันทึกไม่สำเร็จ (ระบบขัดข้อง ลองใหม่)"); }
   }
 
   return (
