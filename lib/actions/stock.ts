@@ -315,8 +315,8 @@ export async function confirmIssueByOrder(
           if (isAssign) {
             // 4 ml: มีในคลัง (กลิ่น/ขนาดตรง) → ตัดออกเหมือนขวด · ไม่มีในระบบ → assign สร้าง unit ใหม่ (mark assigned_at_issue)
             if (!u) {
-              await run(`insert into stock_unit (sku, product, size, status, order_no, assigned_at_issue, issued_at, issued_by, received_at, received_by)
-                         values ($1,$2,$3,'issued',$4,true,now(),$5,now(),$5)`, [sku, li.product, li.size || "", on, user.id]);
+              await run(`insert into stock_unit (sku, product, size, spec, status, order_no, assigned_at_issue, issued_at, issued_by, received_at, received_by)
+                         values ($1,$2,$3,$4,'issued',$5,true,now(),$6,now(),$6)`, [sku, li.product, li.size || "", e.spec, on, user.id]);
             } else if (u.status === "issued" && u.order_no === on) {
               continue;   // ตัดซ้ำใบเดิม (idempotent)
             } else if (u.status === "in_stock") {

@@ -13,9 +13,14 @@ select '4 ml', 'EDP,EDP+,PARFUM,EDT', 'ซองซิป',
        coalesce((select max(sort) from public.spec_rules), 4) + 1
 where not exists (select 1 from public.spec_rules where btrim(sizes) = '4 ml');
 
--- 2) backfill 4 ml เดิมที่ spec ว่าง → ซองซิป
---    จับ "4 ml" แบบ normalize (ตัดช่องว่าง) ขึ้นต้นด้วย 4ml → ไม่โดน 40ml/14ml
+-- 2) backfill 4 ml เดิมที่ spec ว่าง → ซองซิป (จับ "4 ml" แบบ normalize → ไม่โดน 40ml/14ml)
+--    ต้องทำ 2 ตาราง: order_items (บันทึกตอนตัด) + stock_unit (แถวที่หน้า ติดตาม SKU อ่าน)
 update public.order_items
+set spec = 'ซองซิป'
+where coalesce(btrim(spec), '') = ''
+  and regexp_replace(lower(btrim(size)), '\s+', '', 'g') like '4ml%';
+
+update public.stock_unit
 set spec = 'ซองซิป'
 where coalesce(btrim(spec), '') = ''
   and regexp_replace(lower(btrim(size)), '\s+', '', 'g') like '4ml%';
