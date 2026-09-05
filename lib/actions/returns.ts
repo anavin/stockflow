@@ -253,11 +253,15 @@ export async function reverseReturn(returnId: number): Promise<{ ok: boolean; er
         }
       } else if (r.disposition === "damaged") {
         const sku = await matchStockSku(run, r.product, r.size || "");
-        const [row] = await run<{ qty: number }>(
-          `update damaged set qty = qty - $3, updated_at = now() where product=$1 and size=$2 returning qty::float8 as qty`,
-          [sku.product, sku.size, qty]);
-        if (row) await run(`insert into damaged_moves (product, size, qty_change, balance, reason, ref, note, created_by)
-                   values ($1,$2,$3,$4,'writeoff',$5,'ยกเลิกการคืน',$6)`, [sku.product, sku.size, -qty, row.qty, r.order_no, user.id]);
+        const [dmg] = await run<{ qty: number }>(`select qty::float8 as qty from damaged where product=$1 and size=$2 for update`, [sku.product, sku.size]);
+        const take = Math.min(qty, Number(dmg?.qty ?? 0));   // กัน damaged ติดลบ (ของชำรุดอาจถูกทำลาย/เคลมไปก่อนแล้ว)
+        if (take > 0) {
+          const [row] = await run<{ qty: number }>(
+            `update damaged set qty = qty - $3, updated_at = now() where product=$1 and size=$2 returning qty::float8 as qty`,
+            [sku.product, sku.size, take]);
+          if (row) await run(`insert into damaged_moves (product, size, qty_change, balance, reason, ref, note, created_by)
+                     values ($1,$2,$3,$4,'writeoff',$5,'ยกเลิกการคืน',$6)`, [sku.product, sku.size, -take, row.qty, r.order_no, user.id]);
+        }
         // ย้อน serial: void → issued กลับให้ออเดอร์ (ของที่เคยตีชำรุดตอนคืน กลับมาเป็นตัดออก)
         await run(
           `update stock_unit set status='issued'
