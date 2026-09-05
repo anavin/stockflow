@@ -191,15 +191,15 @@ export default function OrdersTable({ orders, platform = "Shopee" }: { orders: O
                           <span className="text-[11px] text-muted whitespace-nowrap" title="ต้องตัดสต๊อกก่อน">รอตัดสต๊อก</span>
                         ))}
                         <a href={`/print/pdf/${encodeURIComponent(o.order_no)}`} target="_blank" rel="noreferrer"
-                          className="rounded-md p-1.5 text-muted hover:bg-brand-50 hover:text-brand-600" title="พิมพ์">
+                          className="rounded-md p-1.5 text-muted hover:bg-brand-50 hover:text-brand-600" title="พิมพ์" aria-label="พิมพ์ใบเบิก">
                           <Printer size={16} />
                         </a>
                         <Link href={`${base}/${encodeURIComponent(o.order_no)}`}
-                          className="rounded-md p-1.5 text-muted hover:bg-soft hover:text-ink" title="แก้ไข">
+                          className="rounded-md p-1.5 text-muted hover:bg-soft hover:text-ink" title="แก้ไข" aria-label="แก้ไขใบเบิก">
                           <Pencil size={16} />
                         </Link>
                         <button onClick={() => onDelete(o.order_no)} disabled={busy === o.order_no}
-                          className="rounded-md p-1.5 text-muted hover:bg-red-50 hover:text-red-600" title="ลบ">
+                          className="rounded-md p-1.5 text-muted hover:bg-red-50 hover:text-red-600" title="ลบ" aria-label="ลบใบเบิก (ไปถังขยะ)">
                           <Trash2 size={16} />
                         </button>
                       </div>
