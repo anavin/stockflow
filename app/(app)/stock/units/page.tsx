@@ -10,12 +10,14 @@ import { ChevronLeft, ChevronRight, ScanBarcode, Search, FileDown } from "lucide
 export const dynamic = "force-dynamic";
 const PAGE_SIZE = 200;
 
-export default async function UnitsPage({ searchParams }: { searchParams: Promise<{ q?: string; status?: string; product?: string; size?: string; platform?: string; page?: string }> }) {
+export default async function UnitsPage({ searchParams }: { searchParams: Promise<{ q?: string; status?: string; product?: string; size?: string; platform?: string; page?: string; day?: string }> }) {
   const me = await requireStock();
   const canEdit = can.manageStock(me.role);
-  const { q, status, product, size, platform, page } = await searchParams;
+  const { q, status, product, size, platform, page, day } = await searchParams;
   const pf = resolvePlatform(platform)?.code;
-  const filter = { search: q, status, product, size, platform: pf };
+  const rawStatus = status ?? "issued";                       // default = ตัดออกแล้ว
+  const statusFilter = rawStatus === "all" ? undefined : rawStatus;
+  const filter = { search: q, status: statusFilter, product, size, platform: pf, day };
   const pageNum = Math.max(1, Number(page) || 1);
   const offset = (pageNum - 1) * PAGE_SIZE;
   const [units, counts, total] = await Promise.all([
@@ -24,9 +26,14 @@ export default async function UnitsPage({ searchParams }: { searchParams: Promis
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
   // ค้นด้วย Order No. ที่ยังไม่มี SKU รายชิ้น → ดึงสรุปออเดอร์มาโชว์ (ตัดสต๊อก/ส่งแล้ว)
   const orderBrief = q && units.length === 0 ? await getOrderBrief(q) : null;
-  const exportQs = new URLSearchParams(Object.entries({ q, status, product, size, platform: pf }).filter(([, v]) => v) as [string, string][]).toString();
-  const filterQs = (code?: string) => new URLSearchParams(Object.entries({ q, status, product, size, platform: code }).filter(([, v]) => v) as [string, string][]).toString();
-  const pageQs = (p: number) => { const sp = new URLSearchParams(Object.entries({ q, status, product, size, platform: pf }).filter(([, v]) => v) as [string, string][]); if (p > 1) sp.set("page", String(p)); const s = sp.toString(); return `/stock/units${s ? "?" + s : ""}`; };
+  // href กลาง: คงตัวกรองปัจจุบัน แล้วทับด้วย over (undefined/"" = เอาออก · issued = default ไม่ใส่ใน URL)
+  const href = (over: Record<string, string | undefined> = {}) => {
+    const m: Record<string, string | undefined> = { q, status: rawStatus === "issued" ? undefined : rawStatus, product, size, platform: pf, day, ...over };
+    const sp = new URLSearchParams(Object.entries(m).filter(([, v]) => v !== undefined && v !== "") as [string, string][]);
+    const s = sp.toString();
+    return `/stock/units${s ? "?" + s : ""}`;
+  };
+  const exportQs = new URLSearchParams(Object.entries({ q, status: statusFilter, product, size, platform: pf, day }).filter(([, v]) => v) as [string, string][]).toString();
   // ผูก SKU ให้ตรงยอด — เฉพาะเมื่อกรองสินค้าเดียว (กลิ่น+ขนาด) และแก้ไขได้
   const reconcile = canEdit && product && size ? { product, size, ...(await stockGapFor(product, size)) } : null;
 
@@ -50,26 +57,37 @@ export default async function UnitsPage({ searchParams }: { searchParams: Promis
           <Link href="/stock/units" className="text-xs text-muted hover:text-ink">ล้าง</Link>
         </div>
       )}
+      {/* แท็บสถานะ — ค่าเริ่มต้น = ตัดออกแล้ว */}
+      <div className="mb-3 inline-flex rounded-lg border border-line bg-white p-0.5">
+        {([["issued", "ตัดออกแล้ว", counts.issued], ["in_stock", "ในคลัง", counts.in_stock], ["all", "ทั้งหมด", counts.issued + counts.in_stock]] as const).map(([val, label, n]) => (
+          <Link key={val} href={href({ status: val, page: "" })}
+            className={`rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${rawStatus === val ? "text-white" : "text-muted hover:text-ink"}`}
+            style={rawStatus === val ? { backgroundColor: "rgb(var(--brand))" } : undefined}>
+            {label} <span className={rawStatus === val ? "opacity-90" : "text-faint"}>{n.toLocaleString()}</span>
+          </Link>
+        ))}
+      </div>
+
       <form action="/stock/units" className="mb-3 flex flex-wrap gap-2">
         {pf && <input type="hidden" name="platform" value={pf} />}
+        {rawStatus !== "issued" && <input type="hidden" name="status" value={rawStatus} />}
+        {product && <input type="hidden" name="product" value={product} />}
+        {size && <input type="hidden" name="size" value={size} />}
         <div className="relative min-w-[240px] flex-1">
           <Search size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-faint" />
           <input name="q" defaultValue={q} className="input pl-9 font-mono" placeholder="สแกน/พิมพ์ SKU · กลิ่น · Order No." />
         </div>
-        <select name="status" defaultValue={status ?? ""} className="input w-40">
-          <option value="">สถานะ: ทั้งหมด</option>
-          <option value="in_stock">อยู่คลัง</option>
-          <option value="issued">ตัดออกแล้ว</option>
-        </select>
+        <input type="date" name="day" defaultValue={day} className="input w-44" title="กรองรายวัน" />
         <button className="btn-primary">ค้นหา</button>
+        {day && <Link href={href({ day: "" })} className="btn-ghost">ล้างวัน</Link>}
       </form>
 
       {/* ตัวกรองแพลตฟอร์ม (ตาม order ของ SKU) */}
       <div className="mb-4 flex flex-wrap items-center gap-1.5">
-        <Link href={`/stock/units${filterQs() ? `?${filterQs()}` : ""}`}
+        <Link href={href({ platform: "" })}
           className={`rounded-full px-2.5 py-1 text-xs font-medium ${!pf ? "bg-ink text-white" : "bg-soft text-muted hover:text-ink"}`}>ทั้งหมด</Link>
         {enabledPlatforms().map((p) => (
-          <Link key={p.code} href={`/stock/units?${filterQs(p.code)}`}
+          <Link key={p.code} href={href({ platform: p.code })}
             className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium ${pf === p.code ? "bg-ink text-white" : "bg-soft text-ink hover:opacity-80"}`}>
             <PlatformDot platform={p.code} /> {p.name}
           </Link>
@@ -100,9 +118,9 @@ export default async function UnitsPage({ searchParams }: { searchParams: Promis
         <div className="mt-4 flex items-center justify-between text-sm">
           <span className="text-muted">หน้า {pageNum} / {totalPages.toLocaleString()} · ทั้งหมด {total.toLocaleString()} ชิ้น</span>
           <div className="flex gap-2">
-            {pageNum > 1 ? <Link href={pageQs(pageNum - 1)} className="btn-ghost"><ChevronLeft size={16} /> ก่อนหน้า</Link>
+            {pageNum > 1 ? <Link href={href({ page: pageNum - 1 > 1 ? String(pageNum - 1) : "" })} className="btn-ghost"><ChevronLeft size={16} /> ก่อนหน้า</Link>
               : <span className="btn-ghost pointer-events-none opacity-40"><ChevronLeft size={16} /> ก่อนหน้า</span>}
-            {pageNum < totalPages ? <Link href={pageQs(pageNum + 1)} className="btn-ghost">ถัดไป <ChevronRight size={16} /></Link>
+            {pageNum < totalPages ? <Link href={href({ page: String(pageNum + 1) })} className="btn-ghost">ถัดไป <ChevronRight size={16} /></Link>
               : <span className="btn-ghost pointer-events-none opacity-40">ถัดไป <ChevronRight size={16} /></span>}
           </div>
         </div>

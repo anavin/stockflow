@@ -1,12 +1,13 @@
 "use client";
 import { useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import dynamic from "next/dynamic";
 import { markShipped, unshipOrder } from "@/lib/actions/orders";
-import type { ShipRow } from "@/lib/queries";
+import type { ShipRow, PendingRow } from "@/lib/queries";
 import { PlatformDot, PlatformBadge } from "./PlatformBadge";
-import { platformName, platformColor } from "@/lib/config";
-import { ScanLine, Camera, CheckCircle2, AlertTriangle, XCircle, PackageCheck, Truck, Undo2, Calendar } from "lucide-react";
+import { platformName, platformColor, platformBase } from "@/lib/config";
+import { ScanLine, Camera, CheckCircle2, AlertTriangle, XCircle, PackageCheck, Truck, Undo2, Calendar, Clock, ChevronRight } from "lucide-react";
 
 const CameraScan = dynamic(() => import("./CameraScan"), { ssr: false });
 import type { ScanFeedback } from "./CameraScan";
@@ -14,6 +15,7 @@ import type { ScanFeedback } from "./CameraScan";
 type Row = ShipRow & { _new?: boolean };
 type Banner = { kind: "ok" | "already" | "error"; text: string; sub?: string; platform?: string | null } | null;
 const timeOf = (v?: string | null) => (v ? new Date(v).toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit" }) : "—");
+const dayOf = (v?: string | null) => (v ? new Date(v).toLocaleDateString("th-TH", { day: "2-digit", month: "short" }) : "—");
 
 // เสียง/สั่น ยืนยันการสแกน (ok=สูง, already=กลาง, error=ต่ำคู่)
 function feedback(kind: "ok" | "already" | "error") {
@@ -28,18 +30,22 @@ function feedback(kind: "ok" | "already" | "error") {
   try { navigator.vibrate?.(kind === "error" ? [80, 60, 80] : 40); } catch { /* ไม่มี vibrate */ }
 }
 
-export default function ShipScanner({ date, isToday, rows: initialRows, pending, canUndo, canUndoOwn = false }:
-  { date: string; isToday: boolean; rows: ShipRow[]; pending: number; canUndo: boolean; canUndoOwn?: boolean }) {
+export default function ShipScanner({ date, isToday, rows: initialRows, pendingRows, canUndo, canUndoOwn = false }:
+  { date: string; isToday: boolean; rows: ShipRow[]; pending: number; pendingRows: PendingRow[]; canUndo: boolean; canUndoOwn?: boolean }) {
   const router = useRouter();
   const [value, setValue] = useState("");
   const [busy, setBusy] = useState(false);
   const [scanOpen, setScanOpen] = useState(false);
   const [banner, setBanner] = useState<Banner>(null);
   const [rows, setRows] = useState<Row[]>(initialRows);
-  const [addedIssued, setAddedIssued] = useState(0);   // นับที่เพิ่งสแกน (เฉพาะที่ตัดสต๊อกแล้ว) → ลด "ค้างส่ง"
+  const [pendingList, setPendingList] = useState<PendingRow[]>(pendingRows);   // ค้างส่ง (ตัดแล้ว ยังไม่ส่ง) — เอาออกเมื่อสแกนส่งสำเร็จ
+  const [view, setView] = useState<"shipped" | "pending">("shipped");          // คลิกการ์ดสลับรายการในคอลัมน์ขวา
   const inputRef = useRef<HTMLInputElement>(null);
+  const listRef = useRef<HTMLDivElement>(null);
   const total = rows.length;                            // = รายการของวันที่เลือก (initial + ที่เพิ่งสแกน) ไม่นับซ้ำ
-  const left = Math.max(0, pending - addedIssued);
+  const left = pendingList.length;                      // ค้างส่งคงเหลือ (ลดลงเมื่อสแกนส่ง)
+  // คลิกการ์ด → สลับมุมมอง + เลื่อนไปรายการ (มือถือ: รายการอยู่ด้านล่าง)
+  const openView = (v: "shipped" | "pending") => { setView(v); setTimeout(() => { if (window.innerWidth < 1024) listRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }); }, 30); };
   const seen = useMemo(() => new Set(rows.map((r) => r.order_no.toUpperCase())), [rows]);
   const [pfFilter, setPfFilter] = useState<string>("");   // "" = ทุกแพลตฟอร์ม (กรองฝั่ง client จาก rows ที่โหลดมาแล้ว)
   // สรุปแยกแพลตฟอร์ม + รายการที่แสดงตามตัวกรอง
@@ -79,7 +85,7 @@ export default function ShipScanner({ date, isToday, rows: initialRows, pending,
       return { status: "dup", title: "สแกนซ้ำ", detail: `บันทึกส่งไปแล้วเมื่อ ${timeOf(res.at)}` };
     }
     setRows((r) => [{ order_no: o.order_no, doc_no: null, platform: o.platform, receiver: o.receiver, province: o.province, item_count: o.item_count, shipped_at: res.at || new Date().toISOString(), shipped_by_name: "เพิ่งสแกน", _new: true }, ...r]);
-    if (res.issued) setAddedIssued((n) => n + 1);
+    if (res.issued) setPendingList((p) => p.filter((x) => x.order_no.toUpperCase() !== o.order_no.toUpperCase()));   // ส่งแล้ว → ออกจากค้างส่ง
     // ส่งของที่ "ยังไม่ตัดสต๊อก" (deferred behavior) — เตือนเด่น: เสียง warn + แบนเนอร์เหลือง + ค้างนานขึ้น (status dup)
     if (!res.issued) {
       feedback("already");
@@ -123,16 +129,18 @@ export default function ShipScanner({ date, isToday, rows: initialRows, pending,
       {/* คอม = 2 คอลัมน์ (ซ้าย: สรุป+สแกน / ขวา: รายการ) · มือถือ = เรียงลง */}
       <div className="grid gap-4 lg:grid-cols-5">
         <div className="space-y-4 lg:col-span-2">
-          {/* สรุป */}
+          {/* สรุป — คลิกการ์ดเพื่อดูรายการในคอลัมน์ขวา (มือถือ: เลื่อนลงไปที่รายการ) */}
           <div className="grid grid-cols-2 gap-3">
-            <div className="card bg-green-50 p-4 text-center">
+            <button type="button" onClick={() => openView("shipped")} aria-pressed={view === "shipped"}
+              className={`card p-4 text-center transition ${view === "shipped" ? "bg-green-50 ring-2 ring-green-500" : "bg-green-50/60 hover:bg-green-50"}`}>
               <div className="text-3xl font-bold text-green-700">{total.toLocaleString()}</div>
-              <div className="mt-0.5 text-xs font-medium text-green-700/80">{isToday ? "ส่งแล้ววันนี้" : "ส่งวันที่เลือก"}</div>
-            </div>
-            <div className="card bg-amber-50 p-4 text-center">
+              <div className="mt-0.5 flex items-center justify-center gap-0.5 text-xs font-medium text-green-700/80">{isToday ? "ส่งแล้ววันนี้" : "ส่งวันที่เลือก"} <ChevronRight size={12} /></div>
+            </button>
+            <button type="button" onClick={() => openView("pending")} aria-pressed={view === "pending"}
+              className={`card p-4 text-center transition ${view === "pending" ? "bg-amber-50 ring-2 ring-amber-500" : "bg-amber-50/60 hover:bg-amber-50"}`}>
               <div className="text-3xl font-bold text-amber-700">{left.toLocaleString()}</div>
-              <div className="mt-0.5 text-xs font-medium text-amber-700/80">ค้างส่ง (ตัดแล้ว)</div>
-            </div>
+              <div className="mt-0.5 flex items-center justify-center gap-0.5 text-xs font-medium text-amber-700/80">ค้างส่ง (ตัดแล้ว) <ChevronRight size={12} /></div>
+            </button>
           </div>
 
           {/* ช่องสแกน */}
@@ -161,11 +169,58 @@ export default function ShipScanner({ date, isToday, rows: initialRows, pending,
           </div>
         </div>
 
-        {/* รายการที่ส่ง */}
-        <div className="card overflow-hidden lg:col-span-3">
+        {/* รายการ — สลับ ส่งแล้ว / ค้างส่ง จากการ์ดด้านซ้าย */}
+        <div ref={listRef} className="card overflow-hidden lg:col-span-3">
           <div className="flex items-center gap-2 border-b border-line px-4 py-3 text-sm font-semibold text-ink">
-            <Truck size={16} /> {isToday ? "รายการที่ส่งวันนี้" : `รายการที่ส่ง ${date}`} <span className="text-muted">({shown.length}{pfFilter ? `/${rows.length}` : ""})</span>
+            {view === "shipped"
+              ? <><Truck size={16} /> {isToday ? "รายการที่ส่งวันนี้" : `รายการที่ส่ง ${date}`} <span className="text-muted">({shown.length}{pfFilter ? `/${rows.length}` : ""})</span></>
+              : <><Clock size={16} className="text-amber-600" /> ค้างส่ง (ตัดสต๊อกแล้ว ยังไม่ส่ง) <span className="text-muted">({pendingList.length})</span></>}
           </div>
+
+          {/* ===== มุมมองค้างส่ง ===== */}
+          {view === "pending" && (
+            pendingList.length === 0 ? (
+              <p className="px-4 py-16 text-center text-sm text-muted">ไม่มีค้างส่ง — ตัดสต๊อกแล้วส่งครบทุกใบ 🎉</p>
+            ) : (
+              <>
+                <div className="hidden overflow-x-auto md:block">
+                  <table className="w-full text-sm">
+                    <thead className="bg-soft text-left text-xs text-muted"><tr>
+                      <th className="px-4 py-2.5">ตัดเมื่อ</th><th className="px-3 py-2.5">Order No.</th>
+                      <th className="px-3 py-2.5">ผู้รับ</th><th className="px-3 py-2.5">จังหวัด</th>
+                      <th className="px-3 py-2.5 text-center">รายการ</th><th className="px-3 py-2.5"></th>
+                    </tr></thead>
+                    <tbody>
+                      {pendingList.map((r) => (
+                        <tr key={r.order_no} className="border-t border-line hover:bg-soft/40">
+                          <td className="px-4 py-2.5 text-xs tabular-nums text-muted">{dayOf(r.issued_at)}</td>
+                          <td className="px-3 py-2.5 font-mono text-xs text-ink"><span className="inline-flex items-center gap-1.5"><PlatformDot platform={r.platform} /> {r.order_no}</span></td>
+                          <td className="px-3 py-2.5 text-ink">{r.receiver || "-"}</td>
+                          <td className="px-3 py-2.5 text-muted">{r.province || "-"}</td>
+                          <td className="px-3 py-2.5 text-center tabular-nums text-muted">{r.item_count}</td>
+                          <td className="px-3 py-2.5 text-right"><Link href={`${platformBase(r.platform || "Shopee")}/${encodeURIComponent(r.order_no)}`} className="inline-flex items-center gap-0.5 rounded-md px-2 py-1 text-xs font-medium text-brand hover:bg-brand-50">เปิด <ChevronRight size={13} /></Link></td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                <div className="divide-y divide-line md:hidden">
+                  {pendingList.map((r) => (
+                    <Link key={r.order_no} href={`${platformBase(r.platform || "Shopee")}/${encodeURIComponent(r.order_no)}`} className="flex items-center gap-3 px-4 py-2.5 hover:bg-soft/40">
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-1.5 truncate font-mono text-xs text-ink"><PlatformDot platform={r.platform} /> {r.order_no}</div>
+                        <div className="truncate text-xs text-muted">{r.receiver || "-"} · {r.province || "-"} · {r.item_count} รายการ · ตัด {dayOf(r.issued_at)}</div>
+                      </div>
+                      <ChevronRight size={16} className="shrink-0 text-faint" />
+                    </Link>
+                  ))}
+                </div>
+              </>
+            )
+          )}
+
+          {/* ===== มุมมองส่งแล้ว ===== */}
+          {view === "shipped" && (<>
           {/* สรุป + ตัวกรองแยกแพลตฟอร์ม */}
           {byPlatform.length > 0 && (
             <div className="flex flex-wrap items-center gap-1.5 border-b border-line px-4 py-2">
@@ -234,6 +289,7 @@ export default function ShipScanner({ date, isToday, rows: initialRows, pending,
               </div>
             </>
           )}
+          </>)}
         </div>
       </div>
 

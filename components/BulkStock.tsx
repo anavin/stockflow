@@ -62,7 +62,7 @@ export default function BulkStock({ rows, canEdit, fdaKeys = [] }: { rows: BulkR
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 text-sm">
       {canEdit && (
         <form onSubmit={addOem} className="card flex flex-wrap items-end gap-2 p-4">
           <div className="flex-1 min-w-[160px]">

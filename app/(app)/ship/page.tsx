@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { requireStock } from "@/lib/auth/require-user";
 import { can } from "@/lib/auth/roles";
-import { shipSummary, listShippedByDay } from "@/lib/queries";
+import { shipSummary, listShippedByDay, listPendingShipment } from "@/lib/queries";
 import ShipScanner from "@/components/ShipScanner";
 import { ClipboardList } from "lucide-react";
 
@@ -16,7 +16,7 @@ export default async function ShipPage({ searchParams }: { searchParams: Promise
   const { date } = await searchParams;
   const today = todayBangkok();
   const day = /^\d{4}-\d{2}-\d{2}$/.test(date || "") ? date! : today;
-  const [sum, rows] = await Promise.all([shipSummary(), listShippedByDay(day)]);
+  const [sum, rows, pendingRows] = await Promise.all([shipSummary(), listShippedByDay(day), listPendingShipment()]);
   return (
     // ใช้ได้ทั้งมือถือ (สแกนหน้างาน) และคอม (2 คอลัมน์) · ธีมน้ำเงินให้ปุ่มสแกนเด่น (เหมือนหน้าตัดสต๊อก)
     <div
@@ -30,7 +30,7 @@ export default async function ShipPage({ searchParams }: { searchParams: Promise
         </div>
         <Link href="/ship/daily" className="btn-ghost"><ClipboardList size={16} /> ประวัติการส่ง</Link>
       </div>
-      <ShipScanner key={day} date={day} isToday={day === today} rows={rows} pending={sum.pending} canUndo={canUndo} canUndoOwn={canUndoOwn} />
+      <ShipScanner key={day} date={day} isToday={day === today} rows={rows} pending={sum.pending} pendingRows={pendingRows} canUndo={canUndo} canUndoOwn={canUndoOwn} />
     </div>
   );
 }

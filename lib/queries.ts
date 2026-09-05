@@ -192,7 +192,7 @@ const UNITS_UNION = `
      and o.deleted_at is null
      and not exists (select 1 from stock_unit s where btrim(s.sku) = btrim(oi.sku))`;
 
-type UnitsFilter = { search?: string; status?: string; product?: string; size?: string; platform?: string };
+type UnitsFilter = { search?: string; status?: string; product?: string; size?: string; platform?: string; day?: string };
 function unitsWhere(opts: UnitsFilter, params: any[]): string {
   const where: string[] = [];
   if (opts.search) { params.push(`%${opts.search}%`); const i = params.length; where.push(`(u.sku ilike $${i} or u.product ilike $${i} or coalesce(u.order_no,'') ilike $${i} or coalesce(o.doc_no,'') ilike $${i})`); }
@@ -200,6 +200,12 @@ function unitsWhere(opts: UnitsFilter, params: any[]): string {
   if (opts.size) { params.push(opts.size); where.push(`regexp_replace(lower(u.size),'[^0-9a-z]','','g') = regexp_replace(lower($${params.length}),'[^0-9a-z]','','g')`); }
   if (opts.status) { params.push(opts.status); where.push(`u.status = $${params.length}`); }
   if (opts.platform) { params.push(opts.platform); where.push(`o.platform = $${params.length}`); }
+  // กรองรายวัน (เวลาไทย) — ตัดออกแล้ว→วันที่ตัด, อยู่คลัง→วันที่รับเข้า, ทั้งหมด→วันใดวันหนึ่งของสองอย่าง
+  if (opts.day) {
+    params.push(opts.day); const i = params.length;
+    const col = opts.status === "in_stock" ? "u.received_at" : opts.status === "issued" ? "u.issued_at" : "coalesce(u.issued_at, u.received_at)";
+    where.push(`(${col} at time zone 'Asia/Bangkok')::date = $${i}::date`);
+  }
   return where.length ? "where " + where.join(" and ") : "";
 }
 /** ติดตาม SKU รายชิ้น — ค้นด้วย SKU/กลิ่น/order + สถานะ; join orders เพื่อรู้ผู้ซื้อ · แบ่งหน้า */
@@ -430,6 +436,22 @@ export async function listShippedByDay(dateStr?: string, platform?: string): Pro
        from orders o left join users u on u.id = o.shipped_by
        where o.deleted_at is null and o.shipped_at is not null and ${cond}${pc}
        order by o.shipped_at desc`, params);
+  } catch { return []; }
+}
+
+export type PendingRow = { order_no: string; doc_no: string | null; platform: string | null; receiver: string | null; province: string | null; item_count: number; issued_at: string | null };
+/** รายการค้างส่ง = ตัดสต๊อกแล้วแต่ยังไม่ส่ง (ทุกวัน ไม่ผูกวันที่) เรียงตัดนานสุดก่อน (ค้างนาน = ควรส่งก่อน) */
+export async function listPendingShipment(platform?: string): Promise<PendingRow[]> {
+  try {
+    const params: any[] = [];
+    const pc = platform ? (params.push(platform), ` and o.platform = $${params.length}`) : "";
+    return await q<PendingRow>(
+      `select o.order_no, o.doc_no, o.platform, coalesce(o.receiver, o.username) as receiver, o.province,
+              (select count(*)::int from order_items i where i.order_no = o.order_no) as item_count,
+              o.stock_issued_at as issued_at
+       from orders o
+       where o.deleted_at is null and o.stock_issued_at is not null and o.shipped_at is null${pc}
+       order by o.stock_issued_at asc nulls last`, params);
   } catch { return []; }
 }
 

@@ -28,8 +28,8 @@ export default function FontSizeToggle() {
 
   return (
     <div className="mb-2 flex items-center gap-2 px-2">
-      <span className="text-[11px] text-muted">ขนาดตัวอักษร</span>
-      <div className="ml-auto flex overflow-hidden rounded-lg border border-line" role="group" aria-label="ขนาดตัวอักษร">
+      <span className="text-[11px] text-faint">ขนาดตัวอักษร</span>
+      <div className="ml-auto flex overflow-hidden rounded-md border border-line" role="group" aria-label="ขนาดตัวอักษร">
         {LEVELS.map((l) => (
           <button
             key={l.key}
@@ -37,8 +37,8 @@ export default function FontSizeToggle() {
             onClick={() => apply(l.key)}
             title={l.title}
             aria-pressed={level === l.key}
-            className={`px-2 py-1 font-medium leading-none transition-colors ${
-              level === l.key ? "bg-brand text-white" : "bg-white text-muted hover:bg-soft"
+            className={`px-2 py-0.5 leading-none transition-colors ${
+              level === l.key ? "bg-soft font-semibold text-ink" : "text-faint hover:bg-soft hover:text-muted"
             }`}
             style={{ fontSize: l.fs }}
           >
