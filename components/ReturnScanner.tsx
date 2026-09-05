@@ -2,19 +2,21 @@
 import { useEffect, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import { lookupOrderForReturn, confirmReturn, type ReturnLookup, type ReturnItemPreview } from "@/lib/actions/returns";
-import { PlatformBadge } from "./PlatformBadge";
+import { PlatformBadge, PlatformDot } from "./PlatformBadge";
+import type { ReturnTodayRow } from "@/lib/queries";
 import { scanBeep } from "@/lib/scan-feedback";
 import { ScanLine, Camera, Undo2, PackageCheck, X, CheckCircle2, RotateCcw, Trash2, ClipboardList } from "lucide-react";
 
 const CameraScan = dynamic(() => import("./CameraScan"), { ssr: false });
 
 const REASONS = ["ลูกค้าตีกลับ (ไม่รับพัสดุ)", "ลูกค้าเปลี่ยนใจ / ขอคืน", "ส่งผิด / ผิดรายการ", "ชำรุด/เสียหายจากขนส่ง", "อื่นๆ"];
+const tOf = (v?: string | number | null) => (v ? new Date(v).toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit" }) : "—");
 
 type Disp = "restock" | "damaged" | "none";
 type Form = Record<number, { qty: number; disp: Disp }>;
 type Done = { order_no: string; platform?: string | null; restocked: number; damaged: number; skipped: number; at: number };
 
-export default function ReturnScanner() {
+export default function ReturnScanner({ todayReturns = [] }: { todayReturns?: ReturnTodayRow[] }) {
   const [value, setValue] = useState("");
   const [busy, setBusy] = useState(false);
   const [scanOpen, setScanOpen] = useState(false);
@@ -178,21 +180,67 @@ export default function ReturnScanner() {
         )}
       </div>
 
-      {/* ขวา: ผลล่าสุด */}
+      {/* ขวา: สรุป + ผลลัพธ์วันนี้ (จาก DB) */}
       <div className="space-y-3 lg:col-span-2">
-        <h3 className="flex items-center gap-2 text-sm font-semibold text-ink"><ClipboardList size={15} className="text-brand" /> รับคืนล่าสุด</h3>
-        {log.length > 0 ? log.map((e) => (
-          <div key={e.at} className="card p-4">
-            <div className="flex items-center gap-2 text-sm font-semibold text-green-700"><CheckCircle2 size={16} /> รับคืนแล้ว · <span className="font-mono text-ink">{e.order_no}</span> <PlatformBadge platform={e.platform} /></div>
-            <div className="mt-1 flex gap-2 text-xs">
-              {e.restocked > 0 && <span className="chip-ok"><RotateCcw size={12} /> คืนสต๊อก {e.restocked}</span>}
-              {e.damaged > 0 && <span className="chip-danger"><Trash2 size={12} /> ชำรุด {e.damaged}</span>}
-              {e.skipped > 0 && <span className="chip-muted">∅ ไม่นับ {e.skipped}</span>}
-            </div>
-          </div>
-        )) : (
-          <div className="card p-6 text-center text-sm text-muted">ยังไม่มีการรับคืนในรอบนี้ — สแกน Order No. ที่ตีกลับด้านซ้าย</div>
-        )}
+        {(() => {
+          const ordersToday = todayReturns.length + log.length;
+          const damagedToday = todayReturns.reduce((a, r) => a + r.damaged, 0) + log.reduce((a, e) => a + e.damaged, 0);
+          const doneNow = new Set(log.map((e) => e.order_no.toUpperCase()));
+          const rows = todayReturns.filter((r) => !doneNow.has(r.order_no.toUpperCase()));
+          return (
+            <>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="card bg-green-50 p-4 text-center">
+                  <div className="text-3xl font-bold text-green-700">{ordersToday.toLocaleString()}</div>
+                  <div className="mt-0.5 text-xs font-medium text-green-700/80">คืนวันนี้ (ออเดอร์)</div>
+                </div>
+                <div className="card bg-red-50 p-4 text-center">
+                  <div className="text-3xl font-bold text-red-700">{damagedToday.toLocaleString()}</div>
+                  <div className="mt-0.5 text-xs font-medium text-red-700/80">ชำรุดวันนี้ (ชิ้น)</div>
+                </div>
+              </div>
+
+              {log.length > 0 && (
+                <div className="space-y-3">
+                  <h3 className="flex items-center gap-2 text-sm font-semibold text-ink"><ClipboardList size={15} className="text-brand" /> รับคืนล่าสุด (รอบนี้)</h3>
+                  {log.map((e) => (
+                    <div key={e.at} className="card p-4">
+                      <div className="flex items-center gap-2 text-sm font-semibold text-green-700"><CheckCircle2 size={16} /> รับคืนแล้ว · <span className="font-mono text-ink">{e.order_no}</span> <PlatformBadge platform={e.platform} /></div>
+                      <div className="mt-1 flex flex-wrap gap-2 text-xs">
+                        {e.restocked > 0 && <span className="chip-ok"><RotateCcw size={12} /> คืนสต๊อก {e.restocked}</span>}
+                        {e.damaged > 0 && <span className="chip-danger"><Trash2 size={12} /> ชำรุด {e.damaged}</span>}
+                        {e.skipped > 0 && <span className="chip-muted">∅ ไม่นับ {e.skipped}</span>}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              <div>
+                <h3 className="mb-2 flex items-center gap-2 text-sm font-semibold text-ink"><Undo2 size={15} className="text-brand" /> คืนวันนี้ทั้งหมด <span className="text-muted">({ordersToday.toLocaleString()})</span></h3>
+                {rows.length === 0 && log.length === 0 ? (
+                  <div className="card p-6 text-center text-sm text-muted">ยังไม่มีการรับคืนวันนี้ — สแกน Order No. ที่ตีกลับด้านซ้าย</div>
+                ) : rows.length > 0 ? (
+                  <div className="space-y-2">
+                    {rows.map((r) => (
+                      <div key={r.order_no} className="card p-3">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="inline-flex items-center gap-1.5 font-mono text-xs text-ink"><PlatformDot platform={r.platform} /> {r.order_no}</span>
+                          <span className="text-[11px] text-faint">{tOf(r.at)}</span>
+                        </div>
+                        <div className="mt-1 flex flex-wrap gap-1.5 text-xs">
+                          {r.restocked > 0 && <span className="chip-ok"><RotateCcw size={11} /> คืนสต๊อก {r.restocked}</span>}
+                          {r.damaged > 0 && <span className="chip-danger"><Trash2 size={11} /> ชำรุด {r.damaged}</span>}
+                          {r.skipped > 0 && <span className="chip-muted">∅ ไม่นับ {r.skipped}</span>}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : null}
+              </div>
+            </>
+          );
+        })()}
       </div>
 
       {scanOpen && (

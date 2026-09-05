@@ -2,7 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { requireStock } from "@/lib/auth/require-user";
 import { can, homeFor, isAdmin } from "@/lib/auth/roles";
-import { stockSummary, getSpecOptionsForIssue } from "@/lib/queries";
+import { stockSummary, getSpecOptionsForIssue, listIssuedToday, issueTodayStats } from "@/lib/queries";
 import StockIssue from "@/components/StockIssue";
 import { Boxes, History, ClipboardList, Tags } from "lucide-react";
 
@@ -12,7 +12,7 @@ export default async function StockIssuePage({ searchParams }: { searchParams: P
   const me = await requireStock();
   if (!can.issueStock(me.role)) redirect(homeFor(me.role));   // ฝ่ายคลังไม่ตัดสต๊อก
   const { order } = await searchParams;
-  const [sum, specOptions] = await Promise.all([stockSummary(), getSpecOptionsForIssue()]);
+  const [sum, specOptions, todayCuts, stats] = await Promise.all([stockSummary(), getSpecOptionsForIssue(), listIssuedToday(), issueTodayStats()]);
   return (
     // หน้าสแกน = ธีมน้ำเงิน (override --brand เฉพาะหน้านี้) ให้ action เด่น;
     // สีผลลัพธ์ เขียว/เหลือง/แดง ไม่เปลี่ยน
@@ -32,7 +32,7 @@ export default async function StockIssuePage({ searchParams }: { searchParams: P
           <Link href="/stock/moves" className="btn-ghost"><History size={16} /> ประวัติ</Link>
         </div>
       </div>
-      <StockIssue isAdmin={isAdmin(me.role)} initialOrder={order} specOptions={specOptions} />
+      <StockIssue isAdmin={isAdmin(me.role)} initialOrder={order} specOptions={specOptions} todayCuts={todayCuts} stats={stats} />
     </div>
   );
 }

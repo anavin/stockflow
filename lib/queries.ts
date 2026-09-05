@@ -947,6 +947,47 @@ export async function listReturns(limit = 200, platform?: string): Promise<Retur
   } catch { return []; }
 }
 
+// ── สรุป "วันนี้" สำหรับหน้าสแกน (ตัดสต๊อก/รับคืน) — โชว์ของจริงจาก DB ไม่ใช่แค่เซสชัน ──
+export type IssuedTodayRow = { order_no: string; doc_no: string | null; platform: string | null; receiver: string | null; item_count: number; issued_at: string };
+/** ใบเบิกที่ "ตัดสต๊อกวันนี้" (เวลาไทย) — 1 แถว/ออเดอร์ ล่าสุดก่อน */
+export async function listIssuedToday(): Promise<IssuedTodayRow[]> {
+  try {
+    return await q<IssuedTodayRow>(
+      `select o.order_no, o.doc_no, o.platform, coalesce(o.receiver, o.username) as receiver,
+              (select count(*)::int from order_items i where i.order_no = o.order_no) as item_count,
+              o.stock_issued_at as issued_at
+       from orders o
+       where o.deleted_at is null and o.stock_issued_at is not null and ${bkkTodayRange("o.stock_issued_at")}
+       order by o.stock_issued_at desc`);
+  } catch { return []; }
+}
+/** สรุปหน้าตัดสต๊อก: ตัดแล้ววันนี้ + รอตัด (ยังไม่ตัด) */
+export async function issueTodayStats(): Promise<{ cutToday: number; pending: number }> {
+  try {
+    const [r] = await q<{ cut_today: number; pending: number }>(
+      `select count(*) filter (where ${bkkTodayRange("stock_issued_at")})::int as cut_today,
+              count(*) filter (where stock_issued_at is null)::int as pending
+       from orders where deleted_at is null`);
+    return { cutToday: r?.cut_today ?? 0, pending: r?.pending ?? 0 };
+  } catch { return { cutToday: 0, pending: 0 }; }
+}
+export type ReturnTodayRow = { order_no: string; platform: string | null; restocked: number; damaged: number; skipped: number; at: string };
+/** การรับคืน "วันนี้" (เวลาไทย) — รวมต่อออเดอร์ (คืนสต๊อก/ชำรุด/ไม่นับ) ล่าสุดก่อน */
+export async function listReturnsToday(): Promise<ReturnTodayRow[]> {
+  try {
+    return await q<ReturnTodayRow>(
+      `select r.order_no, o.platform,
+              coalesce(sum(r.qty) filter (where r.disposition='restock'),0)::float8 as restocked,
+              coalesce(sum(r.qty) filter (where r.disposition='damaged'),0)::float8 as damaged,
+              coalesce(sum(r.qty) filter (where r.disposition not in ('restock','damaged')),0)::float8 as skipped,
+              max(r.created_at) as at
+       from order_returns r left join orders o on o.order_no = r.order_no
+       where r.voided_at is null and ${bkkTodayRange("r.created_at")}
+       group by r.order_no, o.platform
+       order by max(r.created_at) desc`);
+  } catch { return []; }
+}
+
 // ── รายงาน/วิเคราะห์ (หน้า /reports) ───────────────────────────────────────
 export type SalesMonthRow = { ym: string; platform: string; orders: number; qty: number };
 /** ยอดออเดอร์+ชิ้น รายเดือน × แพลตฟอร์ม (N เดือนล่าสุด) */

@@ -3,7 +3,8 @@ import { useEffect, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import { lookupOrderForIssue, confirmIssueByOrder, reverseIssue, resolveIssueSku, type IssueResult, type IssueLookup, type IssueItemPreview } from "@/lib/actions/stock";
 import { resetOrderIssue } from "@/lib/actions/reset";
-import { PlatformBadge } from "./PlatformBadge";
+import { PlatformBadge, PlatformDot } from "./PlatformBadge";
+import type { IssuedTodayRow } from "@/lib/queries";
 import { scanBeep } from "@/lib/scan-feedback";
 import { ScanLine, CheckCircle2, AlertTriangle, XCircle, Undo2, Camera, PackageCheck, X, Printer, StickyNote, ClipboardList, RotateCcw } from "lucide-react";
 
@@ -12,11 +13,12 @@ const CameraScan = dynamic(() => import("./CameraScan"), { ssr: false });
 type Entry = { at: string; res: IssueResult; input: string; reversed?: boolean; platform?: string | null };
 
 const now = () => new Date().toLocaleTimeString("th-TH");
+const tOf = (v?: string | null) => (v ? new Date(v).toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit" }) : "—");
 // ตัวอักษรไซส์ถุง (S/M) จากสเป็กที่เลือก — ใช้ดึงคงเหลือถุงต่อไซส์
 const bagLetter = (s?: string | null) => ((s || "").replace(/[^A-Za-z]/g, "").slice(-1) || "").toUpperCase();
 
 type SpecOpt = { label: string; for_bag: boolean };
-export default function StockIssue({ isAdmin, initialOrder, specOptions = [] }: { isAdmin: boolean; initialOrder?: string; specOptions?: SpecOpt[] }) {
+export default function StockIssue({ isAdmin, initialOrder, specOptions = [], todayCuts = [], stats }: { isAdmin: boolean; initialOrder?: string; specOptions?: SpecOpt[]; todayCuts?: IssuedTodayRow[]; stats?: { cutToday: number; pending: number } }) {
   const [value, setValue] = useState("");
   const [busy, setBusy] = useState(false);
   const [log, setLog] = useState<Entry[]>([]);
@@ -271,14 +273,51 @@ export default function StockIssue({ isAdmin, initialOrder, specOptions = [] }: 
       )}
       </div>
 
-      {/* ขวา: ผลล่าสุด */}
+      {/* ขวา: สรุป + ผลลัพธ์วันนี้ (จาก DB) */}
       <div className="space-y-3 lg:col-span-2">
-        <h3 className="flex items-center gap-2 text-sm font-semibold text-ink"><ClipboardList size={15} className="text-brand" /> ผลล่าสุด</h3>
-        {log.length > 0 ? (
-          log.map((e, i) => <ResultCard key={i} entry={e} idx={i} isAdmin={isAdmin} onReverse={onReverse} onReset={onResetAndCut} />)
-        ) : (
-          <div className="card p-6 text-center text-sm text-muted">ยังไม่มีการตัดสต๊อกในรอบนี้ — สแกนใบเบิกด้านซ้ายเพื่อเริ่ม</div>
+        <div className="grid grid-cols-2 gap-3">
+          <div className="card bg-green-50 p-4 text-center">
+            <div className="text-3xl font-bold text-green-700">{(stats?.cutToday ?? 0).toLocaleString()}</div>
+            <div className="mt-0.5 text-xs font-medium text-green-700/80">ตัดแล้ววันนี้</div>
+          </div>
+          <div className="card bg-amber-50 p-4 text-center">
+            <div className="text-3xl font-bold text-amber-700">{(stats?.pending ?? 0).toLocaleString()}</div>
+            <div className="mt-0.5 text-xs font-medium text-amber-700/80">รอตัดสต๊อก</div>
+          </div>
+        </div>
+
+        {log.length > 0 && (
+          <div className="space-y-3">
+            <h3 className="flex items-center gap-2 text-sm font-semibold text-ink"><ClipboardList size={15} className="text-brand" /> ผลล่าสุด (รอบนี้)</h3>
+            {log.map((e, i) => <ResultCard key={i} entry={e} idx={i} isAdmin={isAdmin} onReverse={onReverse} onReset={onResetAndCut} />)}
+          </div>
         )}
+
+        {(() => {
+          const doneNow = new Set(log.filter((e) => e.res.ok && !e.reversed).map((e) => (e.res.order_no || e.input).toUpperCase()));
+          const rows = todayCuts.filter((r) => !doneNow.has(r.order_no.toUpperCase()));
+          return (
+            <div>
+              <h3 className="mb-2 flex items-center gap-2 text-sm font-semibold text-ink"><PackageCheck size={15} className="text-brand" /> ตัดวันนี้ทั้งหมด <span className="text-muted">({(stats?.cutToday ?? rows.length).toLocaleString()})</span></h3>
+              {rows.length === 0 && log.length === 0 ? (
+                <div className="card p-6 text-center text-sm text-muted">ยังไม่มีการตัดสต๊อกวันนี้ — สแกนใบเบิกด้านซ้ายเพื่อเริ่ม</div>
+              ) : rows.length > 0 ? (
+                <div className="card divide-y divide-line overflow-hidden">
+                  {rows.map((r) => (
+                    <div key={r.order_no} className="flex items-center gap-2 px-3 py-2 text-sm">
+                      <span className="w-11 shrink-0 text-xs tabular-nums text-muted">{tOf(r.issued_at)}</span>
+                      <span className="min-w-0 flex-1 truncate">
+                        <span className="inline-flex items-center gap-1.5 font-mono text-xs text-ink"><PlatformDot platform={r.platform} /> {r.order_no}</span>
+                        <span className="text-xs text-muted"> · {r.receiver || "-"} · {r.item_count} รายการ</span>
+                      </span>
+                      <a href={`/print/pdf/${encodeURIComponent(r.order_no)}`} target="_blank" rel="noreferrer" className="shrink-0 rounded-md p-1 text-faint hover:bg-soft hover:text-ink" title="พิมพ์"><Printer size={13} /></a>
+                    </div>
+                  ))}
+                </div>
+              ) : null}
+            </div>
+          );
+        })()}
       </div>
 
       {scanOpen && (

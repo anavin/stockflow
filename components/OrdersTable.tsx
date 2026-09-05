@@ -130,7 +130,7 @@ export default function OrdersTable({ orders, platform = "Shopee" }: { orders: O
                     checked={allChecked} ref={(el) => { if (el) el.indeterminate = someChecked; }}
                     onChange={toggleAll} aria-label="เลือกทั้งหมด" />
                 </th>
-                <th className="px-4 py-3">เลขที่ใบเบิก</th>
+                <th className="whitespace-nowrap px-4 py-3">เลขที่ใบเบิก</th>
                 <th className="px-4 py-3">Order No.</th>
                 <th className="whitespace-nowrap px-4 py-3">วันที่</th>
                 <th className="px-4 py-3">ผู้รับ</th>
@@ -156,7 +156,7 @@ export default function OrdersTable({ orders, platform = "Shopee" }: { orders: O
                       <input type="checkbox" className="h-4 w-4 cursor-pointer accent-brand"
                         checked={checked} onChange={() => toggle(o.order_no)} aria-label={`เลือก ${o.order_no}`} />
                     </td>
-                    <td className="px-4 py-3 font-mono text-xs font-medium text-ink">{o.doc_no || "—"}</td>
+                    <td className="whitespace-nowrap px-4 py-3 font-mono text-xs font-medium text-ink">{o.doc_no || "—"}</td>
                     <td className="px-4 py-3 font-mono text-xs">{o.order_no}</td>
                     <td className="whitespace-nowrap px-4 py-3 text-xs text-muted">{o.doc_date || "—"}</td>
                     <td className="px-4 py-3">

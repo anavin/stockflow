@@ -14,6 +14,13 @@ const statusChip = (s: string) => s === "issued"
   : s === "void" ? { label: "ยกเลิก", cls: "bg-red-50 text-red-600" }
   : { label: "อยู่คลัง", cls: "bg-green-50 text-green-700" };
 
+// วันที่แบบสั้น วว/ดด/ปป (บรรทัดเดียว) — รองรับทั้ง Date object และ ISO string
+const dOf = (v?: string | Date | null) => {
+  if (!v) return "—";
+  const d = new Date(v);
+  return isNaN(d.getTime()) ? String(v).slice(0, 10) : d.toLocaleDateString("en-GB", { day: "2-digit", month: "2-digit", year: "2-digit" });
+};
+
 type Reconcile = { product: string; size: string; qty: number; units: number; gap: number };
 
 export default function UnitsManager({ units, canEdit, reconcile }: { units: UnitRow[]; canEdit: boolean; reconcile?: Reconcile | null }) {
@@ -123,7 +130,7 @@ export default function UnitsManager({ units, canEdit, reconcile }: { units: Uni
                       ) : <span className="inline-block h-4 w-4" />}
                     </td>
                   )}
-                  <td className="px-4 py-2.5 text-xs text-muted">{u.shipped_at ? String(u.shipped_at).slice(0, 10) : "—"}</td>
+                  <td className="whitespace-nowrap px-4 py-2.5 text-xs tabular-nums text-muted">{dOf(u.shipped_at)}</td>
                   <td className="px-3 py-2.5">
                     {editing ? (
                       <input autoFocus value={editVal} onChange={(e) => setEditVal(e.target.value)}
@@ -136,8 +143,8 @@ export default function UnitsManager({ units, canEdit, reconcile }: { units: Uni
                   <td className="px-3 py-2.5"><span className="font-medium text-ink">{u.product}</span> <span className="text-muted">{u.size}</span></td>
                   <td className="px-3 py-2.5">{u.grade ? <span className="chip bg-brand-50 text-brand-600">{u.grade}</span> : <span className="text-faint">—</span>}</td>
                   <td className="px-3 py-2.5 text-xs text-muted">{u.spec || "—"}</td>
-                  <td className="px-3 py-2.5 text-xs text-muted">{u.received_at ? String(u.received_at).slice(0, 10) : "—"}</td>
-                  <td className="px-3 py-2.5"><span className={`chip ${st.cls}`}>{st.label}</span></td>
+                  <td className="whitespace-nowrap px-3 py-2.5 text-xs tabular-nums text-muted">{dOf(u.received_at)}</td>
+                  <td className="px-3 py-2.5"><span className={`chip whitespace-nowrap ${st.cls}`}>{st.label}</span></td>
                   <td className="px-3 py-2.5">
                     {u.order_no ? (
                       <Link href={`/${(u.platform || "Shopee").toLowerCase()}/${encodeURIComponent(u.order_no)}`} className="inline-flex items-center gap-1.5 text-brand-600 hover:underline">
