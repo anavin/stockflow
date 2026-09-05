@@ -463,13 +463,16 @@ export async function dailyIssueStatus(platform?: string, days = 14): Promise<Da
   try {
     const params: any[] = [days];
     const pc = platform ? (params.push(platform), ` and platform = $${params.length}`) : "";
+    // จัดกลุ่มด้วย coalesce(order_date, doc_date) ให้ "ตรงกับ" ตัวกรอง from/to ของหน้ารายการ (drill-down)
+    // → คลิกเลข "รอตัด" ของวันไหน แล้วเห็นรายการวันนั้นจริง · ยังตัด import ออก (created_at ต่างจาก doc_date >1 วัน)
     const rows = await q<{ day: string; orders: number; issued: number }>(
-      `select to_char((created_at at time zone 'Asia/Bangkok')::date,'YYYY-MM-DD') as day,
+      `select to_char(coalesce(order_date, doc_date),'YYYY-MM-DD') as day,
               count(*)::int as orders,
               count(stock_issued_at)::int as issued
        from orders
        where deleted_at is null${pc}
-         and created_at >= ${BKK_TODAY} - (($1::int - 1) * interval '1 day')
+         and coalesce(order_date, doc_date) is not null
+         and coalesce(order_date, doc_date) >= current_date - (($1::int - 1) * interval '1 day')
          and abs((created_at at time zone 'Asia/Bangkok')::date - coalesce(doc_date, order_date)) <= 1
        group by 1
        order by day desc limit $1`,

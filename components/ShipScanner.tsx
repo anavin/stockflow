@@ -104,6 +104,24 @@ export default function ShipScanner({ date, isToday, rows: initialRows, pendingR
     setRows((r) => r.filter((x) => x.order_no !== orderNo));
   }
 
+  // บันทึก "ส่งแล้ว" แบบมือ (กรณีลืมสแกนตอนแพ็ค แต่ของส่งออกไปแล้ว) — ไม่ต้องสแกน
+  async function manualShip(orderNo: string) {
+    if (busy || !confirm(`ยืนยันว่า ${orderNo} "ส่งแล้ว"?\n\nบันทึกโดยไม่ต้องสแกน — ใช้กรณีลืมสแกนตอนแพ็คแต่ของส่งออกไปแล้ว`)) return;
+    setBusy(true);
+    let res: Awaited<ReturnType<typeof markShipped>>;
+    try { res = await markShipped(orderNo, isToday ? undefined : date); }
+    catch { res = { ok: false, error: "บันทึกไม่สำเร็จ (ระบบขัดข้อง)" }; }
+    setBusy(false);
+    if (!res.ok) { feedback("error"); setBanner({ kind: "error", text: res.error || "บันทึกไม่สำเร็จ" }); return; }
+    const o = res.order;
+    setPendingList((p) => p.filter((x) => x.order_no.toUpperCase() !== orderNo.toUpperCase()));
+    if (o && !seen.has(o.order_no.toUpperCase())) {
+      setRows((r) => [{ order_no: o.order_no, doc_no: null, platform: o.platform, receiver: o.receiver, province: o.province, item_count: o.item_count, shipped_at: res.at || new Date().toISOString(), shipped_by_name: "บันทึกมือ", _new: true }, ...r]);
+    }
+    feedback("ok");
+    setBanner({ kind: "ok", text: `บันทึกส่งแล้ว (มือ) · ${orderNo}`, sub: o ? `${o.receiver || "-"} · ${o.item_count} รายการ` : undefined, platform: o?.platform });
+  }
+
   const bannerCls = banner?.kind === "ok" ? "alert-success"
     : banner?.kind === "already" ? "alert-warn"
     : "alert-error";
@@ -198,7 +216,14 @@ export default function ShipScanner({ date, isToday, rows: initialRows, pendingR
                           <td className="px-3 py-2.5 text-ink">{r.receiver || "-"}</td>
                           <td className="px-3 py-2.5 text-muted">{r.province || "-"}</td>
                           <td className="px-3 py-2.5 text-center tabular-nums text-muted">{r.item_count}</td>
-                          <td className="px-3 py-2.5 text-right"><Link href={`${platformBase(r.platform || "Shopee")}/${encodeURIComponent(r.order_no)}`} className="inline-flex items-center gap-0.5 rounded-md px-2 py-1 text-xs font-medium text-brand hover:bg-brand-50">เปิด <ChevronRight size={13} /></Link></td>
+                          <td className="px-3 py-2.5 text-right">
+                            <div className="inline-flex items-center gap-1">
+                              <button type="button" onClick={() => manualShip(r.order_no)} disabled={busy}
+                                className="inline-flex items-center gap-1 rounded-md border border-green-200 bg-green-50 px-2 py-1 text-xs font-medium text-green-700 hover:bg-green-100 disabled:opacity-50"
+                                title="บันทึกว่าส่งแล้ว โดยไม่ต้องสแกน (กรณีลืมสแกน)"><PackageCheck size={13} /> ส่งแล้ว</button>
+                              <Link href={`${platformBase(r.platform || "Shopee")}/${encodeURIComponent(r.order_no)}`} className="inline-flex items-center gap-0.5 rounded-md px-2 py-1 text-xs font-medium text-muted hover:bg-soft hover:text-ink">เปิด <ChevronRight size={13} /></Link>
+                            </div>
+                          </td>
                         </tr>
                       ))}
                     </tbody>
@@ -206,13 +231,15 @@ export default function ShipScanner({ date, isToday, rows: initialRows, pendingR
                 </div>
                 <div className="divide-y divide-line md:hidden">
                   {pendingList.map((r) => (
-                    <Link key={r.order_no} href={`${platformBase(r.platform || "Shopee")}/${encodeURIComponent(r.order_no)}`} className="flex items-center gap-3 px-4 py-2.5 hover:bg-soft/40">
-                      <div className="min-w-0 flex-1">
+                    <div key={r.order_no} className="flex items-center gap-2 px-4 py-2.5">
+                      <Link href={`${platformBase(r.platform || "Shopee")}/${encodeURIComponent(r.order_no)}`} className="min-w-0 flex-1">
                         <div className="flex items-center gap-1.5 truncate font-mono text-xs text-ink"><PlatformDot platform={r.platform} /> {r.order_no}</div>
                         <div className="truncate text-xs text-muted">{r.receiver || "-"} · {r.province || "-"} · {r.item_count} รายการ · ตัด {dayOf(r.issued_at)}</div>
-                      </div>
-                      <ChevronRight size={16} className="shrink-0 text-faint" />
-                    </Link>
+                      </Link>
+                      <button type="button" onClick={() => manualShip(r.order_no)} disabled={busy}
+                        className="inline-flex shrink-0 items-center gap-1 rounded-md border border-green-200 bg-green-50 px-2 py-1.5 text-xs font-medium text-green-700 hover:bg-green-100 disabled:opacity-50"
+                        title="บันทึกว่าส่งแล้ว โดยไม่ต้องสแกน"><PackageCheck size={14} /> ส่งแล้ว</button>
+                    </div>
                   ))}
                 </div>
               </>
