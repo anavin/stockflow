@@ -120,18 +120,24 @@ export default function StockManager({ rows, products, sizes, initialLow, isAdmi
     const bigSwing = delta >= 100 || (r.qty > 0 && (nv / r.qty >= 10 || nv <= 0));
     if (bigSwing && !confirm(`ตั้งยอด ${r.product} ${r.size}\nจาก ${r.qty} → ${nv} (เปลี่ยน ${nv - r.qty >= 0 ? "+" : ""}${nv - r.qty})\n\nยืนยันตั้งเป็นยอดใหม่?`)) return;
     setSavingKey(k);
-    const res = await adjustStock(r.product, r.size, nv);
-    setSavingKey(null);
-    if (!res.ok) { alert(res.error); return; }
-    setCounted((c) => { const n = { ...c }; delete n[k]; return n; });
-    router.refresh();
+    try {
+      const res = await adjustStock(r.product, r.size, nv);
+      if (!res.ok) { alert(res.error); return; }
+      setCounted((c) => { const n = { ...c }; delete n[k]; return n; });
+      router.refresh();
+    } catch { alert("บันทึกไม่สำเร็จ (ระบบขัดข้อง ลองใหม่)"); }
+    finally { setSavingKey(null); }
   }
   async function quickReceive(r: StockRow) {
     const v = prompt(`รับเข้า ${r.product} ${r.size} — จำนวน?`);
-    if (!v) return;
-    const res = await receiveStock(r.product, r.size, Number(v));
-    if (!res.ok) { alert(res.error); return; }
-    router.refresh();
+    if (v == null) return;
+    const n = Number((v || "").trim());
+    if (!Number.isFinite(n) || n <= 0) { alert("กรุณากรอกจำนวนเป็นตัวเลขมากกว่า 0"); return; }
+    try {
+      const res = await receiveStock(r.product, r.size, n);
+      if (!res.ok) { alert(res.error); return; }
+      router.refresh();
+    } catch { alert("รับเข้าไม่สำเร็จ (ระบบขัดข้อง ลองใหม่)"); }
   }
 
   // ---- รับเข้า / นำเข้าไฟล์ (admin) ----
@@ -146,7 +152,9 @@ export default function StockManager({ rows, products, sizes, initialLow, isAdmi
     if (!bc) return;
     setErr(""); setMsg("");
     if (code != null) setF((s) => ({ ...s, barcode: code }));
-    const res = await resolveSku(bc);   // resolve จากบาร์โค้ดสินค้า → กลิ่น+ขนาด
+    let res: Awaited<ReturnType<typeof resolveSku>>;
+    try { res = await resolveSku(bc); }   // resolve จากบาร์โค้ดสินค้า → กลิ่น+ขนาด
+    catch { setErr("ค้นบาร์โค้ดไม่สำเร็จ (ระบบขัดข้อง ลองใหม่)"); return; }
     if (!res.ok) { setErr(res.error || "ไม่พบบาร์โค้ด"); return; }
     setF((s) => ({ ...s, barcode: bc, product: res.product!, size: res.size!, grade: res.grade || "" }));
     setTimeout(() => qtyRef.current?.focus(), 0);   // โฟกัสช่อง "จำนวน" ต่อทันที
@@ -228,7 +236,9 @@ export default function StockManager({ rows, products, sizes, initialLow, isAdmi
     if (hasCur) lines.push({ product: f.product, size: f.size, grade: f.grade, barcode: f.barcode.trim(), skus: currentSkus() });
     if (!lines.length) { setErr("ยังไม่มีรายการรับเข้า — สแกน SKU แล้วกด 'เพิ่มลงรายการ'"); return; }
     setBusy(true);
-    const res = await receiveUnitsBatch(lines.map((l) => ({ product: l.product, size: l.size, skus: l.skus, barcode: l.barcode })));
+    let res: Awaited<ReturnType<typeof receiveUnitsBatch>>;
+    try { res = await receiveUnitsBatch(lines.map((l) => ({ product: l.product, size: l.size, skus: l.skus, barcode: l.barcode }))); }
+    catch { setBusy(false); setErr("รับเข้าไม่สำเร็จ (ระบบขัดข้อง ลองใหม่)"); return; }
     setBusy(false);
     if (!res.ok) { setErr(res.error || "รับเข้าไม่สำเร็จ"); return; }
     const dup = res.dupes?.length ? ` · ข้ามซ้ำ ${res.dupes.length}` : "";

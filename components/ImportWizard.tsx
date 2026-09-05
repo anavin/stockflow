@@ -57,7 +57,9 @@ export default function ImportWizard({ platform = "Shopee" }: { platform?: strin
   async function runMatch() {
     if (!preview) return;
     setBusy(true); setError("");
-    const res = await matchOrders(preview.orderNos);
+    let res: Awaited<ReturnType<typeof matchOrders>>;
+    try { res = await matchOrders(preview.orderNos); }
+    catch { setBusy(false); setError("จับคู่ไม่สำเร็จ (ระบบขัดข้อง ลองใหม่)"); return; }
     setBusy(false);
     if (!res.ok) { setError(res.error || "จับคู่ไม่สำเร็จ"); return; }
     setMatch({ found: res.found || [], missing: res.missing || [] });
@@ -102,7 +104,9 @@ export default function ImportWizard({ platform = "Shopee" }: { platform?: strin
     if (preview.unmatchedItems > 0 && !window.confirm(
       `ยังมี ${preview.unmatchedItems} รายการที่เดากลิ่นไม่ตรงระบบ — ถ้านำเข้าเลยจะบันทึกเป็นชื่อกลิ่นตามไฟล์ (อาจตัดสต๊อกไม่เจอ)\n\nแนะนำ: เลือกกลิ่นจริง + กด "จำไว้" ในกล่องสีเหลืองด้านบนก่อน\n\nนำเข้าต่อเลยไหม?`)) return;
     setBusy(true); setError("");
-    const res = await bulkSaveOrders(preview.orders);
+    let res: Awaited<ReturnType<typeof bulkSaveOrders>>;
+    try { res = await bulkSaveOrders(preview.orders); }
+    catch { setBusy(false); setError("นำเข้าไม่สำเร็จ (ระบบขัดข้อง ลองใหม่)"); return; }
     setBusy(false);
     if (!res.ok) {
       // บันทึกได้บางส่วน → เหลือเฉพาะใบที่ล้มในตาราง ให้แก้/กดยืนยันซ้ำเพื่อลองใหม่เฉพาะที่ล้ม
