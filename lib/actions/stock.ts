@@ -283,6 +283,15 @@ export async function confirmIssueByOrder(
       const its = await run<{ line_no: number; product: string; size: string; qty: number }>(
         `select line_no, product, size, qty::float8 as qty from order_items where order_no = $1`, [on]);
       const byLine = new Map(its.map((i) => [i.line_no, i]));
+      // guard ฝั่ง server: ทุกบรรทัดที่ต้องมี SKU ต้องมี entry ครบจำนวน ก่อนตัด — กัน caller ตรง ๆ
+      // ตัด aggregate โดยไม่ได้ mark serial (UI ส่งครบอยู่แล้ว แต่ contract ต้องปลอดภัย)
+      const normByLine = new Map(norm.map((n) => [n.line_no, n]));
+      for (const li of its) {
+        if (!requiresSku(li.size)) continue;
+        const need = Math.round(Number(li.qty) || 0);
+        const got = normByLine.get(li.line_no)?.skus.length ?? 0;
+        if (got !== need) throw new Error(`${li.product} ${li.size}: ต้องใส่ SKU ให้ครบ ${need} ชิ้น (มี ${got})`);
+      }
       // บันทึก SKU (join serial) + spec ลง order_items (spec ต้องเขียนก่อน runIssue อ่านตอนตัดถุง)
       for (const e of norm) {
         await run(`update order_items set sku = $2, spec = $3 where order_no = $1 and line_no = $4`,
