@@ -50,7 +50,7 @@ const C = { ink: "#1a1614", muted: "#6b645d", faint: "#9a938c", border: "#cfc9c1
 
 const s = StyleSheet.create({
   // A4 landscape content height = 595.28 - padding(40) ≈ 555 → ล็อกกล่องใบ = 552 (ทุกใบสูงเท่ากัน ขอบบน/ล่างตรงกัน)
-  page: { fontFamily: "NotoSansThai", fontSize: 8, color: C.ink, paddingVertical: 20, paddingHorizontal: 20 },
+  page: { fontFamily: "NotoSansThai", fontSize: 8.5, color: C.ink, paddingVertical: 20, paddingHorizontal: 20 },
   pageRow: { flexDirection: "row", alignItems: "stretch" },
   panel: { flex: 1, height: 552, borderWidth: 1, borderColor: C.ink, padding: 9, flexDirection: "column" },
   // full = A4 portrait เต็มแผ่น: ไม่ล็อกความสูง ให้เนื้อหาไหลลงตามปกติ (กันตัวหนังสือซ้อนกัน)
@@ -62,10 +62,10 @@ const s = StyleSheet.create({
   cutLabel: { fontSize: 6, color: C.faint, marginVertical: 3 },
 
   head: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", borderBottomWidth: 1.5, borderBottomColor: C.ink, paddingBottom: 5, marginBottom: 5 },
-  company: { fontSize: 10, fontWeight: "bold" },
-  companyEn: { fontSize: 6.5, color: C.muted, marginTop: 1 },
+  company: { fontSize: 11, fontWeight: "bold" },
+  companyEn: { fontSize: 7, color: C.muted, marginTop: 1 },
   titleWrap: { alignItems: "flex-end" },
-  docTitle: { fontSize: 13, fontWeight: "bold" },
+  docTitle: { fontSize: 14, fontWeight: "bold" },
   docSub: { fontSize: 7, color: C.faint },
   badge: { marginTop: 3, alignSelf: "flex-end", borderWidth: 0.8, borderColor: C.brand, color: C.brand, fontSize: 6.5, paddingHorizontal: 4, paddingVertical: 1.5, borderRadius: 3, fontWeight: "bold" },
   // ชิปประเภทการส่ง (ส่งด่วน/ส่งทันที) — เล็ก อยู่ในช่องหมายเหตุ (สีแยกประเภท ชัดแม้ขาวดำ: กรอบ+ตัวหนา)
@@ -75,33 +75,33 @@ const s = StyleSheet.create({
 
   band: { flexDirection: "row", backgroundColor: C.soft, borderWidth: 0.5, borderColor: C.border, marginBottom: 5 },
   bandCell: { flex: 1, paddingVertical: 3, paddingHorizontal: 5, borderRightWidth: 0.5, borderRightColor: C.border },
-  bandLabel: { fontSize: 6, color: C.muted },
-  bandVal: { fontSize: 8.5, fontWeight: "bold" },
+  bandLabel: { fontSize: 6.5, color: C.muted },
+  bandVal: { fontSize: 9.5, fontWeight: "bold" },
 
   // Order No. + barcode strip (แนวนอน: เลขซ้าย บาร์โค้ดขวา) — ดีไซน์แรก
   bcRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", borderWidth: 0.8, borderColor: C.border, borderRadius: 3, paddingHorizontal: 8, paddingVertical: 5, marginBottom: 5 },
   bcLeft: {},
-  bcLabel: { fontSize: 6.5, color: C.muted },
-  bcValue: { fontSize: 11, fontWeight: "bold", letterSpacing: 0.6 },
+  bcLabel: { fontSize: 7, color: C.muted },
+  bcValue: { fontSize: 12.5, fontWeight: "bold", letterSpacing: 0.6 },
   bcRight: { alignItems: "center" },
-  bcText: { fontSize: 6.5, color: C.muted, marginTop: 1 },
+  bcText: { fontSize: 7, color: C.muted, marginTop: 1 },
 
   grid: { flexDirection: "row", flexWrap: "wrap", marginBottom: 4 },
   field: { width: "50%", flexDirection: "row", marginBottom: 2, paddingRight: 6 },
   fieldFull: { width: "100%", flexDirection: "row", marginBottom: 2 },
-  fLabel: { color: C.muted, width: 54, fontSize: 7 },
-  fVal: { fontWeight: "bold", flex: 1, fontSize: 7.5 },
+  fLabel: { color: C.muted, width: 58, fontSize: 8 },
+  fVal: { fontWeight: "bold", flex: 1, fontSize: 8.5 },
 
   th: { flexDirection: "row", backgroundColor: C.soft, borderTopWidth: 0.8, borderColor: C.border },
   tr: { flexDirection: "row", borderTopWidth: 0.5, borderColor: C.line, minHeight: 14 },
-  cell: { paddingVertical: 2.5, paddingHorizontal: 3, fontSize: 7.5 },
-  hCell: { fontWeight: "bold", fontSize: 7, color: C.muted },
+  cell: { paddingVertical: 2.5, paddingHorizontal: 3, fontSize: 8.5 },
+  hCell: { fontWeight: "bold", fontSize: 8, color: C.muted },
 
   foot: { flexDirection: "row", borderTopWidth: 0.8, borderBottomWidth: 0.8, borderColor: C.border, backgroundColor: C.soft },
   signRow: { flexDirection: "row", justifyContent: "space-between", marginTop: 14, paddingHorizontal: 4 },
   sign: { width: "30%", alignItems: "center" },
   signLine: { borderTopWidth: 0.6, borderColor: C.muted, width: "100%", marginBottom: 3 },
-  signLabel: { fontSize: 7, color: C.muted },
+  signLabel: { fontSize: 7.8, color: C.muted },
 });
 
 // column widths (# / Grade / สินค้า / ขนาด / จำนวน / Free / หน่วย / SKU)
@@ -167,8 +167,8 @@ function Panel({ order, copyLabel, full = false }: { order: OrderWithItems; copy
   const COL = full ? COL_FULL : COL_HALF;
   // เกณฑ์จำนวนรายการที่เริ่มย่อ — full (A4 เต็มแผ่น) จูนให้ ~50 รายการพอดี 1 หน้า
   const [T0, T1, T2, T3, T4, T5] = full ? [92, 68, 46, 33, 23, 13] : [70, 55, 40, 31, 22, 14];
-  const rowH = n > T0 ? 4.7 : n > T1 ? 5.4 : n > T2 ? 6.3 : n > T3 ? 7.4 : n > T4 ? 9.5 : n > T5 ? 11 : 14;
-  const cfs = n > T0 ? 4.7 : n > T1 ? 5.0 : n > T2 ? 5.4 : n > T3 ? 6 : n > T4 ? 6.6 : n > T5 ? 7 : 7.5;
+  const rowH = n > T0 ? 4.7 : n > T1 ? 5.4 : n > T2 ? 6.3 : n > T3 ? 7.4 : n > T4 ? 10 : n > T5 ? 12 : 15.5;
+  const cfs = n > T0 ? 4.7 : n > T1 ? 5.0 : n > T2 ? 5.6 : n > T3 ? 6.3 : n > T4 ? 7 : n > T5 ? 7.7 : 8.6;
   // เพดานกันตกขอบเงียบ ๆ: ถ้าเกิน CAP บรรทัด แสดงเท่าที่พอดี + แถวเตือน (ยอดรวมยังนับครบทุกชิ้น)
   const CAP = full ? 112 : 78;
   const shownItems = n > CAP ? items.slice(0, CAP - 1) : items;
