@@ -4,7 +4,23 @@ import { q, tx } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth/session";
 import { can } from "@/lib/auth/roles";
 import { logActivity } from "@/lib/activity";
-import { isStockTracked, assignsSku, enabledPlatforms, platformBase } from "@/lib/config";
+import { isStockTracked, assignsSku, isBagProduct, enabledPlatforms, platformBase } from "@/lib/config";
+
+// ถุงกระดาษ = คลังบรรจุภัณฑ์ (material_item) — ตัวอักษรไซส์ (S/M) จาก spec/size
+const bagLetter = (s?: string | null) => ((s || "").replace(/[^A-Za-z]/g, "").slice(-1) || "").toUpperCase();
+async function creditBag(run: <R = any>(sql: string, p?: any[]) => Promise<R[]>, sizeOrSpec: string, qtyChange: number, orderNo: string, userId: number, reason: string, note: string): Promise<boolean> {
+  const letter = bagLetter(sizeOrSpec);
+  if (!letter) return false;
+  const [it] = await run<{ id: number }>(
+    `select id from material_item where category='packaging' and label ~ 'ถุง'
+       and right(upper(regexp_replace(label,'[^A-Za-z]','','g')),1) = $1 order by id limit 1`, [letter]);
+  if (!it) return false;
+  const [row] = await run<{ qty: number }>(
+    `update material_item set qty = qty + $2, updated_at = now() where id = $1 returning qty::float8 as qty`, [it.id, qtyChange]);
+  await run(`insert into material_move (item_id, qty_change, balance, reason, note, order_no, created_by)
+             values ($1,$2,$3,$4,$5,$6,$7)`, [it.id, qtyChange, row.qty, reason, note, orderNo, userId]);
+  return true;
+}
 
 /** revalidate หน้ารายการใบเบิกทุกแพลตฟอร์ม (ป้ายสถานะคืนโชว์บนรายการ) */
 const revalidateAllOrderLists = () => { for (const p of enabledPlatforms()) revalidatePath(platformBase(p.code));  revalidateTag("dashboard"); };
@@ -112,7 +128,7 @@ export async function confirmReturn(orderNo: string, entries: ReturnEntry[], rea
       if (!o.shipped_at) throw new Error("รับคืนได้เฉพาะออเดอร์ที่ส่งแล้ว");
 
       const items = await run<{ line_no: number; product: string; size: string; qty: number }>(
-        `select line_no, product, size, qty::float8 as qty from order_items where order_no = $1 and coalesce(product,'') <> ''`, [on]);
+        `select line_no, product, size, spec, qty::float8 as qty from order_items where order_no = $1 and coalesce(product,'') <> ''`, [on]);
       const itemMap = new Map(items.map((it) => [it.line_no, it]));
       const ret = await run<{ line_no: number; qty: number }>(
         `select line_no, coalesce(sum(qty),0)::float8 as qty from order_returns where order_no = $1 and voided_at is null group by line_no`, [on]);
@@ -129,7 +145,12 @@ export async function confirmReturn(orderNo: string, entries: ReturnEntry[], rea
         retMap.set(e.line_no, already + qty);   // สะสมในลูป กันหลาย entry ของ line เดียวกันรวมแล้วเกิน
         const tracked = isStockTracked(it.size);
 
-        if (e.disposition === "restock") {
+        if (isBagProduct(it.product)) {
+          // ถุงกระดาษ = คลังบรรจุภัณฑ์ (material_item) ไม่ใช่ stock/serial
+          if (e.disposition === "restock") { await creditBag(run, it.spec || it.size || "", qty, on, user.id, "return", n || "รับคืนถุง"); restocked += qty; }
+          else if (e.disposition === "damaged") { damaged += qty; }   // ถุงชำรุด: ไม่เครดิตกลับ (ของเสีย) · บันทึกประวัติผ่าน order_returns
+          else { skipped += qty; }
+        } else if (e.disposition === "restock") {
           // ตัวอย่างที่ไม่มี serial จริง (ไม่ track) หรือ 4ml (assign ตอนตัด = serial สร้างสดๆ) คืนเข้าสต๊อกไม่ได้ (กัน serial ผี)
           if (!tracked || assignsSku(it.size)) throw new Error(`${it.product} (${it.size}): ขนาดตัวอย่างคืนเข้าสต๊อกไม่ได้ — ให้เลือก "ชำรุด" หรือ "ไม่นับ"`);
           if (!o.stock_issued_at) throw new Error("ออเดอร์นี้ยังไม่ได้ตัดสต๊อก คืนเข้าสต๊อกไม่ได้ (เลือกชำรุด หรือยกเลิกออเดอร์แทน)");
@@ -206,7 +227,10 @@ export async function reverseReturn(returnId: number): Promise<{ ok: boolean; er
       orderNo = r.order_no;
       await run(`select 1 from orders where order_no = $1 for update`, [r.order_no]);   // ล็อก order → return_status ไม่เพี้ยนตอนแข่งกับ confirmReturn
       const qty = Number(r.qty);
-      if (r.disposition === "restock") {
+      if (isBagProduct(r.product)) {
+        // ถุงกระดาษ: ยกเลิก "คืนสต๊อก" → หักออกจาก material_item (inverse ของตอนคืน) · ชำรุด/ไม่นับ = ไม่แตะคลัง
+        if (r.disposition === "restock") await creditBag(run, r.size || "", -qty, r.order_no, user.id, "adjust", "ยกเลิกการคืนถุง");
+      } else if (r.disposition === "restock") {
         const sku = await matchStockSku(run, r.product, r.size || "");
         // ย้อน serial ก่อน: หยิบ in_stock ของกลิ่น/ขนาดนี้ กลับเป็น issued ให้ออเดอร์ (serial เดิมของออเดอร์นี้ก่อน)
         // เก็บจำนวนที่ย้อนได้จริง — เผื่อบางตัวถูก "ตัด/ขายใหม่" ไปแล้ว (ไม่เหลือ in_stock ให้ย้อน)
