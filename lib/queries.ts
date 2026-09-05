@@ -767,11 +767,11 @@ export async function dashboardStats(platform?: string): Promise<DashStats> {
          (select count(*)::int from orders where deleted_at is null${pc}
             and ${bkkTodayRange("created_at")}
             and abs((created_at at time zone 'Asia/Bangkok')::date - coalesce(doc_date, order_date)) <= 1) as "ordersToday",
-         (select count(*)::int from orders where deleted_at is null${pc} and to_char(doc_date,'YYYY-MM') = to_char((now() at time zone 'Asia/Bangkok')::date,'YYYY-MM')) as "ordersMonth",
+         (select count(*)::int from orders where deleted_at is null${pc} and to_char(coalesce(order_date, doc_date),'YYYY-MM') = to_char((now() at time zone 'Asia/Bangkok')::date,'YYYY-MM')) as "ordersMonth",
          (select count(*)::int from orders where deleted_at is null${pc}${period} and stock_issued_at is not null) as "issuedTotal",
          (select count(*)::int from orders where deleted_at is null${pc} and ${bkkTodayRange("stock_issued_at")}) as "issuedToday",
          (select count(*)::int from stock) as skus,
-         (select count(*)::int from stock where qty > 0 and qty <= 10) as low,
+         (select count(*)::int from stock where qty >= 0 and qty <= 10) as low,
          (select count(*)::int from stock where qty < 0) as negative,
          ${P ? `(current_date >= date '${P}')` : "false"} as "periodActive"`,
       params,
@@ -809,8 +809,8 @@ export async function ordersTrend(months = 6, platform?: string): Promise<MonthP
     const params: any[] = [];
     const pc = platform ? (params.push(platform), " and platform = $1") : "";
     const rows = await q<{ ym: string; n: number }>(
-      `select to_char(date_trunc('month', doc_date),'YYYY-MM') as ym, count(*)::int as n
-       from orders where deleted_at is null and doc_date is not null${pc}
+      `select to_char(date_trunc('month', coalesce(order_date, doc_date)),'YYYY-MM') as ym, count(*)::int as n
+       from orders where deleted_at is null and coalesce(order_date, doc_date) is not null${pc}
        group by 1 order by 1 desc limit ${m}`,
       params,
     );
