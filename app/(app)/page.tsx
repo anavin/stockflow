@@ -142,7 +142,7 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
       {/* ── เทียบแพลตฟอร์ม (เฉพาะภาพรวมรวม) — รวม + รายวัน ── */}
       {overview.length > 0 && (
         <div className="mt-4 space-y-4">
-          <PlatformCompare rows={overview} />
+          <PlatformCompare rows={overview} periodActive={s.periodActive} />
           <PlatformDailyCompare rows={daily14} />
         </div>
       )}
@@ -222,9 +222,9 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
         <section className="card flex flex-col p-4">
           <div className="mb-2 flex shrink-0 flex-wrap items-center justify-between gap-2">
             <h2 className="flex items-center gap-2 text-xs font-semibold text-ink"><CalendarCheck size={14} className="text-brand" /> ออร์เดอร์รายวัน · ตัดสต๊อกแล้วกี่ใบ</h2>
-            <span className="text-[11px] text-muted">5 วันล่าสุด (ตามวันที่สั่งซื้อ)</span>
+            <span className="text-[11px] text-muted">{pf ? "5 วันล่าสุด (ตามวันที่สั่งซื้อ)" : "5 วันล่าสุด · ทุกแพลตฟอร์ม — เลือกแพลตฟอร์มด้านบนเพื่อคลิกดูรายการ"}</span>
           </div>
-          <DailyIssueTable data={daily} base={base} />
+          <DailyIssueTable data={daily} base={base} linkable={!!pf} />
         </section>
 
         {/* low stock (ย่อเล็ก) */}
@@ -366,9 +366,12 @@ function StockStat({ label, n, total, tone, href }: { label: string; n: number; 
   return href ? <Link href={href} className="block">{inner}</Link> : inner;
 }
 
-function DailyIssueTable({ data, base }: { data: { day: string; orders: number; issued: number; pending: number }[]; base: string }) {
+function DailyIssueTable({ data, base, linkable }: { data: { day: string; orders: number; issued: number; pending: number }[]; base: string; linkable: boolean }) {
   if (data.length === 0) return <p className="text-sm text-muted">ยังไม่มีข้อมูล</p>;
   const fmt = (d: string) => new Date(d + "T00:00:00").toLocaleDateString("th-TH", { day: "numeric", month: "short" });
+  // combined (ทุกแพลตฟอร์ม) ยังไม่มีหน้า list รวมตามวันที่ → โชว์ตัวเลขเฉยๆ กันคลิกแล้วเห็นรายการไม่ครบ (ตัวเลขนับรวมทุกแพลตฟอร์ม)
+  const A = ({ href, className, children }: { href: string; className?: string; children: React.ReactNode }) =>
+    linkable ? <Link href={href} className={className}>{children}</Link> : <span className={className}>{children}</span>;
   return (
     <div className="flex-1 overflow-x-auto">
       <table className="h-full w-full text-xs">
@@ -387,17 +390,17 @@ function DailyIssueTable({ data, base }: { data: { day: string; orders: number; 
             return (
               <tr key={d.day} className={`border-t border-line ${d.pending > 0 ? "bg-amber-50/40" : ""}`}>
                 <td className="whitespace-nowrap py-1.5 pr-3">
-                  <Link href={`${base}?from=${d.day}&to=${d.day}`} className="font-medium text-ink hover:text-brand-600 hover:underline">{fmt(d.day)}</Link>
+                  <A href={`${base}?from=${d.day}&to=${d.day}`} className={linkable ? "font-medium text-ink hover:text-brand-600 hover:underline" : "font-medium text-ink"}>{fmt(d.day)}</A>
                 </td>
                 <td className="py-1.5 pr-3 text-right font-medium text-ink">
-                  <Link href={`${base}?from=${d.day}&to=${d.day}`} className="hover:underline">{d.orders.toLocaleString()}</Link>
+                  <A href={`${base}?from=${d.day}&to=${d.day}`} className={linkable ? "hover:underline" : ""}>{d.orders.toLocaleString()}</A>
                 </td>
                 <td className="py-1.5 pr-3 text-right text-green-600">
-                  <Link href={`${base}?from=${d.day}&to=${d.day}&issued=yes`} className="hover:underline">{d.issued.toLocaleString()}</Link>
+                  <A href={`${base}?from=${d.day}&to=${d.day}&issued=yes`} className={linkable ? "hover:underline" : ""}>{d.issued.toLocaleString()}</A>
                 </td>
                 <td className={`py-1.5 pr-3 text-right ${d.pending > 0 ? "font-semibold text-amber-600" : "text-faint"}`}>
                   {d.pending > 0
-                    ? <Link href={`${base}?from=${d.day}&to=${d.day}&issued=no`} className="hover:underline">{d.pending.toLocaleString()}</Link>
+                    ? <A href={`${base}?from=${d.day}&to=${d.day}&issued=no`} className={linkable ? "hover:underline" : ""}>{d.pending.toLocaleString()}</A>
                     : "—"}
                 </td>
                 <td className="hidden py-1.5 sm:table-cell">

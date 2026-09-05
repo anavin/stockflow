@@ -4,7 +4,7 @@ import { q, tx } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth/session";
 import { can } from "@/lib/auth/roles";
 import { logActivity } from "@/lib/activity";
-import { isStockTracked, assignsSku, isBagProduct, enabledPlatforms, platformBase } from "@/lib/config";
+import { isStockTracked, assignsSku, needsSerialSku, isBagProduct, enabledPlatforms, platformBase } from "@/lib/config";
 
 // ถุงกระดาษ = คลังบรรจุภัณฑ์ (material_item) — ตัวอักษรไซส์ (S/M) จาก spec/size
 const bagLetter = (s?: string | null) => ((s || "").replace(/[^A-Za-z]/g, "").slice(-1) || "").toUpperCase();
@@ -127,7 +127,7 @@ export async function confirmReturn(orderNo: string, entries: ReturnEntry[], rea
       if (o.deleted_at) throw new Error("ออเดอร์นี้ถูกลบแล้ว รับคืนไม่ได้");
       if (!o.shipped_at) throw new Error("รับคืนได้เฉพาะออเดอร์ที่ส่งแล้ว");
 
-      const items = await run<{ line_no: number; product: string; size: string; qty: number }>(
+      const items = await run<{ line_no: number; product: string; size: string; spec: string | null; qty: number }>(
         `select line_no, product, size, spec, qty::float8 as qty from order_items where order_no = $1 and coalesce(product,'') <> ''`, [on]);
       const itemMap = new Map(items.map((it) => [it.line_no, it]));
       const ret = await run<{ line_no: number; qty: number }>(
@@ -233,24 +233,21 @@ export async function reverseReturn(returnId: number): Promise<{ ok: boolean; er
       } else if (r.disposition === "restock") {
         const sku = await matchStockSku(run, r.product, r.size || "");
         // ย้อน serial ก่อน: หยิบ in_stock ของกลิ่น/ขนาดนี้ กลับเป็น issued ให้ออเดอร์ (serial เดิมของออเดอร์นี้ก่อน)
-        // เก็บจำนวนที่ย้อนได้จริง — เผื่อบางตัวถูก "ตัด/ขายใหม่" ไปแล้ว (ไม่เหลือ in_stock ให้ย้อน)
-        const back = await run<{ sku: string }>(
+        // เท่าที่ยังเหลือ in_stock — บางตัวอาจถูก "ตัด/ขายใหม่" ไปแล้ว (ปล่อย best-effort ตามจริง)
+        await run<{ sku: string }>(
           `update stock_unit set status='issued', order_no=$1, issued_at=now(), issued_by=$5
             where sku in (select sku from stock_unit where status='in_stock'
               and regexp_replace(lower(btrim(product)),'[^a-z0-9ก-๙]','','g')=regexp_replace(lower(btrim($2)),'[^a-z0-9ก-๙]','','g')
               and btrim(lower(size),' .')=btrim(lower($3),' .')
             order by (coalesce(order_no,'') = $1) desc, received_at desc limit $4)
             returning sku`, [r.order_no, r.product, r.size || "", Math.round(qty), user.id]);
-        // หัก aggregate เท่าที่ย้อน serial ได้จริง (restock = ของ track serial เสมอ) — กัน stock ติดลบเมื่อ qty บางส่วนถูกขายใหม่ก่อนยกเลิกคืน
-        const backCnt = back.length;
-        if (backCnt > 0) {
-          const [row] = await run<{ qty: number }>(
-            `update stock set qty = qty - $3, updated_at = now() where product=$1 and size=$2 returning qty::float8 as qty`,
-            [sku.product, sku.size, backCnt]);
-          // ลง ledger เฉพาะเมื่อแถวเปลี่ยนจริง (กัน balance เพี้ยนถ้าแถวถูกลบไปแล้ว)
-          if (row) await run(`insert into stock_moves (product, size, qty_change, balance, reason, order_no, note, created_by)
-                     values ($1,$2,$3,$4,'adjust',$5,'ยกเลิกการคืน',$6)`, [sku.product, sku.size, -backCnt, row.qty, r.order_no, user.id]);
-        }
+        // หัก aggregate เต็มจำนวนที่คืน (สมมาตรกับตอน confirmReturn ที่บวก +qty เต็ม) — ยอมให้ติดลบได้ตามนโยบายสต๊อก
+        const [row] = await run<{ qty: number }>(
+          `update stock set qty = qty - $3, updated_at = now() where product=$1 and size=$2 returning qty::float8 as qty`,
+          [sku.product, sku.size, qty]);
+        // ลง ledger เฉพาะเมื่อแถวมีอยู่จริง (กัน balance เพี้ยนถ้าแถวถูกลบไปแล้ว)
+        if (row) await run(`insert into stock_moves (product, size, qty_change, balance, reason, order_no, note, created_by)
+                   values ($1,$2,$3,$4,'adjust',$5,'ยกเลิกการคืน',$6)`, [sku.product, sku.size, -qty, row.qty, r.order_no, user.id]);
       } else if (r.disposition === "damaged") {
         const sku = await matchStockSku(run, r.product, r.size || "");
         const [dmg] = await run<{ qty: number }>(`select qty::float8 as qty from damaged where product=$1 and size=$2 for update`, [sku.product, sku.size]);
@@ -306,6 +303,17 @@ export async function disposeDamaged(product: string, size: string, qty: number,
                  values ($1,$2,$3,$4,$5,$6,$7)`, [product, size || "", -n, row.qty, action, nt, user.id]);
       // ซ่อมได้ → คืนกลับสต๊อกขาย
       if (action === "repair") {
+        if (needsSerialSku(size)) {
+          // ขวดที่มี serial: ต้องปลุก serial ที่เคยตีชำรุด (void) กลับเป็น in_stock — ให้จำนวน serial ตรงกับสต๊อกรวม
+          const woke = await run<{ sku: string }>(
+            `update stock_unit set status='in_stock', order_no=null, issued_at=null, issued_by=null
+              where sku in (select sku from stock_unit where status='void'
+                and regexp_replace(lower(btrim(product)),'[^a-z0-9ก-๙]','','g')=regexp_replace(lower(btrim($1)),'[^a-z0-9ก-๙]','','g')
+                and btrim(lower(size),' .')=btrim(lower($2),' .')
+              order by received_at desc nulls last limit $3)
+              returning sku`, [product, size || "", Math.round(n)]);
+          if (woke.length < n) throw new Error(`ซ่อมได้ไม่เกินจำนวน serial ที่ตีชำรุดไว้ (มี ${woke.length} ชิ้น) — ตรวจ serial ในคลัง`);
+        }
         const [s] = await run<{ qty: number }>(
           `insert into stock (product, size, qty, updated_at) values ($1,$2,$3,now())
            on conflict (product, size) do update set qty = stock.qty + $3, updated_at = now() returning qty::float8 as qty`, [product, size || "", n]);

@@ -5,8 +5,10 @@ import { PlatformDot } from "./PlatformBadge";
 import { Layers } from "lucide-react";
 
 /** ตารางเทียบทุกแพลตฟอร์มบนแดชบอร์ดภาพรวม — ออร์เดอร์/ตัด/ส่ง/ค้างส่ง/คืน + แถบสัดส่วนยอด */
-export default function PlatformCompare({ rows }: { rows: PlatformOverviewRow[] }) {
+export default function PlatformCompare({ rows, periodActive = false }: { rows: PlatformOverviewRow[]; periodActive?: boolean }) {
   if (rows.length === 0) return null;
+  // ตัวเลขตารางนี้เป็น "ยอดสะสมทุกช่วงเวลา" เสมอ — เมื่อรอบเปิดใช้งาน (periodActive) การ์ด KPI ด้านบนเป็น "รอบนี้"
+  // จึงกำกับป้ายให้ชัดว่าตารางนี้คือสะสม กันเข้าใจผิดว่าเลขควรตรงกับการ์ด
   const maxOrders = Math.max(1, ...rows.map((r) => r.orders));
   const totals = rows.reduce(
     (a, r) => ({ orders: a.orders + r.orders, month: a.month + r.month, issued: a.issued + r.issued, shipped: a.shipped + r.shipped, pending: a.pending + r.pending, returned: a.returned + r.returned }),
@@ -17,7 +19,9 @@ export default function PlatformCompare({ rows }: { rows: PlatformOverviewRow[] 
     <section className="card overflow-hidden">
       <div className="flex items-center gap-2 border-b border-line px-5 py-3.5 text-sm font-semibold text-ink">
         <Layers size={16} className="text-brand" /> เทียบแพลตฟอร์ม
-        <span className="text-xs font-normal text-muted">ออร์เดอร์ทั้งหมด · เดือนนี้ · การจัดการ</span>
+        <span className="text-xs font-normal text-muted">
+          ยอดสะสมทุกช่วงเวลา · เดือนนี้ · การจัดการ{periodActive ? <span className="text-faint"> — การ์ด KPI ด้านบนเป็น “รอบนี้”</span> : null}
+        </span>
       </div>
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
@@ -25,7 +29,7 @@ export default function PlatformCompare({ rows }: { rows: PlatformOverviewRow[] 
             <tr>
               <th className="px-5 py-2.5">แพลตฟอร์ม</th>
               <th className="px-3 py-2.5">สัดส่วนออร์เดอร์</th>
-              <th className="px-3 py-2.5 text-right">ทั้งหมด</th>
+              <th className="px-3 py-2.5 text-right">{periodActive ? "สะสม" : "ทั้งหมด"}</th>
               <th className="px-3 py-2.5 text-right">เดือนนี้</th>
               <th className="px-3 py-2.5 text-right">ตัดสต๊อก</th>
               <th className="px-3 py-2.5 text-right">ส่งแล้ว</th>

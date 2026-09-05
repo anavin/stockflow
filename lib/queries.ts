@@ -11,6 +11,23 @@ const BKK_TODAY = `(date_trunc('day', now() at time zone 'Asia/Bangkok') at time
 const bkkTodayRange = (col: string) => `${col} >= ${BKK_TODAY} and ${col} < ${BKK_TODAY} + interval '1 day'`;
 const bkkDayRange = (col: string, param: string) => `${col} >= (${param}::date::timestamp at time zone 'Asia/Bangkok') and ${col} < (${param}::date::timestamp at time zone 'Asia/Bangkok') + interval '1 day'`;
 
+// นิยามกลาง "จักรวาลสต๊อก" (WITH clause ให้ต่อ select ด้านหลังได้) — ใช้ทั้ง dashboard + หน้า /stock ให้ตัวเลขตรงกัน
+//   g = SKU ที่มีระเบียนสต๊อกจริง ∪ ที่เคยสั่ง (ขวด ml, ไม่รวมถุง) รวมชื่อ/ขนาดที่ normalize (สะกดต่าง = แถวเดียว)
+//   ไม่รวม catalog บาร์โค้ดที่ไม่เคยรับเข้า/สั่ง (กัน "หมด" ปลอมท่วมสุขภาพสต๊อก) — ตรงกับ listStock ยกเว้น union product_barcodes
+//   สุขภาพ: ใกล้หมด = qty 0..10 · ติดลบ < 0 · ปกติ > 10
+const STOCK_UNIVERSE = `
+  with u as (
+    select regexp_replace(lower(btrim(product)),'[^a-z0-9ก-๙]','','g') as pkey,
+           regexp_replace(lower(btrim(size)),'[^a-z0-9ก-๙]','','g') as skey, qty::float8 as qty
+      from stock
+    union all
+    select regexp_replace(lower(btrim(oi.product)),'[^a-z0-9ก-๙]','','g'),
+           regexp_replace(lower(btrim(oi.size)),'[^a-z0-9ก-๙]','','g'), 0::float8
+      from order_items oi join orders o on o.order_no = oi.order_no
+      where o.deleted_at is null and coalesce(oi.product,'') <> '' and oi.size ~* 'ml' and oi.product !~ 'ถุง'
+  ),
+  g as (select pkey, skey, sum(qty)::float8 as qty from u group by pkey, skey)`;
+
 // กลืน error เฉพาะ "ตาราง/คอลัมน์ยังไม่มี" (prod ยังไม่รัน SQL) — error อื่น (DB หลุด/timeout/บั๊ก) โยนต่อ
 // กัน DB blip โชว์ 0/ว่าง เหมือนข้อมูลจริง (พนักงานตัดสินใจผิด) — ใช้กับ aggregate/หน้าที่สำคัญ
 function orMissing<T>(e: any, fallback: T): T {
@@ -473,13 +490,12 @@ export async function listPendingShipment(platform?: string): Promise<PendingRow
 export type DailyIssue = { day: string; orders: number; issued: number; pending: number };
 /** รายวัน: ออร์เดอร์ที่เข้ามา (ตามวันที่ใบเบิก) เทียบกับที่ตัดสต๊อกแล้ว */
 export async function dailyIssueStatus(platform?: string, days = 14): Promise<DailyIssue[]> {
-  // ยึด "วันที่นำเข้าระบบจริง" = created_at (เวลาไทย) · ตัดข้อมูล import ออก (created_at ต่างจาก doc_date >1 วัน)
   // platform undefined = ทุกแพลตฟอร์ม
   try {
     const params: any[] = [days];
     const pc = platform ? (params.push(platform), ` and platform = $${params.length}`) : "";
-    // จัดกลุ่มด้วย coalesce(order_date, doc_date) ให้ "ตรงกับ" ตัวกรอง from/to ของหน้ารายการ (drill-down)
-    // → คลิกเลข "รอตัด" ของวันไหน แล้วเห็นรายการวันนั้นจริง · ยังตัด import ออก (created_at ต่างจาก doc_date >1 วัน)
+    // จัดกลุ่ม+กรองด้วย coalesce(order_date, doc_date) ให้ "ตรงเป๊ะ" กับตัวกรอง from/to ของหน้ารายการ (listOrders)
+    // → คลิกวันไหน เห็นรายการวันนั้นครบเท่ากับตัวเลข (นับรวม import ตามวันที่สั่งด้วย — ตัวกรอง from/to ก็นับ)
     const rows = await q<{ day: string; orders: number; issued: number }>(
       `select to_char(coalesce(order_date, doc_date),'YYYY-MM-DD') as day,
               count(*)::int as orders,
@@ -488,7 +504,6 @@ export async function dailyIssueStatus(platform?: string, days = 14): Promise<Da
        where deleted_at is null${pc}
          and coalesce(order_date, doc_date) is not null
          and coalesce(order_date, doc_date) >= current_date - (($1::int - 1) * interval '1 day')
-         and abs((created_at at time zone 'Asia/Bangkok')::date - coalesce(doc_date, order_date)) <= 1
        group by 1
        order by day desc limit $1`,
       params,
@@ -750,7 +765,7 @@ export type DashStats = {
 export async function dashboardStats(platform?: string): Promise<DashStats> {
   // ทำเป็น query เดียว (scalar subqueries) แทน 8 query ขนาน — ลดจำนวน connection
   // ที่เปิดพร้อมกันบน Workers/Hyperdrive (เปิดหลาย connection พร้อมกันเคยทำให้ค้าง).
-  // สุขภาพสต๊อก อิงเฉพาะ SKU ที่ track จริง (ตาราง stock): ปกติ(>10)+ต้องเติม(0..10)+ติดลบ(<0)=skus
+  // สุขภาพสต๊อก อิงจักรวาลกลาง g (SKU ที่มีสต๊อก/เคยสั่ง normalize): ปกติ(>10)+ต้องเติม(0..10)+ติดลบ(<0)=skus — ตรงกับ /stock
   const empty: DashStats = { ordersTotal: 0, ordersToday: 0, ordersMonth: 0, issuedTotal: 0, issuedToday: 0, pendingIssue: 0, skus: 0, low: 0, negative: 0, periodActive: false };
   try {
     const params: any[] = [];
@@ -763,7 +778,9 @@ export async function dashboardStats(platform?: string): Promise<DashStats> {
       ? ` and (current_date < date '${P}' or coalesce(doc_date, order_date) >= date '${P}')`
       : "";
     const [r] = await q<DashStats>(
-      `select
+      // สุขภาพสต๊อก (skus/low/negative) อิงจักรวาลกลาง g → ตรงกับหน้า /stock (นับ SKU ที่มีสต๊อก/เคยสั่ง แบบ normalize)
+      `${STOCK_UNIVERSE}
+       select
          (select count(*)::int from orders where deleted_at is null${pc}${period}) as "ordersTotal",
          (select count(*)::int from orders where deleted_at is null${pc}
             and ${bkkTodayRange("created_at")}
@@ -771,9 +788,9 @@ export async function dashboardStats(platform?: string): Promise<DashStats> {
          (select count(*)::int from orders where deleted_at is null${pc} and to_char(coalesce(order_date, doc_date),'YYYY-MM') = to_char((now() at time zone 'Asia/Bangkok')::date,'YYYY-MM')) as "ordersMonth",
          (select count(*)::int from orders where deleted_at is null${pc}${period} and stock_issued_at is not null) as "issuedTotal",
          (select count(*)::int from orders where deleted_at is null${pc} and ${bkkTodayRange("stock_issued_at")}) as "issuedToday",
-         (select count(*)::int from stock) as skus,
-         (select count(*)::int from stock where qty >= 0 and qty <= 10) as low,
-         (select count(*)::int from stock where qty < 0) as negative,
+         (select count(*)::int from g) as skus,
+         (select count(*)::int from g where qty >= 0 and qty <= 10) as low,
+         (select count(*)::int from g where qty < 0) as negative,
          ${P ? `(current_date >= date '${P}')` : "false"} as "periodActive"`,
       params,
     );
@@ -828,11 +845,13 @@ export async function ordersTrend(months = 6, platform?: string): Promise<MonthP
 
 export async function stockSummary(): Promise<{ skus: number; low: number; issuedOrders: number }> {
   try {
-    const [a] = await q<{ n: number }>(`select count(*)::int n from (select distinct oi.product, oi.size from order_items oi join orders o on o.order_no=oi.order_no where o.deleted_at is null and coalesce(oi.product,'')<>'' and oi.size ~* 'ml' and oi.product !~ 'ถุง' union select product,size from stock) t`);
-    // "ใกล้หมด" = qty 1..10 (0 = "หมด", ติดลบ = คนละหมวด) — ตรงกับ statusOf/StockManager filter/dashboardStats
-    const [b] = await q<{ n: number }>(`select count(*)::int n from stock where qty > 0 and qty <= 10`);
-    const [c] = await q<{ n: number }>(`select count(*)::int n from orders where deleted_at is null and stock_issued_at is not null`);
-    return { skus: a?.n ?? 0, low: b?.n ?? 0, issuedOrders: c?.n ?? 0 };
+    // ใช้จักรวาลกลาง g เดียวกับ dashboardStats → SKU/ใกล้หมด ตรงกัน (ใกล้หมด = qty 0..10 รวม "หมด")
+    const [r] = await q<{ skus: number; low: number; issuedOrders: number }>(
+      `${STOCK_UNIVERSE}
+       select (select count(*)::int from g) as skus,
+              (select count(*)::int from g where qty >= 0 and qty <= 10) as low,
+              (select count(*)::int from orders where deleted_at is null and stock_issued_at is not null) as "issuedOrders"`);
+    return { skus: r?.skus ?? 0, low: r?.low ?? 0, issuedOrders: r?.issuedOrders ?? 0 };
   } catch (e) { return orMissing(e, { skus: 0, low: 0, issuedOrders: 0 }); }
 }
 
@@ -1261,30 +1280,26 @@ export async function platformDaily(days = 14): Promise<PlatformDailyRow[]> {
         group by 1, 2`, [String(days)]);
   } catch { return []; }
 }
-/** สรุปเทียบทุกแพลตฟอร์มในช็อตเดียว (สำหรับ dashboard ภาพรวม) — ออร์เดอร์/ตัด/ส่ง/ค้างส่ง/คืน */
+/** สรุปเทียบทุกแพลตฟอร์มในช็อตเดียว — ออร์เดอร์/ตัด/ส่ง/ค้างส่ง/คืน (ยอดสะสมทุกช่วงเวลา)
+ *  ตั้งใจนับสะสม (ไม่ผูก PERIOD_START) เพื่อให้ตารางเทียบมีข้อมูลเสมอ — แดชบอร์ดกำกับป้ายว่าเป็นยอดสะสม
+ *  ให้ต่างจากการ์ด KPI "รอบนี้" ด้านบนชัดเจน (ดู PlatformCompare periodActive) */
 export async function platformOverview(): Promise<PlatformOverviewRow[]> {
+  const body = (withReturned: boolean) =>
+    `select coalesce(platform,'Shopee') as platform,
+            count(*)::int as orders,
+            count(*) filter (where date_trunc('month', coalesce(doc_date, order_date)) = date_trunc('month', (now() at time zone 'Asia/Bangkok')))::int as month,
+            count(*) filter (where stock_issued_at is not null)::int as issued,
+            count(*) filter (where shipped_at is not null)::int as shipped,
+            count(*) filter (where stock_issued_at is not null and shipped_at is null)::int as pending${withReturned ? `,
+            count(*) filter (where coalesce(return_status,'none') <> 'none')::int as returned` : ""}
+     from orders where deleted_at is null
+     group by 1 order by orders desc`;
   try {
-    return await q<PlatformOverviewRow>(
-      `select coalesce(platform,'Shopee') as platform,
-              count(*)::int as orders,
-              count(*) filter (where date_trunc('month', coalesce(doc_date, order_date)) = date_trunc('month', (now() at time zone 'Asia/Bangkok')))::int as month,
-              count(*) filter (where stock_issued_at is not null)::int as issued,
-              count(*) filter (where shipped_at is not null)::int as shipped,
-              count(*) filter (where stock_issued_at is not null and shipped_at is null)::int as pending,
-              count(*) filter (where coalesce(return_status,'none') <> 'none')::int as returned
-       from orders where deleted_at is null
-       group by 1 order by orders desc`);
+    return await q<PlatformOverviewRow>(body(true));
   } catch {
     // เผื่อ prod ยังไม่มีคอลัมน์ return_status → ลองใหม่แบบไม่รวมคืน
     try {
-      const rows = await q<Omit<PlatformOverviewRow, "returned">>(
-        `select coalesce(platform,'Shopee') as platform,
-                count(*)::int as orders,
-                count(*) filter (where date_trunc('month', coalesce(doc_date, order_date)) = date_trunc('month', (now() at time zone 'Asia/Bangkok')))::int as month,
-                count(*) filter (where stock_issued_at is not null)::int as issued,
-                count(*) filter (where shipped_at is not null)::int as shipped,
-                count(*) filter (where stock_issued_at is not null and shipped_at is null)::int as pending
-         from orders where deleted_at is null group by 1 order by orders desc`);
+      const rows = await q<Omit<PlatformOverviewRow, "returned">>(body(false));
       return rows.map((r) => ({ ...r, returned: 0 }));
     } catch { return []; }
   }
