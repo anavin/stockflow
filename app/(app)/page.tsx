@@ -5,6 +5,7 @@ import { resolvePlatform, platformBase, enabledPlatforms, platformColor } from "
 import { dashboardStats, listOrders, topProducts, ordersTrend, dailyIssueStatus, dailyMatrix, fdaExpirySummary, shipSummary, platformOverview } from "@/lib/queries";
 import CreateOrderMenu from "@/components/CreateOrderMenu";
 import PlatformCompare from "@/components/PlatformCompare";
+import PlatformBarChart from "@/components/PlatformBarChart";
 import DailyMatrix from "@/components/DailyMatrix";
 import {
   ScanLine, Boxes, AlertTriangle, PackageCheck, ClipboardList,
@@ -224,7 +225,8 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
 
       {/* ── เทียบแพลตฟอร์ม (เฉพาะภาพรวมรวม) — ยอดสะสม · รายวันย้ายไปรวมในตารางรายวันด้านบนแล้ว ── */}
       {overview.length > 0 && (
-        <div className="mt-4">
+        <div className="mt-4 space-y-4">
+          <PlatformBarChart rows={overview} periodActive={s.periodActive} />
           <PlatformCompare rows={overview} periodActive={s.periodActive} />
         </div>
       )}
