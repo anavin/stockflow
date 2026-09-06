@@ -26,7 +26,7 @@ const getDashboardData = unstable_cache(
       listOrders({ platform: pf, limit: 20 }),
       topProducts(10),
       ordersTrend(6, pf),
-      dailyIssueStatus(pf, 8),
+      dailyIssueStatus(pf, 10),
       fdaExpirySummary(),
       shipSummary(pf),
       multi ? platformOverview() : Promise.resolve([] as Awaited<ReturnType<typeof platformOverview>>),
@@ -223,7 +223,7 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
           <section className="card flex h-full flex-col p-4">
             <div className="mb-2 flex shrink-0 flex-wrap items-center justify-between gap-2">
               <h2 className="flex items-center gap-2 text-xs font-semibold text-ink"><CalendarCheck size={14} className="text-brand" /> ออร์เดอร์รายวัน · ตัดสต๊อกแล้วกี่ใบ</h2>
-              <span className="text-[11px] text-muted">8 วันล่าสุด{pf ? " (ตามวันที่สั่งซื้อ)" : " · ทุกแพลตฟอร์ม"}</span>
+              <span className="text-[11px] text-muted">10 วันล่าสุด{pf ? " (ตามวันที่สั่งซื้อ)" : " · ทุกแพลตฟอร์ม"}</span>
             </div>
             <DailyIssueTable data={daily} base={pf ? base : "/orders"} linkable />
           </section>
@@ -361,7 +361,7 @@ function DailyIssueTable({ data, base, linkable }: { data: { day: string; orders
     linkable ? <Link href={href} className={className}>{children}</Link> : <span className={className}>{children}</span>;
   return (
     <div className="flex-1 overflow-x-auto">
-      <table className="h-full w-full text-xs">
+      <table className="w-full text-xs">
         <thead className="text-left text-[11px] text-muted">
           <tr>
             <th className="pb-2 pr-3 font-medium">วันที่</th>
@@ -376,23 +376,23 @@ function DailyIssueTable({ data, base, linkable }: { data: { day: string; orders
             const pct = d.orders > 0 ? Math.round((d.issued / d.orders) * 100) : 0;
             return (
               <tr key={d.day} className={`border-t border-line ${d.pending > 0 ? "bg-amber-50/40" : ""}`}>
-                <td className="whitespace-nowrap py-1.5 pr-3">
+                <td className="whitespace-nowrap py-1 pr-3">
                   <A href={`${base}?from=${d.day}&to=${d.day}`} className={linkable ? "font-medium text-ink hover:text-brand-600 hover:underline" : "font-medium text-ink"}>{fmt(d.day)}</A>
                 </td>
-                <td className="py-1.5 pr-3 text-right font-medium text-ink">
+                <td className="py-1 pr-3 text-right font-medium text-ink">
                   <A href={`${base}?from=${d.day}&to=${d.day}`} className={linkable ? "hover:underline" : ""}>{d.orders.toLocaleString()}</A>
                 </td>
-                <td className="py-1.5 pr-3 text-right text-green-600">
+                <td className="py-1 pr-3 text-right text-green-600">
                   <A href={`${base}?from=${d.day}&to=${d.day}&issued=yes`} className={linkable ? "hover:underline" : ""}>{d.issued.toLocaleString()}</A>
                 </td>
-                <td className={`py-1.5 pr-3 text-right ${d.pending > 0 ? "font-semibold text-amber-600" : "text-faint"}`}>
+                <td className={`py-1 pr-3 text-right ${d.pending > 0 ? "font-semibold text-amber-600" : "text-faint"}`}>
                   {d.pending > 0
                     ? <A href={`${base}?from=${d.day}&to=${d.day}&issued=no`} className={linkable ? "hover:underline" : ""}>{d.pending.toLocaleString()}</A>
                     : "—"}
                 </td>
-                <td className="hidden py-1.5 sm:table-cell">
+                <td className="hidden py-1 sm:table-cell">
                   <div className="flex items-center gap-2">
-                    <div className="h-2 min-w-[80px] flex-1 overflow-hidden rounded-full bg-soft">
+                    <div className="h-1.5 min-w-[56px] flex-1 overflow-hidden rounded-full bg-soft">
                       <div className="h-full rounded-full bg-green-500" style={{ width: `${pct}%` }} />
                     </div>
                     <span className="w-9 text-right text-xs text-muted">{pct}%</span>
