@@ -5,8 +5,6 @@ import { resolvePlatform, platformBase, enabledPlatforms, platformColor } from "
 import { dashboardStats, listOrders, topProducts, ordersTrend, dailyIssueStatus, dailyMatrix, fdaExpirySummary, shipSummary, platformOverview } from "@/lib/queries";
 import CreateOrderMenu from "@/components/CreateOrderMenu";
 import PlatformCompare from "@/components/PlatformCompare";
-import PlatformBarChart from "@/components/PlatformBarChart";
-import DailyMatrix from "@/components/DailyMatrix";
 import {
   ScanLine, Boxes, AlertTriangle, PackageCheck, ClipboardList,
   ArrowRight, ShoppingBag, TrendingUp, Sparkles, Clock, CalendarCheck, ShieldAlert, Truck,
@@ -207,27 +205,19 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
         </section>
       </div>
 
-      {/* ── ออร์เดอร์รายวัน (เต็มความกว้าง) ── */}
-      {/* โหมดรวม: ตารางรวม แยกแพลตฟอร์ม + ตัดสต๊อก · เลือกแพลตฟอร์มแล้ว: ตารางเดี่ยว (แพลตฟอร์มนั้น) */}
-      {!pf ? (
-        <div className="mt-4">
-          <DailyMatrix rows={matrix} />
+      {/* ── ออร์เดอร์รายวัน · ตัดสต๊อกแล้วกี่ใบ (เต็มความกว้าง) ── */}
+      <section className="card mt-4 flex flex-col p-4">
+        <div className="mb-2 flex shrink-0 flex-wrap items-center justify-between gap-2">
+          <h2 className="flex items-center gap-2 text-xs font-semibold text-ink"><CalendarCheck size={14} className="text-brand" /> ออร์เดอร์รายวัน · ตัดสต๊อกแล้วกี่ใบ</h2>
+          <span className="text-[11px] text-muted">5 วันล่าสุด{pf ? " (ตามวันที่สั่งซื้อ)" : " · ทุกแพลตฟอร์ม"}</span>
         </div>
-      ) : (
-        <section className="card mt-4 flex flex-col p-4">
-          <div className="mb-2 flex shrink-0 flex-wrap items-center justify-between gap-2">
-            <h2 className="flex items-center gap-2 text-xs font-semibold text-ink"><CalendarCheck size={14} className="text-brand" /> ออร์เดอร์รายวัน · ตัดสต๊อกแล้วกี่ใบ</h2>
-            <span className="text-[11px] text-muted">5 วันล่าสุด (ตามวันที่สั่งซื้อ)</span>
-          </div>
-          <DailyIssueTable data={daily} base={base} linkable />
-        </section>
-      )}
+        <DailyIssueTable data={daily} base={pf ? base : "/orders"} linkable />
+      </section>
 
-      {/* ── เทียบแพลตฟอร์ม (เฉพาะภาพรวมรวม) — ยอดสะสม · รายวันย้ายไปรวมในตารางรายวันด้านบนแล้ว ── */}
+      {/* ── เทียบแพลตฟอร์ม (เฉพาะภาพรวมรวม) — ยอดสะสม + เดือนนี้ + sparkline 7 วัน (รวมรายวัน×แพลตฟอร์ม) ── */}
       {overview.length > 0 && (
-        <div className="mt-4 space-y-4">
-          <PlatformBarChart rows={overview} periodActive={s.periodActive} />
-          <PlatformCompare rows={overview} periodActive={s.periodActive} />
+        <div className="mt-4">
+          <PlatformCompare rows={overview} daily={matrix} periodActive={s.periodActive} />
         </div>
       )}
 
