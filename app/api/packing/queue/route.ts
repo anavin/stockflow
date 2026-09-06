@@ -26,7 +26,8 @@ export async function GET(req: Request) {
   try {
     const orders = await q<Row>(
       `select o.order_no, o.doc_no, o.platform,
-              coalesce(o.receiver, o.username) as receiver, o.province,
+              coalesce(nullif(btrim(o.receiver),''), nullif(btrim(o.username),''),
+                       nullif(btrim(o.shop_name),'')) as receiver, o.province,
               (o.stock_issued_at is not null) as stock_issued,
               (select count(*)::int from order_items i where i.order_no = o.order_no) as item_count
          from orders o
