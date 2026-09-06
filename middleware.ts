@@ -3,7 +3,16 @@ import { SESSION_COOKIE } from "@/lib/auth/constants";
 
 // /api/cron/* กันด้วย CRON_SECRET เอง, /api/health ไม่คืนข้อมูล — ต้องผ่าน middleware
 // ไม่งั้น external cron/uptime (ส่ง Bearer ไม่มี cookie) จะโดน redirect ไป /login แล้ว handler ไม่รัน
-const PUBLIC = new Set(["/login", "/api/login", "/api/ping", "/api/cron/cleanup", "/api/health"]);
+// /api/packing/* เหมือนกัน — Packing Cam ส่ง Bearer PACKING_API_KEY และตรวจเองใน route
+const PUBLIC = new Set([
+  "/login",
+  "/api/login",
+  "/api/ping",
+  "/api/cron/cleanup",
+  "/api/health",
+  "/api/packing/queue",
+  "/api/packing/done",
+]);
 
 export function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
