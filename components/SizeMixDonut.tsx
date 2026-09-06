@@ -22,7 +22,7 @@ export default function SizeMixDonut({ rows }: { rows: SizeMixRow[] }) {
   if (data.length === 0) return null;
 
   const total = data.reduce((a, r) => a + r.qty, 0) || 1;
-  const R = 85, SW = 30, C = 2 * Math.PI * R, GAP = data.length > 1 ? 6 : 0;
+  const R = 92, SW = 34, C = 2 * Math.PI * R, GAP = data.length > 1 ? 6 : 0;
   let acc = 0;
   const segs = data.map((r) => {
     const frac = r.qty / total;
@@ -34,20 +34,20 @@ export default function SizeMixDonut({ rows }: { rows: SizeMixRow[] }) {
   const top = data[0];
 
   return (
-    <section className="card p-5">
+    <section className="card flex h-full flex-col p-5">
       <header className="mb-4 flex items-center gap-2">
         <h2 className="flex items-center gap-2 text-sm font-semibold text-ink"><PieChart size={16} className="text-brand" /> สัดส่วนขนาดขวด</h2>
         <span className="text-xs text-muted">ตามจำนวนที่เบิก · 6 ขนาดหลัก</span>
       </header>
-      <div className="flex flex-wrap items-center justify-center gap-6 sm:justify-start sm:gap-8">
-        <svg width="210" height="210" viewBox="0 0 210 210" className="shrink-0 -rotate-90" role="img" aria-label="สัดส่วนขนาดขวด">
-          <circle cx="105" cy="105" r={R} fill="none" className="stroke-soft" strokeWidth={SW} />
+      <div className="flex flex-1 flex-wrap items-center justify-center gap-6 sm:justify-start sm:gap-8">
+        <svg width="240" height="240" viewBox="0 0 240 240" className="h-auto w-40 shrink-0 -rotate-90 sm:w-56" role="img" aria-label="สัดส่วนขนาดขวด">
+          <circle cx="120" cy="120" r={R} fill="none" className="stroke-soft" strokeWidth={SW} />
           {segs.map((s) => (
-            <circle key={s.tok} cx="105" cy="105" r={R} fill="none" stroke={s.color} strokeWidth={SW}
+            <circle key={s.tok} cx="120" cy="120" r={R} fill="none" stroke={s.color} strokeWidth={SW}
               strokeLinecap="round" strokeDasharray={`${s.len} ${C - s.len}`} strokeDashoffset={-s.off} />
           ))}
-          <text x="105" y="99" transform="rotate(90 105 105)" textAnchor="middle" className="fill-ink" style={{ fontSize: 26, fontWeight: 800 }}>{total.toLocaleString()}</text>
-          <text x="105" y="120" transform="rotate(90 105 105)" textAnchor="middle" className="fill-faint" style={{ fontSize: 11 }}>ชิ้น · ขายดี {top.size}</text>
+          <text x="120" y="113" transform="rotate(90 120 120)" textAnchor="middle" className="fill-ink" style={{ fontSize: 30, fontWeight: 800 }}>{total.toLocaleString()}</text>
+          <text x="120" y="136" transform="rotate(90 120 120)" textAnchor="middle" className="fill-faint" style={{ fontSize: 12 }}>ชิ้น · ขายดี {top.size}</text>
         </svg>
         <div className="min-w-[200px] flex-1 space-y-2.5">
           {segs.map((s) => (

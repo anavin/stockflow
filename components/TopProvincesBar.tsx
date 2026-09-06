@@ -8,7 +8,7 @@ export default function TopProvincesBar({ rows }: { rows: ProvinceRow[] }) {
   const max = Math.max(1, ...data.map((r) => r.orders));
 
   return (
-    <section className="card p-5">
+    <section className="card h-full p-5">
       <header className="mb-3 flex items-center gap-2">
         <h2 className="flex items-center gap-2 text-sm font-semibold text-ink"><MapPin size={16} className="text-brand" /> จังหวัดปลายทางยอดนิยม</h2>
         <span className="text-xs text-muted">Top {data.length}</span>
