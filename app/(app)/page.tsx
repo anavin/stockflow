@@ -229,7 +229,7 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
           </section>
         );
         return overview.length > 0 ? (
-          <div className="mt-4 grid grid-cols-1 items-stretch gap-4 lg:grid-cols-2">
+          <div className="mt-4 grid grid-cols-1 items-stretch gap-4 lg:grid-cols-[2fr_3fr]">
             {dailyCard}
             <PlatformCompare rows={overview} periodActive={s.periodActive} />
           </div>
