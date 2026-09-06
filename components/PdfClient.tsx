@@ -1,12 +1,12 @@
 "use client";
 import { useEffect, useState } from "react";
 import { pdf } from "@react-pdf/renderer";
-import { WithdrawalDocument, WithdrawalDocumentMulti, type WsData } from "@/lib/pdf/withdrawal-sp-document";
+import { WithdrawalDocument, WithdrawalDocumentMulti, type QrMatrix, type WsData } from "@/lib/pdf/withdrawal-sp-document";
 import type { OrderWithItems } from "@/lib/types";
 
 /** สร้าง PDF ใบเบิกในเบราว์เซอร์ (client-side) — เลี่ยงบั๊ก fontkit shape ไทยเพี้ยนบน Cloudflare Workers
  *  ws / wsByPlatform = ข้อมูลค้าส่ง (catalog+สาขา) ที่ server ดึงจาก DB ส่งมา */
-export default function PdfClient({ order, orders, filename, ws, wsByPlatform }: { order?: OrderWithItems; orders?: OrderWithItems[]; filename: string; ws?: WsData; wsByPlatform?: Record<string, WsData> }) {
+export default function PdfClient({ order, orders, filename, ws, wsByPlatform, packingQr }: { order?: OrderWithItems; orders?: OrderWithItems[]; filename: string; ws?: WsData; wsByPlatform?: Record<string, WsData>; packingQr?: QrMatrix | null }) {
   const [url, setUrl] = useState<string | null>(null);
   const [err, setErr] = useState("");
 
@@ -15,7 +15,7 @@ export default function PdfClient({ order, orders, filename, ws, wsByPlatform }:
     let alive = true;
     (async () => {
       try {
-        const doc = orders ? <WithdrawalDocumentMulti orders={orders} wsByPlatform={wsByPlatform} /> : <WithdrawalDocument order={order!} ws={ws} />;
+        const doc = orders ? <WithdrawalDocumentMulti orders={orders} wsByPlatform={wsByPlatform} /> : <WithdrawalDocument order={order!} ws={ws} packingQr={packingQr} />;
         const blob = await pdf(doc).toBlob();
         if (!alive) return;
         objectUrl = URL.createObjectURL(blob);
@@ -25,7 +25,7 @@ export default function PdfClient({ order, orders, filename, ws, wsByPlatform }:
       }
     })();
     return () => { alive = false; if (objectUrl) URL.revokeObjectURL(objectUrl); };
-  }, [order, orders]);
+  }, [order, orders, packingQr]);
 
   if (err) return <div className="p-8 text-center text-sm text-red-600">สร้าง PDF ไม่สำเร็จ: {err}</div>;
   if (!url) return <div className="flex h-screen items-center justify-center text-sm text-muted">กำลังสร้าง PDF…</div>;

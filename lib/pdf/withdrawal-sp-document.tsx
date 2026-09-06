@@ -108,6 +108,22 @@ const s = StyleSheet.create({
 const COL_HALF = [16, 46, 104, 42, 34, 28, 30, 62];        // ~362pt half-panel (A4 landscape 2-up)
 const COL_FULL = [22, 60, 150, 55, 45, 36, 40, 127];       // ~535pt full panel (A4 portrait, 1 ใบเต็มแผ่น)
 
+/** QR ลิงก์คลิปตอนแพค — server ส่งตารางบิตมาให้ (ดู lib/packing-link.ts) */
+export type QrMatrix = { size: number; bits: string; url: string };
+
+function QrCode({ matrix, size = 62 }: { matrix: QrMatrix; size?: number }) {
+  const cell = size / matrix.size;
+  const rects: React.ReactElement[] = [];
+  for (let y = 0; y < matrix.size; y++) {
+    for (let x = 0; x < matrix.size; x++) {
+      if (matrix.bits[y * matrix.size + x] === "1") {
+        rects.push(<Rect key={`${x}-${y}`} x={x * cell} y={y * cell} width={cell} height={cell} fill="#000" />);
+      }
+    }
+  }
+  return <Svg width={size} height={size}>{rects}</Svg>;
+}
+
 function Barcode({ value, width = 250, height = 50 }: { value: string; width?: number; height?: number }) {
   const bc = code128(value);
   const scale = width / bc.totalModules;
@@ -152,7 +168,7 @@ const TYPE_ORDER = ["PARFUM", "EDP+", "EDT", "EDP"];
 const typeRank = (t?: string | null) => { const i = TYPE_ORDER.indexOf(String(t || "").trim()); return i < 0 ? 9 : i; };
 const mlOf = (sz?: string | null) => { const m = String(sz || "").match(/(\d+(?:\.\d+)?)/); return m ? parseFloat(m[1]) : 0; };
 
-function Panel({ order, copyLabel, full = false }: { order: OrderWithItems; copyLabel: string; full?: boolean }) {
+function Panel({ order, copyLabel, full = false, packingQr }: { order: OrderWithItems; copyLabel: string; full?: boolean; packingQr?: QrMatrix | null }) {
   const items = [...(order.items ?? [])].sort((a, b) =>
     (isFreeItem(a) ? 1 : 0) - (isFreeItem(b) ? 1 : 0)   // ของขายขึ้นก่อน ของแถมไว้ล่าง
     || typeRank(a.ptype) - typeRank(b.ptype)             // Grade
@@ -220,6 +236,12 @@ function Panel({ order, copyLabel, full = false }: { order: OrderWithItems; copy
           <Barcode value={order.order_no} width={185} height={bcH} />
           <Text style={s.bcText}>{order.order_no}</Text>
         </View>
+        {packingQr ? (
+          <View style={{ alignItems: "center", marginLeft: 8 }}>
+            <QrCode matrix={packingQr} size={n > T3 ? 46 : 58} />
+            <Text style={[s.bcText, { fontSize: 5.5 }]}>{T("สแกนดูคลิปตอนแพค")}</Text>
+          </View>
+        ) : null}
       </View>
 
       {/* info fields */}
@@ -293,17 +315,17 @@ function Panel({ order, copyLabel, full = false }: { order: OrderWithItems; copy
 }
 
 // A4 landscape, 2 ชุด (ต้นฉบับ | สำเนา) — ใบทั่วไป
-function OrderPageHalf({ order }: { order: OrderWithItems }) {
+function OrderPageHalf({ order, packingQr }: { order: OrderWithItems; packingQr?: QrMatrix | null }) {
   return (
     <Page size="A4" orientation="landscape" style={s.page}>
       <View style={s.pageRow}>
-        <Panel order={order} copyLabel="ต้นฉบับ · ORIGINAL" />
+        <Panel packingQr={packingQr} order={order} copyLabel="ต้นฉบับ · ORIGINAL" />
         <View style={s.divider}>
           <View style={s.dividerLine} />
           <Text style={s.cutLabel}>{T("ตัด")}</Text>
           <View style={s.dividerLine} />
         </View>
-        <Panel order={order} copyLabel="สำเนา · COPY" />
+        <Panel packingQr={packingQr} order={order} copyLabel="สำเนา · COPY" />
       </View>
     </Page>
   );
@@ -311,15 +333,15 @@ function OrderPageHalf({ order }: { order: OrderWithItems }) {
 
 // ════════════ ใบเบิกแบบ PO (ค้าส่ง: CTW / Eveandboy / King Power) — A4 เต็มแผ่น ════════════
 // ค้าส่ง (CTW/Eveandboy/King Power) = ใบเบิกรูปแบบเดียวกับใบส่งของ · อื่นๆ = 2 ชุดต่อหน้า
-function OrderPage({ order, ws }: { order: OrderWithItems; ws: WsData }) {
-  return isWholesalePlatform(order.platform) ? <WholesaleDocPage order={order} mode="issue" ws={ws} /> : <OrderPageHalf order={order} />;
+function OrderPage({ order, ws, packingQr }: { order: OrderWithItems; ws: WsData; packingQr?: QrMatrix | null }) {
+  return isWholesalePlatform(order.platform) ? <WholesaleDocPage order={order} mode="issue" ws={ws} /> : <OrderPageHalf packingQr={packingQr} order={order} />;
 }
 
-export function WithdrawalDocument({ order, ws = EMPTY_WS }: { order: OrderWithItems; ws?: WsData }) {
+export function WithdrawalDocument({ order, ws = EMPTY_WS, packingQr }: { order: OrderWithItems; ws?: WsData; packingQr?: QrMatrix | null }) {
   registerFontOnce();
   return (
     <Document title={`ใบเบิก ${order.doc_no || order.order_no}`} author="Lab Parfumo">
-      <OrderPage order={order} ws={ws} />
+      <OrderPage packingQr={packingQr} order={order} ws={ws} />
     </Document>
   );
 }

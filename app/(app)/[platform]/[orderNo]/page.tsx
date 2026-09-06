@@ -6,7 +6,7 @@ import OrderForm from "@/components/OrderForm";
 import CtwPushButton from "@/components/CtwPushButton";
 import ReverseIssueButton from "@/components/ReverseIssueButton";
 import ResetIssueButton from "@/components/ResetIssueButton";
-import { ChevronLeft, Printer, ScanLine, PackageCheck } from "lucide-react";
+import { ChevronLeft, Printer, ScanLine, PackageCheck, Video } from "lucide-react";
 import { requireCreator } from "@/lib/auth/require-user";
 import { can, isAdmin } from "@/lib/auth/roles";
 
@@ -56,6 +56,12 @@ export default async function EditOrderPage({ params }: { params: Promise<{ plat
           <a href={`/print/pdf/${encodeURIComponent(decoded)}`} target="_blank" rel="noreferrer" className="btn-ghost">
             <Printer size={16} /> พิมพ์ใบเบิก (PDF)
           </a>
+          {/* คลิปตอนแพคจาก Packing Cam — ลิงก์เดียวกับที่ส่งให้ลูกค้าดู */}
+          {order.packing_clip_url && (
+            <a href={order.packing_clip_url} target="_blank" rel="noreferrer" className="btn-ghost">
+              <Video size={16} /> ดูคลิปตอนแพค
+            </a>
+          )}
           {/* ใบส่งของ — เฉพาะหลังตัดสต๊อกหรือส่งแล้ว (กันออกใบส่งก่อนของออกจริง) */}
           {isWholesalePlatform(pf.code) && (order.stock_issued_at || order.shipped_at) && (
             <a href={`/api/delivery/${encodeURIComponent(decoded)}`} target="_blank" rel="noreferrer" className="btn-ghost">
