@@ -2,7 +2,7 @@ import Link from "next/link";
 import { unstable_cache } from "next/cache";
 import { requireDashboard } from "@/lib/auth/require-user";
 import { resolvePlatform, platformBase, enabledPlatforms, platformColor } from "@/lib/config";
-import { dashboardStats, listStock, listOrders, topProducts, ordersTrend, dailyIssueStatus, fdaExpirySummary, shipSummary, platformOverview, platformDaily } from "@/lib/queries";
+import { dashboardStats, listOrders, topProducts, ordersTrend, dailyIssueStatus, fdaExpirySummary, shipSummary, platformOverview, platformDaily } from "@/lib/queries";
 import CreateOrderMenu from "@/components/CreateOrderMenu";
 import PlatformCompare from "@/components/PlatformCompare";
 import PlatformDailyCompare from "@/components/PlatformDailyCompare";
@@ -18,9 +18,8 @@ export const dynamic = "force-dynamic";
 const getDashboardData = unstable_cache(
   async (pf: string | undefined) => {
     const multi = !pf && enabledPlatforms().length > 1;
-    const [s, lowStock, recent, top, trend, daily, fda, ship, overview, daily14] = await Promise.all([
+    const [s, recent, top, trend, daily, fda, ship, overview, daily14] = await Promise.all([
       dashboardStats(pf),
-      listStock({ lowOnly: true, limit: 6 }),
       listOrders({ platform: pf, limit: 20 }),
       topProducts(10),
       ordersTrend(6, pf),
@@ -30,7 +29,7 @@ const getDashboardData = unstable_cache(
       multi ? platformOverview() : Promise.resolve([] as Awaited<ReturnType<typeof platformOverview>>),
       multi ? platformDaily(14) : Promise.resolve([] as Awaited<ReturnType<typeof platformDaily>>),
     ]);
-    return { s, lowStock, recent, top, trend, daily, fda, ship, overview, daily14 };
+    return { s, recent, top, trend, daily, fda, ship, overview, daily14 };
   },
   ["dashboard-data"],
   { revalidate: 30, tags: ["dashboard"] },
@@ -40,7 +39,7 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
   const user = await requireDashboard();
   const pf = resolvePlatform((await searchParams).platform)?.code;   // undefined = ทุกแพลตฟอร์ม
   const base = pf ? platformBase(pf) : "/shopee";                    // ลิงก์ "ดูทั้งหมด"/สร้างใบเบิก
-  const { s, lowStock, recent, top, trend, daily, fda, ship, overview, daily14 } = await getDashboardData(pf);
+  const { s, recent, top, trend, daily, fda, ship, overview, daily14 } = await getDashboardData(pf);
   const platforms = enabledPlatforms();
   // หน้าหลักโชว์เฉพาะที่ "ใกล้จะหมดอายุ/ต้องต่ออายุ" (≤10/≤30 วัน) — ไม่โชว์ที่หมดอายุแล้ว (ดูที่หน้า /fda)
   const fdaAlert = fda.d10 + fda.d15 + fda.d30;
@@ -179,12 +178,11 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
             <span className="text-xs text-muted">{s.skus.toLocaleString()} SKU</span>
           </header>
           <div className="mt-4 flex flex-1 flex-col justify-center">
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid grid-cols-2 gap-2">
               <StockStat label="ปกติ" n={normal} total={s.skus} tone="green" />
               <StockStat label="ใกล้หมด" n={s.low} total={s.skus} tone="amber" href="/stock?low=1" />
-              <StockStat label="ติดลบ" n={s.negative} total={s.skus} tone="red" href="/stock?low=1" />
             </div>
-            <HealthBar normal={normal} low={s.low} negative={s.negative} />
+            <HealthBar normal={normal} low={s.low} negative={0} />
           </div>
           <Link href="/stock"
             className="mt-4 inline-flex items-center justify-center gap-1 rounded-lg border border-line px-3 py-2 text-xs font-medium text-ink transition-colors hover:bg-soft">
@@ -208,74 +206,14 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
         </section>
       </div>
 
-      {/* ── รายวัน + สต๊อกที่ต้องเติม (วางข้างกัน) ── */}
-      <div className="mt-4 grid grid-cols-1 items-stretch gap-4 lg:grid-cols-2">
-        {/* daily */}
-        <section className="card flex flex-col p-4">
-          <div className="mb-2 flex shrink-0 flex-wrap items-center justify-between gap-2">
-            <h2 className="flex items-center gap-2 text-xs font-semibold text-ink"><CalendarCheck size={14} className="text-brand" /> ออร์เดอร์รายวัน · ตัดสต๊อกแล้วกี่ใบ</h2>
-            <span className="text-[11px] text-muted">5 วันล่าสุด{pf ? " (ตามวันที่สั่งซื้อ)" : " · ทุกแพลตฟอร์ม"}</span>
-          </div>
-          {/* โหมดรวม (ไม่เลือกแพลตฟอร์ม) drill ไปหน้า /orders รวมทุกแพลตฟอร์ม · เลือกแพลตฟอร์มแล้ว drill ไปหน้านั้น */}
-          <DailyIssueTable data={daily} base={pf ? base : "/orders"} linkable />
-        </section>
-
-        {/* low stock (ย่อเล็ก) */}
-        <section className="card p-4">
-          <div className="mb-2 flex items-center justify-between">
-            <h2 className="flex items-center gap-2 text-xs font-semibold text-ink"><AlertTriangle size={14} className="text-amber-500" /> สต๊อกที่ต้องเติม (≤10)</h2>
-            <Link href="/stock?low=1" className="inline-flex items-center gap-1 text-[11px] font-medium text-brand-600">ทั้งหมด <ArrowRight size={11} /></Link>
-          </div>
-          {lowStock.length === 0 ? (
-            <p className="py-6 text-center text-xs text-muted">สต๊อกเพียงพอทั้งหมด 👍</p>
-          ) : (
-            <div className="space-y-1.5">
-              {lowStock.map((r) => {
-                const pct = Math.max(0, Math.min(100, (Number(r.qty) / 10) * 100));
-                const neg = Number(r.qty) < 0;
-                return (
-                  <div key={`${r.product}|${r.size}`} className="group">
-                    <div className="flex items-center justify-between text-xs">
-                      <span className="truncate"><span className="font-medium text-ink">{r.product}</span> <span className="text-faint">{r.size}</span></span>
-                      <span className={`chip shrink-0 ${neg ? "bg-red-50 text-red-600" : "bg-amber-50 text-amber-700"}`}>{r.qty}</span>
-                    </div>
-                    <div className="mt-1 h-1 w-full overflow-hidden rounded-full bg-soft">
-                      <div className={`h-full rounded-full ${neg ? "bg-red-500" : "bg-amber-400"}`} style={{ width: `${neg ? 100 : pct}%` }} />
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </section>
-      </div>
-
-      {/* ── top products ── */}
-      <section className="card mt-4 p-5">
-        <div className="mb-1 flex items-center justify-between">
-          <h2 className="flex items-center gap-2 text-sm font-semibold text-ink"><Sparkles size={15} className="text-brand" /> กลิ่นที่เบิกมากที่สุด</h2>
-          <Link href="/scents" className="inline-flex items-center gap-1 text-xs font-medium text-brand-600">ดูทั้งหมด <ArrowRight size={12} /></Link>
+      {/* ── ออร์เดอร์รายวัน · ตัดสต๊อกแล้วกี่ใบ (เต็มความกว้าง) ── */}
+      <section className="card mt-4 flex flex-col p-4">
+        <div className="mb-2 flex shrink-0 flex-wrap items-center justify-between gap-2">
+          <h2 className="flex items-center gap-2 text-xs font-semibold text-ink"><CalendarCheck size={14} className="text-brand" /> ออร์เดอร์รายวัน · ตัดสต๊อกแล้วกี่ใบ</h2>
+          <span className="text-[11px] text-muted">5 วันล่าสุด{pf ? " (ตามวันที่สั่งซื้อ)" : " · ทุกแพลตฟอร์ม"}</span>
         </div>
-        {top.length === 0 ? (
-          <p className="py-6 text-center text-sm text-muted">ยังไม่มีข้อมูล</p>
-        ) : (
-          <div className="mt-3 space-y-2.5">
-            {top.map((p, i) => {
-              const max = top[0]?.qty || 1;
-              const pct = Math.max(4, (Number(p.qty) / max) * 100);
-              return (
-                <div key={p.product} className="flex items-center gap-3">
-                  <span className="w-4 text-right text-xs font-medium text-faint">{i + 1}</span>
-                  <span className="w-40 shrink-0 truncate text-sm text-ink" title={p.product}>{p.product}</span>
-                  <div className="h-4 flex-1 overflow-hidden rounded-full bg-soft">
-                    <div className="flex h-full items-center justify-end rounded-full bg-brand pr-2" style={{ width: `${pct}%` }} />
-                  </div>
-                  <span className="w-14 shrink-0 text-right text-xs font-semibold text-ink">{Number(p.qty).toLocaleString()}</span>
-                </div>
-              );
-            })}
-          </div>
-        )}
+        {/* โหมดรวม (ไม่เลือกแพลตฟอร์ม) drill ไปหน้า /orders รวมทุกแพลตฟอร์ม · เลือกแพลตฟอร์มแล้ว drill ไปหน้านั้น */}
+        <DailyIssueTable data={daily} base={pf ? base : "/orders"} linkable />
       </section>
 
       {/* ── เทียบแพลตฟอร์ม (เฉพาะภาพรวมรวม) — รวม + รายวัน · ย้ายมาไว้ล่างสุด ── */}
@@ -313,6 +251,34 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
                 </div>
               </Link>
             ))}
+          </div>
+        )}
+      </section>
+
+      {/* ── top products — ย้ายมาไว้ล่างสุด ── */}
+      <section className="card mt-4 p-5">
+        <div className="mb-1 flex items-center justify-between">
+          <h2 className="flex items-center gap-2 text-sm font-semibold text-ink"><Sparkles size={15} className="text-brand" /> กลิ่นที่เบิกมากที่สุด</h2>
+          <Link href="/scents" className="inline-flex items-center gap-1 text-xs font-medium text-brand-600">ดูทั้งหมด <ArrowRight size={12} /></Link>
+        </div>
+        {top.length === 0 ? (
+          <p className="py-6 text-center text-sm text-muted">ยังไม่มีข้อมูล</p>
+        ) : (
+          <div className="mt-3 space-y-2.5">
+            {top.map((p, i) => {
+              const max = top[0]?.qty || 1;
+              const pct = Math.max(4, (Number(p.qty) / max) * 100);
+              return (
+                <div key={p.product} className="flex items-center gap-3">
+                  <span className="w-4 text-right text-xs font-medium text-faint">{i + 1}</span>
+                  <span className="w-40 shrink-0 truncate text-sm text-ink" title={p.product}>{p.product}</span>
+                  <div className="h-4 flex-1 overflow-hidden rounded-full bg-soft">
+                    <div className="flex h-full items-center justify-end rounded-full bg-brand pr-2" style={{ width: `${pct}%` }} />
+                  </div>
+                  <span className="w-14 shrink-0 text-right text-xs font-semibold text-ink">{Number(p.qty).toLocaleString()}</span>
+                </div>
+              );
+            })}
           </div>
         )}
       </section>
