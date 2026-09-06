@@ -8,7 +8,7 @@ const mLabel = (ym: string) => { const mm = +ym.slice(5, 7); return `${TH_M[mm -
 export default function NewVsReturningBars({ rows }: { rows: NewReturnMonth[] }) {
   if (rows.length === 0) return null;
   const max = Math.max(1, ...rows.map((r) => r.new_c + r.repeat_c + r.unknown_c));
-  const NEW = "#0ea5e9", REPEAT = "#f59e0b", UNK = "#cbd5e1"; // ฟ้า vs อำพัน = ต่างกันชัด
+  const NEW = "#14b8a6", REPEAT = "#6366f1", UNK = "#cbd5e1"; // เทียล + ม่วงคราม = คูลโทนเข้ากัน แต่แยกออก
   const legend = [
     { label: "ลูกค้าใหม่", color: NEW },
     { label: "กลับมาซื้อ", color: REPEAT },
