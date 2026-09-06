@@ -1325,13 +1325,18 @@ export async function platformDaily(days = 14): Promise<PlatformDailyRow[]> {
  *  ตั้งใจนับสะสม (ไม่ผูก PERIOD_START) เพื่อให้ตารางเทียบมีข้อมูลเสมอ — แดชบอร์ดกำกับป้ายว่าเป็นยอดสะสม
  *  ให้ต่างจากการ์ด KPI "รอบนี้" ด้านบนชัดเจน (ดู PlatformCompare periodActive) */
 export async function platformOverview(): Promise<PlatformOverviewRow[]> {
+  // ตัดสต๊อก/ส่งแล้ว/ค้างส่ง นับเฉพาะที่เกิดตั้งแต่ PERIOD_START (วัน implement) — กันข้อมูล import เก่าปน
+  // (ก่อนถึงวันนั้น = นับสะสมเหมือนเดิม) · ออร์เดอร์รวม/เดือนนี้/คืน = สะสมทุกช่วงเวลา
+  const P = PERIOD_START;
+  const isP = P ? ` and (current_date < date '${P}' or (stock_issued_at at time zone 'Asia/Bangkok')::date >= date '${P}')` : "";
+  const shP = P ? ` and (current_date < date '${P}' or (shipped_at at time zone 'Asia/Bangkok')::date >= date '${P}')` : "";
   const body = (withReturned: boolean) =>
     `select coalesce(platform,'Shopee') as platform,
             count(*)::int as orders,
             count(*) filter (where date_trunc('month', coalesce(doc_date, order_date)) = date_trunc('month', (now() at time zone 'Asia/Bangkok')))::int as month,
-            count(*) filter (where stock_issued_at is not null)::int as issued,
-            count(*) filter (where shipped_at is not null)::int as shipped,
-            count(*) filter (where stock_issued_at is not null and shipped_at is null)::int as pending${withReturned ? `,
+            count(*) filter (where stock_issued_at is not null${isP})::int as issued,
+            count(*) filter (where shipped_at is not null${shP})::int as shipped,
+            count(*) filter (where stock_issued_at is not null${isP} and shipped_at is null)::int as pending${withReturned ? `,
             count(*) filter (where coalesce(return_status,'none') <> 'none')::int as returned` : ""}
      from orders where deleted_at is null
      group by 1 order by orders desc`;

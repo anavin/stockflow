@@ -24,7 +24,7 @@ export default function PlatformCompare({ rows, daily = [], periodActive = false
       <div className="flex items-center gap-2 border-b border-line px-5 py-3.5 text-sm font-semibold text-ink">
         <Layers size={16} className="text-brand" /> เทียบแพลตฟอร์ม
         <span className="text-xs font-normal text-muted">
-          ยอดสะสมทุกช่วงเวลา · เดือนนี้ · {hasDaily ? `แนวโน้ม ${days.length} วัน · ` : ""}การจัดการ{periodActive ? <span className="text-faint"> — การ์ด KPI ด้านบนเป็น “รอบนี้”</span> : null}
+          ออร์เดอร์ = ยอดสะสม · {hasDaily ? `แนวโน้ม ${days.length} วัน · ` : ""}ตัด/ส่ง นับตั้งแต่ 1 ก.ย. 69 (implement)
         </span>
       </div>
       <div className="overflow-x-auto">
