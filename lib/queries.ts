@@ -533,31 +533,6 @@ export async function dailyMatrix(days = 7, platform?: string): Promise<DailyMat
   } catch { return []; }
 }
 
-export type FlowRow = { day: string; orders: number; issued: number; shipped: number };
-/** แนวโน้มรายวัน N วัน: ออร์เดอร์เข้า (order_date) vs ตัดสต๊อก (stock_issued_at) vs ส่ง (shipped_at)
- *  แต่ละเส้นยึด "วันที่ที่เหตุการณ์นั้นเกิด" → เห็นว่างานเข้ากับงานที่เคลียร์ทันกันไหม */
-export async function dailyFlow(days = 14, platform?: string): Promise<FlowRow[]> {
-  try {
-    const params: any[] = [days];
-    const pc = platform ? (params.push(platform), ` and platform = $${params.length}`) : "";
-    const start = `((now() at time zone 'Asia/Bangkok')::date - ($1::int - 1))`;
-    return await q<FlowRow>(
-      `with dd as (
-         select generate_series(${start}, (now() at time zone 'Asia/Bangkok')::date, interval '1 day')::date as d
-       ),
-       o as (select coalesce(order_date, doc_date) as d, count(*)::int n from orders
-             where deleted_at is null${pc} and coalesce(order_date, doc_date) >= ${start} group by 1),
-       i as (select (stock_issued_at at time zone 'Asia/Bangkok')::date as d, count(*)::int n from orders
-             where deleted_at is null${pc} and stock_issued_at is not null and (stock_issued_at at time zone 'Asia/Bangkok')::date >= ${start} group by 1),
-       sh as (select (shipped_at at time zone 'Asia/Bangkok')::date as d, count(*)::int n from orders
-             where deleted_at is null${pc} and shipped_at is not null and (shipped_at at time zone 'Asia/Bangkok')::date >= ${start} group by 1)
-       select to_char(dd.d,'YYYY-MM-DD') as day,
-              coalesce(o.n,0) as orders, coalesce(i.n,0) as issued, coalesce(sh.n,0) as shipped
-       from dd left join o on o.d=dd.d left join i on i.d=dd.d left join sh on sh.d=dd.d
-       order by dd.d`, params);
-  } catch { return []; }
-}
-
 export type MonitorRow = { platform: string; orders: number; issued: number };
 /** Monitor "วันนี้" — ออร์เดอร์ของวันนี้ (order_date=วันนี้ เวลาไทย) แยกแพลตฟอร์ม + ตัดสต๊อกแล้วกี่ใบ
  *  ค้าง = orders - issued · ฐานวันที่/สถานะตรงกับ /orders?from=today&to=today (drill-down เลขตรง) */

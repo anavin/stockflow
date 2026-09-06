@@ -2,11 +2,10 @@ import Link from "next/link";
 import { unstable_cache } from "next/cache";
 import { requireDashboard } from "@/lib/auth/require-user";
 import { resolvePlatform, platformBase, enabledPlatforms, platformColor } from "@/lib/config";
-import { dashboardStats, listOrders, topProducts, ordersTrend, dailyIssueStatus, dailyMatrix, monitorToday, dailyFlow, sizeMix, newVsReturningByMonth, topProvinces, fdaExpirySummary, shipSummary, platformOverview } from "@/lib/queries";
+import { dashboardStats, listOrders, topProducts, ordersTrend, dailyIssueStatus, dailyMatrix, monitorToday, sizeMix, newVsReturningByMonth, topProvinces, fdaExpirySummary, shipSummary, platformOverview } from "@/lib/queries";
 import CreateOrderMenu from "@/components/CreateOrderMenu";
 import PlatformCompare from "@/components/PlatformCompare";
 import TodayMonitor from "@/components/TodayMonitor";
-import DailyFlowChart from "@/components/DailyFlowChart";
 import SizeMixDonut from "@/components/SizeMixDonut";
 import NewVsReturningBars from "@/components/NewVsReturningBars";
 import TopProvincesBar from "@/components/TopProvincesBar";
@@ -22,7 +21,7 @@ export const dynamic = "force-dynamic";
 const getDashboardData = unstable_cache(
   async (pf: string | undefined) => {
     const multi = !pf && enabledPlatforms().length > 1;
-    const [s, recent, top, trend, daily, matrix, fda, ship, overview, monitor, flow, sizes, nvr, provinces] = await Promise.all([
+    const [s, recent, top, trend, daily, matrix, fda, ship, overview, monitor, sizes, nvr, provinces] = await Promise.all([
       dashboardStats(pf),
       listOrders({ platform: pf, limit: 20 }),
       topProducts(10),
@@ -33,12 +32,11 @@ const getDashboardData = unstable_cache(
       shipSummary(pf),
       multi ? platformOverview() : Promise.resolve([] as Awaited<ReturnType<typeof platformOverview>>),
       monitorToday(pf),
-      dailyFlow(14, pf),
       sizeMix(pf),
       newVsReturningByMonth(12),
       topProvinces(10, pf),
     ]);
-    return { s, recent, top, trend, daily, matrix, fda, ship, overview, monitor, flow, sizes, nvr, provinces };
+    return { s, recent, top, trend, daily, matrix, fda, ship, overview, monitor, sizes, nvr, provinces };
   },
   ["dashboard-data"],
   { revalidate: 30, tags: ["dashboard"] },
@@ -48,7 +46,7 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
   const user = await requireDashboard();
   const pf = resolvePlatform((await searchParams).platform)?.code;   // undefined = ทุกแพลตฟอร์ม
   const base = pf ? platformBase(pf) : "/shopee";                    // ลิงก์ "ดูทั้งหมด"/สร้างใบเบิก
-  const { s, recent, top, trend, daily, matrix, fda, ship, overview, monitor, flow, sizes, nvr, provinces } = await getDashboardData(pf);
+  const { s, recent, top, trend, daily, matrix, fda, ship, overview, monitor, sizes, nvr, provinces } = await getDashboardData(pf);
   const platforms = enabledPlatforms();
   // หน้าหลักโชว์เฉพาะที่ "ใกล้จะหมดอายุ/ต้องต่ออายุ" (≤10/≤30 วัน) — ไม่โชว์ที่หมดอายุแล้ว (ดูที่หน้า /fda)
   const fdaAlert = fda.d10 + fda.d15 + fda.d30;
@@ -228,11 +226,6 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
         </div>
         <DailyIssueTable data={daily} base={pf ? base : "/orders"} linkable />
       </section>
-
-      {/* ── แนวโน้มงาน ออร์เดอร์ vs ตัด vs ส่ง (14 วัน) ── */}
-      <div className="mt-4">
-        <DailyFlowChart rows={flow} days={14} />
-      </div>
 
       {/* ── เทียบแพลตฟอร์ม (เฉพาะภาพรวมรวม) — ยอดสะสม + เดือนนี้ + sparkline 7 วัน (รวมรายวัน×แพลตฟอร์ม) ── */}
       {overview.length > 0 && (
