@@ -8,10 +8,11 @@ const mLabel = (ym: string) => { const mm = +ym.slice(5, 7); return `${TH_M[mm -
 export default function NewVsReturningBars({ rows }: { rows: NewReturnMonth[] }) {
   if (rows.length === 0) return null;
   const max = Math.max(1, ...rows.map((r) => r.new_c + r.repeat_c + r.unknown_c));
+  const NEW = "#0ea5e9", REPEAT = "#f59e0b", UNK = "#cbd5e1"; // ฟ้า vs อำพัน = ต่างกันชัด
   const legend = [
-    { label: "ลูกค้าใหม่", color: "rgb(var(--brand))" },
-    { label: "กลับมาซื้อ", color: "#16a34a" },
-    { label: "ไม่ระบุ", color: "#cbd5e1" },
+    { label: "ลูกค้าใหม่", color: NEW },
+    { label: "กลับมาซื้อ", color: REPEAT },
+    { label: "ไม่ระบุ", color: UNK },
   ];
   const totNew = rows.reduce((a, r) => a + r.new_c, 0);
   const totRep = rows.reduce((a, r) => a + r.repeat_c, 0);
@@ -35,9 +36,9 @@ export default function NewVsReturningBars({ rows }: { rows: NewReturnMonth[] })
               <span className="text-[10px] font-medium text-muted">{tot || ""}</span>
               <div className="flex w-full max-w-[30px] flex-col justify-end overflow-hidden rounded-t-md" style={{ height: BAR }}
                 title={`${mLabel(r.ym)} · ใหม่ ${r.new_c} · กลับมา ${r.repeat_c}${r.unknown_c ? ` · ไม่ระบุ ${r.unknown_c}` : ""}`}>
-                {r.unknown_c > 0 && <div style={{ height: px(r.unknown_c), backgroundColor: "#cbd5e1" }} />}
-                {r.repeat_c > 0 && <div style={{ height: px(r.repeat_c), backgroundColor: "#16a34a" }} />}
-                {r.new_c > 0 && <div style={{ height: px(r.new_c), backgroundColor: "rgb(var(--brand))" }} />}
+                {r.unknown_c > 0 && <div style={{ height: px(r.unknown_c), backgroundColor: UNK }} />}
+                {r.repeat_c > 0 && <div style={{ height: px(r.repeat_c), backgroundColor: REPEAT }} />}
+                {r.new_c > 0 && <div style={{ height: px(r.new_c), backgroundColor: NEW }} />}
               </div>
               <span className="text-[10px] text-faint">{mLabel(r.ym)}</span>
             </div>
