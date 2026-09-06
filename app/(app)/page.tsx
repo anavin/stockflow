@@ -2,9 +2,10 @@ import Link from "next/link";
 import { unstable_cache } from "next/cache";
 import { requireDashboard } from "@/lib/auth/require-user";
 import { resolvePlatform, platformBase, enabledPlatforms, platformColor } from "@/lib/config";
-import { dashboardStats, listOrders, topProducts, ordersTrend, dailyIssueStatus, dailyMatrix, fdaExpirySummary, shipSummary, platformOverview } from "@/lib/queries";
+import { dashboardStats, listOrders, topProducts, ordersTrend, dailyIssueStatus, dailyMatrix, monitorToday, fdaExpirySummary, shipSummary, platformOverview } from "@/lib/queries";
 import CreateOrderMenu from "@/components/CreateOrderMenu";
 import PlatformCompare from "@/components/PlatformCompare";
+import TodayMonitor from "@/components/TodayMonitor";
 import {
   ScanLine, Boxes, AlertTriangle, PackageCheck, ClipboardList,
   ArrowRight, ShoppingBag, TrendingUp, Sparkles, Clock, CalendarCheck, ShieldAlert, Truck,
@@ -17,7 +18,7 @@ export const dynamic = "force-dynamic";
 const getDashboardData = unstable_cache(
   async (pf: string | undefined) => {
     const multi = !pf && enabledPlatforms().length > 1;
-    const [s, recent, top, trend, daily, matrix, fda, ship, overview] = await Promise.all([
+    const [s, recent, top, trend, daily, matrix, fda, ship, overview, monitor] = await Promise.all([
       dashboardStats(pf),
       listOrders({ platform: pf, limit: 20 }),
       topProducts(10),
@@ -27,8 +28,9 @@ const getDashboardData = unstable_cache(
       fdaExpirySummary(),
       shipSummary(pf),
       multi ? platformOverview() : Promise.resolve([] as Awaited<ReturnType<typeof platformOverview>>),
+      monitorToday(pf),
     ]);
-    return { s, recent, top, trend, daily, matrix, fda, ship, overview };
+    return { s, recent, top, trend, daily, matrix, fda, ship, overview, monitor };
   },
   ["dashboard-data"],
   { revalidate: 30, tags: ["dashboard"] },
@@ -38,7 +40,7 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
   const user = await requireDashboard();
   const pf = resolvePlatform((await searchParams).platform)?.code;   // undefined = ทุกแพลตฟอร์ม
   const base = pf ? platformBase(pf) : "/shopee";                    // ลิงก์ "ดูทั้งหมด"/สร้างใบเบิก
-  const { s, recent, top, trend, daily, matrix, fda, ship, overview } = await getDashboardData(pf);
+  const { s, recent, top, trend, daily, matrix, fda, ship, overview, monitor } = await getDashboardData(pf);
   const platforms = enabledPlatforms();
   // หน้าหลักโชว์เฉพาะที่ "ใกล้จะหมดอายุ/ต้องต่ออายุ" (≤10/≤30 วัน) — ไม่โชว์ที่หมดอายุแล้ว (ดูที่หน้า /fda)
   const fdaAlert = fda.d10 + fda.d15 + fda.d30;
@@ -135,6 +137,11 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
           icon={<Truck size={18} />} tone="green"
           sub={<>ค้างส่ง <b className="text-ink">{ship.pending.toLocaleString()}</b></>}
         />
+      </div>
+
+      {/* ── Monitor วันนี้ (เฝ้าดูงานระหว่างวัน) ── */}
+      <div className="mt-4">
+        <TodayMonitor rows={monitor} showPlatforms={!pf} />
       </div>
 
       {/* ── highlights: fulfillment · stock health · trend ── */}

@@ -533,6 +533,25 @@ export async function dailyMatrix(days = 7, platform?: string): Promise<DailyMat
   } catch { return []; }
 }
 
+export type MonitorRow = { platform: string; orders: number; issued: number };
+/** Monitor "วันนี้" — ออร์เดอร์ของวันนี้ (order_date=วันนี้ เวลาไทย) แยกแพลตฟอร์ม + ตัดสต๊อกแล้วกี่ใบ
+ *  ค้าง = orders - issued · ฐานวันที่/สถานะตรงกับ /orders?from=today&to=today (drill-down เลขตรง) */
+export async function monitorToday(platform?: string): Promise<MonitorRow[]> {
+  try {
+    const params: any[] = [];
+    const pc = platform ? (params.push(platform), ` and platform = $${params.length}`) : "";
+    return await q<MonitorRow>(
+      `select coalesce(platform,'Shopee') as platform,
+              count(*)::int as orders,
+              count(stock_issued_at)::int as issued
+       from orders
+       where deleted_at is null${pc}
+         and coalesce(order_date, doc_date) = (now() at time zone 'Asia/Bangkok')::date
+       group by 1
+       order by orders desc`, params);
+  } catch { return []; }
+}
+
 export type DayOrderItem = { product: string; size: string | null; qty: number; is_free: boolean };
 export type DayOrderRow = {
   order_no: string; doc_no: string | null; receiver: string | null; username: string | null;
