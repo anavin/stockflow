@@ -2,7 +2,7 @@ import Link from "next/link";
 import { unstable_cache } from "next/cache";
 import { requireDashboard } from "@/lib/auth/require-user";
 import { resolvePlatform, platformBase, enabledPlatforms, platformColor } from "@/lib/config";
-import { dashboardStats, listOrders, topProducts, ordersTrend, dailyIssueStatus, dailyMatrix, monitorToday, sizeMix, newVsReturningByMonth, topProvinces, fdaExpirySummary, shipSummary, platformOverview } from "@/lib/queries";
+import { dashboardStats, listOrders, topProducts, ordersTrend, dailyIssueStatus, monitorToday, sizeMix, newVsReturningByMonth, topProvinces, fdaExpirySummary, shipSummary, platformOverview } from "@/lib/queries";
 import CreateOrderMenu from "@/components/CreateOrderMenu";
 import PlatformCompare from "@/components/PlatformCompare";
 import TodayMonitor from "@/components/TodayMonitor";
@@ -21,13 +21,12 @@ export const dynamic = "force-dynamic";
 const getDashboardData = unstable_cache(
   async (pf: string | undefined) => {
     const multi = !pf && enabledPlatforms().length > 1;
-    const [s, recent, top, trend, daily, matrix, fda, ship, overview, monitor, sizes, nvr, provinces] = await Promise.all([
+    const [s, recent, top, trend, daily, fda, ship, overview, monitor, sizes, nvr, provinces] = await Promise.all([
       dashboardStats(pf),
       listOrders({ platform: pf, limit: 20 }),
       topProducts(10),
       ordersTrend(6, pf),
-      dailyIssueStatus(pf, 5),
-      multi ? dailyMatrix(7) : Promise.resolve([] as Awaited<ReturnType<typeof dailyMatrix>>),
+      dailyIssueStatus(pf, 8),
       fdaExpirySummary(),
       shipSummary(pf),
       multi ? platformOverview() : Promise.resolve([] as Awaited<ReturnType<typeof platformOverview>>),
@@ -36,7 +35,7 @@ const getDashboardData = unstable_cache(
       newVsReturningByMonth(12),
       topProvinces(10, pf),
     ]);
-    return { s, recent, top, trend, daily, matrix, fda, ship, overview, monitor, sizes, nvr, provinces };
+    return { s, recent, top, trend, daily, fda, ship, overview, monitor, sizes, nvr, provinces };
   },
   ["dashboard-data"],
   { revalidate: 30, tags: ["dashboard"] },
@@ -46,7 +45,7 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
   const user = await requireDashboard();
   const pf = resolvePlatform((await searchParams).platform)?.code;   // undefined = ทุกแพลตฟอร์ม
   const base = pf ? platformBase(pf) : "/shopee";                    // ลิงก์ "ดูทั้งหมด"/สร้างใบเบิก
-  const { s, recent, top, trend, daily, matrix, fda, ship, overview, monitor, sizes, nvr, provinces } = await getDashboardData(pf);
+  const { s, recent, top, trend, daily, fda, ship, overview, monitor, sizes, nvr, provinces } = await getDashboardData(pf);
   const platforms = enabledPlatforms();
   // หน้าหลักโชว์เฉพาะที่ "ใกล้จะหมดอายุ/ต้องต่ออายุ" (≤10/≤30 วัน) — ไม่โชว์ที่หมดอายุแล้ว (ดูที่หน้า /fda)
   const fdaAlert = fda.d10 + fda.d15 + fda.d30;
@@ -218,21 +217,26 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
         </section>
       </div>
 
-      {/* ── ออร์เดอร์รายวัน · ตัดสต๊อกแล้วกี่ใบ (เต็มความกว้าง) ── */}
-      <section className="card mt-4 flex flex-col p-4">
-        <div className="mb-2 flex shrink-0 flex-wrap items-center justify-between gap-2">
-          <h2 className="flex items-center gap-2 text-xs font-semibold text-ink"><CalendarCheck size={14} className="text-brand" /> ออร์เดอร์รายวัน · ตัดสต๊อกแล้วกี่ใบ</h2>
-          <span className="text-[11px] text-muted">5 วันล่าสุด{pf ? " (ตามวันที่สั่งซื้อ)" : " · ทุกแพลตฟอร์ม"}</span>
-        </div>
-        <DailyIssueTable data={daily} base={pf ? base : "/orders"} linkable />
-      </section>
-
-      {/* ── เทียบแพลตฟอร์ม (เฉพาะภาพรวมรวม) — ยอดสะสม + เดือนนี้ + sparkline 7 วัน (รวมรายวัน×แพลตฟอร์ม) ── */}
-      {overview.length > 0 && (
-        <div className="mt-4">
-          <PlatformCompare rows={overview} daily={matrix} periodActive={s.periodActive} />
-        </div>
-      )}
+      {/* ── ออร์เดอร์รายวัน + เทียบแพลตฟอร์ม (วางข้างกันเมื่อมีทั้งคู่) ── */}
+      {(() => {
+        const dailyCard = (
+          <section className="card flex h-full flex-col p-4">
+            <div className="mb-2 flex shrink-0 flex-wrap items-center justify-between gap-2">
+              <h2 className="flex items-center gap-2 text-xs font-semibold text-ink"><CalendarCheck size={14} className="text-brand" /> ออร์เดอร์รายวัน · ตัดสต๊อกแล้วกี่ใบ</h2>
+              <span className="text-[11px] text-muted">8 วันล่าสุด{pf ? " (ตามวันที่สั่งซื้อ)" : " · ทุกแพลตฟอร์ม"}</span>
+            </div>
+            <DailyIssueTable data={daily} base={pf ? base : "/orders"} linkable />
+          </section>
+        );
+        return overview.length > 0 ? (
+          <div className="mt-4 grid grid-cols-1 items-stretch gap-4 lg:grid-cols-2">
+            {dailyCard}
+            <PlatformCompare rows={overview} periodActive={s.periodActive} />
+          </div>
+        ) : (
+          <div className="mt-4">{dailyCard}</div>
+        );
+      })()}
 
       {/* ── recent orders (full width) — ต่อจากเทียบแพลตฟอร์ม ── */}
       <section className="card mt-4 p-5">
