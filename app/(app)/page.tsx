@@ -234,15 +234,6 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
         </div>
       )}
 
-      {/* ── กราฟธุรกิจ: ลูกค้าใหม่/กลับมา · สัดส่วนขนาด · จังหวัด ── */}
-      <div className="mt-4">
-        <NewVsReturningBars rows={nvr} />
-      </div>
-      <div className="mt-4 grid grid-cols-1 items-stretch gap-4 lg:grid-cols-2">
-        <SizeMixDonut rows={sizes} />
-        <TopProvincesBar rows={provinces} />
-      </div>
-
       {/* ── recent orders (full width) — ต่อจากเทียบแพลตฟอร์ม ── */}
       <section className="card mt-4 p-5">
         <div className="mb-3 flex items-center justify-between">
@@ -301,6 +292,15 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
           </div>
         )}
       </section>
+
+      {/* ── กราฟธุรกิจ (ล่างสุด): ลูกค้าใหม่/กลับมา · สัดส่วนขนาด · จังหวัด ── */}
+      <div className="mt-4">
+        <NewVsReturningBars rows={nvr} />
+      </div>
+      <div className="mt-4 grid grid-cols-1 items-stretch gap-4 lg:grid-cols-2">
+        <SizeMixDonut rows={sizes} />
+        <TopProvincesBar rows={provinces} />
+      </div>
     </div>
   );
 }
