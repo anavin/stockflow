@@ -512,6 +512,27 @@ export async function dailyIssueStatus(platform?: string, days = 14): Promise<Da
   } catch { return []; }
 }
 
+export type DailyMatrixRow = { day: string; platform: string; orders: number; issued: number };
+/** ออร์เดอร์รายวัน แยกตามแพลตฟอร์ม + ตัดสต๊อกแล้วกี่ใบ (N วันล่าสุด) — สำหรับตารางรายวันรวมบนแดชบอร์ด
+ *  ฐานวันที่ = coalesce(order_date, doc_date) ให้ตรงกับ listOrders/หน้า /orders (drill-down เลขตรง) */
+export async function dailyMatrix(days = 7, platform?: string): Promise<DailyMatrixRow[]> {
+  try {
+    const params: any[] = [days];
+    const pc = platform ? (params.push(platform), ` and platform = $${params.length}`) : "";
+    return await q<DailyMatrixRow>(
+      `select to_char(coalesce(order_date, doc_date),'YYYY-MM-DD') as day,
+              coalesce(platform,'Shopee') as platform,
+              count(*)::int as orders,
+              count(stock_issued_at)::int as issued
+       from orders
+       where deleted_at is null${pc}
+         and coalesce(order_date, doc_date) is not null
+         and coalesce(order_date, doc_date) >= current_date - (($1::int - 1) * interval '1 day')
+       group by 1, 2
+       order by 1 desc`, params);
+  } catch { return []; }
+}
+
 export type DayOrderItem = { product: string; size: string | null; qty: number; is_free: boolean };
 export type DayOrderRow = {
   order_no: string; doc_no: string | null; receiver: string | null; username: string | null;

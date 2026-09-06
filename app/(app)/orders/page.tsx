@@ -63,30 +63,34 @@ export default async function AllOrdersPage({ searchParams }: {
         <div className="card p-10 text-center text-sm text-muted">ไม่พบออร์เดอร์ตามตัวกรองนี้</div>
       ) : (
         <section className="card overflow-hidden">
-          {/* หัวคอลัมน์ (เดสก์ท็อป) */}
-          <div className="hidden grid-cols-[minmax(9rem,auto)_1fr_auto] items-center gap-3 border-b border-line bg-soft/60 px-4 py-2 text-[11px] font-medium text-muted sm:grid">
+          {/* หัวคอลัมน์ (เดสก์ท็อป) — ใช้ template คอลัมน์เดียวกับแถวข้อมูล เป๊ะ เพื่อให้ตรงกัน */}
+          <div className="hidden grid-cols-[minmax(9rem,1.4fr)_minmax(6rem,2fr)_9rem_3.5rem] items-center gap-x-4 border-b border-line bg-soft/60 px-4 py-2 text-[11px] font-medium text-muted sm:grid">
             <span>เลขที่ / ใบเบิก</span>
             <span>ผู้รับ · จังหวัด</span>
-            <span className="text-right">สถานะ · รายการ</span>
+            <span className="text-right">สถานะ</span>
+            <span className="text-right">รายการ</span>
           </div>
           <div className="divide-y divide-line/70">
             {orders.map((o) => (
               <Link key={o.order_no} href={`/${(o.platform || "Shopee").toLowerCase()}/${encodeURIComponent(o.order_no)}`}
-                className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-0.5 px-4 py-2.5 hover:bg-soft sm:grid-cols-[minmax(9rem,auto)_1fr_auto]">
+                className="flex flex-col gap-0.5 px-4 py-2.5 hover:bg-soft sm:grid sm:grid-cols-[minmax(9rem,1.4fr)_minmax(6rem,2fr)_9rem_3.5rem] sm:items-center sm:gap-x-4">
                 {/* คอลัมน์ 1: จุดสี + เลขที่ + ใบเบิก */}
                 <div className="flex min-w-0 items-center gap-2">
                   <span className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: platformColor(o.platform) }} title={o.platform || ""} />
                   <span className="truncate font-mono text-xs text-ink">{o.order_no}</span>
                   {o.doc_no && <span className="hidden shrink-0 text-[11px] text-faint lg:inline">{o.doc_no}</span>}
                 </div>
-                {/* คอลัมน์ 2: ผู้รับ · จังหวัด (เติมช่องกลาง) — มือถือดันลงบรรทัดสองเต็มความกว้าง */}
-                <div className="col-span-2 truncate text-xs text-muted sm:col-span-1 sm:order-none order-last">{o.receiver || o.username || "—"}{o.province ? ` · ${o.province}` : ""}</div>
-                {/* คอลัมน์ 3: สถานะ + จำนวนรายการ */}
-                <div className="flex shrink-0 items-center justify-end gap-1.5">
+                {/* คอลัมน์ 2: ผู้รับ · จังหวัด */}
+                <div className="truncate text-xs text-muted">{o.receiver || o.username || "—"}{o.province ? ` · ${o.province}` : ""}</div>
+                {/* คอลัมน์ 3: สถานะ (ชิดขวา) */}
+                <div className="flex items-center justify-start gap-1.5 sm:justify-end">
                   {o.stock_issued_at
                     ? <span className="chip inline-flex items-center gap-1 bg-green-50 text-green-700"><PackageCheck size={12} /> ตัดแล้ว</span>
                     : <span className="chip bg-amber-50 text-amber-700">รอตัด</span>}
                   {o.shipped_at && <span className="chip inline-flex items-center gap-1 bg-green-50 text-green-700"><Truck size={12} /> ส่งแล้ว</span>}
+                </div>
+                {/* คอลัมน์ 4: จำนวนรายการ (ชิดขวา) */}
+                <div className="flex items-center justify-start sm:justify-end">
                   <span className="chip bg-brand-50 text-brand-600">{o.item_count}</span>
                 </div>
               </Link>
