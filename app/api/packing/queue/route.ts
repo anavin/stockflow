@@ -10,7 +10,10 @@ type Row = {
   doc_no: string | null;
   platform: string | null;
   receiver: string | null;
+  address: string | null;
+  district: string | null;
   province: string | null;
+  postcode: string | null;
   stock_issued: boolean;
   item_count: number;
 };
@@ -27,7 +30,8 @@ export async function GET(req: Request) {
     const orders = await q<Row>(
       `select o.order_no, o.doc_no, o.platform,
               coalesce(nullif(btrim(o.receiver),''), nullif(btrim(o.username),''),
-                       nullif(btrim(o.shop_name),'')) as receiver, o.province,
+                       nullif(btrim(o.shop_name),'')) as receiver,
+              o.address, o.district, o.province, o.postcode,
               (o.stock_issued_at is not null) as stock_issued,
               (select count(*)::int from order_items i where i.order_no = o.order_no) as item_count
          from orders o
@@ -60,7 +64,10 @@ export async function GET(req: Request) {
         docNo: o.doc_no,
         platform: o.platform,
         receiver: o.receiver,
+        address: o.address,
+        district: o.district,
         province: o.province,
+        postcode: o.postcode,
         itemCount: o.item_count,
         stockIssued: o.stock_issued,
         items: (byOrder.get(o.order_no) ?? []).map((l) => ({
