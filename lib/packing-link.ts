@@ -18,6 +18,12 @@ export function isPackingCamConfigured(): boolean {
   return Boolean(process.env.PACKING_CAM_URL && process.env.PACKING_CAM_LINK_SECRET);
 }
 
+/** พิมพ์ QR ลิงก์คลิปลงใบเบิกหรือไม่ — ปิดไว้ก่อน เปิดได้ด้วย PACKING_CAM_QR_ON_SLIP=1
+ *  (ลิงก์/QR ยังใช้จากหน้า Packing Cam ได้ตามปกติ แค่ไม่พิมพ์ลงใบเบิก) */
+export function qrOnSlipEnabled(): boolean {
+  return process.env.PACKING_CAM_QR_ON_SLIP === "1";
+}
+
 export async function packingClipUrl(orderNo: string): Promise<string | null> {
   if (!isPackingCamConfigured()) return null;
   const code = (orderNo || "").trim().toUpperCase();
