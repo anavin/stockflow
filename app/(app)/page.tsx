@@ -238,8 +238,10 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
       <div className="mt-4">
         <NewVsReturningBars rows={nvr} />
       </div>
-      <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-2">
+      <div className="mt-4">
         <SizeMixDonut rows={sizes} />
+      </div>
+      <div className="mt-4">
         <TopProvincesBar rows={provinces} />
       </div>
 

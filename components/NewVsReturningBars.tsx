@@ -25,17 +25,19 @@ export default function NewVsReturningBars({ rows }: { rows: NewReturnMonth[] })
       <div className="mb-3 flex flex-wrap gap-4">
         {legend.map((l) => <span key={l.label} className="inline-flex items-center gap-1.5 text-xs text-muted"><span className="h-2.5 w-2.5 rounded-sm" style={{ backgroundColor: l.color }} /> {l.label}</span>)}
       </div>
-      <div className="flex h-40 items-end justify-between gap-1.5">
+      <div className="flex items-end justify-between gap-1.5">
         {rows.map((r) => {
           const tot = r.new_c + r.repeat_c + r.unknown_c;
-          const h = (v: number) => `${(v / max) * 100}%`;
+          const BAR = 150; // ความสูงพื้นที่แท่ง (px) — ใช้ px ตรงๆ กัน % ยุบเป็น 0
+          const px = (v: number) => `${(v / max) * BAR}px`;
           return (
             <div key={r.ym} className="flex flex-1 flex-col items-center gap-1">
               <span className="text-[10px] font-medium text-muted">{tot || ""}</span>
-              <div className="flex w-full max-w-[30px] flex-1 flex-col justify-end overflow-hidden rounded-t-md" title={`${mLabel(r.ym)} · ใหม่ ${r.new_c} · กลับมา ${r.repeat_c}${r.unknown_c ? ` · ไม่ระบุ ${r.unknown_c}` : ""}`}>
-                {r.unknown_c > 0 && <div style={{ height: h(r.unknown_c), backgroundColor: "#cbd5e1" }} />}
-                {r.repeat_c > 0 && <div style={{ height: h(r.repeat_c), backgroundColor: "#16a34a" }} />}
-                {r.new_c > 0 && <div style={{ height: h(r.new_c), backgroundColor: "rgb(var(--brand))" }} />}
+              <div className="flex w-full max-w-[30px] flex-col justify-end overflow-hidden rounded-t-md" style={{ height: BAR }}
+                title={`${mLabel(r.ym)} · ใหม่ ${r.new_c} · กลับมา ${r.repeat_c}${r.unknown_c ? ` · ไม่ระบุ ${r.unknown_c}` : ""}`}>
+                {r.unknown_c > 0 && <div style={{ height: px(r.unknown_c), backgroundColor: "#cbd5e1" }} />}
+                {r.repeat_c > 0 && <div style={{ height: px(r.repeat_c), backgroundColor: "#16a34a" }} />}
+                {r.new_c > 0 && <div style={{ height: px(r.new_c), backgroundColor: "rgb(var(--brand))" }} />}
               </div>
               <span className="text-[10px] text-faint">{mLabel(r.ym)}</span>
             </div>
