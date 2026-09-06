@@ -361,7 +361,7 @@ function DailyIssueTable({ data, base, linkable }: { data: { day: string; orders
     linkable ? <Link href={href} className={className}>{children}</Link> : <span className={className}>{children}</span>;
   return (
     <div className="flex-1 overflow-x-auto">
-      <table className="w-full text-xs">
+      <table className="h-full w-full text-xs">
         <thead className="text-left text-[11px] text-muted">
           <tr>
             <th className="pb-2 pr-3 font-medium">วันที่</th>
