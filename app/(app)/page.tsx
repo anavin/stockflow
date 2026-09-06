@@ -139,14 +139,6 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
         />
       </div>
 
-      {/* ── เทียบแพลตฟอร์ม (เฉพาะภาพรวมรวม) — รวม + รายวัน ── */}
-      {overview.length > 0 && (
-        <div className="mt-4 space-y-4">
-          <PlatformCompare rows={overview} periodActive={s.periodActive} />
-          <PlatformDailyCompare rows={daily14} />
-        </div>
-      )}
-
       {/* ── highlights: fulfillment · stock health · trend ── */}
       <div className="mt-4 grid grid-cols-1 items-stretch gap-4 md:grid-cols-3">
         {/* fulfillment ring */}
@@ -258,40 +250,6 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
         </section>
       </div>
 
-      {/* ── recent orders (full width) ── */}
-      <div className="mt-4">
-        {/* recent orders */}
-        <section className="card p-5">
-          <div className="mb-3 flex items-center justify-between">
-            <h2 className="flex items-center gap-2 text-sm font-semibold text-ink"><Clock size={15} /> ออร์เดอร์ล่าสุด</h2>
-            <Link href={base} className="inline-flex items-center gap-1 text-xs font-medium text-brand-600">ทั้งหมด <ArrowRight size={12} /></Link>
-          </div>
-          {recent.length === 0 ? (
-            <p className="py-8 text-center text-sm text-muted">ยังไม่มีออร์เดอร์</p>
-          ) : (
-            <div className="grid grid-cols-1 gap-x-6 sm:grid-cols-2 xl:grid-cols-3">
-              {recent.map((o) => (
-                <Link key={o.order_no} href={`/${(o.platform || "Shopee").toLowerCase()}/${encodeURIComponent(o.order_no)}`} className="-mx-2 flex items-center justify-between gap-2 rounded-lg border-b border-line/70 px-2 py-2 hover:bg-soft">
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-1.5">
-                      <span className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: platformColor(o.platform) }} title={o.platform || ""} />
-                      <span className="font-mono text-xs text-ink">{o.order_no}</span>
-                    </div>
-                    <div className="truncate text-xs text-muted">{o.receiver || o.username || "—"}{o.province ? ` · ${o.province}` : ""}</div>
-                  </div>
-                  <div className="flex shrink-0 items-center gap-2">
-                    {o.stock_issued_at
-                      ? <span className="chip bg-green-50 text-green-700">ตัดแล้ว</span>
-                      : <span className="chip bg-amber-50 text-amber-700">รอตัด</span>}
-                    <span className="chip bg-brand-50 text-brand-600">{o.item_count} รายการ</span>
-                  </div>
-                </Link>
-              ))}
-            </div>
-          )}
-        </section>
-      </div>
-
       {/* ── top products ── */}
       <section className="card mt-4 p-5">
         <div className="mb-1 flex items-center justify-between">
@@ -316,6 +274,45 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
                 </div>
               );
             })}
+          </div>
+        )}
+      </section>
+
+      {/* ── เทียบแพลตฟอร์ม (เฉพาะภาพรวมรวม) — รวม + รายวัน · ย้ายมาไว้ล่างสุด ── */}
+      {overview.length > 0 && (
+        <div className="mt-4 space-y-4">
+          <PlatformCompare rows={overview} periodActive={s.periodActive} />
+          <PlatformDailyCompare rows={daily14} />
+        </div>
+      )}
+
+      {/* ── recent orders (full width) — ต่อจากเทียบแพลตฟอร์ม ── */}
+      <section className="card mt-4 p-5">
+        <div className="mb-3 flex items-center justify-between">
+          <h2 className="flex items-center gap-2 text-sm font-semibold text-ink"><Clock size={15} /> ออร์เดอร์ล่าสุด</h2>
+          <Link href={base} className="inline-flex items-center gap-1 text-xs font-medium text-brand-600">ทั้งหมด <ArrowRight size={12} /></Link>
+        </div>
+        {recent.length === 0 ? (
+          <p className="py-8 text-center text-sm text-muted">ยังไม่มีออร์เดอร์</p>
+        ) : (
+          <div className="grid grid-cols-1 gap-x-6 sm:grid-cols-2 xl:grid-cols-3">
+            {recent.map((o) => (
+              <Link key={o.order_no} href={`/${(o.platform || "Shopee").toLowerCase()}/${encodeURIComponent(o.order_no)}`} className="-mx-2 flex items-center justify-between gap-2 rounded-lg border-b border-line/70 px-2 py-2 hover:bg-soft">
+                <div className="min-w-0">
+                  <div className="flex items-center gap-1.5">
+                    <span className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: platformColor(o.platform) }} title={o.platform || ""} />
+                    <span className="font-mono text-xs text-ink">{o.order_no}</span>
+                  </div>
+                  <div className="truncate text-xs text-muted">{o.receiver || o.username || "—"}{o.province ? ` · ${o.province}` : ""}</div>
+                </div>
+                <div className="flex shrink-0 items-center gap-2">
+                  {o.stock_issued_at
+                    ? <span className="chip bg-green-50 text-green-700">ตัดแล้ว</span>
+                    : <span className="chip bg-amber-50 text-amber-700">รอตัด</span>}
+                  <span className="chip bg-brand-50 text-brand-600">{o.item_count} รายการ</span>
+                </div>
+              </Link>
+            ))}
           </div>
         )}
       </section>

@@ -23,7 +23,7 @@ export const PLATFORMS: { code: PlatformCode; name: string; prefix: string; enab
   { code: "Line", name: "Line", prefix: "LN", enabled: true, canImport: false, canCreate: true },
   { code: "Website", name: "Website", prefix: "WEB", enabled: true, canImport: false, canCreate: true },
   { code: "Office", name: "Office", prefix: "OFF", enabled: true, canImport: false, canCreate: true },
-  { code: "CTW", name: "CTW (Central World)", prefix: "WPO", enabled: true, canImport: false, canCreate: true },   // ใบเบิกโอนสาขา — คลังกลางสร้างเอง → ตัดสต๊อก → ส่งไป CTW
+  { code: "CTW", name: "CTW", prefix: "WPO", enabled: true, canImport: false, canCreate: true },   // ใบเบิกโอนสาขา (Central World) — คลังกลางสร้างเอง → ตัดสต๊อก → ส่งไป CTW
   { code: "Eveandboy", name: "Eveandboy", prefix: "EVB", enabled: true, canImport: false, canCreate: true },      // ค้าส่งหน้าร้าน — ใบเบิกแบบ PO (มี PO Order Version)
   { code: "KingPower", name: "King Power", prefix: "KP", enabled: true, canImport: false, canCreate: true },       // ค้าส่งหน้าร้าน — ใบเบิกแบบ PO
 ];
