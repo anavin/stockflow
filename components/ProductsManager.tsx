@@ -236,18 +236,16 @@ export default function ProductsManager({
                     const barcodes = sizesFor(p.name).slice().sort((a, b) => sizeMl(a.size) - sizeMl(b.size));
                     return (
                       <div key={p.id} id={`prod-${p.id}`} className={`border-t border-line px-4 py-3 transition-colors lg:odd:border-r ${addId === p.id ? "bg-brand-50/40" : !p.active ? "bg-soft/40 hover:bg-soft/60" : "hover:bg-soft/25"}`}>
-                        {/* หัวการ์ด: ชื่อ (อ่านอย่างเดียว) + เตือน อย. + เกรด (เฉพาะกลุ่มยังไม่ระบุ) */}
+                        {/* หัวการ์ด: ชื่อ (อ่านอย่างเดียว) + เตือน อย. + เกรด (แก้ได้ทุกกลิ่น) */}
                         <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
                           <span className={p.active ? "font-medium text-ink" : "text-muted line-through"}>{p.name}</span>
                           {noFda(p.name) && <span className="chip-warn" title="ยังไม่มีในทะเบียน อย. — ควรจดแจ้ง/ตรวจชื่อให้ตรง">⚠ ไม่มีใน อย.</span>}
-                          {untyped && (
-                            <select value={p.ptype ?? ""} onChange={(e) => changeType(p.id, e.target.value)} title="เลือกเกรดน้ำหอม (เลือกแล้วย้ายเข้ากลุ่ม)"
-                              className="input h-8 w-32 border-amber-400 py-0 text-xs font-semibold text-amber-700">
-                              <option value="">เลือกเกรด…</option>
-                              {PERFUME_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
-                              {p.ptype && !(PERFUME_TYPES as readonly string[]).includes(p.ptype) && <option value={p.ptype}>{p.ptype}</option>}
-                            </select>
-                          )}
+                          <select value={p.ptype ?? ""} onChange={(e) => changeType(p.id, e.target.value)} title="เลือก/เปลี่ยนเกรดน้ำหอม (เลือกแล้วย้ายเข้ากลุ่ม)"
+                            className={`input ml-auto h-8 w-28 py-0 text-xs font-semibold ${untyped ? "border-amber-400 text-amber-700" : "text-muted"}`}>
+                            <option value="">เลือกเกรด…</option>
+                            {PERFUME_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
+                            {p.ptype && !(PERFUME_TYPES as readonly string[]).includes(p.ptype) && <option value={p.ptype}>{p.ptype}</option>}
+                          </select>
                         </div>
 
                         {/* บาร์โค้ดต่อขนาด — แนวตั้ง เยื้องเข้า (nested ใต้ชื่อ) กล่องเต็มแถวสมดุลซ้าย-ขวา */}
