@@ -374,6 +374,8 @@ const dn = StyleSheet.create({
   title: { fontSize: 19, fontWeight: "bold", color: AC, textAlign: "right", letterSpacing: 0.5 },
   titleEn: { fontSize: 8.5, color: C.muted, textAlign: "right", marginTop: 1, letterSpacing: 1.5 },
   metaWrap: { width: 178, alignSelf: "flex-end", marginTop: 6 },
+  barcodeWrap: { alignItems: "flex-end", marginTop: 8 },
+  barcodeText: { fontSize: 7, color: C.muted, marginTop: 1, letterSpacing: 1 },
   metaRow: { flexDirection: "row", marginTop: 3.5, width: "100%" },
   metaL: { fontSize: 8, color: C.muted, textAlign: "right", width: 74 },
   metaV: { fontSize: 8.5, fontWeight: "bold", flex: 1, textAlign: "right", paddingLeft: 8 },
@@ -468,6 +470,13 @@ function WholesaleDocPage({ order, mode, ws = EMPTY_WS }: { order: OrderWithItem
               <View key={i} style={dn.metaRow}><Text style={dn.metaL}>{l}</Text><Text style={dn.metaV}>{v || " "}</Text></View>
             ))}
           </View>
+          {/* บาร์โค้ด Order No. (Code128) — สแกนเช็ค PO ตอนรับ/จ่ายของ */}
+          {order.order_no ? (
+            <View style={dn.barcodeWrap}>
+              <Barcode value={order.order_no} width={168} height={30} />
+              <Text style={dn.barcodeText}>{T(order.order_no)}</Text>
+            </View>
+          ) : null}
         </View>
       </View>
 
