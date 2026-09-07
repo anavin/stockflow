@@ -431,12 +431,44 @@ export async function getClosedSkus(): Promise<Record<string, string[]>> {
   } catch { return {}; }  // ตารางยังไม่ถูกสร้าง
 }
 
-/** ขนาดที่เลือกในใบเบิกไม่ได้ = เลิกผลิต ∪ ปิดการขาย (รวมเป็น map เดียว ส่งให้ฟอร์มสั่งซื้อ) */
+/** เลิกผลิต + ยอดสต๊อกคงเหลือของขนาดนั้น (normalized) — ใช้ตัดสินว่าจะบล็อก/ให้เลือกได้ */
+async function _discStock(): Promise<{ sk: string; zk: string; qty: number }[]> {
+  try {
+    return await q<{ sk: string; zk: string; qty: number }>(`
+      with d as (
+        select regexp_replace(lower(btrim(scent)),'[^a-z0-9ก-๙]','','g') as sk,
+               regexp_replace(lower(btrim(size)),'[^a-z0-9ก-๙]','','g') as zk
+        from discontinued_sku
+      ),
+      st as (
+        select regexp_replace(lower(btrim(product)),'[^a-z0-9ก-๙]','','g') as sk,
+               regexp_replace(lower(btrim(size)),'[^a-z0-9ก-๙]','','g') as zk,
+               sum(qty)::float8 as qty
+        from stock group by 1, 2
+      )
+      select d.sk, d.zk, coalesce(st.qty, 0)::float8 as qty
+      from d left join st on st.sk = d.sk and st.zk = d.zk`);
+  } catch { return []; }  // ตาราง discontinued_sku ยังไม่ถูกสร้าง
+}
+
+/** ขนาดที่เลือกในใบเบิกไม่ได้ = ปิดการขาย (ทั้งหมด) ∪ เลิกผลิตที่ "สต๊อกหมด (≤0)"
+ *  เลิกผลิตที่ยังมีสต๊อก → ไม่บล็อก (เลือกใส่ออร์เดอร์ได้ ไว้แจกของแถมจนกว่าสต๊อกจะหมด) */
 export async function getBlockedSizesForOrder(): Promise<Record<string, string[]>> {
-  const [disc, closed] = await Promise.all([getDiscontinued(), getClosedSkus()]);
+  const [closed, ds] = await Promise.all([getClosedSkus(), _discStock()]);
   const out: Record<string, string[]> = {};
-  for (const src of [disc, closed]) for (const [k, v] of Object.entries(src)) out[k] = [...new Set([...(out[k] ?? []), ...v])];
+  for (const [k, v] of Object.entries(closed)) out[k] = [...new Set([...(out[k] ?? []), ...v])];
+  for (const r of ds) if (Number(r.qty) <= 0) (out[r.sk] ??= []).push(r.zk);
+  for (const k of Object.keys(out)) out[k] = [...new Set(out[k])];
   return out;
+}
+
+/** เลิกผลิตแต่ "ยังมีสต๊อก" (qty>0) → Record<normScent, Record<normSize, qtyคงเหลือ>>
+ *  ส่งให้ฟอร์มสั่งซื้อ โชว์ป้าย "⚠ เลิกผลิต · เหลือ N" + ยังเลือกได้ */
+export async function getDiscInStock(): Promise<Record<string, Record<string, number>>> {
+  const ds = await _discStock();
+  const map: Record<string, Record<string, number>> = {};
+  for (const r of ds) if (Number(r.qty) > 0) { (map[r.sk] ??= {})[r.zk] = Number(r.qty); }
+  return map;
 }
 
 /** สรุปการจัดส่ง: ส่งแล้ววันนี้ (เวลาไทย) + ค้างส่ง (ตัดสต๊อกแล้วแต่ยังไม่ส่ง) */

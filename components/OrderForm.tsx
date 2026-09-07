@@ -34,6 +34,7 @@ type Props = {
   productCodes?: Record<string, string>;
   productTypes?: Record<string, string>;
   discontinued?: Record<string, string[]>;
+  discInStock?: Record<string, Record<string, number>>;   // เลิกผลิตแต่ยังมีสต๊อก (ให้เลือกได้ + โชว์เหลือ N)
   branches?: BranchOpt[];                          // สาขาค้าส่ง (Eveandboy) จาก DB
   catalogSizes?: Record<string, string[]> | null;  // ขนาดต่อกลิ่นในแคตตาล็อก (Eveandboy/King Power) จาก DB
 };
@@ -43,7 +44,7 @@ function todayStr() {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
-export default function OrderForm({ platform = "Shopee", products, sizes, provinces, postcodes, initial, productCodes, productTypes, discontinued, branches = [], catalogSizes = null }: Props) {
+export default function OrderForm({ platform = "Shopee", products, sizes, provinces, postcodes, initial, productCodes, productTypes, discontinued, discInStock, branches = [], catalogSizes = null }: Props) {
   const router = useRouter();
   const base = `/${platform.toLowerCase()}`;   // path ฐานของแพลตฟอร์ม (กลับหน้ารายการ)
   const editing = !!initial;
@@ -483,7 +484,7 @@ export default function OrderForm({ platform = "Shopee", products, sizes, provin
           const catProducts = catalog ? products.filter((p) => catalog[catNk(p)]) : products;
           return (
             <ItemsEditor items={items} onChange={onItemsChange} products={catProducts} sizes={sizes} errors={itemErrors}
-              productCodes={productCodes} productTypes={productTypes} discontinued={discontinued} platform={pfCode}
+              productCodes={productCodes} productTypes={productTypes} discontinued={discontinued} discInStock={discInStock} platform={pfCode}
               sizeAllow={catalog} />
           );
         })()}

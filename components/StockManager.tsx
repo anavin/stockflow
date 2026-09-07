@@ -10,7 +10,7 @@ import type { StockRow } from "@/lib/queries";
 import { PERFUME_TYPES } from "@/lib/types";
 import { PackagePlus, CheckCircle2, Search, History, FileUp, FileDown, Lock, Check, RotateCcw, ClipboardCheck, ChevronDown, ChevronRight, ScanBarcode, X, Plus, Camera, AlertTriangle } from "lucide-react";
 
-type Status = "all" | "normal" | "low" | "out" | "neg";
+type Status = "all" | "normal" | "low" | "out" | "neg" | "disc";
 const keyOf = (r: StockRow) => `${r.product}|${r.size}`;
 
 function statusOf(qty: number) {
@@ -48,9 +48,10 @@ export default function StockManager({ rows, products, sizes, initialLow, isAdmi
       if (status === "low" && !(r.qty > 0 && r.qty <= 10)) return false;   // ใกล้หมด = 1..10 (0 = "หมด" ดูที่ status out)
       if (status === "out" && r.qty !== 0) return false;
       if (status === "neg" && !(r.qty < 0)) return false;
+      if (status === "disc" && !(isDisc(r.product, r.size) && r.qty > 0)) return false;   // เลิกผลิตแต่ยังมีสต๊อก (ไว้แจกของแถม)
       return true;
     });
-  }, [rows, search, grade, size, status, closedSkus]);
+  }, [rows, search, grade, size, status, closedSkus, discontinued]);
   const hasFilter = !!(search || grade || size || status !== "all");
   // เรียง: เกรดน้ำหอม (A-Z) ก่อน → หมวดอื่น เช่น Car Perfume (A-Z) → ไม่ระบุ ท้ายสุด; ในกลุ่ม: ชื่อ A-Z → ขนาดใหญ่→เล็ก
   const mlOf = (s: string) => { const m = String(s || "").match(/(\d+(?:\.\d+)?)/); return m ? parseFloat(m[1]) : 0; };
@@ -431,6 +432,7 @@ export default function StockManager({ rows, products, sizes, initialLow, isAdmi
           <option value="low">ใกล้หมด (≤10)</option>
           <option value="out">หมด (0)</option>
           <option value="neg">ติดลบ</option>
+          <option value="disc">เลิกผลิต · ยังมีสต๊อก</option>
         </select>
         {hasFilter && <button onClick={clearFilters} className="btn-ghost text-xs"><RotateCcw size={14} /> ล้าง</button>}
         <Link href="/stock/moves" className="btn-ghost text-xs"><History size={14} /> ประวัติ</Link>

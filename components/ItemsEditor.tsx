@@ -59,6 +59,7 @@ export default function ItemsEditor({
   productCodes,
   productTypes,
   discontinued,
+  discInStock,
   platform,
   sizeAllow,
 }: {
@@ -70,12 +71,16 @@ export default function ItemsEditor({
   productCodes?: Record<string, string>;
   productTypes?: Record<string, string>;
   discontinued?: Record<string, string[]>;
+  discInStock?: Record<string, Record<string, number>>;   // เลิกผลิตแต่ยังมีสต๊อก → {normกลิ่น: {normขนาด: เหลือ}}
   platform?: string;
   sizeAllow?: Record<string, string[]>;   // จำกัดขนาดต่อกลิ่น (key = normalize ชื่อ) — Eveandboy เลือกได้เฉพาะที่มี
 }) {
   // CTW โอนสาขา = เบิกถุงกระดาษทีละมาก → เพิ่มได้ถึง 80 ใบ (ปกติ/แพลตฟอร์มอื่น 30)
   const qtyMaxOf = (it: ItemDraft) => (isBagProduct(it.product) && platform === "CTW" ? 80 : 30);
   const normKey = (s: string) => (s || "").toLowerCase().replace(/[^a-z0-9ก-๙]/g, "");
+  // เลิกผลิตแต่ยังมีสต๊อก → เหลือกี่ชิ้น (undefined = ไม่ใช่/ไม่มีข้อมูล) · โชว์ป้ายเตือนแต่ยังเลือกได้
+  const discLeft = (product: string, size: string): number | undefined =>
+    size ? discInStock?.[normKey(product)]?.[normKey(size)] : undefined;
   const errMsg = (e?: ItemError) => {
     if (!e) return "";
     const miss: string[] = [];
@@ -181,6 +186,11 @@ export default function ItemsEditor({
                       <AlertTriangle size={12} /> ของแถมได้เฉพาะ 1.2/4/10 ml
                     </div>
                   )}
+                  {discLeft(it.product, it.size) !== undefined && (
+                    <div className="mt-1 flex items-center gap-1 text-[11px] text-amber-600">
+                      <AlertTriangle size={12} /> เลิกผลิต · เหลือ {discLeft(it.product, it.size)!.toLocaleString()} (แจกของแถมได้จนหมด)
+                    </div>
+                  )}
                 </td>
                 <td className="px-3 py-2">
                   <QtySelect value={it.qty} onChange={(v) => setQty(i, v)} invalid={errors[i]?.qty} max={qtyMaxOf(it)} />
@@ -229,6 +239,9 @@ export default function ItemsEditor({
             )}
             {!isBagProduct(it.product) && it.is_free && it.size && !isAllowedFreeSize(it.size) && (
               <div className="flex items-center gap-1 text-xs text-red-600"><AlertTriangle size={12} /> ของแถมได้เฉพาะ 1.2/4/10 ml</div>
+            )}
+            {discLeft(it.product, it.size) !== undefined && (
+              <div className="flex items-center gap-1 text-xs text-amber-600"><AlertTriangle size={12} /> เลิกผลิต · เหลือ {discLeft(it.product, it.size)!.toLocaleString()} (แจกของแถมได้จนหมด)</div>
             )}
             <label className={`flex items-center gap-2 text-sm ${freeDisabled(it) ? "text-faint" : "text-muted"}`}>
               <input type="checkbox" className="h-4 w-4 accent-brand" checked={it.is_free || isBagProduct(it.product)}
