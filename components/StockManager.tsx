@@ -8,7 +8,7 @@ const CameraScan = dynamic(() => import("./CameraScan"), { ssr: false });
 import { receiveStock, receiveUnitsBatch, adjustStock, resolveSku } from "@/lib/actions/stock";
 import type { StockRow } from "@/lib/queries";
 import { PERFUME_TYPES } from "@/lib/types";
-import { PackagePlus, CheckCircle2, Search, History, FileUp, FileDown, Lock, Check, RotateCcw, ClipboardCheck, ChevronDown, ChevronRight, ScanBarcode, X, Plus, Camera, AlertTriangle } from "lucide-react";
+import { PackagePlus, CheckCircle2, Search, History, FileUp, FileDown, Lock, Check, RotateCcw, ClipboardCheck, ChevronDown, ChevronRight, ScanBarcode, X, Plus, Camera, AlertTriangle, FlaskConical } from "lucide-react";
 
 type Status = "all" | "normal" | "low" | "out" | "neg" | "disc" | "tryme";
 const keyOf = (r: StockRow) => `${r.product}|${r.size}`;
@@ -94,6 +94,7 @@ export default function StockManager({ rows, products, sizes, initialLow, isAdmi
   }, [sorted, emptyScents, search, grade, size, status]);
   const emptyCount = useMemo(() => groups.filter((g) => g.empty).length, [groups]);
   const lowCount = useMemo(() => rows.filter((r) => r.qty > 0 && r.qty <= 10).length, [rows]);   // ใกล้หมด = 1..10 (ตรงกับ statusOf/stockSummary/dashboard)
+  const testerInStock = useMemo(() => rows.filter((r) => /try\s*me/i.test(r.product) && r.qty > 0).length, [rows]);   // Try Me ที่มีสต๊อก
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
   const toggleGroup = (g: string) => setCollapsed((s) => { const n = new Set(s); n.has(g) ? n.delete(g) : n.add(g); return n; });
   const collapseAll = () => setCollapsed(new Set(groups.map((g) => g.product)));
@@ -260,6 +261,16 @@ export default function StockManager({ rows, products, sizes, initialLow, isAdmi
           <div className="text-sm"><b className="text-amber-700">ใกล้หมด {lowCount.toLocaleString()} รายการ</b><div className="text-xs text-amber-600/80">คงเหลือ ≤ 10 — เตรียมเติมสต๊อก · กดเพื่อกรองเฉพาะที่ใกล้หมด</div></div>
         </button>
       )}
+      {/* ปุ่ม Try Me เด่นๆ — สลับดูเฉพาะเทสเตอร์ (ซ่อนจากลิสต์ปกติ) */}
+      <button type="button" onClick={() => setStatus(status === "tryme" ? "all" : "tryme")}
+        className={`flex w-full items-center gap-3 rounded-xl border px-4 py-3 text-left transition-colors ${status === "tryme" ? "border-violet-300 bg-violet-100" : "border-violet-200 bg-violet-50 hover:bg-violet-100"}`}>
+        <FlaskConical size={20} className="shrink-0 text-violet-600" />
+        <div className="flex-1 text-sm">
+          <b className="text-violet-700">Try Me · เทสเตอร์ {testerInStock > 0 ? `— มีสต๊อก ${testerInStock.toLocaleString()} รายการ` : ""}</b>
+          <div className="text-xs text-violet-600/80">{status === "tryme" ? "กำลังดูเฉพาะ Try Me — กดเพื่อกลับสต๊อกปกติ" : "กดเพื่อดูสต๊อกเทสเตอร์ (ปกติซ่อนจากลิสต์)"}</div>
+        </div>
+        {status === "tryme" && <span className="chip bg-violet-200 text-violet-800">กำลังดู</span>}
+      </button>
       {!isAdmin && (
         <div className="card flex items-center gap-2 p-4 text-sm text-muted">
           <Lock size={16} className="text-faint" /> โหมดดูอย่างเดียว — ปรับสต๊อก/รับเข้า/นำเข้าไฟล์ ทำได้เฉพาะผู้ดูแลระบบ (admin)
