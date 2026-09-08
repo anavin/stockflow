@@ -148,7 +148,8 @@ export default function ItemsEditor({
   // เปลี่ยนกลิ่น → ถุงกระดาษติ๊กฟรีอัตโนมัติ · Eveandboy (sizeAllow) ล้างขนาดถ้าไม่เข้ากับกลิ่นใหม่ (กันคู่ที่ไม่มีในแคตตาล็อก)
   const setProduct = (i: number, v: string) => {
     const patch: Partial<ItemDraft> = { product: v, ...(isBagProduct(v) ? { is_free: true } : {}) };
-    if (sizeAllow && !isBagProduct(v) && !(sizeAllow[normKey(v)] || []).includes(items[i].size)) patch.size = "";
+    // Try Me ใช้ขนาด 30/50 เสมอ (ไม่อยู่ในแคตตาล็อก Eveandboy) → ไม่ล้างขนาดเมื่อเปลี่ยนกลิ่น
+    if (sizeAllow && !isBagProduct(v) && !isTesterName(v) && !items[i]._tester && !(sizeAllow[normKey(v)] || []).includes(items[i].size)) patch.size = "";
     update(i, patch);
   };
   // จำนวน > 30 = ของแถมไม่ได้ (ปิดปุ่ม Free + ยกเลิกถ้าติ๊กไว้)

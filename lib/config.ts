@@ -95,8 +95,11 @@ const sizeIn = (list: string[], size?: string | null) => list.some((s) => mlToke
 export function cutsStock(product?: string | null, size?: string | null): boolean {
   return isStockTracked(size) || isBagProduct(product);
 }
-/** ต้องสแกน SKU รายชิ้นจากคลัง (serial ที่รับเข้าแล้ว) — ขวดจริง 10/30/50/90/100 ml */
-export function needsSerialSku(size?: string | null): boolean {
+/** สินค้าเป็น Try Me (เทสเตอร์) ไหม — ชื่อมี "TRY ME" (ใช้ทั้ง client/server ระบุบรรทัดเทสเตอร์) */
+export function isTesterName(product?: string | null): boolean { return /try\s*me/i.test(product || ""); }
+/** ต้องสแกน SKU รายชิ้นจากคลัง (serial ที่รับเข้าแล้ว) — ขวดจริง 10/30/50/90/100 ml · Try Me = ตัดตามจำนวน (เฟส A ยังไม่ทำ serial) */
+export function needsSerialSku(size?: string | null, product?: string | null): boolean {
+  if (isTesterName(product)) return false;
   if (!isStockTracked(size)) return false;
   return !sizeIn(NON_SERIAL_SIZES, size);
 }
@@ -104,9 +107,9 @@ export function needsSerialSku(size?: string | null): boolean {
 export function assignsSku(size?: string | null): boolean {
   return isStockTracked(size) && sizeIn(ASSIGN_SKU_SIZES, size);
 }
-/** ต้องมี SKU ไหม (บังคับ) — ขวดจริง (serial เดิม) หรือ 4 ml (กรอกเอง) · 1.2 ml = ตัดตามจำนวน ไม่ต้องมี */
-export function requiresSku(size?: string | null): boolean {
-  return needsSerialSku(size) || assignsSku(size);
+/** ต้องมี SKU ไหม (บังคับ) — ขวดจริง (serial เดิม) หรือ 4 ml (กรอกเอง) · 1.2 ml / Try Me = ตัดตามจำนวน ไม่ต้องมี */
+export function requiresSku(size?: string | null, product?: string | null): boolean {
+  return needsSerialSku(size, product) || (assignsSku(size) && !isTesterName(product));
 }
 
 /** ของแถม (Free) ให้ได้เฉพาะขนาดเล็กเท่านั้น — ไซต์ใหญ่ห้ามเป็นของแถม */
@@ -118,5 +121,6 @@ export function isAllowedFreeSize(size?: string | null, product?: string | null)
   const t = (size || "").trim();
   if (!t) return true; // ยังไม่เลือกขนาด = ยังไม่ผิด
   if (isBagProduct(product) && BAG_SIZES.includes(t)) return true; // ถุงกระดาษ แถมได้ Size S/M
+  if (isTesterName(product) && ["30", "50"].includes(mlToken(t))) return true; // Try Me (เทสเตอร์) แถมฟรีได้ 30/50 ml
   return FREE_ALLOWED_SIZES.includes(t);
 }

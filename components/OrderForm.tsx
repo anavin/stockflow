@@ -508,7 +508,7 @@ export default function OrderForm({ platform = "Shopee", products, sizes, provin
           </div>
           <div>
             <label className="label">ฉีดกลิ่นลงในกล่อง</label>
-            <Combobox value={f.box_scent} onChange={(v) => set({ box_scent: v })} options={products} placeholder="เลือกกลิ่น (ถ้ามี)" />
+            <Combobox value={f.box_scent} onChange={(v) => set({ box_scent: v })} options={products.filter((p) => !/try\s*me/i.test(p))} placeholder="เลือกกลิ่น (ถ้ามี)" />
           </div>
           <div>
             <label className="label">วันที่ทำการสั่งซื้อ</label>

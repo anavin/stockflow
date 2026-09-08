@@ -222,7 +222,7 @@ export async function lookupOrderForIssue(orderNo: string): Promise<IssueLookup>
     const stockBal = bag
       ? (bagLtr && bagStockMap[bagLtr] !== undefined ? bagStockMap[bagLtr] : bagStockMap[""])
       : (stockByLine.get(it.line_no) ?? 0);
-    withStock.push({ ...it, spec, stock: stockBal, tracked: cutsStock(it.product, it.size), needs_sku: requiresSku(it.size), assign_sku: assignsSku(it.size), is_bag: bag, ctw_barcode });
+    withStock.push({ ...it, spec, stock: stockBal, tracked: cutsStock(it.product, it.size), needs_sku: requiresSku(it.size, it.product), assign_sku: assignsSku(it.size), is_bag: bag, ctw_barcode });
   }
   return { ok: true, order_no: key, doc_no: order.doc_no, platform: order.platform, note: order.note, items: withStock, bag_stock: bagStockMap };
 }
@@ -287,7 +287,7 @@ export async function confirmIssueByOrder(
       // ตัด aggregate โดยไม่ได้ mark serial (UI ส่งครบอยู่แล้ว แต่ contract ต้องปลอดภัย)
       const normByLine = new Map(norm.map((n) => [n.line_no, n]));
       for (const li of its) {
-        if (!requiresSku(li.size)) continue;
+        if (!requiresSku(li.size, li.product)) continue;
         const need = Math.round(Number(li.qty) || 0);
         const got = normByLine.get(li.line_no)?.skus.length ?? 0;
         if (got !== need) throw new Error(`${li.product} ${li.size}: ต้องใส่ SKU ให้ครบ ${need} ชิ้น (มี ${got})`);
@@ -313,7 +313,7 @@ export async function confirmIssueByOrder(
         for (const sku of e.skus) { if (seenSku.has(sku)) throw new Error(`SKU "${sku}" ซ้ำในใบเบิกนี้ (ใช้ได้ครั้งเดียว)`); seenSku.add(sku); }
         // ขวดจริง (serial เดิม) และ 4 ml (assign ตอนตัด) = ต้องมี SKU ให้ครบตามจำนวน · 1.2 ml/ถุง = ไม่ต้อง
         const isAssign = assignsSku(li.size);   // 4 ml = กรอก SKU เอง (ไม่ต้องมีในคลังก่อน)
-        if (requiresSku(li.size)) {
+        if (requiresSku(li.size, li.product)) {
           const need = Math.round(Number(li.qty) || 0);
           if (e.skus.length !== need)
             throw new Error(`${li.product} ${li.size}: ต้องใส่ SKU ให้ครบ ${need} ชิ้น (ใส่มา ${e.skus.length})`);

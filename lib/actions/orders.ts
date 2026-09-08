@@ -7,7 +7,7 @@ import { can } from "@/lib/auth/roles";
 import { logActivity } from "@/lib/activity";
 import { buildProductLabel, type OrderWithItems } from "@/lib/types";
 import { formatDocNo, monthLabel, ymdKey } from "@/lib/docno";
-import { isAllowedFreeSize, FREE_ALLOWED_SIZES, enabledPlatforms, platformBase, isBagProduct, PLATFORMS, canImportPlatform, isWholesalePlatform, platformName } from "@/lib/config";
+import { isAllowedFreeSize, FREE_ALLOWED_SIZES, enabledPlatforms, platformBase, isBagProduct, isTesterName, PLATFORMS, canImportPlatform, isWholesalePlatform, platformName } from "@/lib/config";
 import { getWholesaleCatalog } from "@/lib/queries";
 
 /** revalidate หน้ารายการ+ถังขยะใบเบิกของทุกแพลตฟอร์ม (route เป็น /[platform] — hardcode /shopee ครอบไม่ครบ) */
@@ -100,6 +100,11 @@ export async function saveOrder(input: OrderInput, opts?: { silent?: boolean }):
   if (isWholesalePlatform(o.platform) && !(o.branch || "").trim()) return { ok: false, error: `เลือกสาขาปลายทาง (${o.platform})` };
   // (Eveandboy: ตรวจแคตตาล็อกย้ายเข้า tx ด้านล่าง — ตรวจเฉพาะออเดอร์ใหม่/รายการที่เปลี่ยน กันแก้ที่อยู่/โน้ตไม่ได้)
 
+  // Try Me (เทสเตอร์): เบิกได้เฉพาะค้าส่ง (CTW/Eveandboy/King Power) + ขนาด 30/50 เท่านั้น (กัน action call/import หลุด)
+  const badTester = o.items.find((it) => isTesterName(it.product) && (!isWholesalePlatform(o.platform) || !["30", "50"].includes((it.size || "").match(/[0-9]+/)?.[0] ?? "")));
+  if (badTester) {
+    return { ok: false, error: `Try Me "${badTester.product}" — เบิกได้เฉพาะ CTW / Eveandboy / King Power และขนาด 30/50 ml เท่านั้น` };
+  }
   // ของแถม (Free) ได้เฉพาะขนาดเล็ก — ไซต์ใหญ่ห้ามเป็นของแถม
   const badFree = o.items.find((it) => it.is_free && !isAllowedFreeSize(it.size, it.product));
   if (badFree) {

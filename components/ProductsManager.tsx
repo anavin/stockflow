@@ -101,10 +101,12 @@ export default function ProductsManager({
   async function add(e: React.FormEvent) {
     e.preventDefault(); setError(""); setMsg(""); setBusy(true);
     const nm = name.trim();
-    const res = await createProduct(name, "", ptype); setBusy(false);
-    if (!res.ok) { setError(res.error || "เพิ่มไม่สำเร็จ"); return; }
-    setMsg(`เพิ่มกลิ่น "${nm}" แล้ว${noFda(nm) ? " · ⚠ ยังไม่มีในทะเบียน อย. (ควรจดแจ้ง/ตรวจชื่อให้ตรง)" : ""}`);
-    setName(""); setPtype(""); router.refresh();
+    try {
+      const res = await createProduct(name, "", ptype);
+      if (!res.ok) { setError(res.error || "เพิ่มไม่สำเร็จ"); return; }
+      setMsg(`เพิ่มกลิ่น "${nm}" แล้ว${noFda(nm) ? " · ⚠ ยังไม่มีในทะเบียน อย. (ควรจดแจ้ง/ตรวจชื่อให้ตรง)" : ""}`);
+      setName(""); setPtype(""); router.refresh();
+    } catch { setError("เกิดข้อผิดพลาด ลองใหม่"); } finally { setBusy(false); }
   }
   async function changeType(id: number, v: string) { const res = await setProductType(id, v); if (!res.ok) { alert(res.error); return; } router.refresh(); }
   async function toggle(p: ProductAdminRow) { const res = await setProductActive(p.id, !p.active); if (!res.ok) { alert(res.error); return; } router.refresh(); }
@@ -132,9 +134,11 @@ export default function ProductsManager({
     const rows = filtered; if (rows.length === 0) return;
     if (!confirm(`ตั้งเกรด "${bulkType || "— (ล้าง)"}" ให้ ${rows.length} กลิ่นที่กรองอยู่?`)) return;
     setBusy(true); setMsg(""); setError("");
-    const res = await bulkSetProductTypes(rows.map((p) => ({ id: p.id, ptype: bulkType }))); setBusy(false);
-    if (!res.ok) { setError(res.error || "บันทึกไม่สำเร็จ"); return; }
-    setMsg(`ตั้งเกรด ${res.count} กลิ่นแล้ว`); router.refresh();
+    try {
+      const res = await bulkSetProductTypes(rows.map((p) => ({ id: p.id, ptype: bulkType })));
+      if (!res.ok) { setError(res.error || "บันทึกไม่สำเร็จ"); return; }
+      setMsg(`ตั้งเกรด ${res.count} กลิ่นแล้ว`); router.refresh();
+    } catch { setError("เกิดข้อผิดพลาด ลองใหม่"); } finally { setBusy(false); }
   }
 
   const toggleGrp = (k: string) => setCollapsed((c) => { const n = new Set(c); n.has(k) ? n.delete(k) : n.add(k); return n; });

@@ -19,12 +19,12 @@ const STOCK_UNIVERSE = `
   with u as (
     select regexp_replace(lower(btrim(product)),'[^a-z0-9ก-๙]','','g') as pkey,
            regexp_replace(lower(btrim(size)),'[^a-z0-9ก-๙]','','g') as skey, qty::float8 as qty
-      from stock
+      from stock where product !~* 'try ?me'
     union all
     select regexp_replace(lower(btrim(oi.product)),'[^a-z0-9ก-๙]','','g'),
            regexp_replace(lower(btrim(oi.size)),'[^a-z0-9ก-๙]','','g'), 0::float8
       from order_items oi join orders o on o.order_no = oi.order_no
-      where o.deleted_at is null and coalesce(oi.product,'') <> '' and oi.size ~* 'ml' and oi.product !~ 'ถุง'
+      where o.deleted_at is null and coalesce(oi.product,'') <> '' and oi.size ~* 'ml' and oi.product !~ 'ถุง' and oi.product !~* 'try ?me'
   ),
   g as (select pkey, skey, sum(qty)::float8 as qty from u group by pkey, skey)`;
 
@@ -883,7 +883,7 @@ export async function dashboardStats(platform?: string): Promise<DashStats> {
     // ปิดฟีเจอร์เมื่อ PERIOD_START = "" · ค่าคงที่รูปแบบ YYYY-MM-DD ตรวจแล้วใน config → ปลอดภัยจาก inject
     const P = PERIOD_START;
     const period = P
-      ? ` and (current_date < date '${P}' or coalesce(doc_date, order_date) >= date '${P}')`
+      ? ` and (current_date < date '${P}' or coalesce(order_date, doc_date) >= date '${P}')`
       : "";
     const [r] = await q<DashStats>(
       // สุขภาพสต๊อก (skus/low/negative) อิงจักรวาลกลาง g → ตรงกับหน้า /stock (นับ SKU ที่มีสต๊อก/เคยสั่ง แบบ normalize)
@@ -1401,7 +1401,7 @@ export async function platformOverview(): Promise<PlatformOverviewRow[]> {
   const body = (withReturned: boolean) =>
     `select coalesce(platform,'Shopee') as platform,
             count(*)::int as orders,
-            count(*) filter (where date_trunc('month', coalesce(doc_date, order_date)) = date_trunc('month', (now() at time zone 'Asia/Bangkok')))::int as month,
+            count(*) filter (where date_trunc('month', coalesce(order_date, doc_date)) = date_trunc('month', (now() at time zone 'Asia/Bangkok')))::int as month,
             count(*) filter (where stock_issued_at is not null${isP})::int as issued,
             count(*) filter (where shipped_at is not null${shP})::int as shipped,
             count(*) filter (where stock_issued_at is not null${isP} and shipped_at is null)::int as pending${withReturned ? `,
