@@ -35,6 +35,7 @@ type Props = {
   productTypes?: Record<string, string>;
   discontinued?: Record<string, string[]>;
   discInStock?: Record<string, Record<string, number>>;   // เลิกผลิตแต่ยังมีสต๊อก (ให้เลือกได้ + โชว์เหลือ N)
+  testerStock?: { product: string; size: string; qty: number }[];   // สต๊อก Try Me คงเหลือ (ค้าส่ง)
   branches?: BranchOpt[];                          // สาขาค้าส่ง (Eveandboy) จาก DB
   catalogSizes?: Record<string, string[]> | null;  // ขนาดต่อกลิ่นในแคตตาล็อก (Eveandboy/King Power) จาก DB
 };
@@ -44,7 +45,7 @@ function todayStr() {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
-export default function OrderForm({ platform = "Shopee", products, sizes, provinces, postcodes, initial, productCodes, productTypes, discontinued, discInStock, branches = [], catalogSizes = null }: Props) {
+export default function OrderForm({ platform = "Shopee", products, sizes, provinces, postcodes, initial, productCodes, productTypes, discontinued, discInStock, testerStock, branches = [], catalogSizes = null }: Props) {
   const router = useRouter();
   const base = `/${platform.toLowerCase()}`;   // path ฐานของแพลตฟอร์ม (กลับหน้ารายการ)
   const editing = !!initial;
@@ -481,10 +482,17 @@ export default function OrderForm({ platform = "Shopee", products, sizes, provin
           // Eveandboy / King Power: เลือกได้เฉพาะสินค้า/ขนาดในแคตตาล็อก (จากไฟล์) เท่านั้น
           const catNk = (s: string) => (s || "").toLowerCase().replace(/[^a-z0-9ก-๙]/g, "");
           const catalog = catalogSizes || undefined;
-          const catProducts = catalog ? products.filter((p) => catalog[catNk(p)]) : products;
+          const isTryMe = (p: string) => /try\s*me/i.test(p);
+          const catProductsRaw = catalog ? products.filter((p) => catalog[catNk(p)]) : products;
+          const catProducts = catProductsRaw.filter((p) => !isTryMe(p));   // ซ่อน Try Me จากรายการปกติ (เลือกผ่านปุ่ม + Try Me เท่านั้น)
+          // Try Me: เฉพาะค้าส่ง · สินค้าที่มีสต๊อก (จาก full products list ไม่ผูกแคตตาล็อก) + map เหลือ N
+          const testerNames = isWholesale ? [...new Set((testerStock || []).map((r) => r.product))] : [];
+          const testerMap: Record<string, Record<string, number>> = {};
+          for (const r of testerStock || []) { (testerMap[catNk(r.product)] ??= {})[catNk(r.size)] = Number(r.qty); }
           return (
             <ItemsEditor items={items} onChange={onItemsChange} products={catProducts} sizes={sizes} errors={itemErrors}
-              productCodes={productCodes} productTypes={productTypes} discontinued={discontinued} discInStock={discInStock} platform={pfCode}
+              productCodes={productCodes} productTypes={productTypes} discontinued={discontinued} discInStock={discInStock}
+              testerProducts={testerNames} testerStock={testerMap} isWholesale={isWholesale} platform={pfCode}
               sizeAllow={catalog} />
           );
         })()}

@@ -1,6 +1,6 @@
 "use client";
 import Combobox from "./Combobox";
-import { Trash2, Plus, Gift, AlertTriangle, ShoppingBag } from "lucide-react";
+import { Trash2, Plus, Gift, AlertTriangle, ShoppingBag, FlaskConical } from "lucide-react";
 import { buildProductLabel } from "@/lib/types";
 import { FREE_ALLOWED_SIZES, isAllowedFreeSize } from "@/lib/config";
 
@@ -30,7 +30,11 @@ export type ItemDraft = {
   qty: number;
   unit: string;
   sku: string;
+  _tester?: boolean;   // client-only: บรรทัดนี้เป็น Try Me (เทสเตอร์) — ฟรี/30-50/เลือกเฉพาะที่มีสต๊อก
 };
+
+/** ชื่อสินค้าเป็น Try Me (เทสเตอร์) ไหม — ใช้ระบุบรรทัด (ทั้งที่เพิ่งเพิ่มและที่โหลดจาก DB) */
+export const isTesterName = (name?: string) => /try\s*me/i.test(name || "");
 
 export type ItemError = { product?: boolean; size?: boolean; qty?: boolean };
 
@@ -60,6 +64,9 @@ export default function ItemsEditor({
   productTypes,
   discontinued,
   discInStock,
+  testerProducts = [],
+  testerStock,
+  isWholesale = false,
   platform,
   sizeAllow,
 }: {
@@ -72,6 +79,9 @@ export default function ItemsEditor({
   productTypes?: Record<string, string>;
   discontinued?: Record<string, string[]>;
   discInStock?: Record<string, Record<string, number>>;   // เลิกผลิตแต่ยังมีสต๊อก → {normกลิ่น: {normขนาด: เหลือ}}
+  testerProducts?: string[];                                // สินค้า Try Me ที่มีสต๊อก (ชื่อ "{กลิ่น} TRY ME!")
+  testerStock?: Record<string, Record<string, number>>;     // {normกลิ่นTryMe: {normขนาด: เหลือ}}
+  isWholesale?: boolean;                                     // CTW/Eveandboy/KingPower → มีปุ่ม Try Me
   platform?: string;
   sizeAllow?: Record<string, string[]>;   // จำกัดขนาดต่อกลิ่น (key = normalize ชื่อ) — Eveandboy เลือกได้เฉพาะที่มี
 }) {
@@ -81,6 +91,10 @@ export default function ItemsEditor({
   // เลิกผลิตแต่ยังมีสต๊อก → เหลือกี่ชิ้น (undefined = ไม่ใช่/ไม่มีข้อมูล) · โชว์ป้ายเตือนแต่ยังเลือกได้
   const discLeft = (product: string, size: string): number | undefined =>
     size ? discInStock?.[normKey(product)]?.[normKey(size)] : undefined;
+  // Try Me (เทสเตอร์): ระบุบรรทัด + สต๊อกคงเหลือของกลิ่น/ขนาดนั้น
+  const isTester = (it: ItemDraft) => !!it._tester || isTesterName(it.product);
+  const testerLeft = (product: string, size: string): number =>
+    (product && size ? testerStock?.[normKey(product)]?.[normKey(size)] : undefined) ?? 0;
   const errMsg = (e?: ItemError) => {
     if (!e) return "";
     const miss: string[] = [];
@@ -104,12 +118,19 @@ export default function ItemsEditor({
   function addBag() {
     onChange([...items, { product: BAG_PRODUCT, size: "", is_free: true, qty: 1, unit: "ใบ", sku: "" }]);
   }
+  function addTester() {
+    onChange([...items, { ...emptyItem(), is_free: true, _tester: true }]);   // Try Me = ฟรีเสมอ · เลือกกลิ่น/ขนาดต่อไป
+  }
   // ปกติ: ขนาดใหญ่ก่อน (30/50/90/100) แล้วค่อยขนาดเล็ก
   const SIZE_ORDER = ["30 ml", "50 ml", "90 ml", "100 ml", "1.2 ml", "4 ml", "10 ml"];
   const rank = (sz: string) => { const i = SIZE_ORDER.indexOf(sz); return i < 0 ? 99 : i; };
   const sizesNormal = [...sizes].sort((a, b) => rank(a) - rank(b));
+  // Try Me: ขนาดเฉพาะ 30/50 ที่มีสต๊อกของกลิ่นนั้น · กลิ่น = เฉพาะสินค้า Try Me ที่มีสต๊อก
+  const TRYME_SIZES = ["30 ml", "50 ml"];
+  const productOptionsFor = (it: ItemDraft) => (isTester(it) ? testerProducts : products);
   // ตัดขนาดที่ "เลิกผลิต" ของกลิ่นนั้นออกจากตัวเลือก
   const sizeOptionsFor = (it: ItemDraft) => {
+    if (isTester(it)) return TRYME_SIZES.filter((sz) => testerLeft(it.product, sz) > 0 || !it.product);   // มีสต๊อกเท่านั้น (ยังไม่เลือกกลิ่น = โชว์ทั้งคู่)
     if (sizeAllow) return isBagProduct(it.product) ? BAG_SIZES : (sizeAllow[normKey(it.product)] || []);   // Eveandboy: เฉพาะขนาดที่มี
     const base = isBagProduct(it.product) ? BAG_SIZES : (it.is_free ? sizesFree : sizesNormal);
     const blocked = discontinued?.[normKey(it.product)];
@@ -135,7 +156,7 @@ export default function ItemsEditor({
   function setQty(i: number, v: number) {
     const it = items[i];
     // ถุงกระดาษ = ฟรีเสมอ (แม้จำนวนเกิน 30) — ไม่ปลดฟรี
-    update(i, { qty: v, ...(v > FREE_MAX_QTY && it.is_free && !isBagProduct(it.product) ? { is_free: false } : {}) });
+    update(i, { qty: v, ...(v > FREE_MAX_QTY && it.is_free && !isBagProduct(it.product) && !isTester(it) ? { is_free: false } : {}) });
   }
   // ปิดปุ่ม Free เมื่อ: ขนาดใหญ่ (ไม่ใช่ 1.2/4/10 ml) หรือ จำนวนเกิน 30
   // (ถ้าติ๊ก Free ไว้แล้ว ไม่ปิด เพื่อให้ยกเลิกได้)
@@ -171,7 +192,7 @@ export default function ItemsEditor({
               <tr key={i} className={`border-t border-line align-top ${it.is_free ? "bg-brand-50/50" : ""}`}>
                 <td className="px-3 py-2 text-muted">{i + 1}</td>
                 <td className="px-3 py-2">
-                  <Combobox value={it.product} onChange={(v) => setProduct(i, v)} options={products} allowCustom={!sizeAllow} placeholder="เลือกกลิ่น" invalid={errors[i]?.product} codes={productCodes} />
+                  <Combobox value={it.product} onChange={(v) => setProduct(i, v)} options={productOptionsFor(it)} allowCustom={!sizeAllow && !isTester(it)} placeholder={isTester(it) ? "เลือกกลิ่น Try Me" : "เลือกกลิ่น"} invalid={errors[i]?.product} codes={productCodes} />
                   {productTypes?.[it.product] && <div className="mt-1 text-[11px] text-muted">Grade: <span className="font-medium text-ink">{productTypes[it.product]}</span></div>}
                   {errMsg(errors[i]) && (
                     <div className="mt-1 flex items-center gap-1 text-[11px] text-red-600"><AlertTriangle size={12} /> {errMsg(errors[i])}</div>
@@ -191,13 +212,16 @@ export default function ItemsEditor({
                       <AlertTriangle size={12} /> เลิกผลิต · เหลือ {discLeft(it.product, it.size)!.toLocaleString()} (แจกของแถมได้จนหมด)
                     </div>
                   )}
+                  {isTester(it) && it.product && it.size && (testerLeft(it.product, it.size) > 0
+                    ? <div className="mt-1 text-[11px] font-medium text-brand-600">Try Me · เหลือ {testerLeft(it.product, it.size).toLocaleString()}</div>
+                    : <div className="mt-1 flex items-center gap-1 text-[11px] text-red-600"><AlertTriangle size={12} /> ไม่มีสต๊อก Try Me — เพิ่มสต๊อกก่อน</div>)}
                 </td>
                 <td className="px-3 py-2">
                   <QtySelect value={it.qty} onChange={(v) => setQty(i, v)} invalid={errors[i]?.qty} max={qtyMaxOf(it)} />
                 </td>
                 <td className="px-3 py-2 text-center">
                   <input type="checkbox" className="h-4 w-4 accent-brand disabled:cursor-not-allowed" checked={it.is_free || isBagProduct(it.product)}
-                    disabled={freeDisabled(it)}
+                    disabled={freeDisabled(it) || isTester(it)}
                     title={freeReason(it)}
                     onChange={(e) => setFree(i, e.target.checked)} />
                 </td>
@@ -226,7 +250,7 @@ export default function ItemsEditor({
                 <Trash2 size={16} />
               </button>
             </div>
-            <Combobox value={it.product} onChange={(v) => setProduct(i, v)} options={products} allowCustom={!sizeAllow} placeholder="เลือกกลิ่น" invalid={errors[i]?.product} codes={productCodes} />
+            <Combobox value={it.product} onChange={(v) => setProduct(i, v)} options={productOptionsFor(it)} allowCustom={!sizeAllow && !isTester(it)} placeholder={isTester(it) ? "เลือกกลิ่น Try Me" : "เลือกกลิ่น"} invalid={errors[i]?.product} codes={productCodes} />
             {productTypes?.[it.product] && <div className="text-[11px] text-muted">Grade: <span className="font-medium text-ink">{productTypes[it.product]}</span></div>}
             <div className="grid grid-cols-2 gap-2">
               <Combobox value={it.size} onChange={(v) => update(i, { size: v })}
@@ -243,9 +267,12 @@ export default function ItemsEditor({
             {discLeft(it.product, it.size) !== undefined && (
               <div className="flex items-center gap-1 text-xs text-amber-600"><AlertTriangle size={12} /> เลิกผลิต · เหลือ {discLeft(it.product, it.size)!.toLocaleString()} (แจกของแถมได้จนหมด)</div>
             )}
+            {isTester(it) && it.product && it.size && (testerLeft(it.product, it.size) > 0
+              ? <div className="text-xs font-medium text-brand-600">Try Me · เหลือ {testerLeft(it.product, it.size).toLocaleString()}</div>
+              : <div className="flex items-center gap-1 text-xs text-red-600"><AlertTriangle size={12} /> ไม่มีสต๊อก Try Me — เพิ่มสต๊อกก่อน</div>)}
             <label className={`flex items-center gap-2 text-sm ${freeDisabled(it) ? "text-faint" : "text-muted"}`}>
               <input type="checkbox" className="h-4 w-4 accent-brand" checked={it.is_free || isBagProduct(it.product)}
-                disabled={freeDisabled(it)} onChange={(e) => setFree(i, e.target.checked)} />
+                disabled={freeDisabled(it) || isTester(it)} onChange={(e) => setFree(i, e.target.checked)} />
               {isBagProduct(it.product) ? "ถุงกระดาษ — ของแถม (Free) เสมอ" : `ของแถม (Free) — เฉพาะ 1.2/4/10 ml${freeDisabled(it) ? ` (${freeReason(it)})` : ""}`}
             </label>
           </div>
@@ -263,6 +290,12 @@ export default function ItemsEditor({
         {!sizeAllow && (
           <button type="button" className="btn-ghost border-amber-200 text-amber-700 hover:bg-amber-50" onClick={addBag}>
             <ShoppingBag size={16} /> แถมถุง
+          </button>
+        )}
+        {/* Try Me (เทสเตอร์) — เฉพาะค้าส่ง CTW/Eveandboy/KingPower · เบิกฟรี ตัดจากสต๊อก Try Me */}
+        {isWholesale && testerProducts.length > 0 && (
+          <button type="button" className="btn-ghost border-violet-200 text-violet-700 hover:bg-violet-50" onClick={addTester} title="เบิกเทสเตอร์ Try Me (ฟรี · 30/50 · ตัดจากสต๊อก Try Me)">
+            <FlaskConical size={16} /> + Try Me
           </button>
         )}
       </div>

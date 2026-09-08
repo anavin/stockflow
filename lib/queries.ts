@@ -584,32 +584,40 @@ export async function monitorToday(platform?: string): Promise<MonitorRow[]> {
   } catch { return []; }
 }
 
-// ── Try Me (เทสเตอร์) — เบิกฟรีต่อครั้ง เฉพาะค้าส่ง ──────────────────────────
-export type TryMeRow = { id: number; platform: string; scent: string; size: string; qty: number; note: string | null; created_at: string; by_name: string | null };
-export async function listTryMe(limit = 100, platform?: string): Promise<TryMeRow[]> {
+// ── Try Me (เทสเตอร์) — สินค้า "{กลิ่น} TRY ME!" เบิกฟรีในใบเบิก เฉพาะค้าส่ง ──────
+const TRYME_RX = "~* 'try ?me'";   // ชื่อสินค้ามี "TRY ME" (ไม่สนช่องว่าง/ตัวพิมพ์)
+
+/** สต๊อก Try Me คงเหลือ (product+size, qty>0) — ให้ฟอร์มใบเบิกเลือกเฉพาะที่มีของ + โชว์ "เหลือ N" */
+export type TesterStockRow = { product: string; size: string; qty: number };
+export async function getTesterStock(): Promise<TesterStockRow[]> {
   try {
-    const params: any[] = [];
-    const pc = platform ? (params.push(platform), ` where t.platform = $${params.length}`) : "";
-    const lim = Math.min(Math.max(1, limit), 500);
-    return await q<TryMeRow>(
-      `select t.id, t.platform, t.scent, t.size, t.qty::int as qty, t.note, t.created_at,
-              coalesce(nullif(u.full_name,''), u.username) as by_name
-       from tryme_issue t left join users u on u.id = t.created_by${pc}
-       order by t.created_at desc limit ${lim}`, params);
-  } catch { return []; }  // ตาราง tryme_issue ยังไม่ถูกสร้าง
+    return await q<TesterStockRow>(
+      `select product, size, sum(qty)::float8 as qty from stock
+       where product ${TRYME_RX}
+       group by product, size having sum(qty) > 0
+       order by product, size`);
+  } catch { return []; }
 }
 
-export type TryMeStat = { platform: string; qty: number; times: number };
+/** สถิติ Try Me ที่ "เบิกแล้ว" — นับจากบรรทัดในใบเบิก (สินค้า TRY ME) เฉพาะค้าส่ง */
+export type TryMeStat = { platform: string; qty: number; orders: number };
 export type TryMeScentStat = { scent: string; size: string; qty: number };
-/** สถิติ Try Me: รวมต่อแพลตฟอร์ม + top กลิ่น/ขนาด + ยอดรวม */
-export async function tryMeStats(): Promise<{ byPlatform: TryMeStat[]; byScent: TryMeScentStat[]; total: number }> {
+export type TryMeRow = { order_no: string; platform: string; scent: string; size: string; qty: number; created_at: string };
+export async function tryMeStats(): Promise<{ byPlatform: TryMeStat[]; byScent: TryMeScentStat[]; recent: TryMeRow[]; total: number }> {
   try {
-    const [byPlatform, byScent] = await Promise.all([
-      q<TryMeStat>(`select platform, sum(qty)::int as qty, count(*)::int as times from tryme_issue group by platform order by qty desc`),
-      q<TryMeScentStat>(`select scent, size, sum(qty)::int as qty from tryme_issue group by scent, size order by qty desc limit 20`),
+    const [byPlatform, byScent, recent] = await Promise.all([
+      q<TryMeStat>(`select o.platform, sum(i.qty)::int as qty, count(distinct o.order_no)::int as orders
+        from order_items i join orders o on o.order_no=i.order_no
+        where o.deleted_at is null and i.product ${TRYME_RX} group by o.platform order by qty desc`),
+      q<TryMeScentStat>(`select i.product as scent, i.size, sum(i.qty)::int as qty
+        from order_items i join orders o on o.order_no=i.order_no
+        where o.deleted_at is null and i.product ${TRYME_RX} group by i.product, i.size order by qty desc limit 20`),
+      q<TryMeRow>(`select o.order_no, o.platform, i.product as scent, i.size, i.qty::int as qty, o.created_at
+        from order_items i join orders o on o.order_no=i.order_no
+        where o.deleted_at is null and i.product ${TRYME_RX} order by o.created_at desc limit 100`),
     ]);
-    return { byPlatform, byScent, total: byPlatform.reduce((a, r) => a + Number(r.qty), 0) };
-  } catch { return { byPlatform: [], byScent: [], total: 0 }; }
+    return { byPlatform, byScent, recent, total: byPlatform.reduce((a, r) => a + Number(r.qty), 0) };
+  } catch { return { byPlatform: [], byScent: [], recent: [], total: 0 }; }
 }
 
 export type DayOrderItem = { product: string; size: string | null; qty: number; is_free: boolean };

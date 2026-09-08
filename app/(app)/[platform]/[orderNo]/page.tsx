@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getOrder, getProducts, getSizes, getProvinces, getPostcodes, getProductCodes, getProductTypes, getBlockedSizesForOrder, getDiscInStock, getOrderFormCatalog } from "@/lib/queries";
+import { getOrder, getProducts, getSizes, getProvinces, getPostcodes, getProductCodes, getProductTypes, getBlockedSizesForOrder, getDiscInStock, getTesterStock, getOrderFormCatalog } from "@/lib/queries";
 import { resolvePlatform, platformBase, platformColor, platformTint, isWholesalePlatform } from "@/lib/config";
 import OrderForm from "@/components/OrderForm";
 import CtwPushButton from "@/components/CtwPushButton";
@@ -19,8 +19,8 @@ export default async function EditOrderPage({ params }: { params: Promise<{ plat
   if (!pf) notFound();
   const base = platformBase(pf.code);
   const decoded = decodeURIComponent(orderNo);
-  const [order, products, sizes, provinces, postcodes, productCodes, productTypes, discontinued, discInStock, wsCat] = await Promise.all([
-    getOrder(decoded), getProducts(), getSizes(), getProvinces(), getPostcodes(), getProductCodes(), getProductTypes(), getBlockedSizesForOrder(), getDiscInStock(), getOrderFormCatalog(pf.code),
+  const [order, products, sizes, provinces, postcodes, productCodes, productTypes, discontinued, discInStock, testerStock, wsCat] = await Promise.all([
+    getOrder(decoded), getProducts(), getSizes(), getProvinces(), getPostcodes(), getProductCodes(), getProductTypes(), getBlockedSizesForOrder(), getDiscInStock(), getTesterStock(), getOrderFormCatalog(pf.code),
   ]);
   if (!order) notFound();
 
@@ -79,7 +79,7 @@ export default async function EditOrderPage({ params }: { params: Promise<{ plat
       </div>
       <p className="mb-6 font-mono text-sm text-muted">{order.doc_no} · {order.order_no}</p>
 
-      <OrderForm platform={pf.code} products={products} sizes={sizes} provinces={provinces} postcodes={postcodes} initial={order} productCodes={productCodes} productTypes={productTypes} discontinued={discontinued} discInStock={discInStock} branches={wsCat.branches} catalogSizes={wsCat.catalogSizes} />
+      <OrderForm platform={pf.code} products={products} sizes={sizes} provinces={provinces} postcodes={postcodes} initial={order} productCodes={productCodes} productTypes={productTypes} discontinued={discontinued} discInStock={discInStock} testerStock={testerStock} branches={wsCat.branches} catalogSizes={wsCat.catalogSizes} />
     </div>
   );
 }
