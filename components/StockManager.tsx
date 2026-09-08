@@ -10,7 +10,7 @@ import type { StockRow } from "@/lib/queries";
 import { PERFUME_TYPES } from "@/lib/types";
 import { PackagePlus, CheckCircle2, Search, History, FileUp, FileDown, Lock, Check, RotateCcw, ClipboardCheck, ChevronDown, ChevronRight, ScanBarcode, X, Plus, Camera, AlertTriangle } from "lucide-react";
 
-type Status = "all" | "normal" | "low" | "out" | "neg" | "disc";
+type Status = "all" | "normal" | "low" | "out" | "neg" | "disc" | "tryme";
 const keyOf = (r: StockRow) => `${r.product}|${r.size}`;
 
 function statusOf(qty: number) {
@@ -41,6 +41,9 @@ export default function StockManager({ rows, products, sizes, initialLow, isAdmi
     const t = search.trim().toLowerCase();
     return rows.filter((r) => {
       if (isClosedSku(r.product, r.size)) return false;   // กลิ่น+ขนาดที่ปิดการขาย → ซ่อนจากสต๊อก (จัดการในหน้าต่างจัดการการขาย)
+      // Try Me (เทสเตอร์): ซ่อนจากมุมมองปกติ · โชว์เฉพาะเมื่อเลือกฟิลเตอร์ "Try Me"
+      const tester = /try\s*me/i.test(r.product);
+      if (status === "tryme") { if (!tester) return false; } else if (tester) return false;
       if (t && !r.product.toLowerCase().includes(t)) return false;
       if (grade === "__none__" ? !!r.grade : grade && r.grade !== grade) return false;
       if (size && r.size !== size) return false;
@@ -433,6 +436,7 @@ export default function StockManager({ rows, products, sizes, initialLow, isAdmi
           <option value="out">หมด (0)</option>
           <option value="neg">ติดลบ</option>
           <option value="disc">เลิกผลิต · ยังมีสต๊อก</option>
+          <option value="tryme">Try Me (เทสเตอร์)</option>
         </select>
         {hasFilter && <button onClick={clearFilters} className="btn-ghost text-xs"><RotateCcw size={14} /> ล้าง</button>}
         <Link href="/stock/moves" className="btn-ghost text-xs"><History size={14} /> ประวัติ</Link>
