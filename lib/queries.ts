@@ -1240,7 +1240,7 @@ export async function sizeMix(platform?: string): Promise<SizeMixRow[]> {
     return await q<SizeMixRow>(
       `select coalesce(nullif(btrim(i.size),''),'(ไม่ระบุ)') as size, sum(i.qty)::float8 as qty, count(distinct i.order_no)::int as orders
        from order_items i join orders o on o.order_no = i.order_no
-       where o.deleted_at is null and coalesce(i.product,'') <> ''${pc}
+       where o.deleted_at is null and coalesce(i.product,'') <> '' and i.product !~* 'try ?me'${pc}
        group by 1 order by qty desc`, params);
   } catch { return []; }
 }
@@ -1264,7 +1264,8 @@ export async function topProvinces(limit = 20, platform?: string): Promise<Provi
     const pc = platform ? (params.push(platform), ` and o.platform = $${params.length}`) : "";
     return await q<ProvinceRow>(
       `select coalesce(nullif(btrim(o.province),''),'(ไม่ระบุ)') as province,
-              count(distinct o.order_no)::int as orders, coalesce(sum(i.qty),0)::float8 as qty
+              count(distinct o.order_no)::int as orders,
+              coalesce(sum(i.qty) filter (where i.product !~* 'try ?me'),0)::float8 as qty
        from orders o left join order_items i on i.order_no = o.order_no
        where o.deleted_at is null${pc}
        group by 1 order by orders desc limit ${Math.min(limit, 100)}`, params);

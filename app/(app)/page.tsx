@@ -120,7 +120,7 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
         <Kpi
           label={s.periodActive ? "ออร์เดอร์ (รอบนี้)" : "ออร์เดอร์ทั้งหมด"} value={s.ordersTotal} href={base}
           icon={<ShoppingBag size={18} />} tone="brand"
-          sub={<><b className="text-ink">{s.ordersMonth.toLocaleString()}</b> เดือนนี้ · {s.ordersToday.toLocaleString()} วันนี้</>}
+          sub={<><b className="text-ink">{s.ordersMonth.toLocaleString()}</b> เดือนนี้ · เข้าวันนี้ {s.ordersToday.toLocaleString()}</>}
         />
         <Kpi
           label="ตัดสต๊อกแล้ว" value={s.issuedTotal} href="/stock/issued"
