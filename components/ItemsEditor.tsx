@@ -193,6 +193,7 @@ export default function ItemsEditor({
                 <td className="px-3 py-2 text-muted">{i + 1}</td>
                 <td className="px-3 py-2">
                   <Combobox value={it.product} onChange={(v) => setProduct(i, v)} options={productOptionsFor(it)} allowCustom={!sizeAllow && !isTester(it)} placeholder={isTester(it) ? "เลือกกลิ่น Try Me" : "เลือกกลิ่น"} invalid={errors[i]?.product} codes={productCodes} />
+                  {isTester(it) && testerProducts.length === 0 && <div className="mt-1 flex items-center gap-1 text-[11px] text-red-600"><AlertTriangle size={12} /> ยังไม่มีสต๊อก Try Me — รับเข้าที่ “รับสินค้าเข้าสต๊อก” ก่อน</div>}
                   {productTypes?.[it.product] && <div className="mt-1 text-[11px] text-muted">Grade: <span className="font-medium text-ink">{productTypes[it.product]}</span></div>}
                   {errMsg(errors[i]) && (
                     <div className="mt-1 flex items-center gap-1 text-[11px] text-red-600"><AlertTriangle size={12} /> {errMsg(errors[i])}</div>
@@ -251,6 +252,7 @@ export default function ItemsEditor({
               </button>
             </div>
             <Combobox value={it.product} onChange={(v) => setProduct(i, v)} options={productOptionsFor(it)} allowCustom={!sizeAllow && !isTester(it)} placeholder={isTester(it) ? "เลือกกลิ่น Try Me" : "เลือกกลิ่น"} invalid={errors[i]?.product} codes={productCodes} />
+            {isTester(it) && testerProducts.length === 0 && <div className="flex items-center gap-1 text-xs text-red-600"><AlertTriangle size={12} /> ยังไม่มีสต๊อก Try Me — รับเข้าที่ “รับสินค้าเข้าสต๊อก” ก่อน</div>}
             {productTypes?.[it.product] && <div className="text-[11px] text-muted">Grade: <span className="font-medium text-ink">{productTypes[it.product]}</span></div>}
             <div className="grid grid-cols-2 gap-2">
               <Combobox value={it.size} onChange={(v) => update(i, { size: v })}
@@ -292,8 +294,8 @@ export default function ItemsEditor({
             <ShoppingBag size={16} /> แถมถุง
           </button>
         )}
-        {/* Try Me (เทสเตอร์) — เฉพาะค้าส่ง CTW/Eveandboy/KingPower · เบิกฟรี ตัดจากสต๊อก Try Me */}
-        {isWholesale && testerProducts.length > 0 && (
+        {/* Try Me (เทสเตอร์) — เฉพาะค้าส่ง CTW/Eveandboy/KingPower · เบิกฟรี ตัดจากสต๊อก Try Me · โชว์เสมอ (ไม่มีสต๊อก = เตือนในบรรทัด) */}
+        {isWholesale && (
           <button type="button" className="btn-ghost border-violet-200 text-violet-700 hover:bg-violet-50" onClick={addTester} title="เบิกเทสเตอร์ Try Me (ฟรี · 30/50 · ตัดจากสต๊อก Try Me)">
             <FlaskConical size={16} /> + Try Me
           </button>
