@@ -4,14 +4,15 @@ import { can } from "@/lib/auth/roles";
 import { listStock, getProducts, getSizes, stockSummary, getDiscontinued, getSkuLookup, stockUnitMismatches, getClosedSkus, getScentsWithoutStock } from "@/lib/queries";
 import StockManager from "@/components/StockManager";
 import SalesManager from "@/components/SalesManager";
-import { ScanLine, FileDown, ScanBarcode, AlertTriangle } from "lucide-react";
+import { ScanLine, FileDown, ScanBarcode, AlertTriangle, FlaskConical } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
-export default async function StockPage({ searchParams }: { searchParams: Promise<{ low?: string }> }) {
+export default async function StockPage({ searchParams }: { searchParams: Promise<{ low?: string; tryme?: string }> }) {
   const me = await requireStock();
   const isAdmin = can.manageStock(me.role);   // admin + ฝ่ายคลัง = แก้สต๊อกได้
-  const { low } = await searchParams;
+  const { low, tryme } = await searchParams;
+  const trymeOn = tryme === "1";
   const [rows, products, sizes, sum, discontinued, skuMap, mismatches, closedSkus, emptyScents] = await Promise.all([
     listStock({ limit: 5000 }),
     getProducts(), getSizes(), stockSummary(), getDiscontinued(), getSkuLookup(), stockUnitMismatches(), getClosedSkus(), getScentsWithoutStock(),
@@ -25,6 +26,11 @@ export default async function StockPage({ searchParams }: { searchParams: Promis
           <p className="text-sm text-muted">{sum.skus.toLocaleString()} รายการ (SKU) · ใกล้หมด {sum.low.toLocaleString()} · ตัดสต๊อกแล้ว {sum.issuedOrders.toLocaleString()} ใบ</p>
         </div>
         <div className="flex flex-wrap gap-2">
+          <Link href={trymeOn ? "/stock" : "/stock?tryme=1"}
+            className={`btn-ghost ${trymeOn ? "border-violet-300 bg-violet-100 text-violet-700" : "border-violet-200 text-violet-700 hover:bg-violet-50"}`}
+            title="ดูสต๊อกเทสเตอร์ Try Me (ปกติซ่อนจากลิสต์)">
+            <FlaskConical size={16} /> Try Me{trymeOn ? " ✓" : ""}
+          </Link>
           {isAdmin && <SalesManager rows={rows} closed={closedSkus} />}
           <Link href="/stock/units" className="btn-ghost"><ScanBarcode size={16} /> ติดตาม SKU</Link>
           <a href="/api/export/stock" className="btn-ghost"><FileDown size={16} /> Export</a>
@@ -52,7 +58,7 @@ export default async function StockPage({ searchParams }: { searchParams: Promis
         </div>
       )}
       {/* initialLow = deep-link ?low=1 (เช่นจากที่อื่น) · การ์ด "ใกล้หมด" ในหน้าย้ายเข้า StockManager แล้ว (กดกรองในหน้าเดิม ไม่ remount) */}
-      <StockManager rows={rows} products={products} sizes={sizes} initialLow={low === "1"} isAdmin={isAdmin} discontinued={discontinued} skuMap={skuMap} closedSkus={closedSkus} emptyScents={emptyScents} />
+      <StockManager rows={rows} products={products} sizes={sizes} initialLow={low === "1"} initialTryme={trymeOn} isAdmin={isAdmin} discontinued={discontinued} skuMap={skuMap} closedSkus={closedSkus} emptyScents={emptyScents} />
     </div>
   );
 }

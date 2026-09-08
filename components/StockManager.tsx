@@ -20,8 +20,8 @@ function statusOf(qty: number) {
   return { label: "ปกติ", cls: "chip-ok", dot: "bg-green-500" };
 }
 
-export default function StockManager({ rows, products, sizes, initialLow, isAdmin, discontinued = {}, skuMap = {}, closedSkus = {}, emptyScents = [] }:
-  { rows: StockRow[]; products: string[]; sizes: string[]; initialLow?: boolean; isAdmin: boolean; discontinued?: Record<string, string[]>; skuMap?: Record<string, string>; closedSkus?: Record<string, string[]>; emptyScents?: { name: string; grade: string | null }[] }) {
+export default function StockManager({ rows, products, sizes, initialLow, initialTryme, isAdmin, discontinued = {}, skuMap = {}, closedSkus = {}, emptyScents = [] }:
+  { rows: StockRow[]; products: string[]; sizes: string[]; initialLow?: boolean; initialTryme?: boolean; isAdmin: boolean; discontinued?: Record<string, string[]>; skuMap?: Record<string, string>; closedSkus?: Record<string, string[]>; emptyScents?: { name: string; grade: string | null }[] }) {
   const router = useRouter();
   const normKey = (s: string) => (s || "").toLowerCase().replace(/[^a-z0-9ก-๙]/g, "");
   const isDisc = (product: string, size: string) => (discontinued[normKey(product)] ?? []).includes(normKey(size));
@@ -34,7 +34,7 @@ export default function StockManager({ rows, products, sizes, initialLow, isAdmi
   const [search, setSearch] = useState("");
   const [grade, setGrade] = useState("");        // "" = ทั้งหมด, "__none__" = ไม่ระบุ
   const [size, setSize] = useState("");
-  const [status, setStatus] = useState<Status>(initialLow ? "low" : "all");
+  const [status, setStatus] = useState<Status>(initialTryme ? "tryme" : initialLow ? "low" : "all");
 
   const gradesInUse = useMemo(() => PERFUME_TYPES.filter((g) => rows.some((r) => r.grade === g)), [rows]);
   const filtered = useMemo(() => {
@@ -261,16 +261,13 @@ export default function StockManager({ rows, products, sizes, initialLow, isAdmi
           <div className="text-sm"><b className="text-amber-700">ใกล้หมด {lowCount.toLocaleString()} รายการ</b><div className="text-xs text-amber-600/80">คงเหลือ ≤ 10 — เตรียมเติมสต๊อก · กดเพื่อกรองเฉพาะที่ใกล้หมด</div></div>
         </button>
       )}
-      {/* ปุ่ม Try Me เด่นๆ — สลับดูเฉพาะเทสเตอร์ (ซ่อนจากลิสต์ปกติ) */}
-      <button type="button" onClick={() => setStatus(status === "tryme" ? "all" : "tryme")}
-        className={`flex w-full items-center gap-3 rounded-xl border px-4 py-3 text-left transition-colors ${status === "tryme" ? "border-violet-300 bg-violet-100" : "border-violet-200 bg-violet-50 hover:bg-violet-100"}`}>
-        <FlaskConical size={20} className="shrink-0 text-violet-600" />
-        <div className="flex-1 text-sm">
-          <b className="text-violet-700">Try Me · เทสเตอร์ {testerInStock > 0 ? `— มีสต๊อก ${testerInStock.toLocaleString()} รายการ` : ""}</b>
-          <div className="text-xs text-violet-600/80">{status === "tryme" ? "กำลังดูเฉพาะ Try Me — กดเพื่อกลับสต๊อกปกติ" : "กดเพื่อดูสต๊อกเทสเตอร์ (ปกติซ่อนจากลิสต์)"}</div>
+      {/* แถบแจ้งเมื่อกำลังดู Try Me (ปุ่มสลับย้ายไป header หน้า /stock แล้ว) */}
+      {status === "tryme" && (
+        <div className="flex items-center gap-2 rounded-xl border border-violet-200 bg-violet-50 px-4 py-2.5 text-sm text-violet-700">
+          <FlaskConical size={16} className="shrink-0" /> กำลังดูสต๊อก <b>Try Me (เทสเตอร์)</b>{testerInStock > 0 ? ` · มีสต๊อก ${testerInStock.toLocaleString()} รายการ` : ""}
+          <button type="button" onClick={() => setStatus("all")} className="ml-auto text-xs underline hover:text-violet-900">กลับสต๊อกปกติ</button>
         </div>
-        {status === "tryme" && <span className="chip bg-violet-200 text-violet-800">กำลังดู</span>}
-      </button>
+      )}
       {!isAdmin && (
         <div className="card flex items-center gap-2 p-4 text-sm text-muted">
           <Lock size={16} className="text-faint" /> โหมดดูอย่างเดียว — ปรับสต๊อก/รับเข้า/นำเข้าไฟล์ ทำได้เฉพาะผู้ดูแลระบบ (admin)
