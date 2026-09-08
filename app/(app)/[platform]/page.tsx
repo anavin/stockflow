@@ -1,10 +1,10 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { listOrders, getMonths, countOrders } from "@/lib/queries";
-import { resolvePlatform, platformBase, canImportPlatform, canCreatePlatform, platformColor, platformTint } from "@/lib/config";
+import { resolvePlatform, platformBase, canImportPlatform, canCreatePlatform, platformColor, platformTint, isWholesalePlatform } from "@/lib/config";
 import OrdersTable from "@/components/OrdersTable";
 import OrderFilters from "@/components/OrderFilters";
-import { PlusCircle, Upload, ChevronLeft, ChevronRight, FileDown, FileBarChart, Trash2, Info } from "lucide-react";
+import { PlusCircle, Upload, ChevronLeft, ChevronRight, FileDown, FileBarChart, Trash2, Info, FlaskConical } from "lucide-react";
 import { requireCreator } from "@/lib/auth/require-user";
 
 export const dynamic = "force-dynamic";
@@ -72,6 +72,7 @@ export default async function OrdersPage({ params, searchParams }: {
           <a href={reportHref} target="_blank" rel="noopener" className="btn-ghost" title="สรุปกลิ่น×ขนาด ตามตัวกรอง (พิมพ์/PDF)"><FileBarChart size={16} /> สรุป</a>
           <a href={exportHref} className="btn-ghost"><FileDown size={16} /> Export</a>
           <Link href={`${base}/trash`} className="btn-ghost" title="ถังขยะ"><Trash2 size={16} /></Link>
+          {isWholesalePlatform(pf.code) && <Link href={`/tryme?platform=${pf.code}`} className="btn-ghost" title="เบิกเทสเตอร์ Try Me (ฟรี)"><FlaskConical size={16} /> Try Me</Link>}
           {canImportPlatform(pf.code) && <Link href={`${base}/import`} className="btn-ghost"><Upload size={16} /> นำเข้า</Link>}
           {canCreatePlatform(pf.code) && <Link href={`${base}/new`} className="btn-primary"><PlusCircle size={16} /> สร้างใบเบิก</Link>}
         </div>

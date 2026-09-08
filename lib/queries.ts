@@ -584,6 +584,34 @@ export async function monitorToday(platform?: string): Promise<MonitorRow[]> {
   } catch { return []; }
 }
 
+// ── Try Me (เทสเตอร์) — เบิกฟรีต่อครั้ง เฉพาะค้าส่ง ──────────────────────────
+export type TryMeRow = { id: number; platform: string; scent: string; size: string; qty: number; note: string | null; created_at: string; by_name: string | null };
+export async function listTryMe(limit = 100, platform?: string): Promise<TryMeRow[]> {
+  try {
+    const params: any[] = [];
+    const pc = platform ? (params.push(platform), ` where t.platform = $${params.length}`) : "";
+    const lim = Math.min(Math.max(1, limit), 500);
+    return await q<TryMeRow>(
+      `select t.id, t.platform, t.scent, t.size, t.qty::int as qty, t.note, t.created_at,
+              coalesce(nullif(u.full_name,''), u.username) as by_name
+       from tryme_issue t left join users u on u.id = t.created_by${pc}
+       order by t.created_at desc limit ${lim}`, params);
+  } catch { return []; }  // ตาราง tryme_issue ยังไม่ถูกสร้าง
+}
+
+export type TryMeStat = { platform: string; qty: number; times: number };
+export type TryMeScentStat = { scent: string; size: string; qty: number };
+/** สถิติ Try Me: รวมต่อแพลตฟอร์ม + top กลิ่น/ขนาด + ยอดรวม */
+export async function tryMeStats(): Promise<{ byPlatform: TryMeStat[]; byScent: TryMeScentStat[]; total: number }> {
+  try {
+    const [byPlatform, byScent] = await Promise.all([
+      q<TryMeStat>(`select platform, sum(qty)::int as qty, count(*)::int as times from tryme_issue group by platform order by qty desc`),
+      q<TryMeScentStat>(`select scent, size, sum(qty)::int as qty from tryme_issue group by scent, size order by qty desc limit 20`),
+    ]);
+    return { byPlatform, byScent, total: byPlatform.reduce((a, r) => a + Number(r.qty), 0) };
+  } catch { return { byPlatform: [], byScent: [], total: 0 }; }
+}
+
 export type DayOrderItem = { product: string; size: string | null; qty: number; is_free: boolean };
 export type DayOrderRow = {
   order_no: string; doc_no: string | null; receiver: string | null; username: string | null;

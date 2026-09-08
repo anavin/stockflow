@@ -28,6 +28,7 @@ export default function Sidebar({ user }: { user: { full_name: string; username:
     ...(can.issueStock(role) ? [{ href: "/stock/issue", label: "ตัดสต๊อก (สแกน)", icon: ScanLine }] : []),
     ...(can.viewStock(role) ? [{ href: "/ship", label: "จัดส่งสินค้า (สแกน)", icon: Truck, exact: true }] : []),
     ...(can.handleReturns(role) ? [{ href: "/returns", label: "รับคืนสินค้า (สแกน)", icon: Undo2, exact: true }] : []),
+    ...(can.createOrders(role) ? [{ href: "/tryme", label: "Try Me (เทสเตอร์)", icon: FlaskConical, exact: true }] : []),
     ...(can.viewStock(role) ? [{ href: "/stock", label: "สต๊อกคงเหลือ", icon: Boxes, exact: true }] : []),
     ...(can.viewStock(role) ? [{ href: "/stock/damaged", label: "สต๊อกของชำรุด", icon: PackageX, exact: true }] : []),
     ...(can.viewStock(role) ? [{ href: "/stock/units", label: "ติดตาม SKU", icon: ScanBarcode }] : []),
