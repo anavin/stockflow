@@ -1,5 +1,5 @@
 "use client";
-import { Fragment, useMemo, useRef, useState } from "react";
+import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
 import Link from "next/link";
@@ -35,6 +35,12 @@ export default function StockManager({ rows, products, sizes, initialLow, initia
   const [grade, setGrade] = useState("");        // "" = ทั้งหมด, "__none__" = ไม่ระบุ
   const [size, setSize] = useState("");
   const [status, setStatus] = useState<Status>(initialTryme ? "tryme" : initialLow ? "low" : "all");
+  // ปุ่ม Try Me ที่ header เปลี่ยน ?tryme=1 แบบ soft-nav → prop initialTryme เปลี่ยน แต่ useState อ่านแค่ตอน mount
+  // → sync status เมื่อ "ค่าเปลี่ยนจริง" เท่านั้น (ไม่แตะตอน mount เพื่อไม่ทับ deep-link ?low=1)
+  const prevTryme = useRef(initialTryme);
+  useEffect(() => {
+    if (initialTryme !== prevTryme.current) { setStatus(initialTryme ? "tryme" : "all"); prevTryme.current = initialTryme; }
+  }, [initialTryme]);
 
   const gradesInUse = useMemo(() => PERFUME_TYPES.filter((g) => rows.some((r) => r.grade === g)), [rows]);
   const filtered = useMemo(() => {
