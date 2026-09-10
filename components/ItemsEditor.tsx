@@ -204,7 +204,7 @@ export default function ItemsEditor({
                   <Combobox value={it.size} onChange={(v) => update(i, { size: v })}
                     options={sizeOptionsFor(it)}
                     allowCustom={!sizeAllow && !it.is_free && !isBagProduct(it.product)} placeholder={isBagProduct(it.product) ? "ขนาดถุง (ถ้ามี)" : "ขนาด"} invalid={errors[i]?.size} />
-                  {!isBagProduct(it.product) && it.is_free && it.size && !isAllowedFreeSize(it.size) && (
+                  {!isBagProduct(it.product) && it.is_free && it.size && !isAllowedFreeSize(it.size, it.product) && (
                     <div className="mt-1 flex items-center gap-1 text-[11px] text-red-600">
                       <AlertTriangle size={12} /> ของแถมได้เฉพาะ 1.2/4/10 ml
                     </div>
@@ -264,7 +264,7 @@ export default function ItemsEditor({
             {errMsg(errors[i]) && (
               <div className="flex items-center gap-1 text-xs text-red-600"><AlertTriangle size={12} /> {errMsg(errors[i])}</div>
             )}
-            {!isBagProduct(it.product) && it.is_free && it.size && !isAllowedFreeSize(it.size) && (
+            {!isBagProduct(it.product) && it.is_free && it.size && !isAllowedFreeSize(it.size, it.product) && (
               <div className="flex items-center gap-1 text-xs text-red-600"><AlertTriangle size={12} /> ของแถมได้เฉพาะ 1.2/4/10 ml</div>
             )}
             {discLeft(it.product, it.size) !== undefined && (

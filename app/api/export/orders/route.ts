@@ -37,9 +37,11 @@ export async function GET(req: Request) {
     params.push(today); const d = `$${params.length}`;
     where.push(`(coalesce(o.order_date, o.doc_date) = ${d} or (o.created_at at time zone 'Asia/Bangkok')::date = ${d})`);
   }
-  if (from) { params.push(from); where.push(`o.doc_date >= $${params.length}`); }
-  if (to) { params.push(to); where.push(`o.doc_date <= $${params.length}`); }
-  if (search) { params.push(`%${search}%`); const p = `$${params.length}`; where.push(`(o.order_no ilike ${p} or o.doc_no ilike ${p} or o.receiver ilike ${p} or o.username ilike ${p})`); }
+  // ยึด coalesce(order_date, doc_date) ให้ตรงกับ listOrders/countOrders (ไม่งั้นไฟล์ export ≠ หน้าจอ)
+  if (from) { params.push(from); where.push(`coalesce(o.order_date, o.doc_date) >= $${params.length}`); }
+  if (to) { params.push(to); where.push(`coalesce(o.order_date, o.doc_date) <= $${params.length}`); }
+  // ค้นหาให้ครบ 6 ฟิลด์เหมือน listOrders (รวม shop_name/province) ไม่งั้นผลค้นหาบนจอกับไฟล์ไม่ตรง
+  if (search) { params.push(`%${search}%`); const p = `$${params.length}`; where.push(`(o.order_no ilike ${p} or o.doc_no ilike ${p} or o.receiver ilike ${p} or o.username ilike ${p} or o.shop_name ilike ${p} or o.province ilike ${p})`); }
 
   const rows = await q<Row>(
     `select o.doc_no, o.order_no, o.doc_date::text as doc_date, o.channel,

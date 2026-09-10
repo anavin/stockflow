@@ -303,7 +303,7 @@ export async function disposeDamaged(product: string, size: string, qty: number,
                  values ($1,$2,$3,$4,$5,$6,$7)`, [product, size || "", -n, row.qty, action, nt, user.id]);
       // ซ่อมได้ → คืนกลับสต๊อกขาย
       if (action === "repair") {
-        if (needsSerialSku(size)) {
+        if (needsSerialSku(size, product)) {   // ส่ง product ด้วย ไม่งั้น Try Me (เทสเตอร์) ถูกมองว่ามี serial → ซ่อมคืนสต๊อกไม่ได้
           // ขวดที่มี serial: ต้องปลุก serial ที่เคยตีชำรุด (void) กลับเป็น in_stock — ให้จำนวน serial ตรงกับสต๊อกรวม
           const woke = await run<{ sku: string }>(
             `update stock_unit set status='in_stock', order_no=null, issued_at=null, issued_by=null
