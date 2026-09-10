@@ -65,31 +65,38 @@ export default function TodayMonitor({ rows, showPlatforms = true }: { rows: Mon
             <span className="shrink-0 text-xs font-semibold text-ink">{pct}%</span>
           </div>
 
-          {/* แยกแพลตฟอร์ม */}
-          {showPlatforms && platforms.length > 1 && (
+          {/* แยกแพลตฟอร์ม — แถบสัดส่วนตรงกลางเติมช่องว่าง (สัดส่วนออร์เดอร์เทียบแพลตฟอร์มสูงสุด) */}
+          {showPlatforms && platforms.length > 1 && (() => {
+            const maxOrders = Math.max(...platforms.map((r) => r.orders), 1);
+            const COLS = "grid grid-cols-[minmax(84px,150px)_1fr_repeat(3,3rem)] items-center gap-x-3";
+            return (
             <div className="mt-4 border-t border-line pt-3">
-              <div className="mb-1.5 grid grid-cols-[1fr_auto_auto_auto] gap-x-4 px-1 text-[11px] font-medium text-muted">
-                <span>แพลตฟอร์ม</span><span className="w-12 text-right">ออร์เดอร์</span><span className="w-12 text-right">ตัดแล้ว</span><span className="w-12 text-right">ค้าง</span>
+              <div className={`mb-1.5 ${COLS} px-1 text-[11px] font-medium text-muted`}>
+                <span>แพลตฟอร์ม</span><span /><span className="text-right">ออร์เดอร์</span><span className="text-right">ตัดแล้ว</span><span className="text-right">ค้าง</span>
               </div>
               <div className="space-y-0.5">
                 {platforms.map((r) => {
                   const p = r.orders - r.issued;
                   return (
                     <Link key={r.platform} href={`/orders?platform=${r.platform}&today=${today}`}
-                      className="grid grid-cols-[1fr_auto_auto_auto] items-center gap-x-4 rounded-md px-1 py-1.5 text-sm hover:bg-soft">
+                      className={`${COLS} rounded-md px-1 py-1.5 text-sm hover:bg-soft`}>
                       <span className="flex items-center gap-1.5 truncate">
                         <span className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: platformColor(r.platform) }} />
                         <span className="truncate text-ink">{platformName(r.platform)}</span>
                       </span>
-                      <span className="w-12 text-right font-medium tabular-nums text-ink">{r.orders.toLocaleString()}</span>
-                      <span className="w-12 text-right tabular-nums text-green-600">{r.issued.toLocaleString()}</span>
-                      <span className={`w-12 text-right tabular-nums ${p > 0 ? "font-semibold text-amber-600" : "text-faint"}`}>{p > 0 ? p.toLocaleString() : "—"}</span>
+                      <span className="h-1.5 w-full overflow-hidden rounded-full bg-soft">
+                        <span className="block h-full rounded-full" style={{ width: `${Math.round((r.orders / maxOrders) * 100)}%`, backgroundColor: platformColor(r.platform) }} />
+                      </span>
+                      <span className="text-right font-medium tabular-nums text-ink">{r.orders.toLocaleString()}</span>
+                      <span className="text-right tabular-nums text-green-600">{r.issued.toLocaleString()}</span>
+                      <span className={`text-right tabular-nums ${p > 0 ? "font-semibold text-amber-600" : "text-faint"}`}>{p > 0 ? p.toLocaleString() : "—"}</span>
                     </Link>
                   );
                 })}
               </div>
             </div>
-          )}
+            );
+          })()}
         </>
       )}
     </section>
