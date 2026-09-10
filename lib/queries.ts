@@ -578,7 +578,10 @@ export async function monitorToday(platform?: string): Promise<MonitorRow[]> {
               count(stock_issued_at)::int as issued
        from orders
        where deleted_at is null${pc}
-         and coalesce(order_date, doc_date) = (now() at time zone 'Asia/Bangkok')::date
+         and (
+              coalesce(order_date, doc_date) = (now() at time zone 'Asia/Bangkok')::date
+           or (created_at at time zone 'Asia/Bangkok')::date = (now() at time zone 'Asia/Bangkok')::date
+         )
        group by 1
        order by orders desc`, params);
   } catch { return []; }
@@ -681,11 +684,17 @@ export const getProvinces = unstable_cache(
 );
 
 // ---- orders ----------------------------------------------------------------
-export async function listOrders(opts: { platform?: string; search?: string; month?: string; from?: string; to?: string; issued?: "yes" | "no"; shipped?: "yes" | "no"; limit?: number; offset?: number } = {}): Promise<OrderRow[]> {
+export async function listOrders(opts: { platform?: string; search?: string; month?: string; from?: string; to?: string; today?: string; issued?: "yes" | "no"; shipped?: "yes" | "no"; limit?: number; offset?: number } = {}): Promise<OrderRow[]> {
   const where: string[] = ["o.deleted_at is null"];
   const params: any[] = [];
   if (opts.platform) { params.push(opts.platform); where.push(`o.platform = $${params.length}`); }
   if (opts.month) { params.push(opts.month); where.push(`o.month_label = $${params.length}`); }
+  // Monitor "วันนี้" basis: order_date=today OR imported/entered today (matches monitorToday)
+  if (opts.today) {
+    params.push(opts.today);
+    const d = `$${params.length}`;
+    where.push(`(coalesce(o.order_date, o.doc_date) = ${d} or (o.created_at at time zone 'Asia/Bangkok')::date = ${d})`);
+  }
   if (opts.from) { params.push(opts.from); where.push(`coalesce(o.order_date, o.doc_date) >= $${params.length}`); }
   if (opts.to) { params.push(opts.to); where.push(`coalesce(o.order_date, o.doc_date) <= $${params.length}`); }
   if (opts.issued === "yes") where.push(`o.stock_issued_at is not null`);
@@ -713,11 +722,16 @@ export async function listOrders(opts: { platform?: string; search?: string; mon
   return rows.map(normOrder);
 }
 
-export async function countOrders(opts: { platform?: string; search?: string; month?: string; from?: string; to?: string; issued?: "yes" | "no"; shipped?: "yes" | "no" } = {}): Promise<number> {
+export async function countOrders(opts: { platform?: string; search?: string; month?: string; from?: string; to?: string; today?: string; issued?: "yes" | "no"; shipped?: "yes" | "no" } = {}): Promise<number> {
   const where: string[] = ["deleted_at is null"];
   const params: any[] = [];
   if (opts.platform) { params.push(opts.platform); where.push(`platform = $${params.length}`); }
   if (opts.month) { params.push(opts.month); where.push(`month_label = $${params.length}`); }
+  if (opts.today) {
+    params.push(opts.today);
+    const d = `$${params.length}`;
+    where.push(`(coalesce(order_date, doc_date) = ${d} or (created_at at time zone 'Asia/Bangkok')::date = ${d})`);
+  }
   if (opts.from) { params.push(opts.from); where.push(`coalesce(order_date, doc_date) >= $${params.length}`); }
   if (opts.to) { params.push(opts.to); where.push(`coalesce(order_date, doc_date) <= $${params.length}`); }
   if (opts.issued === "yes") where.push(`stock_issued_at is not null`);

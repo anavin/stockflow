@@ -4,7 +4,7 @@ import { platformColor, platformName } from "@/lib/config";
 import { Radar, PackageCheck, Clock3 } from "lucide-react";
 
 /** Monitor "วันนี้" — ออร์เดอร์วันนี้ / ตัดแล้ว / ค้างตัด + แยกแพลตฟอร์ม · คลิกตัวเลขไป /orders (วันนี้)
- *  ไว้เฝ้าดูงานระหว่างวัน · ตัวเลขตรงกับ /orders?from=today&to=today */
+ *  ไว้เฝ้าดูงานระหว่างวัน · "วันนี้" = order_date วันนี้ หรือ นำเข้าระบบวันนี้ · ตรงกับ /orders?today=today */
 export default function TodayMonitor({ rows, showPlatforms = true }: { rows: MonitorRow[]; showPlatforms?: boolean }) {
   const today = new Date(Date.now() + 7 * 3600 * 1000).toISOString().slice(0, 10); // วันนี้ (เวลาไทย)
   const dateLabel = new Date(today + "T00:00:00").toLocaleDateString("th-TH", { weekday: "long", day: "numeric", month: "long" });
@@ -12,7 +12,7 @@ export default function TodayMonitor({ rows, showPlatforms = true }: { rows: Mon
   const issued = rows.reduce((a, r) => a + r.issued, 0);
   const pending = orders - issued;
   const pct = orders > 0 ? Math.round((issued / orders) * 100) : 0;
-  const href = (extra = "") => `/orders?from=${today}&to=${today}${extra}`;
+  const href = (extra = "") => `/orders?today=${today}${extra}`;
   const platforms = [...rows].filter((r) => r.orders > 0).sort((a, b) => b.orders - a.orders);
 
   return (
@@ -70,7 +70,7 @@ export default function TodayMonitor({ rows, showPlatforms = true }: { rows: Mon
                 {platforms.map((r) => {
                   const p = r.orders - r.issued;
                   return (
-                    <Link key={r.platform} href={`/orders?platform=${r.platform}&from=${today}&to=${today}`}
+                    <Link key={r.platform} href={`/orders?platform=${r.platform}&today=${today}`}
                       className="grid grid-cols-[1fr_auto_auto_auto] items-center gap-x-4 rounded-md px-1 py-1.5 text-sm hover:bg-soft">
                       <span className="flex items-center gap-1.5 truncate">
                         <span className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: platformColor(r.platform) }} />
