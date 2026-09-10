@@ -13,22 +13,22 @@ const PAGE_SIZE = 50;
 
 export default async function OrdersPage({ params, searchParams }: {
   params: Promise<{ platform: string }>;
-  searchParams: Promise<{ q?: string; month?: string; from?: string; to?: string; issued?: string; shipped?: string; page?: string }>;
+  searchParams: Promise<{ q?: string; month?: string; from?: string; to?: string; today?: string; issued?: string; shipped?: string; page?: string }>;
 }) {
   await requireCreator();
   const pf = resolvePlatform((await params).platform);
   if (!pf) notFound();
   const base = platformBase(pf.code);
-  const { q, month, from, to, issued, shipped, page } = await searchParams;
+  const { q, month, from, to, today, issued, shipped, page } = await searchParams;
   const iss = issued === "yes" || issued === "no" ? issued : undefined;
   const shp = shipped === "yes" || shipped === "no" ? shipped : undefined;
   const pageNum = Math.max(1, Number(page) || 1);
   const offset = (pageNum - 1) * PAGE_SIZE;
 
   const [orders, months, total] = await Promise.all([
-    listOrders({ platform: pf.code, search: q, month, from, to, issued: iss, shipped: shp, limit: PAGE_SIZE, offset }),
+    listOrders({ platform: pf.code, search: q, month, from, to, today, issued: iss, shipped: shp, limit: PAGE_SIZE, offset }),
     getMonths(pf.code),
-    countOrders({ platform: pf.code, search: q, month, from, to, issued: iss, shipped: shp }),
+    countOrders({ platform: pf.code, search: q, month, from, to, today, issued: iss, shipped: shp }),
   ]);
 
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
@@ -40,6 +40,7 @@ export default async function OrdersPage({ params, searchParams }: {
     if (month) sp.set("month", month);
     if (from) sp.set("from", from);
     if (to) sp.set("to", to);
+    if (today) sp.set("today", today);
     if (iss) sp.set("issued", iss);
     if (shp) sp.set("shipped", shp);
     for (const [k, v] of Object.entries(extra ?? {})) if (v) sp.set(k, v);
@@ -85,7 +86,7 @@ export default async function OrdersPage({ params, searchParams }: {
         </div>
       )}
 
-      <OrderFilters platform={pf.code} q={q} month={month} from={from} to={to} issued={iss} shipped={shp} months={months} />
+      <OrderFilters platform={pf.code} q={q} month={month} from={from} to={to} today={today} issued={iss} shipped={shp} months={months} />
 
       <OrdersTable orders={orders} platform={pf.code} />
 

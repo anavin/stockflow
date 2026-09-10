@@ -3,7 +3,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Search, X, CalendarDays } from "lucide-react";
 
-export default function OrderFilters({ platform = "Shopee", q, month, from, to, issued, shipped, months }: { platform?: string; q?: string; month?: string; from?: string; to?: string; issued?: string; shipped?: string; months: string[] }) {
+export default function OrderFilters({ platform = "Shopee", q, month, from, to, today: todayParam, issued, shipped, months }: { platform?: string; q?: string; month?: string; from?: string; to?: string; today?: string; issued?: string; shipped?: string; months: string[] }) {
   const router = useRouter();
   const base = `/${platform.toLowerCase()}`;
   const [search, setSearch] = useState(q ?? "");
@@ -11,18 +11,19 @@ export default function OrderFilters({ platform = "Shopee", q, month, from, to, 
   const [dt, setDt] = useState(to ?? "");     // ถึงวันที่
 
   // รวมค่าปัจจุบัน + ค่าที่เพิ่งเปลี่ยน แล้ว push URL (กรองทันที)
-  function go(next: { q?: string; month?: string; from?: string; to?: string; issued?: string; shipped?: string } = {}) {
+  //   today = โหมด "วันนี้" (union: order_date=วันนี้ หรือ นำเข้าระบบวันนี้) — กันไม่ให้ปนกับ from/to
+  function go(next: { q?: string; month?: string; from?: string; to?: string; today?: string; issued?: string; shipped?: string } = {}) {
     const sp = new URLSearchParams();
     const vq = next.q ?? search;
+    const vToday = next.today !== undefined ? next.today : (todayParam ?? "");
     const vm = next.month ?? month ?? "";
     const vf = next.from ?? df;
     const vt = next.to ?? dt;
     const vi = next.issued ?? issued ?? "";
     const vs = next.shipped ?? shipped ?? "";
     if (vq) sp.set("q", vq);
-    if (vm) sp.set("month", vm);
-    if (vf) sp.set("from", vf);
-    if (vt) sp.set("to", vt);
+    if (vToday) sp.set("today", vToday);
+    else { if (vm) sp.set("month", vm); if (vf) sp.set("from", vf); if (vt) sp.set("to", vt); }
     if (vi) sp.set("issued", vi);
     if (vs) sp.set("shipped", vs);
     const s = sp.toString();
@@ -38,10 +39,11 @@ export default function OrderFilters({ platform = "Shopee", q, month, from, to, 
     { key: "7d", label: "7 วัน", from: addDays(today, -6), to: today },
     { key: "month", label: "เดือนนี้", from: today.slice(0, 8) + "01", to: today },
   ];
-  const activePreset = presets.find((p) => p.from === df && p.to === dt)?.key ?? "";
-  const applyRange = (f: string, t: string) => { setDf(f); setDt(t); go({ from: f, to: t, month: "" }); };
+  const activePreset = todayParam ? "today" : presets.find((p) => p.key !== "today" && p.from === df && p.to === dt)?.key ?? "";
+  const applyRange = (f: string, t: string) => { setDf(f); setDt(t); go({ from: f, to: t, month: "", today: "" }); };
+  const applyToday = () => { setDf(""); setDt(""); go({ today, from: "", to: "", month: "" }); };
 
-  const hasFilter = !!(search || month || df || dt || issued || shipped);
+  const hasFilter = !!(search || month || df || dt || todayParam || issued || shipped);
 
   return (
     <form className="mb-4 flex flex-wrap items-center gap-2" onSubmit={(e) => { e.preventDefault(); go(); }}>
@@ -51,7 +53,7 @@ export default function OrderFilters({ platform = "Shopee", q, month, from, to, 
           value={search} onChange={(e) => setSearch(e.target.value)} />
       </div>
 
-      <select className="input w-auto" value={month ?? ""} onChange={(e) => go({ month: e.target.value })}>
+      <select className="input w-auto" value={month ?? ""} onChange={(e) => { setDf(""); setDt(""); go({ month: e.target.value, from: "", to: "", today: "" }); }}>
         <option value="">ทุกเดือน</option>
         {months.map((m) => <option key={m} value={m}>{m}</option>)}
       </select>
@@ -74,7 +76,8 @@ export default function OrderFilters({ platform = "Shopee", q, month, from, to, 
       <div className="flex flex-wrap items-center gap-1.5">
         <div className="flex items-center overflow-hidden rounded-lg border border-line">
           {presets.map((p, i) => (
-            <button key={p.key} type="button" onClick={() => applyRange(p.from, p.to)}
+            <button key={p.key} type="button" onClick={() => (p.key === "today" ? applyToday() : applyRange(p.from, p.to))}
+              title={p.key === "today" ? "order_date วันนี้ หรือ นำเข้าระบบวันนี้" : undefined}
               className={`px-2.5 py-2 text-xs font-medium transition-colors ${i > 0 ? "border-l border-line" : ""} ${activePreset === p.key ? "bg-brand text-white" : "bg-white text-muted hover:bg-soft"}`}>
               {p.label}
             </button>
@@ -83,10 +86,10 @@ export default function OrderFilters({ platform = "Shopee", q, month, from, to, 
         <div className={`flex items-center gap-1 rounded-lg border bg-white px-2 py-1 ${(df || dt) && !activePreset ? "border-brand-300 ring-1 ring-brand-100" : "border-line"}`}>
           <CalendarDays size={15} className="shrink-0 text-faint" />
           <input type="date" className="w-[130px] bg-transparent text-sm text-ink outline-none" value={df} max={dt || undefined}
-            onChange={(e) => { setDf(e.target.value); go({ from: e.target.value, month: "" }); }} title="จากวันที่" />
+            onChange={(e) => { setDf(e.target.value); go({ from: e.target.value, month: "", today: "" }); }} title="จากวันที่" />
           <span className="text-faint">–</span>
           <input type="date" className="w-[130px] bg-transparent text-sm text-ink outline-none" value={dt} min={df || undefined}
-            onChange={(e) => { setDt(e.target.value); go({ to: e.target.value, month: "" }); }} title="ถึงวันที่" />
+            onChange={(e) => { setDt(e.target.value); go({ to: e.target.value, month: "", today: "" }); }} title="ถึงวันที่" />
         </div>
       </div>
 

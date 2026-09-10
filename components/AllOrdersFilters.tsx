@@ -5,8 +5,8 @@ import { Search, X, CalendarDays } from "lucide-react";
 import { enabledPlatforms } from "@/lib/config";
 
 // ฟิลเตอร์หน้า /orders (รวมทุกแพลตฟอร์ม) — เลือกแพลตฟอร์ม/ค้นหา/สถานะตัด-ส่ง/ช่วงวันที่ · เปลี่ยนแล้วกรองทันที
-export default function AllOrdersFilters({ q, platform, issued, shipped, from, to }: {
-  q?: string; platform?: string; issued?: string; shipped?: string; from?: string; to?: string;
+export default function AllOrdersFilters({ q, platform, issued, shipped, from, to, today: todayParam }: {
+  q?: string; platform?: string; issued?: string; shipped?: string; from?: string; to?: string; today?: string;
 }) {
   const router = useRouter();
   const [search, setSearch] = useState(q ?? "");
@@ -14,20 +14,22 @@ export default function AllOrdersFilters({ q, platform, issued, shipped, from, t
   const [dt, setDt] = useState(to ?? "");
   const platforms = enabledPlatforms();
 
-  function go(next: { q?: string; platform?: string; issued?: string; shipped?: string; from?: string; to?: string } = {}) {
+  //   today = โหมด "วันนี้" (union: order_date=วันนี้ หรือ นำเข้าระบบวันนี้) — กันไม่ให้ปนกับ from/to
+  function go(next: { q?: string; platform?: string; issued?: string; shipped?: string; from?: string; to?: string; today?: string } = {}) {
     const sp = new URLSearchParams();
     const vq = next.q ?? search;
     const vp = next.platform ?? platform ?? "";
     const vi = next.issued ?? issued ?? "";
     const vs = next.shipped ?? shipped ?? "";
+    const vToday = next.today !== undefined ? next.today : (todayParam ?? "");
     const vf = next.from ?? df;
     const vt = next.to ?? dt;
     if (vq) sp.set("q", vq);
     if (vp) sp.set("platform", vp);
     if (vi) sp.set("issued", vi);
     if (vs) sp.set("shipped", vs);
-    if (vf) sp.set("from", vf);
-    if (vt) sp.set("to", vt);
+    if (vToday) sp.set("today", vToday);
+    else { if (vf) sp.set("from", vf); if (vt) sp.set("to", vt); }
     const s = sp.toString();
     router.push(`/orders${s ? "?" + s : ""}`);
   }
@@ -40,9 +42,10 @@ export default function AllOrdersFilters({ q, platform, issued, shipped, from, t
     { key: "7d", label: "7 วัน", from: addDays(today, -6), to: today },
     { key: "month", label: "เดือนนี้", from: today.slice(0, 8) + "01", to: today },
   ];
-  const activePreset = presets.find((p) => p.from === df && p.to === dt)?.key ?? "";
-  const applyRange = (f: string, t: string) => { setDf(f); setDt(t); go({ from: f, to: t }); };
-  const hasFilter = !!(search || platform || df || dt || issued || shipped);
+  const activePreset = todayParam ? "today" : presets.find((p) => p.key !== "today" && p.from === df && p.to === dt)?.key ?? "";
+  const applyRange = (f: string, t: string) => { setDf(f); setDt(t); go({ from: f, to: t, today: "" }); };
+  const applyToday = () => { setDf(""); setDt(""); go({ today, from: "", to: "" }); };
+  const hasFilter = !!(search || platform || df || dt || todayParam || issued || shipped);
 
   return (
     <form className="mb-4 flex flex-wrap items-center gap-2" onSubmit={(e) => { e.preventDefault(); go(); }}>
@@ -72,7 +75,8 @@ export default function AllOrdersFilters({ q, platform, issued, shipped, from, t
       <div className="flex flex-wrap items-center gap-1.5">
         <div className="flex items-center overflow-hidden rounded-lg border border-line">
           {presets.map((p, i) => (
-            <button key={p.key} type="button" onClick={() => applyRange(p.from, p.to)}
+            <button key={p.key} type="button" onClick={() => (p.key === "today" ? applyToday() : applyRange(p.from, p.to))}
+              title={p.key === "today" ? "order_date วันนี้ หรือ นำเข้าระบบวันนี้" : undefined}
               className={`px-2.5 py-2 text-xs font-medium transition-colors ${i > 0 ? "border-l border-line" : ""} ${activePreset === p.key ? "bg-brand text-white" : "bg-white text-muted hover:bg-soft"}`}>
               {p.label}
             </button>
@@ -81,10 +85,10 @@ export default function AllOrdersFilters({ q, platform, issued, shipped, from, t
         <div className={`flex items-center gap-1 rounded-lg border bg-white px-2 py-1 ${(df || dt) && !activePreset ? "border-brand-300 ring-1 ring-brand-100" : "border-line"}`}>
           <CalendarDays size={15} className="shrink-0 text-faint" />
           <input type="date" className="w-[130px] bg-transparent text-sm text-ink outline-none" value={df} max={dt || undefined}
-            onChange={(e) => { setDf(e.target.value); go({ from: e.target.value }); }} title="จากวันที่" />
+            onChange={(e) => { setDf(e.target.value); go({ from: e.target.value, today: "" }); }} title="จากวันที่" />
           <span className="text-faint">–</span>
           <input type="date" className="w-[130px] bg-transparent text-sm text-ink outline-none" value={dt} min={df || undefined}
-            onChange={(e) => { setDt(e.target.value); go({ to: e.target.value }); }} title="ถึงวันที่" />
+            onChange={(e) => { setDt(e.target.value); go({ to: e.target.value, today: "" }); }} title="ถึงวันที่" />
         </div>
       </div>
 

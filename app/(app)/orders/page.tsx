@@ -58,7 +58,7 @@ export default async function AllOrdersPage({ searchParams }: {
         </p>
       </div>
 
-      <AllOrdersFilters q={q} platform={pf} issued={iss} shipped={shp} from={from} to={to} />
+      <AllOrdersFilters q={q} platform={pf} issued={iss} shipped={shp} from={from} to={to} today={today} />
 
       {orders.length === 0 ? (
         <div className="card p-10 text-center text-sm text-muted">ไม่พบออร์เดอร์ตามตัวกรองนี้</div>
