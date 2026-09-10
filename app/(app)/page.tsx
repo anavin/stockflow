@@ -119,27 +119,27 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
       <div className="grid grid-cols-2 gap-3 md:grid-cols-5">
         <Kpi
           label={s.periodActive ? "ออร์เดอร์ (รอบนี้)" : "ออร์เดอร์ทั้งหมด"} value={s.ordersTotal} href={base}
-          icon={<ShoppingBag size={18} />} tone="brand"
+          icon={<ShoppingBag size={20} />} tone="brand"
           sub={<><b className="text-ink">{s.ordersMonth.toLocaleString()}</b> เดือนนี้ · เข้าวันนี้ {s.ordersToday.toLocaleString()}</>}
         />
         <Kpi
           label="ตัดสต๊อกแล้ว" value={s.issuedTotal} href="/stock/issued"
-          icon={<PackageCheck size={18} />} tone="green"
+          icon={<PackageCheck size={20} />} tone="green"
           sub={<>วันนี้ {s.issuedToday.toLocaleString()} ใบ</>}
         />
         <Kpi
           label="รอตัดสต๊อก" value={s.pendingIssue} href="/stock/issue"
-          icon={<ClipboardList size={18} />} tone="amber"
+          icon={<ClipboardList size={20} />} tone="amber"
           sub="ยังไม่สแกนตัดสต๊อก"
         />
         <Kpi
           label="ต้องเติม / ติดลบ" value={s.low + s.negative} href="/stock?low=1"
-          icon={<AlertTriangle size={18} />} tone={s.negative > 0 ? "red" : "amber"}
+          icon={<AlertTriangle size={20} />} tone={s.negative > 0 ? "red" : "amber"}
           sub={s.negative > 0 ? <span className="font-medium text-red-600">ติดลบ {s.negative} รายการ</span> : `ใกล้หมด ${s.low} รายการ`}
         />
         <Kpi
           label="ส่งวันนี้" value={ship.shippedToday} href="/ship"
-          icon={<Truck size={18} />} tone="green"
+          icon={<Truck size={20} />} tone="green"
           sub={<>ค้างส่ง <b className="text-ink">{ship.pending.toLocaleString()}</b></>}
         />
       </div>
@@ -322,13 +322,13 @@ function Kpi({ label, value, sub, icon, href, tone }: {
   label: string; value: number; sub?: React.ReactNode; icon: React.ReactNode; href: string; tone: keyof typeof TONES;
 }) {
   return (
-    <Link href={href} className="card group p-4 transition-shadow hover:shadow-card">
-      <div className="flex items-start justify-between">
-        <span className="text-xs text-muted">{label}</span>
-        <span className={`grid h-8 w-8 place-items-center rounded-lg ${TONES[tone]}`}>{icon}</span>
+    <Link href={href} className="card group flex items-center gap-3 p-4 transition-shadow hover:shadow-card">
+      <span className={`grid h-11 w-11 shrink-0 place-items-center rounded-xl ${TONES[tone]}`}>{icon}</span>
+      <div className="min-w-0 leading-tight">
+        <div className="truncate text-xs text-muted">{label}</div>
+        <div className="text-2xl font-bold leading-none tracking-tight text-ink">{value.toLocaleString()}</div>
+        {sub && <div className="mt-1 text-[11px] leading-tight text-faint">{sub}</div>}
       </div>
-      <div className="mt-2 text-2xl font-bold tracking-tight text-ink">{value.toLocaleString()}</div>
-      {sub && <div className="mt-1 text-[11px] leading-tight text-faint">{sub}</div>}
     </Link>
   );
 }
