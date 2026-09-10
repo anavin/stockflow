@@ -269,36 +269,35 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
         )}
       </section>
 
-      {/* ── top products — ย้ายมาไว้ล่างสุด ── */}
-      <section className="card mt-4 p-5">
-        <div className="mb-1 flex items-center justify-between">
-          <h2 className="flex items-center gap-2 text-sm font-semibold text-ink"><Sparkles size={15} className="text-brand" /> กลิ่นที่เบิกมากที่สุด</h2>
-          <Link href="/scents" className="inline-flex items-center gap-1 text-xs font-medium text-brand-600">ดูทั้งหมด <ArrowRight size={12} /></Link>
-        </div>
-        {top.length === 0 ? (
-          <p className="py-6 text-center text-sm text-muted">ยังไม่มีข้อมูล</p>
-        ) : (
-          <div className="mt-3 space-y-2.5">
-            {top.map((p, i) => {
-              const max = top[0]?.qty || 1;
-              const pct = Math.max(4, (Number(p.qty) / max) * 100);
-              return (
-                <div key={p.product} className="flex items-center gap-3">
-                  <span className="w-4 text-right text-xs font-medium text-faint">{i + 1}</span>
-                  <span className="w-40 shrink-0 truncate text-sm text-ink" title={p.product}>{p.product}</span>
-                  <div className="h-4 flex-1 overflow-hidden rounded-full bg-soft">
-                    <div className="flex h-full items-center justify-end rounded-full bg-brand pr-2" style={{ width: `${pct}%` }} />
-                  </div>
-                  <span className="w-14 shrink-0 text-right text-xs font-semibold text-ink">{Number(p.qty).toLocaleString()}</span>
-                </div>
-              );
-            })}
+      {/* ── กลิ่นที่เบิกมากที่สุด + ลูกค้าใหม่/กลับมา (ข้างกัน) ── */}
+      <div className="mt-4 grid grid-cols-1 items-stretch gap-4 lg:grid-cols-2">
+        <section className="card flex flex-col p-5">
+          <div className="mb-1 flex items-center justify-between">
+            <h2 className="flex items-center gap-2 text-sm font-semibold text-ink"><Sparkles size={15} className="text-brand" /> กลิ่นที่เบิกมากที่สุด</h2>
+            <Link href="/scents" className="inline-flex items-center gap-1 text-xs font-medium text-brand-600">ดูทั้งหมด <ArrowRight size={12} /></Link>
           </div>
-        )}
-      </section>
-
-      {/* ── กราฟธุรกิจ (ล่างสุด): ลูกค้าใหม่/กลับมา · สัดส่วนขนาด · จังหวัด ── */}
-      <div className="mt-4">
+          {top.length === 0 ? (
+            <p className="py-6 text-center text-sm text-muted">ยังไม่มีข้อมูล</p>
+          ) : (
+            <div className="mt-3 flex flex-1 flex-col justify-between gap-2">
+              {top.map((p, i) => {
+                const max = top[0]?.qty || 1;
+                const pct = Math.max(4, (Number(p.qty) / max) * 100);
+                const medal = i === 0 ? "bg-amber-400 text-white" : i === 1 ? "bg-slate-300 text-white" : i === 2 ? "bg-amber-700/80 text-white" : "bg-soft text-faint";
+                return (
+                  <div key={p.product} className="flex items-center gap-2.5">
+                    <span className={`grid h-5 w-5 shrink-0 place-items-center rounded-full text-[11px] font-bold ${medal}`}>{i + 1}</span>
+                    <span className="w-24 shrink-0 truncate text-sm text-ink lg:w-28" title={p.product}>{p.product}</span>
+                    <div className="h-3.5 flex-1 overflow-hidden rounded-full bg-soft">
+                      <div className="h-full rounded-full bg-brand transition-all" style={{ width: `${pct}%` }} />
+                    </div>
+                    <span className="w-12 shrink-0 text-right text-xs font-semibold tabular-nums text-ink">{Number(p.qty).toLocaleString()}</span>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </section>
         <NewVsReturningBars rows={nvr} />
       </div>
       <div className="mt-4 grid grid-cols-1 items-stretch gap-4 lg:grid-cols-2">

@@ -935,6 +935,8 @@ export async function topProducts(limit = 6): Promise<TopProduct[]> {
       `select oi.product, sum(oi.qty)::float8 as qty
        from order_items oi join orders o on o.order_no = oi.order_no
        where o.deleted_at is null and coalesce(oi.product,'') <> ''
+         and oi.product !~ 'ถุง'        -- ตัดถุงกระดาษ (ไม่ใช่กลิ่น)
+         and oi.product !~* 'try ?me'   -- ตัดเทสเตอร์ (ไม่ใช่กลิ่น · ให้ตรงกับกราฟอื่น)
        group by oi.product order by qty desc limit ${lim}`,
     );
   } catch { return []; }
