@@ -3,9 +3,39 @@ import type { MonitorRow } from "@/lib/queries";
 import { platformColor, platformName } from "@/lib/config";
 import { Radar, PackageCheck, Clock3, ClipboardList } from "lucide-react";
 
+const STAT_TONE = {
+  brand: { bg: "bg-brand-50", ring: "", chip: "bg-brand/10 text-brand", num: "text-brand", label: "text-brand/80" },
+  green: { bg: "bg-green-50", ring: "", chip: "bg-green-600/10 text-green-700", num: "text-green-700", label: "text-green-700/80" },
+  amber: { bg: "bg-amber-50", ring: "ring-1 ring-amber-200", chip: "bg-amber-600/10 text-amber-700", num: "text-amber-700", label: "text-amber-700/80" },
+  faint: { bg: "bg-soft", ring: "", chip: "bg-ink/5 text-faint", num: "text-faint", label: "text-faint" },
+} as const;
+
+/** ไทล์สรุป · compact = อยู่คอลัมน์ซ้าย (ชิปเล็ก เลข+ป้ายบรรทัดเดียว) · ปกติ = ใหญ่ เลขบนป้ายล่าง */
+function StatTile({ href, tone, icon, value, label, compact }: {
+  href: string; tone: keyof typeof STAT_TONE; icon: React.ReactNode; value: number; label: string; compact: boolean;
+}) {
+  const t = STAT_TONE[tone];
+  return (
+    <Link href={href} className={`flex items-center gap-3 rounded-xl transition hover:brightness-95 ${t.bg} ${t.ring} ${compact ? "px-3.5 py-2" : "p-4"}`}>
+      <span className={`grid shrink-0 place-items-center rounded-xl ${t.chip} ${compact ? "h-9 w-9" : "h-12 w-12"}`}>{icon}</span>
+      {compact ? (
+        <div className="flex min-w-0 items-baseline gap-2">
+          <span className={`text-2xl font-bold leading-none ${t.num}`}>{value.toLocaleString()}</span>
+          <span className={`truncate text-xs font-medium ${t.label}`}>{label}</span>
+        </div>
+      ) : (
+        <div className="min-w-0 leading-tight">
+          <div className={`text-[2rem] font-bold leading-none ${t.num}`}>{value.toLocaleString()}</div>
+          <div className={`mt-1 text-xs font-medium ${t.label}`}>{label}</div>
+        </div>
+      )}
+    </Link>
+  );
+}
+
 /** Monitor "วันนี้" — ออร์เดอร์วันนี้ / ตัดแล้ว / ค้างตัด + แยกแพลตฟอร์ม · คลิกตัวเลขไป /orders (วันนี้)
  *  ไว้เฝ้าดูงานระหว่างวัน · "วันนี้" = order_date วันนี้ หรือ นำเข้าระบบวันนี้ · ตรงกับ /orders?today=today
- *  layout: มีตารางแพลตฟอร์ม → 2 คอลัมน์ (สรุปซ้าย · ตารางขวา) · ไม่มี → สรุปเต็มความกว้าง */
+ *  layout: มีตารางแพลตฟอร์ม → 2 คอลัมน์ (สรุปซ้าย·ตารางขวา, ไทล์ย่อให้สูง≈ตาราง) · ไม่มี → สรุปเต็มกว้าง */
 export default function TodayMonitor({ rows, showPlatforms = true }: { rows: MonitorRow[]; showPlatforms?: boolean }) {
   const today = new Date(Date.now() + 7 * 3600 * 1000).toISOString().slice(0, 10); // วันนี้ (เวลาไทย)
   const dateLabel = new Date(today + "T00:00:00").toLocaleDateString("th-TH", { weekday: "long", day: "numeric", month: "long" });
@@ -17,33 +47,15 @@ export default function TodayMonitor({ rows, showPlatforms = true }: { rows: Mon
   const platforms = [...rows].filter((r) => r.orders > 0).sort((a, b) => b.orders - a.orders);
   const hasTable = showPlatforms && platforms.length > 1;
 
-  // ── ซ้าย: สรุป 3 ตัว (ไอคอนซ้าย) + progress · ซ้อนแนวตั้งเมื่ออยู่ 2 คอลัมน์ ไม่งั้นเรียงแนวนอน ──
+  // ── ซ้าย: สรุป 3 ตัว + progress ──
   const summary = (
-    <div>
-      <div className={hasTable ? "grid grid-cols-1 gap-2.5" : "grid grid-cols-3 gap-3"}>
-        <Link href={href()} className="flex items-center gap-3 rounded-xl bg-brand-50 p-4 transition hover:brightness-95">
-          <span className="grid h-12 w-12 shrink-0 place-items-center rounded-xl bg-brand/10 text-brand"><ClipboardList size={24} /></span>
-          <div className="min-w-0 leading-tight">
-            <div className="text-[2rem] font-bold leading-none text-brand">{orders.toLocaleString()}</div>
-            <div className="mt-1 text-xs font-medium text-brand/80">ออร์เดอร์วันนี้</div>
-          </div>
-        </Link>
-        <Link href={href("&issued=yes")} className="flex items-center gap-3 rounded-xl bg-green-50 p-4 transition hover:brightness-95">
-          <span className="grid h-12 w-12 shrink-0 place-items-center rounded-xl bg-green-600/10 text-green-700"><PackageCheck size={24} /></span>
-          <div className="min-w-0 leading-tight">
-            <div className="text-[2rem] font-bold leading-none text-green-700">{issued.toLocaleString()}</div>
-            <div className="mt-1 text-xs font-medium text-green-700/80">ตัดสต๊อกแล้ว</div>
-          </div>
-        </Link>
-        <Link href={href("&issued=no")} className={`flex items-center gap-3 rounded-xl p-4 transition hover:brightness-95 ${pending > 0 ? "bg-amber-50 ring-1 ring-amber-200" : "bg-soft"}`}>
-          <span className={`grid h-12 w-12 shrink-0 place-items-center rounded-xl ${pending > 0 ? "bg-amber-600/10 text-amber-700" : "bg-ink/5 text-faint"}`}><Clock3 size={24} /></span>
-          <div className="min-w-0 leading-tight">
-            <div className={`text-[2rem] font-bold leading-none ${pending > 0 ? "text-amber-700" : "text-faint"}`}>{pending.toLocaleString()}</div>
-            <div className={`mt-1 text-xs font-medium ${pending > 0 ? "text-amber-700/80" : "text-faint"}`}>ค้างตัดสต๊อก</div>
-          </div>
-        </Link>
+    <div className="flex flex-col">
+      <div className={hasTable ? "flex flex-col gap-2" : "grid grid-cols-3 gap-3"}>
+        <StatTile href={href()} tone="brand" icon={<ClipboardList size={hasTable ? 18 : 24} />} value={orders} label="ออร์เดอร์วันนี้" compact={hasTable} />
+        <StatTile href={href("&issued=yes")} tone="green" icon={<PackageCheck size={hasTable ? 18 : 24} />} value={issued} label="ตัดสต๊อกแล้ว" compact={hasTable} />
+        <StatTile href={href("&issued=no")} tone={pending > 0 ? "amber" : "faint"} icon={<Clock3 size={hasTable ? 18 : 24} />} value={pending} label="ค้างตัดสต๊อก" compact={hasTable} />
       </div>
-      <div className="mt-3 flex items-center gap-3">
+      <div className="mt-2.5 flex items-center gap-3">
         <div className="h-2.5 flex-1 overflow-hidden rounded-full bg-soft">
           <div className="h-full rounded-full bg-green-500 transition-all" style={{ width: `${pct}%` }} />
         </div>
@@ -99,7 +111,7 @@ export default function TodayMonitor({ rows, showPlatforms = true }: { rows: Mon
       {orders === 0 ? (
         <p className="py-8 text-center text-sm text-muted">ยังไม่มีออร์เดอร์ของวันนี้</p>
       ) : hasTable ? (
-        <div className="grid gap-5 lg:grid-cols-[minmax(240px,1fr)_1.5fr]">
+        <div className="grid items-start gap-5 lg:grid-cols-[minmax(240px,1fr)_1.5fr]">
           {summary}
           {table}
         </div>
