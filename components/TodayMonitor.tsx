@@ -16,8 +16,8 @@ function StatTile({ href, tone, icon, value, label, compact }: {
 }) {
   const t = STAT_TONE[tone];
   return (
-    <Link href={href} className={`flex items-center gap-3 rounded-xl transition hover:brightness-95 ${t.bg} ${t.ring} ${compact ? "px-3.5 py-2" : "p-4"}`}>
-      <span className={`grid shrink-0 place-items-center rounded-xl ${t.chip} ${compact ? "h-9 w-9" : "h-12 w-12"}`}>{icon}</span>
+    <Link href={href} className={`flex items-center gap-2.5 rounded-xl transition hover:brightness-95 ${t.bg} ${t.ring} ${compact ? "px-3 py-1.5" : "p-4"}`}>
+      <span className={`grid shrink-0 place-items-center rounded-lg ${t.chip} ${compact ? "h-8 w-8" : "h-12 w-12"}`}>{icon}</span>
       {compact ? (
         <div className="flex min-w-0 items-baseline gap-2">
           <span className={`text-2xl font-bold leading-none ${t.num}`}>{value.toLocaleString()}</span>
@@ -50,12 +50,12 @@ export default function TodayMonitor({ rows, showPlatforms = true }: { rows: Mon
   // ── ซ้าย: สรุป 3 ตัว + progress ──
   const summary = (
     <div className="flex flex-col">
-      <div className={hasTable ? "flex flex-col gap-2" : "grid grid-cols-3 gap-3"}>
-        <StatTile href={href()} tone="brand" icon={<ClipboardList size={hasTable ? 18 : 24} />} value={orders} label="ออร์เดอร์วันนี้" compact={hasTable} />
-        <StatTile href={href("&issued=yes")} tone="green" icon={<PackageCheck size={hasTable ? 18 : 24} />} value={issued} label="ตัดสต๊อกแล้ว" compact={hasTable} />
-        <StatTile href={href("&issued=no")} tone={pending > 0 ? "amber" : "faint"} icon={<Clock3 size={hasTable ? 18 : 24} />} value={pending} label="ค้างตัดสต๊อก" compact={hasTable} />
+      <div className={hasTable ? "flex flex-col gap-1.5" : "grid grid-cols-3 gap-3"}>
+        <StatTile href={href()} tone="brand" icon={<ClipboardList size={hasTable ? 16 : 24} />} value={orders} label="ออร์เดอร์วันนี้" compact={hasTable} />
+        <StatTile href={href("&issued=yes")} tone="green" icon={<PackageCheck size={hasTable ? 16 : 24} />} value={issued} label="ตัดสต๊อกแล้ว" compact={hasTable} />
+        <StatTile href={href("&issued=no")} tone={pending > 0 ? "amber" : "faint"} icon={<Clock3 size={hasTable ? 16 : 24} />} value={pending} label="ค้างตัดสต๊อก" compact={hasTable} />
       </div>
-      <div className="mt-2.5 flex items-center gap-3">
+      <div className="mt-2 flex items-center gap-3">
         <div className="h-2.5 flex-1 overflow-hidden rounded-full bg-soft">
           <div className="h-full rounded-full bg-green-500 transition-all" style={{ width: `${pct}%` }} />
         </div>
