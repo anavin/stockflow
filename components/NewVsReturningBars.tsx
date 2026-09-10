@@ -29,7 +29,7 @@ export default function NewVsReturningBars({ rows }: { rows: NewReturnMonth[] })
       <div className="flex items-end justify-between gap-1.5">
         {rows.map((r) => {
           const tot = r.new_c + r.repeat_c + r.unknown_c;
-          const BAR = 150; // ความสูงพื้นที่แท่ง (px) — ใช้ px ตรงๆ กัน % ยุบเป็น 0
+          const BAR = 210; // ความสูงพื้นที่แท่ง (px) — ใช้ px ตรงๆ กัน % ยุบเป็น 0 · สูงพอเต็มกรอบ ≈ รายการกลิ่นซ้าย
           const px = (v: number) => `${(v / max) * BAR}px`;
           return (
             <div key={r.ym} className="flex flex-1 flex-col items-center gap-1">

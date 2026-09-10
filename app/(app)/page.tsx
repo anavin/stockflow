@@ -37,7 +37,7 @@ const getDashboardData = unstable_cache(
     ]);
     return { s, recent, top, trend, daily, fda, ship, overview, monitor, sizes, nvr, provinces };
   },
-  ["dashboard-data"],
+  ["dashboard-data-v2"],   // bump คีย์ = ล้าง Data Cache เก่าที่ค้างข้าม deploy (เช่น top ที่ยังมีถุงกระดาษ)
   { revalidate: 30, tags: ["dashboard"] },
 );
 
