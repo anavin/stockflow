@@ -905,8 +905,7 @@ export async function dashboardStats(platform?: string): Promise<DashStats> {
        select
          (select count(*)::int from orders where deleted_at is null${pc}${period}) as "ordersTotal",
          (select count(*)::int from orders where deleted_at is null${pc}
-            and ${bkkTodayRange("created_at")}
-            and abs((created_at at time zone 'Asia/Bangkok')::date - coalesce(doc_date, order_date)) <= 1) as "ordersToday",
+            and ${bkkTodayRange("created_at")}) as "ordersToday",
          (select count(*)::int from orders where deleted_at is null${pc} and to_char(coalesce(order_date, doc_date),'YYYY-MM') = to_char((now() at time zone 'Asia/Bangkok')::date,'YYYY-MM')) as "ordersMonth",
          (select count(*)::int from orders where deleted_at is null${pc}${period} and stock_issued_at is not null) as "issuedTotal",
          (select count(*)::int from orders where deleted_at is null${pc} and ${bkkTodayRange("stock_issued_at")}) as "issuedToday",
