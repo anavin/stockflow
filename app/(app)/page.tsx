@@ -2,12 +2,13 @@ import Link from "next/link";
 import { unstable_cache } from "next/cache";
 import { requireDashboard } from "@/lib/auth/require-user";
 import { resolvePlatform, platformBase, enabledPlatforms, platformColor } from "@/lib/config";
-import { dashboardStats, listOrders, topProducts, ordersTrend, dailyIssueStatus, monitorToday, sizeMix, newVsReturningByMonth, topProvinces, fdaExpirySummary, shipSummary, platformOverview } from "@/lib/queries";
+import { dashboardStats, listOrders, topProducts, ordersTrend, dailyIssueStatus, monitorToday, sizeMix, newVsReturningByMonth, topProvinces, fdaExpirySummary, shipSummary, platformOverview, listPendingShipment } from "@/lib/queries";
 import CreateOrderMenu from "@/components/CreateOrderMenu";
 import PlatformCompare from "@/components/PlatformCompare";
 import TodayMonitor from "@/components/TodayMonitor";
 import SizeMixDonut from "@/components/SizeMixDonut";
 import NewVsReturningBars from "@/components/NewVsReturningBars";
+import PendingShipPanel from "@/components/PendingShipPanel";
 import TopProvincesBar from "@/components/TopProvincesBar";
 import {
   ScanLine, Boxes, AlertTriangle, PackageCheck, ClipboardList,
@@ -21,7 +22,7 @@ export const dynamic = "force-dynamic";
 const getDashboardData = unstable_cache(
   async (pf: string | undefined) => {
     const multi = !pf && enabledPlatforms().length > 1;
-    const [s, recent, top, trend, daily, fda, ship, overview, monitor, sizes, nvr, provinces] = await Promise.all([
+    const [s, recent, top, trend, daily, fda, ship, overview, monitor, sizes, nvr, provinces, pending] = await Promise.all([
       dashboardStats(pf),
       listOrders({ platform: pf, limit: 20 }),
       topProducts(10),
@@ -34,10 +35,11 @@ const getDashboardData = unstable_cache(
       sizeMix(pf),
       newVsReturningByMonth(12),
       topProvinces(10, pf),
+      listPendingShipment(pf),
     ]);
-    return { s, recent, top, trend, daily, fda, ship, overview, monitor, sizes, nvr, provinces };
+    return { s, recent, top, trend, daily, fda, ship, overview, monitor, sizes, nvr, provinces, pending };
   },
-  ["dashboard-data-v2"],   // bump คีย์ = ล้าง Data Cache เก่าที่ค้างข้าม deploy (เช่น top ที่ยังมีถุงกระดาษ)
+  ["dashboard-data-v3"],   // bump คีย์ทุกครั้งที่ shape เปลี่ยน = ล้าง Data Cache เก่าข้าม deploy (v3: +pending ค้างส่ง)
   { revalidate: 30, tags: ["dashboard"] },
 );
 
@@ -45,7 +47,7 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
   const user = await requireDashboard();
   const pf = resolvePlatform((await searchParams).platform)?.code;   // undefined = ทุกแพลตฟอร์ม
   const base = pf ? platformBase(pf) : "/shopee";                    // ลิงก์ "ดูทั้งหมด"/สร้างใบเบิก
-  const { s, recent, top, trend, daily, fda, ship, overview, monitor, sizes, nvr, provinces } = await getDashboardData(pf);
+  const { s, recent, top, trend, daily, fda, ship, overview, monitor, sizes, nvr, provinces, pending } = await getDashboardData(pf);
   const platforms = enabledPlatforms();
   // หน้าหลักโชว์เฉพาะที่ "ใกล้จะหมดอายุ/ต้องต่ออายุ" (≤10/≤30 วัน) — ไม่โชว์ที่หมดอายุแล้ว (ดูที่หน้า /fda)
   const fdaAlert = fda.d10 + fda.d15 + fda.d30;
@@ -147,6 +149,11 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
       {/* ── Monitor วันนี้ (เฝ้าดูงานระหว่างวัน) ── */}
       <div className="mt-4">
         <TodayMonitor rows={monitor} showPlatforms={!pf} />
+      </div>
+
+      {/* ── ค้างส่ง (ตัดแล้ว รอส่ง) — งานที่ต้องเคลียร์ต่อจากตัดสต๊อก ── */}
+      <div className="mt-4">
+        <PendingShipPanel rows={pending} showPlatform={!pf} />
       </div>
 
       {/* ── highlights: fulfillment · stock health · trend ── */}
