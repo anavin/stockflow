@@ -112,7 +112,7 @@ export default function TodayMonitor({ rows, showPlatforms = true }: { rows: Mon
       {orders === 0 ? (
         <p className="py-8 text-center text-sm text-muted">ยังไม่มีออร์เดอร์ของวันนี้</p>
       ) : hasTable ? (
-        <div className="grid gap-5 lg:grid-cols-[minmax(240px,1fr)_1.5fr]">
+        <div className="grid gap-5 lg:grid-cols-[minmax(280px,340px)_minmax(0,1fr)]">
           {summary}
           {table}
         </div>
