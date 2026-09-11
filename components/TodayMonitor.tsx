@@ -50,7 +50,7 @@ export default function TodayMonitor({ rows, showPlatforms = true }: { rows: Mon
   // ── ซ้าย: สรุป 3 ตัว + progress ──
   const summary = (
     <div className="flex flex-col">
-      <div className={hasTable ? "flex flex-col gap-1.5" : "grid grid-cols-3 gap-3"}>
+      <div className={hasTable ? "grid grid-cols-3 gap-2.5 lg:flex lg:flex-col lg:gap-1.5" : "grid grid-cols-3 gap-3"}>
         <StatTile href={href()} tone="brand" icon={<ClipboardList size={hasTable ? 16 : 24} />} value={orders} label="ออร์เดอร์วันนี้" compact={hasTable} />
         <StatTile href={href("&issued=yes")} tone="green" icon={<PackageCheck size={hasTable ? 16 : 24} />} value={issued} label="ตัดสต๊อกแล้ว" compact={hasTable} />
         <StatTile href={href("&issued=no")} tone={pending > 0 ? "amber" : "faint"} icon={<Clock3 size={hasTable ? 16 : 24} />} value={pending} label="ค้างตัดสต๊อก" compact={hasTable} />
