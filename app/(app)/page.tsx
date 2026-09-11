@@ -75,11 +75,11 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
 
       {/* ── ตัวสลับแพลตฟอร์ม (ภาพรวมรวม/แยกแพลตฟอร์ม) ── */}
       {platforms.length > 1 && (
-        <div className="mb-5 flex w-fit items-center overflow-hidden rounded-lg border border-line text-sm">
-          <Link href="/" className={`px-3 py-1.5 font-medium transition-colors ${!pf ? "bg-brand text-white" : "bg-white text-muted hover:bg-soft"}`}>ทั้งหมด</Link>
+        <div className="mb-5 flex max-w-full items-center overflow-x-auto rounded-lg border border-line text-sm">
+          <Link href="/" className={`shrink-0 whitespace-nowrap px-3 py-1.5 font-medium transition-colors ${!pf ? "bg-brand text-white" : "bg-white text-muted hover:bg-soft"}`}>ทั้งหมด</Link>
           {platforms.map((p) => (
             <Link key={p.code} href={`/?platform=${p.code}`}
-              className={`flex items-center gap-1.5 border-l border-line px-3 py-1.5 font-medium transition-colors ${pf === p.code ? "text-white" : "bg-white text-muted hover:bg-soft"}`}
+              className={`flex shrink-0 items-center gap-1.5 whitespace-nowrap border-l border-line px-3 py-1.5 font-medium transition-colors ${pf === p.code ? "text-white" : "bg-white text-muted hover:bg-soft"}`}
               style={pf === p.code ? { backgroundColor: platformColor(p.code) } : undefined}>
               <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: pf === p.code ? "#ffffff" : platformColor(p.code) }} /> {p.name}
             </Link>
@@ -146,8 +146,9 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
         />
       </div>
 
-      {/* ── Monitor วันนี้ (2/3) + ค้างส่ง สถิติย่อ (1/3) ── */}
-      <div className="mt-4 grid items-stretch gap-4 lg:grid-cols-[2fr_1fr]">
+      {/* ── Monitor วันนี้ (2/3) + ค้างส่ง สถิติย่อ (1/3) ──
+          แตกที่ xl: ช่วง lg–xl Monitor เต็มกว้าง (grid ในตัวมันแตกที่ lg แล้ว) กันตารางถูกบีบซ้อน */}
+      <div className="mt-4 grid items-stretch gap-4 xl:grid-cols-[2fr_1fr]">
         <TodayMonitor rows={monitor} showPlatforms={!pf} />
         <PendingShipPanel rows={pending} />
       </div>
