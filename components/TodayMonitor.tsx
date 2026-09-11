@@ -68,16 +68,17 @@ export default function TodayMonitor({ rows, showPlatforms = true }: { rows: Mon
   const maxOrders = Math.max(...platforms.map((r) => r.orders), 1);
   const COLS = "grid grid-cols-[minmax(80px,140px)_1fr_repeat(3,2.75rem)] items-center gap-x-3";
   const table = (
-    <div className="lg:border-l lg:border-line lg:pl-5">
+    <div className="flex h-full flex-col lg:border-l lg:border-line lg:pl-5">
       <div className={`mb-1.5 ${COLS} px-1 text-[11px] font-medium text-muted`}>
         <span>แพลตฟอร์ม</span><span /><span className="text-right">ออร์เดอร์</span><span className="text-right">ตัดแล้ว</span><span className="text-right">ค้าง</span>
       </div>
-      <div className="space-y-0.5">
+      {/* แถวยืดเต็มความสูง (flex-1) — น้อยแพลตฟอร์มก็เต็มกรอบ มากก็หดลงถึง min */}
+      <div className="flex flex-1 flex-col gap-1">
         {platforms.map((r) => {
           const p = r.orders - r.issued;
           return (
             <Link key={r.platform} href={`/orders?platform=${r.platform}&today=${today}`}
-              className={`${COLS} rounded-md px-1 py-1.5 text-sm hover:bg-soft`}>
+              className={`${COLS} min-h-[2.25rem] flex-1 rounded-lg border border-line px-1.5 text-sm transition-colors hover:bg-soft`}>
               <span className="flex items-center gap-1.5 truncate">
                 <span className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: platformColor(r.platform) }} />
                 <span className="truncate text-ink">{platformName(r.platform)}</span>
@@ -111,7 +112,7 @@ export default function TodayMonitor({ rows, showPlatforms = true }: { rows: Mon
       {orders === 0 ? (
         <p className="py-8 text-center text-sm text-muted">ยังไม่มีออร์เดอร์ของวันนี้</p>
       ) : hasTable ? (
-        <div className="grid items-start gap-5 lg:grid-cols-[minmax(240px,1fr)_1.5fr]">
+        <div className="grid gap-5 lg:grid-cols-[minmax(240px,1fr)_1.5fr]">
           {summary}
           {table}
         </div>
