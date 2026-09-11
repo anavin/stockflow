@@ -146,14 +146,10 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
         />
       </div>
 
-      {/* ── Monitor วันนี้ (เฝ้าดูงานระหว่างวัน) ── */}
-      <div className="mt-4">
+      {/* ── Monitor วันนี้ (2/3) + ค้างส่ง สถิติย่อ (1/3) ── */}
+      <div className="mt-4 grid items-stretch gap-4 lg:grid-cols-[2fr_1fr]">
         <TodayMonitor rows={monitor} showPlatforms={!pf} />
-      </div>
-
-      {/* ── ค้างส่ง (ตัดแล้ว รอส่ง) — งานที่ต้องเคลียร์ต่อจากตัดสต๊อก ── */}
-      <div className="mt-4">
-        <PendingShipPanel rows={pending} showPlatform={!pf} />
+        <PendingShipPanel rows={pending} />
       </div>
 
       {/* ── highlights: fulfillment · stock health · trend ── */}

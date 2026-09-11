@@ -1,62 +1,60 @@
 import Link from "next/link";
 import { Truck, ArrowRight, PackageCheck } from "lucide-react";
 import type { PendingRow } from "@/lib/queries";
-import { platformColor, platformName } from "@/lib/config";
 
-/** ค้างส่ง = ตัดสต๊อกแล้วแต่ยังไม่ส่ง · เรียงค้างนานสุดก่อน (จาก listPendingShipment)
- *  โชว์งานที่ควรส่งก่อน + อายุการค้าง (ตัดมากี่วัน) เพื่อจับงานที่ค้างนานเกิน */
-export default function PendingShipPanel({ rows = [], showPlatform = true, limit = 8 }: { rows?: PendingRow[]; showPlatform?: boolean; limit?: number }) {
+/** ค้างส่ง = ตัดสต๊อกแล้วแต่ยังไม่ส่ง (listPendingShipment) — การ์ด "สถิติ" ย่อ วางข้าง Monitor
+ *  โชว์ยอดรวม + แยกตามอายุการค้าง (วันนี้ / 1–2 วัน / ≥3 วัน ด่วน) เพื่อจับงานค้างนาน */
+export default function PendingShipPanel({ rows = [] }: { rows?: PendingRow[] }) {
   const total = rows.length;
-  const shown = rows.slice(0, limit);
   const bkkToday = new Date(Date.now() + 7 * 3600 * 1000).toISOString().slice(0, 10);
   const ageDays = (iso: string | null) => {
     if (!iso) return 0;
     const d = new Date(new Date(iso).getTime() + 7 * 3600 * 1000).toISOString().slice(0, 10);
     return Math.max(0, Math.round((Date.parse(bkkToday) - Date.parse(d)) / 86400000));
   };
-  const ageTone = (n: number) =>
-    n >= 3 ? "bg-red-50 text-red-600 font-semibold" : n === 2 ? "bg-amber-50 text-amber-700" : n === 1 ? "bg-soft text-muted" : "text-faint";
+  let today = 0, d12 = 0, d3 = 0;
+  for (const r of rows) { const n = ageDays(r.issued_at); if (n >= 3) d3++; else if (n >= 1) d12++; else today++; }
 
   return (
-    <section className="card p-5">
-      <header className="mb-3 flex items-center justify-between gap-2">
-        <h2 className="flex items-center gap-2 text-sm font-semibold text-ink">
-          <Truck size={15} className="text-amber-600" /> ค้างส่ง <span className="text-xs font-normal text-faint">(ตัดสต๊อกแล้ว · รอส่ง)</span>
-          {total > 0 && <span className="rounded-full bg-amber-50 px-2 py-0.5 text-xs font-semibold text-amber-700">{total.toLocaleString()}</span>}
-        </h2>
-        <Link href="/ship" className="inline-flex items-center gap-1 text-xs font-medium text-brand-600 hover:underline">ไปหน้าส่ง <ArrowRight size={12} /></Link>
+    <section className="card flex h-full flex-col p-5">
+      <header className="flex items-center justify-between gap-2">
+        <h2 className="flex items-center gap-2 text-sm font-semibold text-ink"><Truck size={15} className="text-amber-600" /> ค้างส่ง</h2>
+        <Link href="/ship" className="inline-flex items-center gap-1 text-xs font-medium text-brand-600 hover:underline">ไปส่ง <ArrowRight size={12} /></Link>
       </header>
 
       {total === 0 ? (
-        <p className="flex items-center justify-center gap-2 py-6 text-center text-sm text-muted">
-          <PackageCheck size={16} className="text-green-600" /> ไม่มีงานค้างส่ง — ส่งครบแล้ว
-        </p>
+        <div className="flex flex-1 flex-col items-center justify-center gap-2 py-4 text-center">
+          <PackageCheck size={28} className="text-green-500" />
+          <p className="text-sm text-muted">ไม่มีงานค้างส่ง<br />ส่งครบแล้ว</p>
+        </div>
       ) : (
-        <>
-          <div className="grid grid-cols-1 gap-x-6 gap-y-0.5 lg:grid-cols-2">
-            {shown.map((r) => {
-              const n = ageDays(r.issued_at);
-              return (
-                <Link key={r.order_no} href={`/${(r.platform || "Shopee").toLowerCase()}/${encodeURIComponent(r.order_no)}`}
-                  className="flex items-center gap-2 rounded-md px-1.5 py-1.5 text-sm hover:bg-soft">
-                  {showPlatform && <span className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: platformColor(r.platform ?? undefined) }} title={platformName(r.platform ?? undefined)} />}
-                  <span className="w-24 shrink-0 truncate font-medium text-ink" title={r.order_no}>{r.order_no}</span>
-                  <span className="min-w-0 flex-1 truncate text-muted">{r.receiver || "—"}{r.province ? ` · ${r.province}` : ""}</span>
-                  <span className="shrink-0 text-xs text-faint">{r.item_count} ชิ้น</span>
-                  <span className={`shrink-0 rounded-full px-1.5 py-0.5 text-xs tabular-nums ${ageTone(n)}`}>
-                    {n === 0 ? "วันนี้" : `${n} วัน`}
-                  </span>
-                </Link>
-              );
-            })}
+        <div className="flex flex-1 flex-col justify-center">
+          {/* ยอดรวม */}
+          <Link href="/ship" className="group block">
+            <div className={`text-[2.5rem] font-bold leading-none ${d3 > 0 ? "text-amber-600" : "text-ink"}`}>{total.toLocaleString()}</div>
+            <div className="mt-1 text-xs font-medium text-muted">ตัดสต๊อกแล้ว · รอส่ง</div>
+          </Link>
+
+          {/* แยกตามอายุการค้าง */}
+          <div className="mt-4 space-y-2 border-t border-line pt-3">
+            <AgeRow color="bg-brand" label="วันนี้" n={today} />
+            <AgeRow color="bg-amber-400" label="ค้าง 1–2 วัน" n={d12} />
+            <AgeRow color="bg-red-500" label="ค้าง ≥3 วัน" n={d3} urgent />
           </div>
-          {total > shown.length && (
-            <div className="mt-2 border-t border-line pt-2 text-center">
-              <Link href="/ship" className="text-xs font-medium text-muted hover:text-brand-600">+ อีก {(total - shown.length).toLocaleString()} รายการ · ดูทั้งหมด</Link>
-            </div>
-          )}
-        </>
+        </div>
       )}
     </section>
+  );
+}
+
+function AgeRow({ color, label, n, urgent }: { color: string; label: string; n: number; urgent?: boolean }) {
+  return (
+    <div className="flex items-center justify-between text-sm">
+      <span className="inline-flex items-center gap-2 text-muted">
+        <span className={`h-2 w-2 rounded-full ${color}`} />
+        {label}{urgent && n > 0 && <span className="rounded bg-red-50 px-1 text-[10px] font-semibold text-red-600">ด่วน</span>}
+      </span>
+      <b className={`tabular-nums ${urgent && n > 0 ? "text-red-600" : "text-ink"}`}>{n.toLocaleString()}</b>
+    </div>
   );
 }
