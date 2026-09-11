@@ -50,7 +50,13 @@ export default function PlatformCompare({ rows, periodActive = false }: {
                   <td className="px-3 py-2.5 text-right tabular-nums text-muted">{r.issued.toLocaleString()}</td>
                   <td className="px-3 py-2.5 text-right tabular-nums text-muted">{r.shipped.toLocaleString()}</td>
                   <td className={`px-3 py-2.5 text-right tabular-nums ${r.pending > 0 ? "font-medium text-amber-600" : "text-muted"}`}>{r.pending.toLocaleString()}</td>
-                  <td className={`px-3 py-2.5 text-right tabular-nums ${r.returned > 0 ? "font-medium text-red-600" : "text-faint"}`}>{r.returned.toLocaleString()}</td>
+                  <td className="px-3 py-2.5 text-right tabular-nums">
+                    {r.returned > 0 ? (
+                      <Link href={`/returns/history?platform=${r.platform}`} className="font-medium text-red-600 hover:underline" title={`ดูรายการคืนของ ${platformName(r.platform)}`}>{r.returned.toLocaleString()}</Link>
+                    ) : (
+                      <span className="text-faint">0</span>
+                    )}
+                  </td>
                 </tr>
               );
             })}
