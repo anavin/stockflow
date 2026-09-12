@@ -40,7 +40,7 @@ const orderSchema = z.object({
   receiver: z.string().trim().optional().nullable(),
   phone: z.string().trim().optional().nullable(),
   customer_type: z.string().trim().optional().nullable(),
-  purchase_count: z.coerce.number().int().optional().nullable(),
+  purchase_count: z.preprocess((v) => (v === "" || v == null ? null : v), z.coerce.number().int().nullable()).optional(),   // "" → null (ไม่งั้น coerce เป็น 0 → ข้าม auto-compute)
   district: z.string().trim().optional().nullable(),
   subdistrict: z.string().trim().optional().nullable(),
   province: z.string().trim().optional().nullable(),

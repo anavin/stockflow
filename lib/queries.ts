@@ -1304,7 +1304,7 @@ export async function customerTypeSummary(platform?: string): Promise<CustomerTy
     return await q<CustomerTypeSummaryRow>(
       `select case when o.customer_type = 'ลูกค้าใหม่' then 'new' else 'repeat' end as grp,
               count(distinct o.order_no)::int as orders,
-              coalesce(sum(i.qty) filter (where i.product !~* 'try ?me' and i.product !~ 'ถุง'),0)::float8 as qty
+              coalesce(sum(i.qty) filter (where not coalesce(i.is_free, false) and i.product !~* 'try ?me' and i.product !~ 'ถุง'),0)::float8 as qty
        from orders o left join order_items i on i.order_no = o.order_no
        where o.deleted_at is null and o.customer_type in ('ลูกค้าใหม่','ลูกค้าเก่า')${pc}
        group by 1`, params);
@@ -1337,12 +1337,13 @@ export async function newVsReturningByMonth(months = 12, platform?: string): Pro
     const params: any[] = [String(months)];
     const pc = platform ? (params.push(platform), ` and platform = $${params.length}`) : "";
     return await q<NewReturnMonth>(
+      // btrim(customer_type) ให้ตรงกับ drill-down (unclassified) · cutoff ขอบเดือน ให้แต่ละเดือนเต็ม = ตรงกับ /orders from=วันที่1
       `select to_char(coalesce(order_date,doc_date),'YYYY-MM') as ym,
-              count(*) filter (where customer_type = 'ลูกค้าใหม่')::int as new_c,
-              count(*) filter (where customer_type = 'ลูกค้าเก่า')::int as repeat_c,
-              count(*) filter (where coalesce(customer_type,'') not in ('ลูกค้าใหม่','ลูกค้าเก่า'))::int as unknown_c
+              count(*) filter (where btrim(customer_type) = 'ลูกค้าใหม่')::int as new_c,
+              count(*) filter (where btrim(customer_type) = 'ลูกค้าเก่า')::int as repeat_c,
+              count(*) filter (where coalesce(btrim(customer_type),'') not in ('ลูกค้าใหม่','ลูกค้าเก่า'))::int as unknown_c
        from orders where deleted_at is null and coalesce(order_date,doc_date) is not null
-         and coalesce(order_date,doc_date) >= (current_date - ($1 || ' months')::interval)${pc}
+         and coalesce(order_date,doc_date) >= (date_trunc('month', current_date) - ($1 || ' months')::interval)${pc}
        group by 1 order by 1`, params);
   } catch { return []; }
 }
