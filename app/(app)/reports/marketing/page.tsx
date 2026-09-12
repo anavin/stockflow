@@ -1,12 +1,12 @@
 import { requireReports } from "@/lib/auth/require-user";
-import { sizeMix, newVsReturningByMonth, topProvinces, sizeByCustomerType, customerTypeSummary, customerIdCoverage } from "@/lib/queries";
+import { sizeMix, newVsReturningByMonth, topProvinces, sizeByCustomerType, customerTypeSummary, customerIdCoverage, topScents, topFreebies } from "@/lib/queries";
 import { enabledPlatforms, platformName, platformColor, resolvePlatform } from "@/lib/config";
 import ReportTabs from "@/components/ReportTabs";
 import { ReportHeader, Bar, SectionCard } from "@/components/ReportUI";
 import SizeByGroup from "@/components/SizeByGroup";
 import CustomerDataQuality from "@/components/CustomerDataQuality";
 import Link from "next/link";
-import { Megaphone, Ruler, UserPlus, MapPin, Layers, ShieldCheck } from "lucide-react";
+import { Megaphone, Ruler, UserPlus, MapPin, Layers, ShieldCheck, Sparkles, Gift } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 const ML = (ym: string) => { const [y, m] = ym.split("-"); return `${["ม.ค.","ก.พ.","มี.ค.","เม.ย.","พ.ค.","มิ.ย.","ก.ค.","ส.ค.","ก.ย.","ต.ค.","พ.ย.","ธ.ค."][+m - 1] || m} ${y.slice(2)}`; };
@@ -16,9 +16,11 @@ const monthRange = (ym: string): [string, string] => { const [y, m] = ym.split("
 export default async function MarketingReport({ searchParams }: { searchParams: Promise<{ platform?: string }> }) {
   await requireReports();
   const pf = resolvePlatform((await searchParams).platform)?.code;   // undefined = ภาพรวมทุกแพลตฟอร์ม
-  const [sizes, nvr, provinces, sizeGrp, custSum, idCov] = await Promise.all([sizeMix(pf), newVsReturningByMonth(12, pf), topProvinces(16, pf), sizeByCustomerType(pf), customerTypeSummary(pf), customerIdCoverage()]);
+  const [sizes, nvr, provinces, sizeGrp, custSum, idCov, scents, freebies] = await Promise.all([sizeMix(pf), newVsReturningByMonth(12, pf), topProvinces(16, pf), sizeByCustomerType(pf), customerTypeSummary(pf), customerIdCoverage(), topScents(15, pf), topFreebies(15, pf)]);
   const maxSize = Math.max(1, ...sizes.map((s) => s.qty));
   const maxProv = Math.max(1, ...provinces.map((p) => p.orders));
+  const maxScent = Math.max(1, ...scents.map((s) => s.qty));
+  const maxFree = Math.max(1, ...freebies.map((s) => s.qty));
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-6 md:px-8">
@@ -57,7 +59,7 @@ export default async function MarketingReport({ searchParams }: { searchParams: 
         {/* ลูกค้าใหม่ vs เก่า */}
         <SectionCard title="ลูกค้าใหม่ vs เก่า (รายเดือน)" icon={<UserPlus size={16} />} tone="green">
           <table className="w-full text-sm">
-            <thead className="bg-soft text-left text-xs text-muted"><tr><th className="px-5 py-2.5">เดือน</th><th className="px-3 py-2.5 text-right">ใหม่</th><th className="px-3 py-2.5 text-right">เก่า</th><th className="px-3 py-2.5 text-right">ไม่ระบุ</th><th className="px-3 py-2.5">สัดส่วนใหม่</th></tr></thead>
+            <thead className="bg-soft text-left text-xs text-muted"><tr><th className="px-5 py-2.5">เดือน</th><th className="px-3 py-2.5 text-right">ใหม่</th><th className="px-3 py-2.5 text-right">เก่า</th><th className="px-3 py-2.5 text-right">ไม่ระบุ</th><th className="px-3 py-2.5" title="% ลูกค้าใหม่ ในบรรดาที่จัดประเภทได้ = ใหม่ ÷ (ใหม่+เก่า) · ไม่รวม 'ไม่ระบุ' · สูง=ได้ลูกค้าใหม่เยอะ ฐานโต · ต่ำ=พึ่งลูกค้าเก่าซื้อซ้ำ">สัดส่วนใหม่ ⓘ</th></tr></thead>
             <tbody>
               {[...nvr].reverse().map((r) => { const tot = r.new_c + r.repeat_c; const pct = tot ? Math.round(r.new_c / tot * 100) : 0; return (
                 <tr key={r.ym} className="border-t border-line">
@@ -76,6 +78,37 @@ export default async function MarketingReport({ searchParams }: { searchParams: 
               {nvr.length === 0 && <tr><td colSpan={5} className="px-5 py-10 text-center text-muted">ยังไม่มีข้อมูล</td></tr>}
             </tbody>
           </table>
+        </SectionCard>
+      </div>
+
+      {/* กลิ่นขายดี (ตามตัวกรองแพลตฟอร์ม) + ของแถมยอดนิยม — ไม่นับของแถมในกลิ่นขายดี */}
+      <div className="mt-5 grid grid-cols-1 gap-5 lg:grid-cols-2">
+        <SectionCard title={`กลิ่นขายดี (Top ${scents.length})`} icon={<Sparkles size={16} />} tone="brand">
+          <div className="divide-y divide-line">
+            {scents.length === 0 && <p className="px-5 py-10 text-center text-muted">ยังไม่มีข้อมูล</p>}
+            {scents.map((s, i) => (
+              <div key={s.product} className="flex items-center gap-3 px-5 py-2">
+                <span className="w-5 shrink-0 text-right text-xs font-semibold text-faint">{i + 1}</span>
+                <span className="w-32 shrink-0 truncate text-sm text-ink" title={s.product}>{s.product}</span>
+                <div className="flex-1"><Bar pct={s.qty / maxScent * 100} tone="brand" /></div>
+                <span className="w-24 text-right text-xs tabular-nums text-muted">{s.qty.toLocaleString()} ชิ้น</span>
+              </div>
+            ))}
+          </div>
+        </SectionCard>
+
+        <SectionCard title={`ของแถมยอดนิยม (Top ${freebies.length})`} icon={<Gift size={16} />} tone="amber">
+          <div className="divide-y divide-line">
+            {freebies.length === 0 && <p className="px-5 py-10 text-center text-muted">ยังไม่มีของแถม</p>}
+            {freebies.map((s, i) => (
+              <div key={s.product} className="flex items-center gap-3 px-5 py-2">
+                <span className="w-5 shrink-0 text-right text-xs font-semibold text-faint">{i + 1}</span>
+                <span className="w-32 shrink-0 truncate text-sm text-ink" title={s.product}>{s.product}</span>
+                <div className="flex-1"><Bar pct={s.qty / maxFree * 100} tone="amber" /></div>
+                <span className="w-24 text-right text-xs tabular-nums text-muted">{s.qty.toLocaleString()} ชิ้น</span>
+              </div>
+            ))}
+          </div>
         </SectionCard>
       </div>
 

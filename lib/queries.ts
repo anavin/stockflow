@@ -938,6 +938,7 @@ export async function topProducts(limit = 6): Promise<TopProduct[]> {
       `select oi.product, sum(oi.qty)::float8 as qty
        from order_items oi join orders o on o.order_no = oi.order_no
        where o.deleted_at is null and coalesce(oi.product,'') <> ''
+         and not coalesce(oi.is_free, false)   -- ไม่นับของแถม (ขายดีต้องเป็นยอดขายจริง)
          and oi.product !~ 'ถุง'        -- ตัดถุงกระดาษ (ไม่ใช่กลิ่น)
          and oi.product !~* 'try ?me'   -- ตัดเทสเตอร์ (ไม่ใช่กลิ่น · ให้ตรงกับกราฟอื่น)
        group by oi.product order by qty desc limit ${lim}`,
@@ -1179,7 +1180,21 @@ export async function topScents(limit = 20, platform?: string): Promise<TopScent
     return await q<TopScentRow>(
       `select i.product, sum(i.qty)::float8 as qty, count(distinct i.order_no)::int as orders
        from order_items i join orders o on o.order_no = i.order_no
-       where o.deleted_at is null and coalesce(i.product,'') <> ''${pc}
+       where o.deleted_at is null and coalesce(i.product,'') <> ''
+         and not coalesce(i.is_free, false) and i.product !~ 'ถุง' and i.product !~* 'try ?me'${pc}
+       group by i.product order by qty desc limit ${Math.min(limit, 50)}`, params);
+  } catch { return []; }
+}
+
+/** ของแถม (free) ยอดนิยม Top N — นับเฉพาะ is_free (รวมถุง/เทสเตอร์ที่แถม) · กรองแพลตฟอร์มได้ */
+export async function topFreebies(limit = 20, platform?: string): Promise<TopScentRow[]> {
+  try {
+    const params: any[] = [];
+    const pc = platform ? (params.push(platform), ` and o.platform = $${params.length}`) : "";
+    return await q<TopScentRow>(
+      `select i.product, sum(i.qty)::float8 as qty, count(distinct i.order_no)::int as orders
+       from order_items i join orders o on o.order_no = i.order_no
+       where o.deleted_at is null and coalesce(i.is_free, false) = true and coalesce(i.product,'') <> ''${pc}
        group by i.product order by qty desc limit ${Math.min(limit, 50)}`, params);
   } catch { return []; }
 }
@@ -1258,7 +1273,7 @@ export async function sizeMix(platform?: string): Promise<SizeMixRow[]> {
     return await q<SizeMixRow>(
       `select coalesce(nullif(btrim(i.size),''),'(ไม่ระบุ)') as size, sum(i.qty)::float8 as qty, count(distinct i.order_no)::int as orders
        from order_items i join orders o on o.order_no = i.order_no
-       where o.deleted_at is null and coalesce(i.product,'') <> '' and i.product !~* 'try ?me' and i.product !~ 'ถุง'${pc}
+       where o.deleted_at is null and coalesce(i.product,'') <> '' and not coalesce(i.is_free, false) and i.product !~* 'try ?me' and i.product !~ 'ถุง'${pc}
        group by 1 order by qty desc`, params);
   } catch { return []; }
 }
@@ -1273,7 +1288,7 @@ export async function sizeByCustomerType(platform?: string): Promise<SizeByGroup
               coalesce(nullif(btrim(i.size),''),'(ไม่ระบุ)') as size,
               sum(i.qty)::float8 as qty
        from order_items i join orders o on o.order_no = i.order_no
-       where o.deleted_at is null and coalesce(i.product,'') <> ''
+       where o.deleted_at is null and coalesce(i.product,'') <> '' and not coalesce(i.is_free, false)
          and i.product !~* 'try ?me' and i.product !~ 'ถุง'
          and o.customer_type in ('ลูกค้าใหม่','ลูกค้าเก่า')${pc}
        group by 1, 2`, params);

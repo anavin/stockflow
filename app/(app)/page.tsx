@@ -39,7 +39,7 @@ const getDashboardData = unstable_cache(
     ]);
     return { s, recent, top, trend, daily, fda, ship, overview, monitor, sizes, nvr, provinces, pending };
   },
-  ["dashboard-data-v3"],   // bump คีย์ทุกครั้งที่ shape เปลี่ยน = ล้าง Data Cache เก่าข้าม deploy (v3: +pending ค้างส่ง)
+  ["dashboard-data-v4"],   // bump คีย์เมื่อ shape/นิยามเปลี่ยน = ล้าง Data Cache เก่าข้าม deploy (v4: กลิ่นขายดีตัดของแถม)
   { revalidate: 30, tags: ["dashboard"] },
 );
 
