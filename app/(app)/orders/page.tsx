@@ -12,19 +12,20 @@ const PAGE_SIZE = 50;
 // รายการออร์เดอร์ "รวมทุกแพลตฟอร์ม" — ปลายทางของ drill-down การ์ดรายวันบนแดชบอร์ดโหมดรวม + มีฟิลเตอร์ของตัวเอง
 // (หน้า /[platform] ดูได้ทีละแพลตฟอร์ม · หน้านี้กรองแพลตฟอร์ม/ค้นหา/สถานะ/ช่วงวันที่ ได้ในที่เดียว)
 export default async function AllOrdersPage({ searchParams }: {
-  searchParams: Promise<{ platform?: string; from?: string; to?: string; today?: string; issued?: string; shipped?: string; q?: string; page?: string }>;
+  searchParams: Promise<{ platform?: string; from?: string; to?: string; today?: string; unclassified?: string; issued?: string; shipped?: string; q?: string; page?: string }>;
 }) {
   await requireDashboard();
-  const { platform, from, to, today, issued, shipped, q, page } = await searchParams;
+  const { platform, from, to, today, unclassified, issued, shipped, q, page } = await searchParams;
   const pf = resolvePlatform(platform)?.code;   // undefined = ทุกแพลตฟอร์ม
   const iss = issued === "yes" || issued === "no" ? issued : undefined;
   const shp = shipped === "yes" || shipped === "no" ? shipped : undefined;
+  const unc = unclassified === "1";
   const pageNum = Math.max(1, Number(page) || 1);
   const offset = (pageNum - 1) * PAGE_SIZE;
 
   const [orders, total] = await Promise.all([
-    listOrders({ platform: pf, search: q, from, to, today, issued: iss, shipped: shp, limit: PAGE_SIZE, offset }),
-    countOrders({ platform: pf, search: q, from, to, today, issued: iss, shipped: shp }),
+    listOrders({ platform: pf, search: q, from, to, today, unclassified: unc, issued: iss, shipped: shp, limit: PAGE_SIZE, offset }),
+    countOrders({ platform: pf, search: q, from, to, today, unclassified: unc, issued: iss, shipped: shp }),
   ]);
 
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
@@ -34,13 +35,14 @@ export default async function AllOrdersPage({ searchParams }: {
   const fmtDay = (d?: string | null) => (d ? new Date(d + "T00:00:00").toLocaleDateString("th-TH", { day: "numeric", month: "short", year: "2-digit" }) : "");
   const dateLabel = today ? `วันนี้ (รวมที่นำเข้าวันนี้)` : from && to ? (from === to ? fmtDay(from) : `${fmtDay(from)}–${fmtDay(to)}`) : from ? `ตั้งแต่ ${fmtDay(from)}` : to ? `ถึง ${fmtDay(to)}` : "";
   const statusLabel = iss === "no" ? "รอตัดสต๊อก" : iss === "yes" ? "ตัดสต๊อกแล้ว" : shp === "no" ? "ค้างส่ง" : shp === "yes" ? "ส่งแล้ว" : "";
-  const summary = [pf ? platformName(pf) : "", dateLabel, statusLabel].filter(Boolean).join(" · ") || "ทั้งหมด";
+  const summary = [pf ? platformName(pf) : "", dateLabel, unc ? "ยังไม่จัดลูกค้า (ไม่ระบุ)" : "", statusLabel].filter(Boolean).join(" · ") || "ทั้งหมด";
 
   // คง query ปัจจุบันไว้ตอนเปลี่ยนหน้า
   const qs = (p: number) => {
     const sp = new URLSearchParams();
     if (q) sp.set("q", q); if (pf) sp.set("platform", pf); if (from) sp.set("from", from); if (to) sp.set("to", to);
     if (today) sp.set("today", today);
+    if (unc) sp.set("unclassified", "1");
     if (iss) sp.set("issued", iss); if (shp) sp.set("shipped", shp);
     if (p > 1) sp.set("page", String(p));
     const s = sp.toString();

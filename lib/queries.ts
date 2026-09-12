@@ -684,11 +684,13 @@ export const getProvinces = unstable_cache(
 );
 
 // ---- orders ----------------------------------------------------------------
-export async function listOrders(opts: { platform?: string; search?: string; month?: string; from?: string; to?: string; today?: string; issued?: "yes" | "no"; shipped?: "yes" | "no"; limit?: number; offset?: number } = {}): Promise<OrderRow[]> {
+export async function listOrders(opts: { platform?: string; search?: string; month?: string; from?: string; to?: string; today?: string; unclassified?: boolean; issued?: "yes" | "no"; shipped?: "yes" | "no"; limit?: number; offset?: number } = {}): Promise<OrderRow[]> {
   const where: string[] = ["o.deleted_at is null"];
   const params: any[] = [];
   if (opts.platform) { params.push(opts.platform); where.push(`o.platform = $${params.length}`); }
   if (opts.month) { params.push(opts.month); where.push(`o.month_label = $${params.length}`); }
+  // "ไม่ระบุ" = ยังไม่ได้จัดประเภทลูกค้า (customer_type ไม่ใช่ ใหม่/เก่า) — ตรงกับ unknown_c ในกราฟ
+  if (opts.unclassified) where.push(`coalesce(btrim(o.customer_type),'') not in ('ลูกค้าใหม่','ลูกค้าเก่า')`);
   // Monitor "วันนี้" basis: order_date=today OR imported/entered today (matches monitorToday)
   if (opts.today) {
     params.push(opts.today);
@@ -722,11 +724,12 @@ export async function listOrders(opts: { platform?: string; search?: string; mon
   return rows.map(normOrder);
 }
 
-export async function countOrders(opts: { platform?: string; search?: string; month?: string; from?: string; to?: string; today?: string; issued?: "yes" | "no"; shipped?: "yes" | "no" } = {}): Promise<number> {
+export async function countOrders(opts: { platform?: string; search?: string; month?: string; from?: string; to?: string; today?: string; unclassified?: boolean; issued?: "yes" | "no"; shipped?: "yes" | "no" } = {}): Promise<number> {
   const where: string[] = ["deleted_at is null"];
   const params: any[] = [];
   if (opts.platform) { params.push(opts.platform); where.push(`platform = $${params.length}`); }
   if (opts.month) { params.push(opts.month); where.push(`month_label = $${params.length}`); }
+  if (opts.unclassified) where.push(`coalesce(btrim(customer_type),'') not in ('ลูกค้าใหม่','ลูกค้าเก่า')`);
   if (opts.today) {
     params.push(opts.today);
     const d = `$${params.length}`;
@@ -1303,9 +1306,11 @@ export async function customerIdCoverage(): Promise<IdCoverageRow[]> {
               count(*)::int as total,
               count(*) filter (where coalesce(btrim(username),'') <> '')::int as has_user,
               count(*) filter (where coalesce(btrim(username),'') = ''
-                                 and nullif(regexp_replace(coalesce(phone,''),'[^0-9]','','g'),'') is not null)::int as phone_only,
+                                 and (nullif(regexp_replace(coalesce(phone,''),'[^0-9]','','g'),'') is not null
+                                      or coalesce(btrim(receiver),'') <> ''))::int as phone_only,
               count(*) filter (where coalesce(btrim(username),'') = ''
-                                 and nullif(regexp_replace(coalesce(phone,''),'[^0-9]','','g'),'') is null)::int as neither
+                                 and nullif(regexp_replace(coalesce(phone,''),'[^0-9]','','g'),'') is null
+                                 and coalesce(btrim(receiver),'') = '')::int as neither
        from orders where deleted_at is null
        group by 1 order by total desc`);
   } catch { return []; }

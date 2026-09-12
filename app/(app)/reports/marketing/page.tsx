@@ -10,6 +10,8 @@ import { Megaphone, Ruler, UserPlus, MapPin, Layers, ShieldCheck } from "lucide-
 
 export const dynamic = "force-dynamic";
 const ML = (ym: string) => { const [y, m] = ym.split("-"); return `${["ม.ค.","ก.พ.","มี.ค.","เม.ย.","พ.ค.","มิ.ย.","ก.ค.","ส.ค.","ก.ย.","ต.ค.","พ.ย.","ธ.ค."][+m - 1] || m} ${y.slice(2)}`; };
+// ช่วงวันของเดือน YYYY-MM → [วันแรก, วันสุดท้าย] สำหรับลิงก์ drill-down /orders
+const monthRange = (ym: string): [string, string] => { const [y, m] = ym.split("-").map(Number); const end = new Date(y, m, 0).getDate(); return [`${ym}-01`, `${ym}-${String(end).padStart(2, "0")}`]; };
 
 export default async function MarketingReport({ searchParams }: { searchParams: Promise<{ platform?: string }> }) {
   await requireReports();
@@ -62,7 +64,12 @@ export default async function MarketingReport({ searchParams }: { searchParams: 
                   <td className="px-5 py-2 font-medium text-ink">{ML(r.ym)}</td>
                   <td className="px-3 py-2 text-right tabular-nums text-green-700">{r.new_c}</td>
                   <td className="px-3 py-2 text-right tabular-nums text-muted">{r.repeat_c}</td>
-                  <td className={`px-3 py-2 text-right tabular-nums ${r.unknown_c > 0 ? "text-amber-600" : "text-faint"}`} title="มีออร์เดอร์แต่ไม่ได้ระบุ/จับคู่ลูกค้า (มักไม่มี username ตอนนำเข้า)">{r.unknown_c}</td>
+                  <td className="px-3 py-2 text-right tabular-nums">
+                    {r.unknown_c > 0 ? (() => { const [f, t] = monthRange(r.ym); return (
+                      <Link href={`/orders?from=${f}&to=${t}&unclassified=1${pf ? `&platform=${pf}` : ""}`}
+                        className="font-medium text-amber-600 hover:underline" title="ดู/แก้ออร์เดอร์ที่ยังไม่จัดลูกค้าของเดือนนี้">{r.unknown_c}</Link>
+                    ); })() : <span className="text-faint">0</span>}
+                  </td>
                   <td className="px-3 py-2"><div className="flex items-center gap-2"><div className="w-20"><Bar pct={pct} tone="green" /></div><span className="text-xs text-muted">{pct}%</span></div></td>
                 </tr>
               ); })}

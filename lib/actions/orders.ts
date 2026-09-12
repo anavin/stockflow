@@ -167,12 +167,12 @@ export async function saveOrder(input: OrderInput, opts?: { silent?: boolean }):
       // นับจากจำนวนออเดอร์เดิมของลูกค้าเดียวกัน — key = username ถ้าว่างใช้เบอร์โทร (phone-fallback สำหรับ Lazada)
       let custType = (o.customer_type || "").trim();
       let purchaseCount: number | null = o.purchase_count ?? null;
-      const ckey = (o.username || "").trim().toLowerCase() || (o.phone || "").replace(/[^0-9]/g, "");
+      const ckey = (o.username || "").trim().toLowerCase() || (o.phone || "").replace(/[^0-9]/g, "") || (o.receiver || "").trim().toLowerCase().replace(/\s+/g, " ");
       if ((!custType || purchaseCount == null) && ckey) {
         const [c] = await run<{ c: number }>(
           `select count(*)::int as c from orders
             where deleted_at is null and order_no <> $1
-              and coalesce(nullif(lower(btrim(username)),''), nullif(regexp_replace(coalesce(phone,''),'[^0-9]','','g'),'')) = $2`,
+              and coalesce(nullif(lower(btrim(username)),''), nullif(regexp_replace(coalesce(phone,''),'[^0-9]','','g'),''), nullif(lower(regexp_replace(btrim(coalesce(receiver,'')),'\\s+',' ','g')),'')) = $2`,
           [o.order_no, ckey]);
         const n = (c?.c ?? 0) + 1;
         if (purchaseCount == null) purchaseCount = n;
@@ -550,7 +550,7 @@ export async function bulkSaveOrders(orders: OrderWithItems[]): Promise<{ ok: bo
   // คำนวณ "ซื้อครั้งที่" ใหม่เสมอ — จับคู่ลูกค้าด้วย key = username ถ้าว่างใช้เบอร์โทร (phone-fallback สำหรับ Lazada):
   //   ซื้อครั้งที่ = จำนวนที่เคยซื้อใน DB (ประวัติเดิม) + ลำดับในไฟล์นี้ (เรียงวันที่→Order No.)
   //   → ลูกค้าซื้อหลายออเดอร์วันเดียวกัน จะนับต่อเนื่อง (เช่น เก่า 4 ครั้ง → ใบนี้ 5, ใบถัดไป 6)
-  const nk = (o: OrderWithItems) => (o.username || "").trim().toLowerCase() || (o.phone || "").replace(/[^0-9]/g, "");
+  const nk = (o: OrderWithItems) => (o.username || "").trim().toLowerCase() || (o.phone || "").replace(/[^0-9]/g, "") || (o.receiver || "").trim().toLowerCase().replace(/\s+/g, " ");
   const groups = new Map<string, OrderWithItems[]>();
   for (const o of orders) {
     const k = nk(o);
@@ -569,7 +569,7 @@ export async function bulkSaveOrders(orders: OrderWithItems[]): Promise<{ ok: bo
       try {
         prior = await q<{ d: string; on: string }>(
           `select coalesce(to_char(order_date,'YYYY-MM-DD'), to_char(doc_date,'YYYY-MM-DD'), '') as d, order_no as on
-             from orders where coalesce(nullif(lower(btrim(username)),''), nullif(regexp_replace(coalesce(phone,''),'[^0-9]','','g'),'')) = $1
+             from orders where coalesce(nullif(lower(btrim(username)),''), nullif(regexp_replace(coalesce(phone,''),'[^0-9]','','g'),''), nullif(lower(regexp_replace(btrim(coalesce(receiver,'')),'\\s+',' ','g')),'')) = $1
                and deleted_at is null and order_no <> all($2::text[])`,
           [k, ons]);
       } catch { prior = []; }
@@ -710,10 +710,12 @@ export async function recomputeCustomerTypes(mode: "fill" | "all" = "fill"): Pro
       `with ranked as (
          select order_no,
                 coalesce(nullif(lower(btrim(username)), ''),
-                         nullif(regexp_replace(coalesce(phone, ''), '[^0-9]', '', 'g'), '')) as ckey,
+                         nullif(regexp_replace(coalesce(phone, ''), '[^0-9]', '', 'g'), ''),
+                         nullif(lower(regexp_replace(btrim(coalesce(receiver, '')), '\\s+', ' ', 'g')), '')) as ckey,
                 row_number() over (
                   partition by coalesce(nullif(lower(btrim(username)), ''),
-                                        nullif(regexp_replace(coalesce(phone, ''), '[^0-9]', '', 'g'), ''))
+                                        nullif(regexp_replace(coalesce(phone, ''), '[^0-9]', '', 'g'), ''),
+                                        nullif(lower(regexp_replace(btrim(coalesce(receiver, '')), '\\s+', ' ', 'g')), ''))
                   order by coalesce(order_date, doc_date) asc nulls last, order_no asc
                 ) as n
          from orders
