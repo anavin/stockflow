@@ -1,12 +1,13 @@
 import { requireAdmin } from "@/lib/auth/require-user";
-import { sizeMix, newVsReturningByMonth, topProvinces, sizeByCustomerType, customerTypeSummary } from "@/lib/queries";
+import { sizeMix, newVsReturningByMonth, topProvinces, sizeByCustomerType, customerTypeSummary, customerIdCoverage } from "@/lib/queries";
 import { enabledPlatforms, platformName, platformColor, resolvePlatform } from "@/lib/config";
 import ReportTabs from "@/components/ReportTabs";
 import { ReportHeader, Bar, SectionCard } from "@/components/ReportUI";
 import SizeByGroup from "@/components/SizeByGroup";
+import CustomerDataQuality from "@/components/CustomerDataQuality";
 import RecomputeCustomerBtn from "@/components/RecomputeCustomerBtn";
 import Link from "next/link";
-import { Megaphone, Ruler, UserPlus, MapPin, Layers } from "lucide-react";
+import { Megaphone, Ruler, UserPlus, MapPin, Layers, ShieldCheck } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 const ML = (ym: string) => { const [y, m] = ym.split("-"); return `${["ม.ค.","ก.พ.","มี.ค.","เม.ย.","พ.ค.","มิ.ย.","ก.ค.","ส.ค.","ก.ย.","ต.ค.","พ.ย.","ธ.ค."][+m - 1] || m} ${y.slice(2)}`; };
@@ -14,7 +15,7 @@ const ML = (ym: string) => { const [y, m] = ym.split("-"); return `${["ม.ค."
 export default async function MarketingReport({ searchParams }: { searchParams: Promise<{ platform?: string }> }) {
   await requireAdmin();
   const pf = resolvePlatform((await searchParams).platform)?.code;   // undefined = ภาพรวมทุกแพลตฟอร์ม
-  const [sizes, nvr, provinces, sizeGrp, custSum] = await Promise.all([sizeMix(pf), newVsReturningByMonth(12, pf), topProvinces(15, pf), sizeByCustomerType(pf), customerTypeSummary(pf)]);
+  const [sizes, nvr, provinces, sizeGrp, custSum, idCov] = await Promise.all([sizeMix(pf), newVsReturningByMonth(12, pf), topProvinces(15, pf), sizeByCustomerType(pf), customerTypeSummary(pf), customerIdCoverage()]);
   const maxSize = Math.max(1, ...sizes.map((s) => s.qty));
   const maxProv = Math.max(1, ...provinces.map((p) => p.orders));
 
@@ -71,6 +72,11 @@ export default async function MarketingReport({ searchParams }: { searchParams: 
           </table>
         </SectionCard>
       </div>
+
+      {/* ความครบของข้อมูลลูกค้า (ทำไมบางแพลตฟอร์มจัดใหม่/เก่าไม่ได้) — โชว์ทุกแพลตฟอร์ม ไม่ขึ้นกับตัวกรอง */}
+      <SectionCard title="ความครบของข้อมูลลูกค้า (แยกแพลตฟอร์ม)" icon={<ShieldCheck size={16} />} tone="amber" className="mt-5">
+        <CustomerDataQuality rows={idCov} />
+      </SectionCard>
 
       {/* ลูกค้าแต่ละกลุ่มซื้อขนาดไหน */}
       <SectionCard title="ขนาดที่ซื้อ: ลูกค้าใหม่ vs เก่า" icon={<Layers size={16} />} tone="green" className="mt-5">

@@ -1293,6 +1293,24 @@ export async function customerTypeSummary(platform?: string): Promise<CustomerTy
   } catch { return []; }
 }
 
+// ── ความครบของตัวระบุลูกค้า ต่อแพลตฟอร์ม (ทำไมจัดใหม่/เก่าไม่ได้) ──
+//   has_user = มี username · phone_only = ไม่มี username แต่มีเบอร์ (จัดได้ด้วย fallback) · neither = ไม่มีเลย (จัดไม่ได้)
+export type IdCoverageRow = { platform: string; total: number; has_user: number; phone_only: number; neither: number };
+export async function customerIdCoverage(): Promise<IdCoverageRow[]> {
+  try {
+    return await q<IdCoverageRow>(
+      `select coalesce(platform,'Shopee') as platform,
+              count(*)::int as total,
+              count(*) filter (where coalesce(btrim(username),'') <> '')::int as has_user,
+              count(*) filter (where coalesce(btrim(username),'') = ''
+                                 and nullif(regexp_replace(coalesce(phone,''),'[^0-9]','','g'),'') is not null)::int as phone_only,
+              count(*) filter (where coalesce(btrim(username),'') = ''
+                                 and nullif(regexp_replace(coalesce(phone,''),'[^0-9]','','g'),'') is null)::int as neither
+       from orders where deleted_at is null
+       group by 1 order by total desc`);
+  } catch { return []; }
+}
+
 export type NewReturnMonth = { ym: string; new_c: number; repeat_c: number; unknown_c: number };
 export async function newVsReturningByMonth(months = 12, platform?: string): Promise<NewReturnMonth[]> {
   try {
