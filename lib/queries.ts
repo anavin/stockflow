@@ -1259,17 +1259,53 @@ export async function sizeMix(platform?: string): Promise<SizeMixRow[]> {
        group by 1 order by qty desc`, params);
   } catch { return []; }
 }
-export type NewReturnMonth = { ym: string; new_c: number; repeat_c: number; unknown_c: number };
-export async function newVsReturningByMonth(months = 12): Promise<NewReturnMonth[]> {
+// ── ขนาดที่ซื้อ แยกตามกลุ่มลูกค้า (ใหม่/เก่า) — ตอบ "ลูกค้าแต่ละกลุ่มซื้อขนาดไหน" ──
+export type SizeByGroupRow = { grp: "new" | "repeat"; size: string; qty: number };
+export async function sizeByCustomerType(platform?: string): Promise<SizeByGroupRow[]> {
   try {
+    const params: any[] = [];
+    const pc = platform ? (params.push(platform), ` and o.platform = $${params.length}`) : "";
+    return await q<SizeByGroupRow>(
+      `select case when o.customer_type = 'ลูกค้าใหม่' then 'new' else 'repeat' end as grp,
+              coalesce(nullif(btrim(i.size),''),'(ไม่ระบุ)') as size,
+              sum(i.qty)::float8 as qty
+       from order_items i join orders o on o.order_no = i.order_no
+       where o.deleted_at is null and coalesce(i.product,'') <> ''
+         and i.product !~* 'try ?me' and i.product !~ 'ถุง'
+         and o.customer_type in ('ลูกค้าใหม่','ลูกค้าเก่า')${pc}
+       group by 1, 2`, params);
+  } catch { return []; }
+}
+
+// สรุปพฤติกรรมต่อกลุ่มลูกค้า: จำนวนออร์เดอร์ + ชิ้นรวม (ไว้คิดชิ้น/ออร์เดอร์)
+export type CustomerTypeSummaryRow = { grp: "new" | "repeat"; orders: number; qty: number };
+export async function customerTypeSummary(platform?: string): Promise<CustomerTypeSummaryRow[]> {
+  try {
+    const params: any[] = [];
+    const pc = platform ? (params.push(platform), ` and o.platform = $${params.length}`) : "";
+    return await q<CustomerTypeSummaryRow>(
+      `select case when o.customer_type = 'ลูกค้าใหม่' then 'new' else 'repeat' end as grp,
+              count(distinct o.order_no)::int as orders,
+              coalesce(sum(i.qty) filter (where i.product !~* 'try ?me' and i.product !~ 'ถุง'),0)::float8 as qty
+       from orders o left join order_items i on i.order_no = o.order_no
+       where o.deleted_at is null and o.customer_type in ('ลูกค้าใหม่','ลูกค้าเก่า')${pc}
+       group by 1`, params);
+  } catch { return []; }
+}
+
+export type NewReturnMonth = { ym: string; new_c: number; repeat_c: number; unknown_c: number };
+export async function newVsReturningByMonth(months = 12, platform?: string): Promise<NewReturnMonth[]> {
+  try {
+    const params: any[] = [String(months)];
+    const pc = platform ? (params.push(platform), ` and platform = $${params.length}`) : "";
     return await q<NewReturnMonth>(
       `select to_char(coalesce(order_date,doc_date),'YYYY-MM') as ym,
               count(*) filter (where customer_type = 'ลูกค้าใหม่')::int as new_c,
               count(*) filter (where customer_type = 'ลูกค้าเก่า')::int as repeat_c,
               count(*) filter (where coalesce(customer_type,'') not in ('ลูกค้าใหม่','ลูกค้าเก่า'))::int as unknown_c
        from orders where deleted_at is null and coalesce(order_date,doc_date) is not null
-         and coalesce(order_date,doc_date) >= (current_date - ($1 || ' months')::interval)
-       group by 1 order by 1`, [String(months)]);
+         and coalesce(order_date,doc_date) >= (current_date - ($1 || ' months')::interval)${pc}
+       group by 1 order by 1`, params);
   } catch { return []; }
 }
 export type ProvinceRow = { province: string; orders: number; qty: number };

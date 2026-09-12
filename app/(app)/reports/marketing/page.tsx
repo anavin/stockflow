@@ -1,22 +1,40 @@
 import { requireAdmin } from "@/lib/auth/require-user";
-import { sizeMix, newVsReturningByMonth, topProvinces } from "@/lib/queries";
+import { sizeMix, newVsReturningByMonth, topProvinces, sizeByCustomerType, customerTypeSummary } from "@/lib/queries";
+import { enabledPlatforms, platformName, platformColor, resolvePlatform } from "@/lib/config";
 import ReportTabs from "@/components/ReportTabs";
 import { ReportHeader, Bar, SectionCard } from "@/components/ReportUI";
-import { Megaphone, Ruler, UserPlus, MapPin } from "lucide-react";
+import SizeByGroup from "@/components/SizeByGroup";
+import Link from "next/link";
+import { Megaphone, Ruler, UserPlus, MapPin, Layers } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 const ML = (ym: string) => { const [y, m] = ym.split("-"); return `${["ม.ค.","ก.พ.","มี.ค.","เม.ย.","พ.ค.","มิ.ย.","ก.ค.","ส.ค.","ก.ย.","ต.ค.","พ.ย.","ธ.ค."][+m - 1] || m} ${y.slice(2)}`; };
 
-export default async function MarketingReport() {
+export default async function MarketingReport({ searchParams }: { searchParams: Promise<{ platform?: string }> }) {
   await requireAdmin();
-  const [sizes, nvr, provinces] = await Promise.all([sizeMix(), newVsReturningByMonth(12), topProvinces(15)]);
+  const pf = resolvePlatform((await searchParams).platform)?.code;   // undefined = ภาพรวมทุกแพลตฟอร์ม
+  const [sizes, nvr, provinces, sizeGrp, custSum] = await Promise.all([sizeMix(pf), newVsReturningByMonth(12, pf), topProvinces(15, pf), sizeByCustomerType(pf), customerTypeSummary(pf)]);
   const maxSize = Math.max(1, ...sizes.map((s) => s.qty));
   const maxProv = Math.max(1, ...provinces.map((p) => p.orders));
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-6 md:px-8">
-      <ReportHeader icon={<Megaphone size={22} />} title="การตลาด" subtitle="ขนาดที่ขาย · ลูกค้าใหม่/เก่า · ยอดตามจังหวัด" />
+      <ReportHeader icon={<Megaphone size={22} />} title="การตลาด" subtitle={`ขนาดที่ขาย · ลูกค้าใหม่/เก่า · ยอดตามจังหวัด · ${pf ? platformName(pf) : "ทุกแพลตฟอร์ม (ภาพรวม)"}`} />
       <ReportTabs />
+
+      {/* ตัวกรองแพลตฟอร์ม — ภาพรวม / แยกรายแพลตฟอร์ม */}
+      {enabledPlatforms().length > 1 && (
+        <div className="mb-5 flex max-w-full items-center overflow-x-auto rounded-lg border border-line text-sm">
+          <Link href="/reports/marketing" className={`shrink-0 whitespace-nowrap px-3 py-1.5 font-medium transition-colors ${!pf ? "bg-brand text-white" : "bg-white text-muted hover:bg-soft"}`}>ทั้งหมด</Link>
+          {enabledPlatforms().map((p) => (
+            <Link key={p.code} href={`/reports/marketing?platform=${p.code}`}
+              className={`flex shrink-0 items-center gap-1.5 whitespace-nowrap border-l border-line px-3 py-1.5 font-medium transition-colors ${pf === p.code ? "text-white" : "bg-white text-muted hover:bg-soft"}`}
+              style={pf === p.code ? { backgroundColor: platformColor(p.code) } : undefined}>
+              <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: pf === p.code ? "#ffffff" : platformColor(p.code) }} /> {p.name}
+            </Link>
+          ))}
+        </div>
+      )}
 
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
         {/* สัดส่วนขนาด */}
@@ -51,6 +69,11 @@ export default async function MarketingReport() {
           </table>
         </SectionCard>
       </div>
+
+      {/* ลูกค้าแต่ละกลุ่มซื้อขนาดไหน */}
+      <SectionCard title="ขนาดที่ซื้อ: ลูกค้าใหม่ vs เก่า" icon={<Layers size={16} />} tone="green" className="mt-5">
+        <SizeByGroup rows={sizeGrp} summary={custSum} />
+      </SectionCard>
 
       {/* Top จังหวัด */}
       <SectionCard title={`ยอดขายตามจังหวัด (Top ${provinces.length})`} icon={<MapPin size={16} />} className="mt-5">
