@@ -54,17 +54,18 @@ export default async function MarketingReport({ searchParams }: { searchParams: 
         {/* ลูกค้าใหม่ vs เก่า */}
         <SectionCard title="ลูกค้าใหม่ vs เก่า (รายเดือน)" icon={<UserPlus size={16} />} tone="green">
           <table className="w-full text-sm">
-            <thead className="bg-soft text-left text-xs text-muted"><tr><th className="px-5 py-2.5">เดือน</th><th className="px-3 py-2.5 text-right">ใหม่</th><th className="px-3 py-2.5 text-right">เก่า</th><th className="px-3 py-2.5">สัดส่วนใหม่</th></tr></thead>
+            <thead className="bg-soft text-left text-xs text-muted"><tr><th className="px-5 py-2.5">เดือน</th><th className="px-3 py-2.5 text-right">ใหม่</th><th className="px-3 py-2.5 text-right">เก่า</th><th className="px-3 py-2.5 text-right">ไม่ระบุ</th><th className="px-3 py-2.5">สัดส่วนใหม่</th></tr></thead>
             <tbody>
               {[...nvr].reverse().map((r) => { const tot = r.new_c + r.repeat_c; const pct = tot ? Math.round(r.new_c / tot * 100) : 0; return (
                 <tr key={r.ym} className="border-t border-line">
                   <td className="px-5 py-2 font-medium text-ink">{ML(r.ym)}</td>
                   <td className="px-3 py-2 text-right tabular-nums text-green-700">{r.new_c}</td>
                   <td className="px-3 py-2 text-right tabular-nums text-muted">{r.repeat_c}</td>
+                  <td className={`px-3 py-2 text-right tabular-nums ${r.unknown_c > 0 ? "text-amber-600" : "text-faint"}`} title="มีออร์เดอร์แต่ไม่ได้ระบุ/จับคู่ลูกค้า (มักไม่มี username ตอนนำเข้า)">{r.unknown_c}</td>
                   <td className="px-3 py-2"><div className="flex items-center gap-2"><div className="w-20"><Bar pct={pct} tone="green" /></div><span className="text-xs text-muted">{pct}%</span></div></td>
                 </tr>
               ); })}
-              {nvr.length === 0 && <tr><td colSpan={4} className="px-5 py-10 text-center text-muted">ยังไม่มีข้อมูล</td></tr>}
+              {nvr.length === 0 && <tr><td colSpan={5} className="px-5 py-10 text-center text-muted">ยังไม่มีข้อมูล</td></tr>}
             </tbody>
           </table>
         </SectionCard>
