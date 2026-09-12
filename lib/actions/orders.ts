@@ -3,7 +3,7 @@ import { revalidatePath, revalidateTag } from "next/cache";
 import { z } from "zod";
 import { q, tx } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth/session";
-import { can } from "@/lib/auth/roles";
+import { can, isAdmin } from "@/lib/auth/roles";
 import { logActivity } from "@/lib/activity";
 import { buildProductLabel, type OrderWithItems } from "@/lib/types";
 import { formatDocNo, monthLabel, ymdKey } from "@/lib/docno";
@@ -689,4 +689,37 @@ export async function unshipOrder(orderNo: string): Promise<{ ok: boolean; error
     revalidatePath("/ship/daily"); revalidateOrderLists();
     return { ok: true };
   } catch (e: any) { return { ok: false, error: e?.message || "ยกเลิกไม่สำเร็จ" }; }
+}
+
+/** Backfill: จัดประเภทลูกค้า (ใหม่/เก่า) + ซื้อครั้งที่ ย้อนหลัง — เฉพาะออร์เดอร์ที่มี username แต่ customer_type ว่าง
+ *  จัดอันดับต่อ username ตามวันที่ (order_date→doc_date) ใบแรก=ใหม่ ที่เหลือ=เก่า · ไม่ทับของที่ระบุแล้ว · กดซ้ำได้ */
+export async function recomputeCustomerTypes(): Promise<{ ok: boolean; updated?: number; error?: string }> {
+  const user = await getCurrentUser();
+  if (!user || !isAdmin(user.role)) return { ok: false, error: "เฉพาะแอดมิน" };
+  try {
+    const rows = await q<{ order_no: string }>(
+      `with ranked as (
+         select order_no,
+                row_number() over (
+                  partition by lower(btrim(username))
+                  order by coalesce(order_date, doc_date) asc nulls last, order_no asc
+                ) as n
+         from orders
+         where deleted_at is null and coalesce(btrim(username), '') <> ''
+       )
+       update orders o
+          set customer_type = case when r.n > 1 then 'ลูกค้าเก่า' else 'ลูกค้าใหม่' end,
+              purchase_count = r.n,
+              updated_at = now()
+         from ranked r
+        where o.order_no = r.order_no
+          and coalesce(btrim(o.customer_type), '') = ''
+        returning o.order_no`,
+    );
+    await logActivity("recompute_customer_type", `${rows.length} ออร์เดอร์`);
+    revalidateOrderLists();
+    return { ok: true, updated: rows.length };
+  } catch (e: any) {
+    return { ok: false, error: e?.message || "จัดประเภทไม่สำเร็จ" };
+  }
 }
