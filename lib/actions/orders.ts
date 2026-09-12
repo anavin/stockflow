@@ -696,9 +696,14 @@ export async function unshipOrder(orderNo: string): Promise<{ ok: boolean; error
 
 /** Backfill: จัดประเภทลูกค้า (ใหม่/เก่า) + ซื้อครั้งที่ ย้อนหลัง — เฉพาะออร์เดอร์ที่มี username แต่ customer_type ว่าง
  *  จัดอันดับต่อ username ตามวันที่ (order_date→doc_date) ใบแรก=ใหม่ ที่เหลือ=เก่า · ไม่ทับของที่ระบุแล้ว · กดซ้ำได้ */
-export async function recomputeCustomerTypes(): Promise<{ ok: boolean; updated?: number; error?: string }> {
+/** mode "fill" = จัดเฉพาะที่ยังว่าง (ไม่ทับของเดิม) · "all" = จัดใหม่ทั้งหมด เรียงวันที่ ทับของเดิมด้วย (เฉพาะแถวที่ค่าจะเปลี่ยน) */
+export async function recomputeCustomerTypes(mode: "fill" | "all" = "fill"): Promise<{ ok: boolean; updated?: number; error?: string }> {
   const user = await getCurrentUser();
   if (!user || !isAdmin(user.role)) return { ok: false, error: "เฉพาะแอดมิน" };
+  // fill → เฉพาะที่ว่าง · all → เฉพาะแถวที่ค่าจริงจะเปลี่ยน (กันอัปเดตเปล่า + นับจำนวนที่เปลี่ยนจริง)
+  const guard = mode === "all"
+    ? `and (o.customer_type is distinct from (case when r.n > 1 then 'ลูกค้าเก่า' else 'ลูกค้าใหม่' end) or o.purchase_count is distinct from r.n)`
+    : `and coalesce(btrim(o.customer_type), '') = ''`;
   try {
     const rows = await q<{ order_no: string }>(
       // customer key = username (ถ้ามี) ไม่งั้น = เบอร์โทรเฉพาะตัวเลข (phone-fallback สำหรับ Lazada ฯลฯ ที่ปิดบัง username)
@@ -721,10 +726,10 @@ export async function recomputeCustomerTypes(): Promise<{ ok: boolean; updated?:
          from ranked r
         where o.order_no = r.order_no
           and r.ckey is not null
-          and coalesce(btrim(o.customer_type), '') = ''
+          ${guard}
         returning o.order_no`,
     );
-    await logActivity("recompute_customer_type", `${rows.length} ออร์เดอร์`);
+    await logActivity("recompute_customer_type", `${mode} · ${rows.length} ออร์เดอร์`);
     revalidateOrderLists();
     return { ok: true, updated: rows.length };
   } catch (e: any) {
