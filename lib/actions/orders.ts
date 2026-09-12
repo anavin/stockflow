@@ -164,14 +164,16 @@ export async function saveOrder(input: OrderInput, opts?: { silent?: boolean }):
       if (!docNo) docNo = await allocDocNo(run, o.platform, date);
 
       // เติม customer_type/purchase_count อัตโนมัติถ้าฟอร์มไม่ได้ส่งมา (ลูกค้าใหม่พิมพ์เองไม่ได้เลือกจาก dropdown)
-      // นับจากจำนวนออเดอร์เดิมของ username เดียวกัน — กัน PDF ไม่ขึ้น "ลูกค้าใหม่ / ซื้อครั้งที่ 1"
+      // นับจากจำนวนออเดอร์เดิมของลูกค้าเดียวกัน — key = username ถ้าว่างใช้เบอร์โทร (phone-fallback สำหรับ Lazada)
       let custType = (o.customer_type || "").trim();
       let purchaseCount: number | null = o.purchase_count ?? null;
-      if ((!custType || purchaseCount == null) && (o.username || "").trim()) {
+      const ckey = (o.username || "").trim().toLowerCase() || (o.phone || "").replace(/[^0-9]/g, "");
+      if ((!custType || purchaseCount == null) && ckey) {
         const [c] = await run<{ c: number }>(
           `select count(*)::int as c from orders
-            where deleted_at is null and order_no <> $1 and lower(btrim(username)) = lower(btrim($2))`,
-          [o.order_no, o.username]);
+            where deleted_at is null and order_no <> $1
+              and coalesce(nullif(lower(btrim(username)),''), nullif(regexp_replace(coalesce(phone,''),'[^0-9]','','g'),'')) = $2`,
+          [o.order_no, ckey]);
         const n = (c?.c ?? 0) + 1;
         if (purchaseCount == null) purchaseCount = n;
         if (!custType) custType = n > 1 ? "ลูกค้าเก่า" : "ลูกค้าใหม่";
@@ -545,14 +547,14 @@ export async function bulkSaveOrders(orders: OrderWithItems[]): Promise<{ ok: bo
   let saved = 0;
   const errors: string[] = [];
 
-  // คำนวณ "ซื้อครั้งที่" ใหม่เสมอ — จับคู่ลูกค้าด้วย username:
+  // คำนวณ "ซื้อครั้งที่" ใหม่เสมอ — จับคู่ลูกค้าด้วย key = username ถ้าว่างใช้เบอร์โทร (phone-fallback สำหรับ Lazada):
   //   ซื้อครั้งที่ = จำนวนที่เคยซื้อใน DB (ประวัติเดิม) + ลำดับในไฟล์นี้ (เรียงวันที่→Order No.)
   //   → ลูกค้าซื้อหลายออเดอร์วันเดียวกัน จะนับต่อเนื่อง (เช่น เก่า 4 ครั้ง → ใบนี้ 5, ใบถัดไป 6)
-  const nk = (s?: string | null) => (s || "").trim().toLowerCase();
+  const nk = (o: OrderWithItems) => (o.username || "").trim().toLowerCase() || (o.phone || "").replace(/[^0-9]/g, "");
   const groups = new Map<string, OrderWithItems[]>();
   for (const o of orders) {
-    const k = nk(o.username);
-    if (!k) continue;                         // ไม่มี username → ใช้ค่าเดิมจากไฟล์
+    const k = nk(o);
+    if (!k) continue;                         // ไม่มีทั้ง username และ phone → ใช้ค่าเดิมจากไฟล์
     const arr = groups.get(k); if (arr) arr.push(o); else groups.set(k, [o]);
   }
   const groupArr = [...groups];
@@ -567,7 +569,8 @@ export async function bulkSaveOrders(orders: OrderWithItems[]): Promise<{ ok: bo
       try {
         prior = await q<{ d: string; on: string }>(
           `select coalesce(to_char(order_date,'YYYY-MM-DD'), to_char(doc_date,'YYYY-MM-DD'), '') as d, order_no as on
-             from orders where lower(btrim(username)) = $1 and deleted_at is null and order_no <> all($2::text[])`,
+             from orders where coalesce(nullif(lower(btrim(username)),''), nullif(regexp_replace(coalesce(phone,''),'[^0-9]','','g'),'')) = $1
+               and deleted_at is null and order_no <> all($2::text[])`,
           [k, ons]);
       } catch { prior = []; }
       const merged = [
@@ -698,14 +701,18 @@ export async function recomputeCustomerTypes(): Promise<{ ok: boolean; updated?:
   if (!user || !isAdmin(user.role)) return { ok: false, error: "เฉพาะแอดมิน" };
   try {
     const rows = await q<{ order_no: string }>(
+      // customer key = username (ถ้ามี) ไม่งั้น = เบอร์โทรเฉพาะตัวเลข (phone-fallback สำหรับ Lazada ฯลฯ ที่ปิดบัง username)
       `with ranked as (
          select order_no,
+                coalesce(nullif(lower(btrim(username)), ''),
+                         nullif(regexp_replace(coalesce(phone, ''), '[^0-9]', '', 'g'), '')) as ckey,
                 row_number() over (
-                  partition by lower(btrim(username))
+                  partition by coalesce(nullif(lower(btrim(username)), ''),
+                                        nullif(regexp_replace(coalesce(phone, ''), '[^0-9]', '', 'g'), ''))
                   order by coalesce(order_date, doc_date) asc nulls last, order_no asc
                 ) as n
          from orders
-         where deleted_at is null and coalesce(btrim(username), '') <> ''
+         where deleted_at is null
        )
        update orders o
           set customer_type = case when r.n > 1 then 'ลูกค้าเก่า' else 'ลูกค้าใหม่' end,
@@ -713,6 +720,7 @@ export async function recomputeCustomerTypes(): Promise<{ ok: boolean; updated?:
               updated_at = now()
          from ranked r
         where o.order_no = r.order_no
+          and r.ckey is not null
           and coalesce(btrim(o.customer_type), '') = ''
         returning o.order_no`,
     );
