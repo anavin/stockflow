@@ -14,7 +14,7 @@ async function requireAdminUser() {
   return { user };
 }
 
-const ALLOWED_ROLES = ["admin", "creator", "picker", "stock"];
+const ALLOWED_ROLES = ["admin", "creator", "picker", "stock", "marketing"];
 function cleanRoles(v: string): string[] {
   return [...new Set((v || "").split(",").map((r) => r.trim()).filter((r) => ALLOWED_ROLES.includes(r)))];
 }

@@ -1,4 +1,4 @@
-import { requireAdmin } from "@/lib/auth/require-user";
+import { requireReports } from "@/lib/auth/require-user";
 import { leadTimeStats, returnReasons, returnStatsByPlatform, returnStatsByScent } from "@/lib/queries";
 import ReportTabs from "@/components/ReportTabs";
 import { ReportHeader, Kpi, Bar, SectionCard } from "@/components/ReportUI";
@@ -9,7 +9,7 @@ import { Wrench, Timer, Undo2, Layers } from "lucide-react";
 export const dynamic = "force-dynamic";
 
 export default async function OpsReport() {
-  await requireAdmin();
+  await requireReports();
   const [lead, reasons, byPlatform, byScent] = await Promise.all([
     leadTimeStats(), returnReasons(), returnStatsByPlatform(), returnStatsByScent(),
   ]);

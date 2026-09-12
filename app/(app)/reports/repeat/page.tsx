@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { requireAdmin } from "@/lib/auth/require-user";
+import { requireReports } from "@/lib/auth/require-user";
 import { topRepeatCustomers, customerRepeat } from "@/lib/queries";
 import { ReportHeader, Bar, SectionCard } from "@/components/ReportUI";
 import { Users } from "lucide-react";
@@ -7,7 +7,7 @@ import { Users } from "lucide-react";
 export const dynamic = "force-dynamic";
 
 export default async function RepeatCustomersPage() {
-  await requireAdmin();
+  await requireReports();
   const [list, repeat] = await Promise.all([topRepeatCustomers(5000), customerRepeat()]);
   const maxCust = Math.max(1, ...list.map((c) => c.orders));
 

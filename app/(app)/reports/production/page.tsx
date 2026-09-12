@@ -1,4 +1,4 @@
-import { requireAdmin } from "@/lib/auth/require-user";
+import { requireReports } from "@/lib/auth/require-user";
 import { scentVelocity, slowMovers } from "@/lib/queries";
 import ReportTabs from "@/components/ReportTabs";
 import { ReportHeader, SectionCard } from "@/components/ReportUI";
@@ -7,7 +7,7 @@ import { Factory, Gauge, PackageX, AlertTriangle } from "lucide-react";
 export const dynamic = "force-dynamic";
 
 export default async function ProductionReport() {
-  await requireAdmin();
+  await requireReports();
   const [velocity, slow] = await Promise.all([scentVelocity(40), slowMovers(40)]);
   const soon = velocity.filter((v) => v.days_left != null && v.stock > 0 && v.days_left <= 30);
 

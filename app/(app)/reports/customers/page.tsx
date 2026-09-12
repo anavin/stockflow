@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { requireAdmin } from "@/lib/auth/require-user";
+import { requireReports } from "@/lib/auth/require-user";
 import { lapsedCustomers, customerRepeat } from "@/lib/queries";
 import ReportTabs from "@/components/ReportTabs";
 import { ReportHeader, Kpi, SectionCard } from "@/components/ReportUI";
@@ -8,7 +8,7 @@ import { Users, UserX } from "lucide-react";
 export const dynamic = "force-dynamic";
 
 export default async function CustomersReport() {
-  await requireAdmin();
+  await requireReports();
   const [lapsed, repeat] = await Promise.all([lapsedCustomers(90, 60), customerRepeat()]);
 
   return (

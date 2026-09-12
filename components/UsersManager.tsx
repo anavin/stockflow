@@ -4,14 +4,15 @@ import { useRouter } from "next/navigation";
 import { createUser, setUserActive, resetPassword, setUserRoles } from "@/lib/actions/users";
 import { ROLE_LABELS, ROLE_DESC, roleList } from "@/lib/auth/roles";
 import type { UserRow } from "@/lib/queries";
-import { UserPlus, KeyRound, CheckCircle2, Search, Shield, FileText, ScanLine, Boxes, Users, Check } from "lucide-react";
+import { UserPlus, KeyRound, CheckCircle2, Search, Shield, FileText, ScanLine, Boxes, Users, Check, Megaphone } from "lucide-react";
 
 // ลำดับบทบาทในหน้านี้ (ขาย → จัดของ → คลัง → แอดมิน)
-const ROLE_OPTS = ["creator", "picker", "stock", "admin"] as const;
+const ROLE_OPTS = ["creator", "picker", "stock", "marketing", "admin"] as const;
 const ROLE_META: Record<string, { icon: any; chip: string; ring: string }> = {
   creator: { icon: FileText, chip: "bg-blue-50 text-blue-700", ring: "border-blue-200" },
   picker: { icon: ScanLine, chip: "bg-green-50 text-green-700", ring: "border-green-200" },
   stock: { icon: Boxes, chip: "bg-amber-50 text-amber-700", ring: "border-amber-200" },
+  marketing: { icon: Megaphone, chip: "bg-pink-50 text-pink-700", ring: "border-pink-200" },
   admin: { icon: Shield, chip: "bg-violet-50 text-violet-700", ring: "border-violet-200" },
 };
 const roleChip = (role: string) => ROLE_META[role]?.chip ?? "bg-soft text-muted";

@@ -7,6 +7,7 @@ export const ROLE_LABELS: Record<string, string> = {
   creator: "ฝ่ายขาย / สร้างใบเบิก",
   picker: "ฝ่ายจัดของ / ตัดสต๊อก",
   stock: "ฝ่ายคลัง / สต๊อก",
+  marketing: "ฝ่ายการตลาด / ดูรายงาน",
 };
 
 export const ROLE_DESC: Record<string, string> = {
@@ -14,6 +15,7 @@ export const ROLE_DESC: Record<string, string> = {
   creator: "สร้าง / นำเข้า / แก้ไข / พิมพ์ใบเบิก (ไม่ตัดสต๊อก)",
   picker: "สแกนใบเบิก ใส่ SKU/Spec แล้วตัดสต๊อก (ไม่สร้างใบเบิก)",
   stock: "คลังวัตถุดิบ: รับเข้า / เบิก / ปรับยอด / นับสต๊อก + จัดการกลิ่น + ดูแดชบอร์ด",
+  marketing: "ดูรายงาน & วิเคราะห์ทั้งหมด (อ่านอย่างเดียว · ไม่เห็นข้อมูลฝ่ายอื่น)",
 };
 
 // รองรับข้อมูลเก่า: role "staff" เดิม = ทำงานฝั่งสร้างใบเบิก
@@ -45,6 +47,8 @@ export const can = {
   viewDashboard: (role?: string | null) => hasAny(role, ["admin", "picker", "stock", "creator"]),
   /** ดูข้อมูล อย. (อ่านอย่างเดียว) = ทุกฝ่ายที่มีบทบาท (แก้ = manageStock) */
   viewFda: (role?: string | null) => hasAny(role, ["admin", "picker", "stock", "creator"]),
+  /** ดูรายงาน & วิเคราะห์ = เจ้าของ + ฝ่ายการตลาด */
+  viewReports: (role?: string | null) => hasAny(role, ["admin", "marketing"]),
   /** จัดการผู้ใช้ */
   manageUsers: (role?: string | null) => hasAny(role, ["admin"]),
   /** ดูบันทึกการใช้งาน (audit log) = เจ้าของเท่านั้น */
@@ -63,6 +67,7 @@ export function homeFor(role?: string | null): string {
   if (rs.includes("creator")) return "/shopee";
   if (rs.includes("picker")) return "/stock/issue";
   if (rs.includes("stock")) return "/stock";
+  if (rs.includes("marketing")) return "/reports";
   return "/no-access";
 }
 

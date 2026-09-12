@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { requireAdmin } from "@/lib/auth/require-user";
+import { requireReports } from "@/lib/auth/require-user";
 import { customerOrders } from "@/lib/queries";
 import { platformBase } from "@/lib/config";
 import { PlatformDot } from "@/components/PlatformBadge";
@@ -10,7 +10,7 @@ import { ShoppingBag, PackageCheck, Truck } from "lucide-react";
 export const dynamic = "force-dynamic";
 
 export default async function CustomerHistoryPage({ searchParams }: { searchParams: Promise<{ u?: string }> }) {
-  await requireAdmin();
+  await requireReports();
   const username = (await searchParams).u || "";
   if (!username.trim()) notFound();
   const orders = await customerOrders(username);

@@ -1,4 +1,4 @@
-import { requireAdmin } from "@/lib/auth/require-user";
+import { requireReports } from "@/lib/auth/require-user";
 import { salesByMonth, topScents, returnsByMonth, customerRepeat, topRepeatCustomers, platformOverview } from "@/lib/queries";
 import { enabledPlatforms, platformName, resolvePlatform } from "@/lib/config";
 import { PlatformDot } from "@/components/PlatformBadge";
@@ -13,7 +13,7 @@ export const dynamic = "force-dynamic";
 const monthLabel = (ym: string) => { const [y, m] = ym.split("-"); return `${["ม.ค.","ก.พ.","มี.ค.","เม.ย.","พ.ค.","มิ.ย.","ก.ค.","ส.ค.","ก.ย.","ต.ค.","พ.ย.","ธ.ค."][+m - 1] || m} ${y.slice(2)}`; };
 
 export default async function ReportsPage({ searchParams }: { searchParams: Promise<{ platform?: string }> }) {
-  await requireAdmin();
+  await requireReports();
   const pf = resolvePlatform((await searchParams).platform)?.code;
   const [sales, scents, returns, repeat, repeatList, overview] = await Promise.all([
     salesByMonth(12), topScents(20, pf), returnsByMonth(12), customerRepeat(), topRepeatCustomers(50), platformOverview(),

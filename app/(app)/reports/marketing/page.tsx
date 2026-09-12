@@ -1,4 +1,4 @@
-import { requireAdmin } from "@/lib/auth/require-user";
+import { requireReports } from "@/lib/auth/require-user";
 import { sizeMix, newVsReturningByMonth, topProvinces, sizeByCustomerType, customerTypeSummary, customerIdCoverage } from "@/lib/queries";
 import { enabledPlatforms, platformName, platformColor, resolvePlatform } from "@/lib/config";
 import ReportTabs from "@/components/ReportTabs";
@@ -12,7 +12,7 @@ export const dynamic = "force-dynamic";
 const ML = (ym: string) => { const [y, m] = ym.split("-"); return `${["ม.ค.","ก.พ.","มี.ค.","เม.ย.","พ.ค.","มิ.ย.","ก.ค.","ส.ค.","ก.ย.","ต.ค.","พ.ย.","ธ.ค."][+m - 1] || m} ${y.slice(2)}`; };
 
 export default async function MarketingReport({ searchParams }: { searchParams: Promise<{ platform?: string }> }) {
-  await requireAdmin();
+  await requireReports();
   const pf = resolvePlatform((await searchParams).platform)?.code;   // undefined = ภาพรวมทุกแพลตฟอร์ม
   const [sizes, nvr, provinces, sizeGrp, custSum, idCov] = await Promise.all([sizeMix(pf), newVsReturningByMonth(12, pf), topProvinces(15, pf), sizeByCustomerType(pf), customerTypeSummary(pf), customerIdCoverage()]);
   const maxSize = Math.max(1, ...sizes.map((s) => s.qty));

@@ -15,6 +15,13 @@ export async function requireAdmin(): Promise<User> {
   return user;
 }
 
+/** หน้ารายงาน & วิเคราะห์ — admin + marketing (อ่านอย่างเดียว) */
+export async function requireReports(): Promise<User> {
+  const user = await requireUser();
+  if (!can.viewReports(user.role)) redirect(homeFor(user.role));
+  return user;
+}
+
 /** หน้าฝั่ง "สร้างใบเบิก" — admin + creator เท่านั้น */
 export async function requireCreator(): Promise<User> {
   const user = await requireUser();
