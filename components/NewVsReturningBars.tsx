@@ -21,7 +21,7 @@ export default function NewVsReturningBars({ rows }: { rows: NewReturnMonth[] })
     <section className="card p-5">
       <header className="mb-1 flex flex-wrap items-center justify-between gap-2">
         <h2 className="flex items-center gap-2 text-sm font-semibold text-ink"><Users size={16} className="text-brand" /> ลูกค้าใหม่ vs กลับมาซื้อ</h2>
-        <span className="text-xs text-muted">รายเดือน</span>
+        <span className="text-xs text-muted">รายเดือน · <span style={{ color: REPEAT }}>ตัวเลขบนแท่ง = % ซื้อซ้ำ</span></span>
       </header>
       <div className="mb-3 flex flex-wrap gap-4">
         {legend.map((l) => <span key={l.label} className="inline-flex items-center gap-1.5 text-xs text-muted"><span className="h-2.5 w-2.5 rounded-sm" style={{ backgroundColor: l.color }} /> {l.label}</span>)}
@@ -29,11 +29,16 @@ export default function NewVsReturningBars({ rows }: { rows: NewReturnMonth[] })
       <div className="flex items-end justify-between gap-1.5">
         {rows.map((r) => {
           const tot = r.new_c + r.repeat_c + r.unknown_c;
+          const denom = r.new_c + r.repeat_c;
+          const repeatPct = denom > 0 ? Math.round((r.repeat_c / denom) * 100) : 0;
           const BAR = 210; // ความสูงพื้นที่แท่ง (px) — ใช้ px ตรงๆ กัน % ยุบเป็น 0 · สูงพอเต็มกรอบ ≈ รายการกลิ่นซ้าย
           const px = (v: number) => `${(v / max) * BAR}px`;
           return (
             <div key={r.ym} className="flex flex-1 flex-col items-center gap-1">
-              <span className="text-[10px] font-medium text-muted">{tot || ""}</span>
+              <div className="flex flex-col items-center leading-none">
+                {denom > 0 && <span className="text-[10px] font-semibold" style={{ color: REPEAT }}>{repeatPct}%</span>}
+                <span className="text-[9px] text-faint">{tot || ""}</span>
+              </div>
               <div className="flex w-full max-w-[30px] flex-col justify-end overflow-hidden rounded-t-md" style={{ height: BAR }}
                 title={`${mLabel(r.ym)} · ใหม่ ${r.new_c} · กลับมา ${r.repeat_c}${r.unknown_c ? ` · ไม่ระบุ ${r.unknown_c}` : ""}`}>
                 {r.unknown_c > 0 && <div style={{ height: px(r.unknown_c), backgroundColor: UNK }} />}
