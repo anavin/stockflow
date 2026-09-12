@@ -16,7 +16,7 @@ const monthRange = (ym: string): [string, string] => { const [y, m] = ym.split("
 export default async function MarketingReport({ searchParams }: { searchParams: Promise<{ platform?: string }> }) {
   await requireReports();
   const pf = resolvePlatform((await searchParams).platform)?.code;   // undefined = ภาพรวมทุกแพลตฟอร์ม
-  const [sizes, nvr, provinces, sizeGrp, custSum, idCov] = await Promise.all([sizeMix(pf), newVsReturningByMonth(12, pf), topProvinces(15, pf), sizeByCustomerType(pf), customerTypeSummary(pf), customerIdCoverage()]);
+  const [sizes, nvr, provinces, sizeGrp, custSum, idCov] = await Promise.all([sizeMix(pf), newVsReturningByMonth(12, pf), topProvinces(16, pf), sizeByCustomerType(pf), customerTypeSummary(pf), customerIdCoverage()]);
   const maxSize = Math.max(1, ...sizes.map((s) => s.qty));
   const maxProv = Math.max(1, ...provinces.map((p) => p.orders));
 
@@ -91,16 +91,28 @@ export default async function MarketingReport({ searchParams }: { searchParams: 
 
       {/* Top จังหวัด */}
       <SectionCard title={`ยอดขายตามจังหวัด (Top ${provinces.length})`} icon={<MapPin size={16} />} className="mt-5">
-        <div className="grid grid-cols-1 md:grid-cols-2">
-          {provinces.map((p, i) => (
-            <div key={p.province} className="flex items-center gap-3 border-b border-line px-5 py-2">
-              <span className="w-5 text-right text-xs font-semibold text-faint">{i + 1}</span>
-              <span className="w-32 shrink-0 truncate text-sm text-ink">{p.province}</span>
-              <div className="flex-1"><Bar pct={p.orders / maxProv * 100} /></div>
-              <span className="w-20 text-right text-xs tabular-nums text-muted">{p.orders.toLocaleString()} ใบ</span>
+        {(() => {
+          const half = Math.ceil(provinces.length / 2);   // เรียงบน-ลง: ซ้าย = อันดับ 1..half, ขวา = half+1..N
+          return (
+            <div className="grid grid-cols-1 md:grid-cols-2">
+              {[provinces.slice(0, half), provinces.slice(half)].map((col, ci) => (
+                <div key={ci} className={ci === 0 ? "md:border-r md:border-line" : ""}>
+                  {col.map((p, idx) => {
+                    const rank = ci * half + idx + 1;
+                    return (
+                      <div key={p.province} className="flex items-center gap-3 border-b border-line px-5 py-2">
+                        <span className="w-5 text-right text-xs font-semibold text-faint">{rank}</span>
+                        <span className="w-32 shrink-0 truncate text-sm text-ink">{p.province}</span>
+                        <div className="flex-1"><Bar pct={p.orders / maxProv * 100} /></div>
+                        <span className="w-20 text-right text-xs tabular-nums text-muted">{p.orders.toLocaleString()} ใบ</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              ))}
             </div>
-          ))}
-        </div>
+          );
+        })()}
       </SectionCard>
     </div>
   );
