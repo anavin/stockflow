@@ -58,7 +58,7 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
                 <th className="px-5 py-2.5">เดือน</th>
                 {platforms.map((c) => <th key={c} className="px-3 py-2.5 text-right"><span className="inline-flex items-center gap-1"><PlatformDot platform={c} /> {platformName(c)}</span></th>)}
                 <th className="px-3 py-2.5 text-right">รวม</th>
-                <th className="px-3 py-2.5" style={{ width: 160 }}>สัดส่วน</th>
+                <th className="px-3 py-2.5" style={{ width: 160 }} title="แท่งเทียบยอดรวมของเดือน กับเดือนที่ยอดสูงสุด (เต็มแท่ง = เดือนที่มากที่สุด) — ไว้ดูเดือนพีค/ตก">เทียบเดือนสูงสุด ⓘ</th>
               </tr>
             </thead>
             <tbody>
