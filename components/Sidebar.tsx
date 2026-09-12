@@ -4,7 +4,7 @@ import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { PLATFORMS, enabledPlatforms, platformBase, platformColor, platformTint } from "@/lib/config";
 import { can, ROLE_LABELS, roleList, isAdmin } from "@/lib/auth/roles";
-import { Package, PlusCircle, Upload, List, LogOut, Menu, X, Trash2, Users, ScanLine, Boxes, LayoutDashboard, BarChart3, FlaskConical, ScanBarcode, ShieldCheck, Truck, Droplets, Sticker, PackageOpen, History, ScrollText, ClipboardCheck, Undo2, PackageX, Store } from "lucide-react";
+import { Package, PlusCircle, Upload, List, LogOut, Menu, X, Trash2, Users, ScanLine, Boxes, LayoutDashboard, BarChart3, FlaskConical, ScanBarcode, ShieldCheck, Truck, Droplets, Sticker, PackageOpen, History, ScrollText, ClipboardCheck, Undo2, PackageX, Store, Wrench } from "lucide-react";
 import FontSizeToggle from "@/components/FontSizeToggle";
 
 export default function Sidebar({ user }: { user: { full_name: string; username: string; role: string } }) {
@@ -50,6 +50,7 @@ export default function Sidebar({ user }: { user: { full_name: string; username:
     ...(can.viewFda(role) ? [{ href: "/fda", label: "ข้อมูล อย.", icon: ShieldCheck, exact: true }] : []),
     ...(can.viewLogs(role) ? [{ href: "/activity", label: "บันทึกการใช้งาน", icon: ScrollText, exact: true }] : []),
     ...(can.manageUsers(role) ? [{ href: "/users", label: "จัดการผู้ใช้", icon: Users }] : []),
+    ...(isAdmin(role) ? [{ href: "/maintenance", label: "ดูแลข้อมูล", icon: Wrench }] : []),
   ];
 
   const isActive = (href: string, exact?: boolean) =>

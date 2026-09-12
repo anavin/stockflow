@@ -5,7 +5,6 @@ import ReportTabs from "@/components/ReportTabs";
 import { ReportHeader, Bar, SectionCard } from "@/components/ReportUI";
 import SizeByGroup from "@/components/SizeByGroup";
 import CustomerDataQuality from "@/components/CustomerDataQuality";
-import RecomputeCustomerBtn from "@/components/RecomputeCustomerBtn";
 import Link from "next/link";
 import { Megaphone, Ruler, UserPlus, MapPin, Layers, ShieldCheck } from "lucide-react";
 
@@ -54,7 +53,7 @@ export default async function MarketingReport({ searchParams }: { searchParams: 
         </SectionCard>
 
         {/* ลูกค้าใหม่ vs เก่า */}
-        <SectionCard title="ลูกค้าใหม่ vs เก่า (รายเดือน)" icon={<UserPlus size={16} />} tone="green" action={<RecomputeCustomerBtn />}>
+        <SectionCard title="ลูกค้าใหม่ vs เก่า (รายเดือน)" icon={<UserPlus size={16} />} tone="green">
           <table className="w-full text-sm">
             <thead className="bg-soft text-left text-xs text-muted"><tr><th className="px-5 py-2.5">เดือน</th><th className="px-3 py-2.5 text-right">ใหม่</th><th className="px-3 py-2.5 text-right">เก่า</th><th className="px-3 py-2.5 text-right">ไม่ระบุ</th><th className="px-3 py-2.5">สัดส่วนใหม่</th></tr></thead>
             <tbody>
