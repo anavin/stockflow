@@ -13,6 +13,7 @@ const PUBLIC = new Set([
   "/api/packing/queue",
   "/api/packing/done",
   "/api/packing/auth",
+  "/api/packing/unpack",
 ]);
 
 export function middleware(req: NextRequest) {
