@@ -89,7 +89,7 @@ export default function StockIssue({ isAdmin, initialOrder, specOptions = [], to
     if (incomplete.length) {
       alert(
         `ต้องใส่ SKU ให้ครบก่อนตัดสต๊อก:\n` +
-        incomplete.map((it) => `• ${it.product} ${it.size} — ${(form[it.line_no]?.skus?.length || 0)}/${it.qty}${it.assign_sku ? " (กรอกในช่อง 4ml)" : ""}`).join("\n"));
+        incomplete.map((it) => `• ${it.product} ${it.size} — ${(form[it.line_no]?.skus?.length || 0)}/${it.qty}${it.assign_sku ? " (กรอกในช่องของบรรทัดนี้)" : ""}`).join("\n"));
       return;
     }
     // ถุงต้องเลือกไซส์ (S/M) ก่อน ไม่งั้นระบบไม่รู้จะหักจากไซส์ไหน → ถุงจะไม่ถูกตัด
@@ -132,9 +132,9 @@ export default function StockIssue({ isAdmin, initialOrder, specOptions = [], to
     const res = await resolveIssueSku(preview.order_no, s);
     if (!res.ok || res.product == null) {
       scanBeep("error");
-      // มีบรรทัด 4ml (assign ตอนตัด) ที่ยังไม่ครบ → แนะนำให้กรอกในช่องของบรรทัด 4ml แทน (ช่องบนใช้กับขวดที่รับเข้าคลังแล้ว)
+      // มีบรรทัด assign ตอนตัด (4ml / Try Me) ที่ยังไม่ครบ → แนะนำให้กรอกในช่องของบรรทัดนั้นแทน (ช่องบนใช้กับขวดที่รับเข้าคลังแล้ว)
       const hasAssign = preview.items!.some((it) => it.assign_sku && (form[it.line_no]?.skus?.length || 0) < it.qty);
-      setScanMsg({ type: "error", text: (res.error || "SKU ไม่ถูกต้อง") + (hasAssign ? " · ถ้าเป็น SKU ของ 4ml ให้กรอกในช่องของบรรทัด 4ml ด้านล่าง" : "") });
+      setScanMsg({ type: "error", text: (res.error || "SKU ไม่ถูกต้อง") + (hasAssign ? " · ถ้าเป็น SKU ของ 4ml / Try Me ให้กรอกในช่องของบรรทัดนั้นด้านล่าง" : "") });
       return;
     }
     const nk = (x?: string | null) => (x || "").toLowerCase().replace(/[^a-z0-9ก-๙]/g, "");
@@ -249,7 +249,7 @@ export default function StockIssue({ isAdmin, initialOrder, specOptions = [], to
                     )}
                     {it.assign_sku ? (
                       (form[it.line_no]?.skus?.length || 0) < it.qty && (
-                        <input className="input h-8 font-mono text-xs" placeholder={`กรอก/สแกน SKU 4ml แล้ว Enter (${form[it.line_no]?.skus?.length || 0}/${it.qty})`}
+                        <input className="input h-8 font-mono text-xs" placeholder={`กรอก/สแกน SKU ${it.size} แล้ว Enter (${form[it.line_no]?.skus?.length || 0}/${it.qty})`}
                           onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); const el = e.target as HTMLInputElement; addLineSku(it, el.value); el.value = ""; } }} />
                       )
                     ) : (form[it.line_no]?.skus?.length || 0) > 0 ? null

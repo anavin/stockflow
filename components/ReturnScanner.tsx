@@ -34,7 +34,7 @@ export default function ReturnScanner({ todayReturns = [] }: { todayReturns?: Re
   function initForm(items: ReturnItemPreview[], issued: boolean): Form {
     const f: Form = {};
     for (const it of items) {
-      const canRestock = (it.tracked || isBagProduct(it.product)) && issued && !assignsSku(it.size);   // 4ml คืนไม่ได้ · ถุง=คืนเข้าคลังบรรจุภัณฑ์ได้
+      const canRestock = (it.tracked || isBagProduct(it.product)) && issued && !assignsSku(it.size, it.product);   // 4ml/Try Me คืนไม่ได้ · ถุง=คืนเข้าคลังบรรจุภัณฑ์ได้
       f[it.line_no] = { qty: it.remaining, disp: canRestock ? "restock" : it.is_free ? "none" : "damaged" };
     }
     return f;
@@ -120,7 +120,7 @@ export default function ReturnScanner({ todayReturns = [] }: { todayReturns?: Re
             <div className="space-y-2">
               {preview.items!.map((it) => {
                 const v = form[it.line_no] || { qty: 0, disp: "none" as Disp };
-                const canRestock = (it.tracked || isBagProduct(it.product)) && preview.issued && !assignsSku(it.size);
+                const canRestock = (it.tracked || isBagProduct(it.product)) && preview.issued && !assignsSku(it.size, it.product);
                 const full = it.remaining <= 0;
                 return (
                   <div key={it.line_no} className={`rounded-lg border border-line p-3 ${full ? "opacity-60" : ""}`}>

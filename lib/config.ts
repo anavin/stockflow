@@ -97,19 +97,22 @@ export function cutsStock(product?: string | null, size?: string | null): boolea
 }
 /** สินค้าเป็น Try Me (เทสเตอร์) ไหม — ชื่อมี "TRY ME" (ใช้ทั้ง client/server ระบุบรรทัดเทสเตอร์) */
 export function isTesterName(product?: string | null): boolean { return /try\s*me/i.test(product || ""); }
-/** ต้องสแกน SKU รายชิ้นจากคลัง (serial ที่รับเข้าแล้ว) — ขวดจริง 10/30/50/90/100 ml · Try Me = ตัดตามจำนวน (เฟส A ยังไม่ทำ serial) */
+/** ต้องสแกน SKU รายชิ้น "จากคลัง" (serial ที่รับเข้าไว้ก่อนแล้ว) — ขวดจริง 10/30/50/90/100 ml
+ *  Try Me (เทสเตอร์) = ไม่ใช่ serial-pool แต่ "assign SKU ตอนตัด" เหมือน 4 ml → คืน false ที่นี่ (ดู assignsSku) */
 export function needsSerialSku(size?: string | null, product?: string | null): boolean {
   if (isTesterName(product)) return false;
   if (!isStockTracked(size)) return false;
   return !sizeIn(NON_SERIAL_SIZES, size);
 }
-/** assign SKU ตอนตัด (กรอกเอง ไม่ต้องมีในคลังก่อน) — 4 ml */
-export function assignsSku(size?: string | null): boolean {
-  return isStockTracked(size) && sizeIn(ASSIGN_SKU_SIZES, size);
+/** assign SKU ตอนตัด (กรอก/สแกนเอง ไม่ต้องมีในคลังก่อน) — 4 ml และ Try Me (เทสเตอร์ ทุกขนาด ml)
+ *  Try Me = สแกน serial ที่ป้ายขวดตอนตัด แล้วโชว์บนใบเบิก เหมือน 4 ml (ของเดิมไม่ต้อง migrate เป็น serial) */
+export function assignsSku(size?: string | null, product?: string | null): boolean {
+  if (!isStockTracked(size)) return false;                 // ต้องเป็นขนาดที่ตัดสต๊อก (ml) ก่อน
+  return isTesterName(product) || sizeIn(ASSIGN_SKU_SIZES, size);
 }
-/** ต้องมี SKU ไหม (บังคับ) — ขวดจริง (serial เดิม) หรือ 4 ml (กรอกเอง) · 1.2 ml / Try Me = ตัดตามจำนวน ไม่ต้องมี */
+/** ต้องมี SKU ไหม (บังคับ) — ขวดจริง (serial เดิม) · 4 ml + Try Me (assign ตอนตัด) · 1.2 ml / ถุง = ไม่ต้อง */
 export function requiresSku(size?: string | null, product?: string | null): boolean {
-  return needsSerialSku(size, product) || (assignsSku(size) && !isTesterName(product));
+  return needsSerialSku(size, product) || assignsSku(size, product);
 }
 
 /** ของแถม (Free) ให้ได้เฉพาะขนาดเล็กเท่านั้น — ไซต์ใหญ่ห้ามเป็นของแถม */

@@ -443,6 +443,10 @@ function WholesaleDocPage({ order, mode, ws = EMPTY_WS }: { order: OrderWithItem
   const addr = ws.branchAddr[order.branch || ""] || "";
   const partner = platformName(order.platform).toUpperCase();
   const isDelivery = mode === "delivery";
+  // ใบเบิก (issue) = โชว์ SKU/serial ที่ตัดจริง (เหมือน Shopee/Lazada) · ใบส่งของถึงห้าง (delivery) = ไม่โชว์ serial ภายใน
+  const showSku = mode === "issue";
+  const HEAD = showSku ? ["Product Code", "Name", "Grade", "Size", "SKU", "Qty"] : ["Product Code", "Name", "Grade", "Size", "Qty"];
+  const COLW = showSku ? [92, 182, 42, 46, 100, 40] : DN_COL;   // รวม ~502 (A4)
   const title = isDelivery ? "ใบส่งของ" : "ใบเบิกสินค้า";
   const titleEn = isDelivery ? "DELIVERY NOTE" : "GOODS ISSUE FORM";
   const meta: [string, string][] = isDelivery
@@ -507,8 +511,8 @@ function WholesaleDocPage({ order, mode, ws = EMPTY_WS }: { order: OrderWithItem
       {/* table */}
       <View style={dn.tableWrap}>
         <View style={dn.th} fixed>
-          {["Product Code", "Name", "Grade", "Size", "Qty"].map((h, i) => (
-            <Text key={i} style={[dn.thCell, { width: DN_COL[i], textAlign: i === 4 ? "right" : "left" }]}>{h}</Text>
+          {HEAD.map((h, i) => (
+            <Text key={i} style={[dn.thCell, { width: COLW[i], textAlign: i === HEAD.length - 1 ? "right" : "left" }]}>{h}</Text>
           ))}
         </View>
         {groups.map((g) => (
@@ -520,11 +524,12 @@ function WholesaleDocPage({ order, mode, ws = EMPTY_WS }: { order: OrderWithItem
             </View>
             {g.items.map((it, i) => (
               <View key={it.id ?? i} style={dn.tr} wrap={false}>
-                <Text style={[dn.cell, { width: DN_COL[0], letterSpacing: 0.3 }]}>{T(catOf(it)?.code || it.barcode)}</Text>
-                <Text style={[dn.cell, { width: DN_COL[1], fontWeight: "bold" }]}>{T(catOf(it)?.name || it.product)}</Text>
-                <Text style={[dn.cell, { width: DN_COL[2], color: C.muted }]}>{T(it.ptype)}</Text>
-                <Text style={[dn.cell, { width: DN_COL[3], color: C.muted }]}>{T(it.size)}</Text>
-                <Text style={[dn.cell, { width: DN_COL[4], textAlign: "right", fontWeight: "bold" }]}>{Number(it.qty) || 0}</Text>
+                <Text style={[dn.cell, { width: COLW[0], letterSpacing: 0.3 }]}>{T(catOf(it)?.code || it.barcode)}</Text>
+                <Text style={[dn.cell, { width: COLW[1], fontWeight: "bold" }]}>{T(catOf(it)?.name || it.product)}</Text>
+                <Text style={[dn.cell, { width: COLW[2], color: C.muted }]}>{T(it.ptype)}</Text>
+                <Text style={[dn.cell, { width: COLW[3], color: C.muted }]}>{T(it.size)}</Text>
+                {showSku && <Text style={[dn.cell, { width: COLW[4], fontSize: 7, letterSpacing: 0.2, color: C.muted }]}>{T(it.sku)}</Text>}
+                <Text style={[dn.cell, { width: COLW[showSku ? 5 : 4], textAlign: "right", fontWeight: "bold" }]}>{Number(it.qty) || 0}</Text>
               </View>
             ))}
           </View>

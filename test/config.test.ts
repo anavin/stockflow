@@ -20,6 +20,17 @@ describe("SKU tier model", () => {
     }
   });
 
+  it("Try Me (เทสเตอร์) = assign SKU ตอนตัด เหมือน 4ml + ตัดสต๊อก (ไม่ใช่ serial-pool)", () => {
+    for (const s of ["30 ml", "50 ml"]) {
+      const p = "1000 Thousand TRY ME!";
+      expect(assignsSku(s, p), s).toBe(true);          // สแกน/กรอก SKU ตอนตัด
+      expect(needsSerialSku(s, p), s).toBe(false);     // ไม่บังคับ serial ที่รับเข้าคลังก่อน
+      expect(requiresSku(s, p), s).toBe(true);         // แต่บังคับต้องมี SKU (โชว์บนใบเบิก)
+      expect(cutsStock(p, s), s).toBe(true);           // ตัดสต๊อกเหมือนสินค้าปกติ
+      expect(isAllowedFreeSize(s, p), s).toBe(true);   // ยังแถมฟรีได้ 30/50
+    }
+  });
+
   it("1.2ml = ตัดตามจำนวน ไม่ต้องมี SKU", () => {
     expect(needsSerialSku("1.2 ml")).toBe(false);
     expect(assignsSku("1.2 ml")).toBe(false);

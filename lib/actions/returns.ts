@@ -151,8 +151,8 @@ export async function confirmReturn(orderNo: string, entries: ReturnEntry[], rea
           else if (e.disposition === "damaged") { damaged += qty; }   // ถุงชำรุด: ไม่เครดิตกลับ (ของเสีย) · บันทึกประวัติผ่าน order_returns
           else { skipped += qty; }
         } else if (e.disposition === "restock") {
-          // ตัวอย่างที่ไม่มี serial จริง (ไม่ track) หรือ 4ml (assign ตอนตัด = serial สร้างสดๆ) คืนเข้าสต๊อกไม่ได้ (กัน serial ผี)
-          if (!tracked || assignsSku(it.size)) throw new Error(`${it.product} (${it.size}): ขนาดตัวอย่างคืนเข้าสต๊อกไม่ได้ — ให้เลือก "ชำรุด" หรือ "ไม่นับ"`);
+          // ตัวอย่างที่ไม่มี serial จริง (ไม่ track) หรือ 4ml/Try Me (assign ตอนตัด = serial สร้างสดๆ) คืนเข้าสต๊อกไม่ได้ (กัน serial ผี)
+          if (!tracked || assignsSku(it.size, it.product)) throw new Error(`${it.product} (${it.size}): ขนาดตัวอย่างคืนเข้าสต๊อกไม่ได้ — ให้เลือก "ชำรุด" หรือ "ไม่นับ"`);
           if (!o.stock_issued_at) throw new Error("ออเดอร์นี้ยังไม่ได้ตัดสต๊อก คืนเข้าสต๊อกไม่ได้ (เลือกชำรุด หรือยกเลิกออเดอร์แทน)");
           const sku = await matchStockSku(run, it.product, it.size || "");
           const [row] = await run<{ qty: number }>(
