@@ -64,6 +64,8 @@ export function resolvePlatform(param?: string): Platform | null {
 }
 /** path ฐานของแพลตฟอร์ม เช่น "Shopee" → "/shopee" */
 export const platformBase = (code: string) => `/${code.toLowerCase()}`;
+/** path ฐานของแพลตฟอร์มแรกที่เปิดใช้ — ใช้เป็น fallback แทน hardcode "/shopee" (กัน 404 ถ้าปิด Shopee) */
+export const firstEnabledBase = (): string => { const p = enabledPlatforms()[0]; return p ? platformBase(p.code) : "/"; };
 export const CUSTOMER_TYPES = ["ลูกค้าใหม่", "ลูกค้าเก่า"] as const;
 
 /** วันเริ่ม "รอบปัจจุบัน" ของแดชบอร์ด — ตัวเลขตัดสต๊อก/รอตัด/ออร์เดอร์บนหน้าหลัก

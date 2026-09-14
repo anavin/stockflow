@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { unstable_cache } from "next/cache";
 import { requireDashboard } from "@/lib/auth/require-user";
-import { resolvePlatform, platformBase, enabledPlatforms, platformColor } from "@/lib/config";
+import { resolvePlatform, platformBase, enabledPlatforms, platformColor, firstEnabledBase } from "@/lib/config";
 import { dashboardStats, listOrders, topProducts, ordersTrend, dailyIssueStatus, monitorToday, sizeMix, newVsReturningByMonth, topProvinces, fdaExpirySummary, shipSummary, platformOverview, listPendingShipment } from "@/lib/queries";
 import CreateOrderMenu from "@/components/CreateOrderMenu";
 import PlatformCompare from "@/components/PlatformCompare";
@@ -46,7 +46,7 @@ const getDashboardData = unstable_cache(
 export default async function Dashboard({ searchParams }: { searchParams: Promise<{ platform?: string }> }) {
   const user = await requireDashboard();
   const pf = resolvePlatform((await searchParams).platform)?.code;   // undefined = ทุกแพลตฟอร์ม
-  const base = pf ? platformBase(pf) : "/shopee";                    // ลิงก์ "ดูทั้งหมด"/สร้างใบเบิก
+  const base = pf ? platformBase(pf) : firstEnabledBase();           // ลิงก์ "ดูทั้งหมด"/สร้างใบเบิก (fallback = แพลตฟอร์มแรกที่เปิด)
   const { s, recent, top, trend, daily, fda, ship, overview, monitor, sizes, nvr, provinces, pending } = await getDashboardData(pf);
   const platforms = enabledPlatforms();
   // หน้าหลักโชว์เฉพาะที่ "ใกล้จะหมดอายุ/ต้องต่ออายุ" (≤10/≤30 วัน) — ไม่โชว์ที่หมดอายุแล้ว (ดูที่หน้า /fda)

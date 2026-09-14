@@ -2,7 +2,7 @@
 import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import { PlusCircle, ChevronDown } from "lucide-react";
-import { platformColor } from "@/lib/config";
+import { platformColor, firstEnabledBase } from "@/lib/config";
 
 /** ปุ่มสร้างใบเบิกบนหน้าหลัก — มีแพลตฟอร์มเดียว=ปุ่มตรง · หลายแพลตฟอร์ม=เลือกแพลตฟอร์มก่อน */
 export default function CreateOrderMenu({ platforms }: { platforms: { code: string; name: string }[] }) {
@@ -17,7 +17,7 @@ export default function CreateOrderMenu({ platforms }: { platforms: { code: stri
   if (platforms.length <= 1) {
     const p = platforms[0];
     return (
-      <Link href={p ? `/${p.code.toLowerCase()}/new` : "/shopee/new"} className="btn-primary">
+      <Link href={p ? `/${p.code.toLowerCase()}/new` : `${firstEnabledBase()}/new`} className="btn-primary">
         <PlusCircle size={16} /> สร้างใบเบิก
       </Link>
     );

@@ -1,11 +1,15 @@
+import { redirect } from "next/navigation";
 import { requireStock } from "@/lib/auth/require-user";
+import { can, homeFor } from "@/lib/auth/roles";
 import { listMaterialMoves } from "@/lib/queries";
 import MaterialMoves from "@/components/MaterialMoves";
 
 export const dynamic = "force-dynamic";
 
 export default async function MaterialMovesPage({ searchParams }: { searchParams: Promise<{ cat?: string; date?: string; ref?: string; q?: string }> }) {
-  await requireStock();
+  const me = await requireStock();
+  // คลังวัตถุดิบ = admin/stock (ตรงกับเมนู) — กัน picker เข้าตรงทาง URL
+  if (!can.manageStock(me.role)) redirect(homeFor(me.role));
   const { cat, date, ref, q } = await searchParams;
   const c = cat === "bulk" || cat === "label" || cat === "packaging" ? cat : "";
   const d = /^\d{4}-\d{2}-\d{2}$/.test(date || "") ? date! : "";

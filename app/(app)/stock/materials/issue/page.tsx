@@ -1,6 +1,7 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { requireStock } from "@/lib/auth/require-user";
-import { can } from "@/lib/auth/roles";
+import { can, homeFor } from "@/lib/auth/roles";
 import { listAllMaterials } from "@/lib/queries";
 import MaterialIssue from "@/components/MaterialIssue";
 import { ChevronLeft, PackageOpen, History } from "lucide-react";
@@ -9,6 +10,8 @@ export const dynamic = "force-dynamic";
 
 export default async function MaterialIssuePage({ searchParams }: { searchParams: Promise<{ mode?: string }> }) {
   const me = await requireStock();
+  // คลังวัตถุดิบ = admin/stock (ตรงกับเมนู) — picker เห็นเมนูไม่ได้ กันเข้าตรงทาง URL ด้วย
+  if (!can.manageStock(me.role)) redirect(homeFor(me.role));
   const canIssue = can.manageStock(me.role);
   const { mode } = await searchParams;
   const initialMode = mode === "receive" ? "receive" : "issue";

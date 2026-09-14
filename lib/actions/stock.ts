@@ -229,7 +229,7 @@ export async function lookupOrderForIssue(orderNo: string): Promise<IssueLookup>
 
 /** ตรวจ SKU ที่สแกนตอนตัดสต๊อก: ต้องมีจริง (in_stock) + ตรงกลิ่น/ขนาดของบรรทัดในใบเบิก
  *  คืน line_no ที่จับคู่ได้ (ให้ UI เพิ่ม serial ให้บรรทัดนั้นอัตโนมัติ) หรือ error ทันที */
-export async function resolveIssueSku(orderNo: string, sku: string): Promise<{ ok: boolean; line_no?: number; product?: string; size?: string; error?: string }> {
+export async function resolveIssueSku(orderNo: string, sku: string): Promise<{ ok: boolean; line_no?: number; product?: string; size?: string; error?: string; notFound?: boolean }> {
   const user = await getCurrentUser();
   if (!user) return { ok: false, error: "กรุณาเข้าสู่ระบบ" };
   if (!can.issueStock(user.role)) return { ok: false, error: "ไม่มีสิทธิ์ตัดสต๊อก" };
@@ -238,7 +238,8 @@ export async function resolveIssueSku(orderNo: string, sku: string): Promise<{ o
   const on = (orderNo || "").trim();
   const [u] = await q<{ status: string; order_no: string | null; product: string; size: string }>(
     `select status, order_no, product, size from stock_unit where btrim(sku) = $1`, [s]);
-  if (!u) return { ok: false, error: `ไม่พบ SKU "${s}" ในคลัง` };
+  // notFound = SKU ไม่มีในคลังเลย (ป้าย assign สดๆ ของ 4ml/Try Me) — UI เอาไปเติมบรรทัด assign ได้ · ต่างจาก "มีแต่ตัดไม่ได้"
+  if (!u) return { ok: false, error: `ไม่พบ SKU "${s}" ในคลัง`, notFound: true };
   if (u.status !== "in_stock") return { ok: false, error: `SKU "${s}" ตัดไม่ได้ (${u.status === "issued" ? "ตัดไปแล้ว" + (u.order_no ? " · " + u.order_no : "") : u.status})` };
   const [li] = await q<{ line_no: number }>(
     `select oi.line_no from order_items oi join orders o on o.order_no = oi.order_no

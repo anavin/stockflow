@@ -131,10 +131,12 @@ export default function StockIssue({ isAdmin, initialOrder, specOptions = [], to
     if (Object.values(form).some((v) => (v?.skus || []).includes(s))) { scanBeep("warn"); setScanMsg({ type: "warn", text: `สแกนซ้ำ: ${s}` }); return; }
     const res = await resolveIssueSku(preview.order_no, s);
     if (!res.ok || res.product == null) {
+      // บรรทัด assign ตอนตัด (4ml / Try Me) ที่ยังไม่ครบ — assign SKU เป็นป้ายสดๆ ไม่มีในคลัง
+      const assignTargets = preview.items!.filter((it) => it.assign_sku && (form[it.line_no]?.skus?.length || 0) < it.qty);
+      // SKU ไม่มีในคลังเลย (notFound) + มีบรรทัด assign เหลือบรรทัดเดียว → เติมให้อัตโนมัติ (สแกน Try Me/4ml ในช่องบนได้เลย)
+      if (res.notFound && assignTargets.length === 1) { addLineSku(assignTargets[0], s); return; }
       scanBeep("error");
-      // มีบรรทัด assign ตอนตัด (4ml / Try Me) ที่ยังไม่ครบ → แนะนำให้กรอกในช่องของบรรทัดนั้นแทน (ช่องบนใช้กับขวดที่รับเข้าคลังแล้ว)
-      const hasAssign = preview.items!.some((it) => it.assign_sku && (form[it.line_no]?.skus?.length || 0) < it.qty);
-      setScanMsg({ type: "error", text: (res.error || "SKU ไม่ถูกต้อง") + (hasAssign ? " · ถ้าเป็น SKU ของ 4ml / Try Me ให้กรอกในช่องของบรรทัดนั้นด้านล่าง" : "") });
+      setScanMsg({ type: "error", text: (res.error || "SKU ไม่ถูกต้อง") + (assignTargets.length ? " · ถ้าเป็น SKU ของ 4ml / Try Me ให้กรอกในช่องของบรรทัดนั้นด้านล่าง" : "") });
       return;
     }
     const nk = (x?: string | null) => (x || "").toLowerCase().replace(/[^a-z0-9ก-๙]/g, "");

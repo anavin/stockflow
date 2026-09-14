@@ -264,15 +264,19 @@ export async function countUnits(opts: UnitsFilter = {}): Promise<number> {
     return r?.n ?? 0;
   } catch { return 0; }
 }
-export async function unitCounts(): Promise<{ in_stock: number; issued: number }> {
-  try {
-    const [r] = await q<{ in_stock: number; issued: number }>(
-      `select count(*) filter (where status='in_stock')::int as in_stock,
-              count(*) filter (where status='issued')::int as issued
-       from (${UNITS_UNION}) u`);
-    return { in_stock: r?.in_stock ?? 0, issued: r?.issued ?? 0 };
-  } catch { return { in_stock: 0, issued: 0 }; }
-}
+// badge นับ SKU (in_stock/issued) — full-scan UNION ตัวหนักไม่ต้องสดทุก request → cache 30s (bump ด้วย tag "dashboard" ตอน รับ/ตัด/reverse)
+export const unitCounts = unstable_cache(
+  async (): Promise<{ in_stock: number; issued: number }> => {
+    try {
+      const [r] = await q<{ in_stock: number; issued: number }>(
+        `select count(*) filter (where status='in_stock')::int as in_stock,
+                count(*) filter (where status='issued')::int as issued
+         from (${UNITS_UNION}) u`);
+      return { in_stock: r?.in_stock ?? 0, issued: r?.issued ?? 0 };
+    } catch { return { in_stock: 0, issued: 0 }; }
+  },
+  ["stock:unit-counts"], { tags: ["dashboard"], revalidate: 30 },
+);
 
 export type OrderBrief = { order_no: string; doc_no: string | null; platform: string | null; receiver: string | null; province: string | null; stock_issued_at: boolean; shipped_at: string | null; item_count: number };
 /** สรุปออเดอร์ (สำหรับหน้าติดตาม SKU: ค้น Order No. ที่ยังไม่มี SKU รายชิ้น → โชว์สถานะตัด/ส่ง) */
@@ -509,13 +513,17 @@ export async function listPendingShipment(platform?: string): Promise<PendingRow
   try {
     const params: any[] = [];
     const pc = platform ? (params.push(platform), ` and o.platform = $${params.length}`) : "";
+    // join+group แทน correlated subquery ต่อแถว + จำกัด 300 (เหมือน list อื่น) — ค้างส่งเยอะไม่อืด
     return await q<PendingRow>(
       `select o.order_no, o.doc_no, o.platform, coalesce(o.receiver, o.username) as receiver, o.province,
-              (select count(*)::int from order_items i where i.order_no = o.order_no) as item_count,
+              coalesce(count(i.id), 0)::int as item_count,
               o.stock_issued_at as issued_at
        from orders o
+       left join order_items i on i.order_no = o.order_no
        where o.deleted_at is null and o.stock_issued_at is not null and o.shipped_at is null${pc}
-       order by o.stock_issued_at asc nulls last`, params);
+       group by o.order_no
+       order by o.stock_issued_at asc nulls last
+       limit 300`, params);
   } catch { return []; }
 }
 
@@ -716,8 +724,10 @@ export async function listOrders(opts: { platform?: string; search?: string; mon
     group by o.order_no
     order by o.doc_date desc nulls last, o.created_at desc
     limit ${limit} offset ${offset}`;
-  const rows = await q<OrderRow>(sql, params);
-  return rows.map(normOrder);
+  try {
+    const rows = await q<OrderRow>(sql, params);
+    return rows.map(normOrder);
+  } catch (e) { return orMissing(e, [] as OrderRow[]); }   // schema drift → หน้าว่าง ไม่ 500 ยกแผง (อยู่ใน dashboard bundle)
 }
 
 export async function countOrders(opts: { platform?: string; search?: string; month?: string; from?: string; to?: string; today?: string; unclassified?: boolean; issued?: "yes" | "no"; shipped?: "yes" | "no" } = {}): Promise<number> {
@@ -742,29 +752,36 @@ export async function countOrders(opts: { platform?: string; search?: string; mo
     // ต้องตรงกับ listOrders เป๊ะ (รวม province) ไม่งั้น total/หน้าเพจเพี้ยน
     where.push(`(order_no ilike ${p} or doc_no ilike ${p} or receiver ilike ${p} or username ilike ${p} or shop_name ilike ${p} or province ilike ${p})`);
   }
-  const [r] = await q<{ n: number }>(`select count(*)::int n from orders ${where.length ? "where " + where.join(" and ") : ""}`, params);
-  return r?.n ?? 0;
+  try {
+    const [r] = await q<{ n: number }>(`select count(*)::int n from orders ${where.length ? "where " + where.join(" and ") : ""}`, params);
+    return r?.n ?? 0;
+  } catch (e) { return orMissing(e, 0); }
 }
 
 export async function listDeletedOrders(platform = "Shopee", limit = 200, offset = 0): Promise<OrderRow[]> {
-  const rows = await q<OrderRow>(
-    `select o.*, coalesce(count(i.id),0)::int as item_count, coalesce(sum(i.qty),0)::float8 as total_qty
-     from orders o left join order_items i on i.order_no = o.order_no
-     where o.platform = $1 and o.deleted_at is not null
-     group by o.order_no
-     order by o.deleted_at desc
-     limit ${Math.min(limit, 500)} offset ${Math.max(0, offset)}`,
-    [platform],
-  );
-  return rows.map(normOrder);
+  try {
+    const rows = await q<OrderRow>(
+      `select o.*, coalesce(count(i.id),0)::int as item_count, coalesce(sum(i.qty),0)::float8 as total_qty
+       from orders o left join order_items i on i.order_no = o.order_no
+       where o.platform = $1 and o.deleted_at is not null
+       group by o.order_no
+       order by o.deleted_at desc
+       limit ${Math.min(limit, 500)} offset ${Math.max(0, offset)}`,
+      [platform],
+    );
+    return rows.map(normOrder);
+  } catch (e) { return orMissing(e, [] as OrderRow[]); }
 }
 
 export async function countDeleted(platform = "Shopee"): Promise<number> {
-  const [r] = await q<{ n: number }>(`select count(*)::int n from orders where platform = $1 and deleted_at is not null`, [platform]);
-  return r?.n ?? 0;
+  try {
+    const [r] = await q<{ n: number }>(`select count(*)::int n from orders where platform = $1 and deleted_at is not null`, [platform]);
+    return r?.n ?? 0;
+  } catch (e) { return orMissing(e, 0); }
 }
 
 export async function getOrder(orderNo: string, opts: { includeDeleted?: boolean } = {}): Promise<OrderWithItems | null> {
+  try {
   const [order] = await q<Order>(
     `select * from orders where order_no = $1 ${opts.includeDeleted ? "" : "and deleted_at is null"}`,
     [orderNo],
@@ -784,6 +801,7 @@ export async function getOrder(orderNo: string, opts: { includeDeleted?: boolean
     [orderNo],
   );
   return { ...normOrder(order), items };
+  } catch (e) { return orMissing(e, null); }
 }
 
 // ---- stock -----------------------------------------------------------------
@@ -836,15 +854,17 @@ export async function getStockMoves(opts: { orderNo?: string; product?: string; 
   if (opts.product) { params.push(opts.product); where.push(`m.product = $${params.length}`); }
   if (opts.size) { params.push(opts.size); where.push(`m.size = $${params.length}`); }
   const limit = Math.min(opts.limit ?? 200, 1000);
-  return q<StockMoveRow>(
-    `select m.id, m.product, m.size, m.qty_change::float8 as qty_change, m.balance::float8 as balance,
-            m.reason, m.order_no, m.note, m.created_at,
-            coalesce(nullif(u.full_name,''), u.username) as by_name
-     from stock_moves m left join users u on u.id = m.created_by
-     ${where.length ? "where " + where.join(" and ") : ""}
-     order by m.created_at desc, m.id desc limit ${limit}`,
-    params,
-  );
+  try {
+    return await q<StockMoveRow>(
+      `select m.id, m.product, m.size, m.qty_change::float8 as qty_change, m.balance::float8 as balance,
+              m.reason, m.order_no, m.note, m.created_at,
+              coalesce(nullif(u.full_name,''), u.username) as by_name
+       from stock_moves m left join users u on u.id = m.created_by
+       ${where.length ? "where " + where.join(" and ") : ""}
+       order by m.created_at desc, m.id desc limit ${limit}`,
+      params,
+    );
+  } catch (e) { return orMissing(e, [] as StockMoveRow[]); }
 }
 
 /** Order + items with current stock level per item (สำหรับหน้า preview ก่อนตัดสต๊อก). */
@@ -979,18 +999,22 @@ export async function stockSummary(): Promise<{ skus: number; low: number; issue
 
 export type UserRow = { id: number; username: string; full_name: string; role: string; is_active: boolean; last_login_at: string | null; created_at: string };
 export async function listUsers(): Promise<UserRow[]> {
-  return q<UserRow>(`select id, username, full_name, role, is_active, last_login_at, created_at from users order by id`);
+  try {
+    return await q<UserRow>(`select id, username, full_name, role, is_active, last_login_at, created_at from users order by id`);
+  } catch (e) { return orMissing(e, [] as UserRow[]); }
 }
 
 /** Distinct month labels present, newest first (for the filter dropdown). */
 export async function getMonths(platform?: string): Promise<string[]> {
-  const rows = await q<{ month_label: string; d: string }>(
-    `select month_label, max(doc_date) d from orders
-     where month_label is not null ${platform ? "and platform = $1" : ""}
-     group by month_label order by d desc nulls last`,
-    platform ? [platform] : [],
-  );
-  return rows.map((r) => r.month_label);
+  try {
+    const rows = await q<{ month_label: string; d: string }>(
+      `select month_label, max(doc_date) d from orders
+       where month_label is not null ${platform ? "and platform = $1" : ""}
+       group by month_label order by d desc nulls last`,
+      platform ? [platform] : [],
+    );
+    return rows.map((r) => r.month_label);
+  } catch (e) { return orMissing(e, [] as string[]); }
 }
 
 // ---- คลังวัตถุดิบ & บรรจุภัณฑ์ (material_item + material_move) ---------------
@@ -1363,7 +1387,7 @@ export async function scentVelocity(limit = 40): Promise<VelocityRow[]> {
   try {
     return await q<VelocityRow>(
       `with sold as (
-         select regexp_replace(lower(i.product),'[^a-z0-9ก-๙]','','g') as pk, btrim(lower(i.size),' .') as sk,
+         select regexp_replace(lower(btrim(i.product)),'[^a-z0-9ก-๙]','','g') as pk, btrim(lower(i.size),' .') as sk,
                 max(i.product) as product, max(i.size) as size, sum(i.qty)::float8 as sold90
          from order_items i join orders o on o.order_no = i.order_no
          where o.deleted_at is null and coalesce(i.product,'') <> '' and i.size ~* 'ml'
@@ -1384,7 +1408,7 @@ export async function slowMovers(limit = 40): Promise<SlowMoverRow[]> {
   try {
     return await q<SlowMoverRow>(
       `with sold as (
-         select regexp_replace(lower(i.product),'[^a-z0-9ก-๙]','','g') as pk, btrim(lower(i.size),' .') as sk, sum(i.qty)::float8 as sold90
+         select regexp_replace(lower(btrim(i.product)),'[^a-z0-9ก-๙]','','g') as pk, btrim(lower(i.size),' .') as sk, sum(i.qty)::float8 as sold90
          from order_items i join orders o on o.order_no = i.order_no
          where o.deleted_at is null and coalesce(o.order_date,o.doc_date) >= current_date - interval '90 days'
          group by 1,2)

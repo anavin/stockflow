@@ -1,5 +1,5 @@
 import { requireFda } from "@/lib/auth/require-user";
-import { isAdmin } from "@/lib/auth/roles";
+import { can } from "@/lib/auth/roles";
 import { listFda, fdaExpirySummary } from "@/lib/queries";
 import FdaManager from "@/components/FdaManager";
 import { ShieldCheck } from "lucide-react";
@@ -8,7 +8,8 @@ export const dynamic = "force-dynamic";
 
 export default async function FdaPage() {
   const me = await requireFda();
-  const canEdit = isAdmin(me.role);
+  // แก้ อย. = manageStock (admin+stock) ให้ตรงกับ fda.ts gate + policy ใน roles.ts (เดิม UI จำกัด admin เกินไป)
+  const canEdit = can.manageStock(me.role);
   const [rows, summary] = await Promise.all([listFda(), fdaExpirySummary()]);
 
   return (

@@ -1,6 +1,7 @@
 // สิทธิ์ตามบทบาท — จุดเดียวที่กำหนดว่าใครทำอะไรได้ (ใช้ทั้งฝั่ง UI + server action)
 // 4 บทบาท: admin (เจ้าของ) · creator (สร้างใบเบิก) · picker (จัดของ/ตัดสต๊อก) · stock (คลัง)
 import type { Role } from "./constants";
+import { firstEnabledBase } from "@/lib/config";
 
 export const ROLE_LABELS: Record<string, string> = {
   admin: "แอดมิน / เจ้าของ",
@@ -64,7 +65,7 @@ export const can = {
 export function homeFor(role?: string | null): string {
   const rs = roleList(role);
   if (rs.includes("admin")) return "/";
-  if (rs.includes("creator")) return "/shopee";
+  if (rs.includes("creator")) return firstEnabledBase();
   if (rs.includes("picker")) return "/stock/issue";
   if (rs.includes("stock")) return "/stock";
   if (rs.includes("marketing")) return "/reports";
