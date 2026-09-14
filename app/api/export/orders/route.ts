@@ -33,9 +33,9 @@ export async function GET(req: Request) {
   const where = ["o.deleted_at is null", "o.platform = $1"];
   if (month) { params.push(month); where.push(`o.month_label = $${params.length}`); }
   if (today) {
-    // "วันนี้" = order_date วันนี้ หรือ นำเข้าระบบวันนี้ (ตรงกับ listOrders/Monitor)
-    params.push(today); const d = `$${params.length}`;
-    where.push(`(coalesce(o.order_date, o.doc_date) = ${d} or (o.created_at at time zone 'Asia/Bangkok')::date = ${d})`);
+    // "วันนี้" = ใบเบิกที่นำเข้าระบบวันนี้ (created_at) — ตรงกับ listOrders/Monitor
+    params.push(today);
+    where.push(`(o.created_at at time zone 'Asia/Bangkok')::date = $${params.length}`);
   }
   // ยึด coalesce(order_date, doc_date) ให้ตรงกับ listOrders/countOrders (ไม่งั้นไฟล์ export ≠ หน้าจอ)
   if (from) { params.push(from); where.push(`coalesce(o.order_date, o.doc_date) >= $${params.length}`); }

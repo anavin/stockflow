@@ -61,7 +61,7 @@ export default function TodayMonitor({ rows, showPlatforms = true }: { rows: Mon
         </div>
         <span className="shrink-0 text-xs font-semibold text-ink">{pct}%</span>
       </div>
-      <p className="mt-2 text-[10px] leading-tight text-faint">* &ldquo;ออร์เดอร์วันนี้&rdquo; นับรวมออร์เดอร์ที่นำเข้าระบบวันนี้ด้วย (order_date วันนี้ หรือ วันนำเข้า)</p>
+      <p className="mt-2 text-[10px] leading-tight text-faint">* &ldquo;ออร์เดอร์วันนี้&rdquo; = ใบเบิกที่นำเข้าระบบวันนี้ (นับตามวันที่นำเข้า/สร้าง ไม่ใช่วันที่สั่งซื้อ)</p>
     </div>
   );
 

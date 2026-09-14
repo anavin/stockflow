@@ -33,7 +33,7 @@ export default async function AllOrdersPage({ searchParams }: {
   const rowTo = offset + orders.length;
 
   const fmtDay = (d?: string | null) => (d ? new Date(d + "T00:00:00").toLocaleDateString("th-TH", { day: "numeric", month: "short", year: "2-digit" }) : "");
-  const dateLabel = today ? `วันนี้ (รวมที่นำเข้าวันนี้)` : from && to ? (from === to ? fmtDay(from) : `${fmtDay(from)}–${fmtDay(to)}`) : from ? `ตั้งแต่ ${fmtDay(from)}` : to ? `ถึง ${fmtDay(to)}` : "";
+  const dateLabel = today ? `นำเข้าวันนี้` : from && to ? (from === to ? fmtDay(from) : `${fmtDay(from)}–${fmtDay(to)}`) : from ? `ตั้งแต่ ${fmtDay(from)}` : to ? `ถึง ${fmtDay(to)}` : "";
   const statusLabel = iss === "no" ? "รอตัดสต๊อก" : iss === "yes" ? "ตัดสต๊อกแล้ว" : shp === "no" ? "ค้างส่ง" : shp === "yes" ? "ส่งแล้ว" : "";
   const summary = [pf ? platformName(pf) : "", dateLabel, unc ? "ยังไม่จัดลูกค้า (ไม่ระบุ)" : "", statusLabel].filter(Boolean).join(" · ") || "ทั้งหมด";
 

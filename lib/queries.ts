@@ -578,10 +578,7 @@ export async function monitorToday(platform?: string): Promise<MonitorRow[]> {
               count(stock_issued_at)::int as issued
        from orders
        where deleted_at is null${pc}
-         and (
-              coalesce(order_date, doc_date) = (now() at time zone 'Asia/Bangkok')::date
-           or (created_at at time zone 'Asia/Bangkok')::date = (now() at time zone 'Asia/Bangkok')::date
-         )
+         and (created_at at time zone 'Asia/Bangkok')::date = (now() at time zone 'Asia/Bangkok')::date
        group by 1
        order by orders desc`, params);
   } catch { return []; }
@@ -691,11 +688,10 @@ export async function listOrders(opts: { platform?: string; search?: string; mon
   if (opts.month) { params.push(opts.month); where.push(`o.month_label = $${params.length}`); }
   // "ไม่ระบุ" = ยังไม่ได้จัดประเภทลูกค้า (customer_type ไม่ใช่ ใหม่/เก่า) — ตรงกับ unknown_c ในกราฟ
   if (opts.unclassified) where.push(`coalesce(btrim(o.customer_type),'') not in ('ลูกค้าใหม่','ลูกค้าเก่า')`);
-  // Monitor "วันนี้" basis: order_date=today OR imported/entered today (matches monitorToday)
+  // Monitor "วันนี้" = ใบเบิกที่นำเข้าระบบวันนี้ (created_at) — ตรงกับ monitorToday + KPI "เข้าวันนี้"
   if (opts.today) {
     params.push(opts.today);
-    const d = `$${params.length}`;
-    where.push(`(coalesce(o.order_date, o.doc_date) = ${d} or (o.created_at at time zone 'Asia/Bangkok')::date = ${d})`);
+    where.push(`(o.created_at at time zone 'Asia/Bangkok')::date = $${params.length}`);
   }
   if (opts.from) { params.push(opts.from); where.push(`coalesce(o.order_date, o.doc_date) >= $${params.length}`); }
   if (opts.to) { params.push(opts.to); where.push(`coalesce(o.order_date, o.doc_date) <= $${params.length}`); }
@@ -732,8 +728,7 @@ export async function countOrders(opts: { platform?: string; search?: string; mo
   if (opts.unclassified) where.push(`coalesce(btrim(customer_type),'') not in ('ลูกค้าใหม่','ลูกค้าเก่า')`);
   if (opts.today) {
     params.push(opts.today);
-    const d = `$${params.length}`;
-    where.push(`(coalesce(order_date, doc_date) = ${d} or (created_at at time zone 'Asia/Bangkok')::date = ${d})`);
+    where.push(`(created_at at time zone 'Asia/Bangkok')::date = $${params.length}`);
   }
   if (opts.from) { params.push(opts.from); where.push(`coalesce(order_date, doc_date) >= $${params.length}`); }
   if (opts.to) { params.push(opts.to); where.push(`coalesce(order_date, doc_date) <= $${params.length}`); }

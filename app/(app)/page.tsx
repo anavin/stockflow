@@ -39,7 +39,7 @@ const getDashboardData = unstable_cache(
     ]);
     return { s, recent, top, trend, daily, fda, ship, overview, monitor, sizes, nvr, provinces, pending };
   },
-  ["dashboard-data-v5"],   // bump คีย์เมื่อ shape/นิยามเปลี่ยน = ล้าง Data Cache เก่าข้าม deploy (v5: nvr btrim+cutoff ขอบเดือน)
+  ["dashboard-data-v6"],   // bump คีย์เมื่อ shape/นิยามเปลี่ยน = ล้าง Data Cache เก่าข้าม deploy (v6: Monitor นับตาม created_at ล้วน)
   { revalidate: 30, tags: ["dashboard"] },
 );
 
