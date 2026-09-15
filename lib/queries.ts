@@ -1574,7 +1574,7 @@ export async function returnStatsByScent(platform?: string): Promise<ReturnStat[
                 count(distinct r.order_no)::int as times
          from order_returns r join orders o on o.order_no = r.order_no
          where r.voided_at is null and coalesce(r.product,'') <> '' and o.platform = $1
-         group by r.product order by returned desc limit 50`, [platform]);
+         group by r.product order by returned desc limit 19`, [platform]);
     }
     return await q<ReturnStat>(
       `select product,
@@ -1582,7 +1582,7 @@ export async function returnStatsByScent(platform?: string): Promise<ReturnStat[
               sum(case when disposition='damaged' then qty else 0 end)::float8 as damaged,
               count(distinct order_no)::int as times
        from order_returns where voided_at is null and coalesce(product,'') <> ''
-       group by product order by returned desc limit 50`);
+       group by product order by returned desc limit 19`);
   } catch { return []; }
 }
 
