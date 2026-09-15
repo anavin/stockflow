@@ -1,12 +1,15 @@
 "use client";
 import Link from "next/link";
 import { useState } from "react";
+import type { ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { deleteOrder, bulkDeleteOrders } from "@/lib/actions/orders";
 import { pushToCtw } from "@/lib/actions/ctw";
-import { canCreatePlatform } from "@/lib/config";
+import { markWholesaleShipped } from "@/lib/actions/wholesale-delivery";
+import { canCreatePlatform, isWholesalePlatform } from "@/lib/config";
 import type { OrderRow } from "@/lib/types";
-import { Printer, Pencil, Trash2, PackageOpen, X, Zap, Clock, Check, Send, CheckCircle2 } from "lucide-react";
+import WholesaleReceiptModal from "./WholesaleReceiptModal";
+import { Printer, Pencil, Trash2, PackageOpen, X, Zap, Clock, Check, Send, CheckCircle2, Truck, PackageCheck } from "lucide-react";
 
 /** สถานะออเดอร์ — ชุดเดียวกัน ไล่สีตามขั้น: รอตัด (เหลือง) → ตัดแล้ว (ฟ้า) → ส่งแล้ว (เขียว)
  *  + ป้ายการคืน (ถ้ามี) — return_status เป็น undefined ถ้า prod ยังไม่รัน migration รับคืน */
@@ -14,11 +17,23 @@ function StatusChip({ order }: { order: OrderRow }) {
   const ret = order.return_status;
   const retChip = ret === "full" ? <span className="chip-danger whitespace-nowrap">↩ คืนแล้ว</span>
     : ret === "partial" ? <span className="chip-warn whitespace-nowrap">↩ คืนบางส่วน</span> : null;
-  const base = order.shipped_at
-    ? <span className="chip-ok whitespace-nowrap"><Check size={12} className="opacity-80" /> ส่งแล้ว</span>
-    : order.stock_issued_at
-    ? <span className="chip-info whitespace-nowrap"><span className="h-1.5 w-1.5 rounded-full bg-blue-500" /> ตัดแล้ว</span>
-    : <span className="chip-warn whitespace-nowrap"><span className="h-1.5 w-1.5 rounded-full bg-amber-400" /> รอตัด</span>;
+  const wh = isWholesalePlatform(order.platform);   // ค้าส่ง = มีขั้น "ส่งออก → ปลายทางรับ"
+  const recv = order.received_qty ?? 0;
+  const total = order.total_qty ?? 0;
+  let base: ReactNode;
+  if (order.shipped_at && wh) {
+    base = order.received_at
+      ? <span className="chip-ok whitespace-nowrap"><PackageCheck size={12} className="opacity-80" /> ปลายทางรับครบ</span>
+      : recv > 0
+      ? <span className="whitespace-nowrap inline-flex items-center gap-1 rounded-md bg-teal-50 px-2 py-1 text-xs font-medium text-teal-700"><PackageCheck size={12} /> รับบางส่วน {recv}/{total}</span>
+      : <span className="whitespace-nowrap inline-flex items-center gap-1 rounded-md bg-orange-50 px-2 py-1 text-xs font-medium text-orange-700"><Truck size={12} /> ส่งออกแล้ว · รอยืนยัน</span>;
+  } else if (order.shipped_at) {
+    base = <span className="chip-ok whitespace-nowrap"><Check size={12} className="opacity-80" /> ส่งแล้ว</span>;
+  } else if (order.stock_issued_at) {
+    base = <span className="chip-info whitespace-nowrap"><span className="h-1.5 w-1.5 rounded-full bg-blue-500" /> ตัดแล้ว</span>;
+  } else {
+    base = <span className="chip-warn whitespace-nowrap"><span className="h-1.5 w-1.5 rounded-full bg-amber-400" /> รอตัด</span>;
+  }
   if (!retChip) return base;
   return <span className="inline-flex flex-wrap items-center gap-1">{base}{retChip}</span>;
 }
@@ -45,6 +60,8 @@ export default function OrdersTable({ orders, platform = "Shopee" }: { orders: O
   }
 
   const isCtw = platform === "CTW";
+  const isEveKp = isWholesalePlatform(platform) && !isCtw;   // Eve/KingPower = ส่งออก+ยืนยันรับ มือ (2 จังหวะ)
+  const [receiptFor, setReceiptFor] = useState<{ order_no: string; doc_no: string | null } | null>(null);
   async function onPush(orderNo: string) {
     if (!confirm(`ส่งใบเบิก ${orderNo} ไปยังระบบ CTW?\n\nระบบ CTW จะรับรายการ + SKU ไปเข้าสต๊อกสาขา`)) return;
     setBusy(orderNo);
@@ -53,6 +70,16 @@ export default function OrdersTable({ orders, platform = "Shopee" }: { orders: O
       if (!res.ok) { alert(res.error || "ส่งไม่สำเร็จ"); return; }
       router.refresh();
     } catch { alert("ส่งไม่สำเร็จ (ระบบขัดข้อง ลองใหม่)"); }
+    finally { setBusy(null); }
+  }
+  async function onShip(orderNo: string) {
+    if (!confirm(`ยืนยันส่งออกใบเบิก ${orderNo} ไปปลายทาง?\n\n(รอปลายทางแจ้งกลับแล้วค่อยกด "ยืนยันรับ" อีกที)`)) return;
+    setBusy(orderNo);
+    try {
+      const res = await markWholesaleShipped(orderNo);
+      if (!res.ok) { alert(res.error || "ส่งออกไม่สำเร็จ"); return; }
+      router.refresh();
+    } catch { alert("ส่งออกไม่สำเร็จ (ระบบขัดข้อง)"); }
     finally { setBusy(null); }
   }
 
@@ -190,6 +217,23 @@ export default function OrdersTable({ orders, platform = "Shopee" }: { orders: O
                         ) : (
                           <span className="text-[11px] text-muted whitespace-nowrap" title="ต้องตัดสต๊อกก่อน">รอตัดสต๊อก</span>
                         ))}
+                        {isEveKp && (!o.stock_issued_at ? (
+                          <span className="text-[11px] text-muted whitespace-nowrap" title="ต้องตัดสต๊อกก่อน">รอตัดสต๊อก</span>
+                        ) : !o.shipped_at ? (
+                          <button onClick={() => onShip(o.order_no)} disabled={busy === o.order_no}
+                            className="inline-flex items-center gap-1 rounded-md bg-orange-500 px-2 py-1 text-xs font-medium text-white hover:bg-orange-600 disabled:opacity-50 whitespace-nowrap" title="ยืนยันส่งออกไปปลายทาง">
+                            <Truck size={14} /> {busy === o.order_no ? "กำลังส่ง…" : "ส่งออก"}
+                          </button>
+                        ) : o.received_at ? (
+                          <span className="inline-flex items-center gap-1 rounded-md bg-green-50 px-2 py-1 text-xs font-medium text-green-700 whitespace-nowrap" title={`ปลายทางรับครบ${o.received_by ? " · " + o.received_by : ""}`}>
+                            <PackageCheck size={14} /> รับครบ
+                          </span>
+                        ) : (
+                          <button onClick={() => setReceiptFor({ order_no: o.order_no, doc_no: o.doc_no ?? null })}
+                            className="inline-flex items-center gap-1 rounded-md bg-green-600 px-2 py-1 text-xs font-medium text-white hover:bg-green-700 whitespace-nowrap" title="ยืนยันปลายทางรับ (รับบางส่วนได้)">
+                            <PackageCheck size={14} /> {(o.received_qty ?? 0) > 0 ? `รับเพิ่ม (${o.received_qty}/${o.total_qty})` : "ยืนยันรับ"}
+                          </button>
+                        ))}
                         <a href={`/print/pdf/${encodeURIComponent(o.order_no)}`} target="_blank" rel="noreferrer"
                           className="rounded-md p-1.5 text-muted hover:bg-brand-50 hover:text-brand-600" title="พิมพ์" aria-label="พิมพ์ใบเบิก">
                           <Printer size={16} />
@@ -211,6 +255,11 @@ export default function OrdersTable({ orders, platform = "Shopee" }: { orders: O
           </table>
         </div>
       </div>
+      {receiptFor && (
+        <WholesaleReceiptModal orderNo={receiptFor.order_no} docNo={receiptFor.doc_no}
+          onClose={() => setReceiptFor(null)}
+          onDone={() => { setReceiptFor(null); router.refresh(); }} />
+      )}
     </div>
   );
 }

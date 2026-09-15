@@ -689,7 +689,7 @@ export const getProvinces = unstable_cache(
 );
 
 // ---- orders ----------------------------------------------------------------
-export async function listOrders(opts: { platform?: string; search?: string; month?: string; from?: string; to?: string; today?: string; unclassified?: boolean; issued?: "yes" | "no"; shipped?: "yes" | "no"; limit?: number; offset?: number } = {}): Promise<OrderRow[]> {
+export async function listOrders(opts: { platform?: string; search?: string; month?: string; from?: string; to?: string; today?: string; unclassified?: boolean; issued?: "yes" | "no"; shipped?: "yes" | "no"; awaitingReceipt?: boolean; limit?: number; offset?: number } = {}): Promise<OrderRow[]> {
   const where: string[] = ["o.deleted_at is null"];
   const params: any[] = [];
   if (opts.platform) { params.push(opts.platform); where.push(`o.platform = $${params.length}`); }
@@ -707,6 +707,8 @@ export async function listOrders(opts: { platform?: string; search?: string; mon
   else if (opts.issued === "no") where.push(`o.stock_issued_at is null`);
   if (opts.shipped === "yes") where.push(`o.shipped_at is not null`);
   else if (opts.shipped === "no") where.push(`o.shipped_at is null`);
+  // ค้าส่ง: รอปลายทางยืนยันรับ = ส่งออกแล้วแต่ยังรับไม่ครบ (received_at ตั้งเมื่อครบ) — อ้าง received_at เฉพาะตอนเลือกฟิลเตอร์นี้
+  if (opts.awaitingReceipt) where.push(`o.shipped_at is not null and o.received_at is null and o.platform in ('CTW','Eveandboy','KingPower')`);
   if (opts.search) {
     params.push(`%${opts.search}%`);
     const p = `$${params.length}`;
@@ -726,11 +728,22 @@ export async function listOrders(opts: { platform?: string; search?: string; mon
     limit ${limit} offset ${offset}`;
   try {
     const rows = await q<OrderRow>(sql, params);
-    return rows.map(normOrder);
+    const mapped = rows.map(normOrder);
+    // จำนวนที่ปลายทางยืนยันรับ (ค้าส่ง) — drift-safe: prod ยังไม่รัน 0047 = ข้าม (ไม่ให้ทั้งลิสต์ล่ม)
+    if (mapped.length) {
+      try {
+        const ons = mapped.map((r) => r.order_no);
+        const rq = await q<{ order_no: string; rq: number }>(
+          `select order_no, coalesce(sum(received_qty),0)::float8 as rq from order_items where order_no = any($1) group by order_no`, [ons]);
+        const m = new Map(rq.map((r) => [r.order_no, Number(r.rq)]));
+        for (const r of mapped) r.received_qty = m.get(r.order_no) ?? 0;
+      } catch { /* คอลัมน์ received_qty ยังไม่มี = ข้าม */ }
+    }
+    return mapped;
   } catch (e) { return orMissing(e, [] as OrderRow[]); }   // schema drift → หน้าว่าง ไม่ 500 ยกแผง (อยู่ใน dashboard bundle)
 }
 
-export async function countOrders(opts: { platform?: string; search?: string; month?: string; from?: string; to?: string; today?: string; unclassified?: boolean; issued?: "yes" | "no"; shipped?: "yes" | "no" } = {}): Promise<number> {
+export async function countOrders(opts: { platform?: string; search?: string; month?: string; from?: string; to?: string; today?: string; unclassified?: boolean; issued?: "yes" | "no"; shipped?: "yes" | "no"; awaitingReceipt?: boolean } = {}): Promise<number> {
   const where: string[] = ["deleted_at is null"];
   const params: any[] = [];
   if (opts.platform) { params.push(opts.platform); where.push(`platform = $${params.length}`); }
@@ -746,6 +759,7 @@ export async function countOrders(opts: { platform?: string; search?: string; mo
   else if (opts.issued === "no") where.push(`stock_issued_at is null`);
   if (opts.shipped === "yes") where.push(`shipped_at is not null`);
   else if (opts.shipped === "no") where.push(`shipped_at is null`);
+  if (opts.awaitingReceipt) where.push(`shipped_at is not null and received_at is null and platform in ('CTW','Eveandboy','KingPower')`);
   if (opts.search) {
     params.push(`%${opts.search}%`);
     const p = `$${params.length}`;

@@ -50,9 +50,11 @@ export async function pushToCtw(orderNo: string): Promise<CtwPushResult> {
     return { ok: false, error: `CTW ตอบกลับ ${res.status}${t ? `: ${t.slice(0, 200)}` : ""}` };
   }
 
-  // ส่งไป CTW = ถือว่าจัดส่งแล้ว → ปักธง shipped_at (ถ้ายังไม่มี) ให้สถานะเป็น "ส่งแล้ว" + ออกจากค้างส่ง
-  // coalesce กันทับของเดิม (เผื่อเคยสแกนส่งใน /ship มาก่อน) — idempotent กับ markShipped
-  await q(`update orders set shipped_at = coalesce(shipped_at, now()), shipped_by = coalesce(shipped_by, $2), updated_at = now()
+  // ส่งไป CTW = ส่งออก + ปลายทาง(ระบบ CTW)รับข้อมูลครบทันที → ปักทั้ง shipped + received (โมเดลค้าส่งเดียวกับ Eve/KP)
+  // coalesce กันทับของเดิม — idempotent กับ markShipped / confirmWholesaleReceipt
+  await q(`update order_items set received_qty = qty where order_no = $1 and received_qty is null`, [on]);
+  await q(`update orders set shipped_at = coalesce(shipped_at, now()), shipped_by = coalesce(shipped_by, $2),
+             received_at = coalesce(received_at, now()), received_by = coalesce(received_by, 'CTW push'), updated_at = now()
              where order_no = $1`, [on, user.id]);
 
   await logActivity("ctw.push", `${on} → CTW (${(skus as any[]).length} SKU)`);

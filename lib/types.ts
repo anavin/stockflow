@@ -13,6 +13,7 @@ export type OrderItem = {
   sku?: string | null;
   ptype?: string | null;   // ประเภทน้ำหอม (จาก products) — ใช้โชว์/เรียงในใบพิมพ์
   barcode?: string | null; // บาร์โค้ดสินค้า (product_barcodes) — คอลัมน์ BARCODE ในใบเบิกแบบ PO
+  received_qty?: number | null; // ค้าส่ง: จำนวนที่ปลายทางยืนยันรับ (null = ยังไม่ยืนยัน)
 };
 
 export type Order = {
@@ -49,6 +50,9 @@ export type Order = {
   po_version?: string | null;
   ctw_received_at?: string | null;
   ctw_received_by?: string | null;
+  // ค้าส่ง 2 จังหวะ: ปลายทางยืนยันรับ (Eve/KingPower มือ · CTW auto) — undefined ถ้า prod ยังไม่รัน 0047
+  received_at?: string | null;
+  received_by?: string | null;
   created_by?: number | null;
   created_at?: string;
   updated_at?: string;
@@ -65,7 +69,7 @@ export type Order = {
 
 export type OrderWithItems = Order & { items: OrderItem[] };
 
-export type OrderRow = Order & { item_count: number; total_qty: number };
+export type OrderRow = Order & { item_count: number; total_qty: number; received_qty?: number };
 
 /** Build the display label used in the Excel "ชื่อสินค้า" column. */
 export function buildProductLabel(product: string, size: string, isFree: boolean): string {
