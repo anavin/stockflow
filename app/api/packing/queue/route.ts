@@ -22,6 +22,7 @@ type Line = { order_no: string; product: string | null; size: string | null; qty
 
 /** คิวออเดอร์ที่รอแพค — ให้ Packing Cam ดึงไปแสดงที่โต๊ะแพค (read-only)
  *  เกณฑ์: ยังไม่ส่ง + ยังไม่แพค + (ตัดสต๊อกแล้ว หรือ เพิ่งสร้างภายใน 3 วัน)
+ *  + ใบโอนสาขา CTW ที่กด "ส่งไป CTW" แล้ว (ctw_received_at) ไม่อยู่ในคิว — ของออกจากคลังไปแล้ว แต่ใบ CTW ไม่มี shipped_at จึงค้างคิว
  *  ที่ยังไม่ตัดสต๊อกก็ส่งไปด้วย เพราะเจ้าของอนุญาตให้แพค/ส่งก่อนตัดสต๊อกได้ — ฝั่งนั้นจะขึ้นเตือน ไม่บล็อก */
 export async function GET(req: Request) {
   if (!checkPackingKey(req)) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
@@ -38,6 +39,7 @@ export async function GET(req: Request) {
         where o.deleted_at is null
           and o.shipped_at is null
           and o.packed_at is null
+          and not (o.platform = 'CTW' and o.ctw_received_at is not null)
           and (o.stock_issued_at is not null or o.doc_date >= current_date - 3)
         order by (o.stock_issued_at is null), o.doc_date desc nulls last, o.order_no
         limit 200`,
