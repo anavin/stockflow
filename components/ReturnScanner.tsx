@@ -6,7 +6,7 @@ import { PlatformBadge, PlatformDot } from "./PlatformBadge";
 import StatCard from "./StatCard";
 import type { ReturnTodayRow } from "@/lib/queries";
 import { scanBeep } from "@/lib/scan-feedback";
-import { assignsSku, isBagProduct } from "@/lib/config";
+import { isBagProduct } from "@/lib/config";
 import { ScanLine, Camera, Undo2, PackageCheck, X, CheckCircle2, RotateCcw, Trash2, ClipboardList } from "lucide-react";
 
 const CameraScan = dynamic(() => import("./CameraScan"), { ssr: false });
@@ -34,7 +34,7 @@ export default function ReturnScanner({ todayReturns = [] }: { todayReturns?: Re
   function initForm(items: ReturnItemPreview[], issued: boolean): Form {
     const f: Form = {};
     for (const it of items) {
-      const canRestock = (it.tracked || isBagProduct(it.product)) && issued && !assignsSku(it.size, it.product);   // 4ml/Try Me คืนไม่ได้ · ถุง=คืนเข้าคลังบรรจุภัณฑ์ได้
+      const canRestock = (it.tracked || isBagProduct(it.product)) && issued;   // คืนเข้าสต๊อกได้ทุกขนาดที่ตัดสต๊อก (รวม 4ml/Try Me) · ถุง=คืนเข้าคลังบรรจุภัณฑ์
       f[it.line_no] = { qty: it.remaining, disp: canRestock ? "restock" : it.is_free ? "none" : "damaged" };
     }
     return f;
@@ -120,7 +120,7 @@ export default function ReturnScanner({ todayReturns = [] }: { todayReturns?: Re
             <div className="space-y-2">
               {preview.items!.map((it) => {
                 const v = form[it.line_no] || { qty: 0, disp: "none" as Disp };
-                const canRestock = (it.tracked || isBagProduct(it.product)) && preview.issued && !assignsSku(it.size, it.product);
+                const canRestock = (it.tracked || isBagProduct(it.product)) && preview.issued;
                 const full = it.remaining <= 0;
                 return (
                   <div key={it.line_no} className={`rounded-lg border border-line p-3 ${full ? "opacity-60" : ""}`}>
@@ -149,7 +149,7 @@ export default function ReturnScanner({ todayReturns = [] }: { todayReturns?: Re
                         {/* ปลายทาง */}
                         <div className="inline-flex overflow-hidden rounded-lg border border-line text-xs font-semibold">
                           <button type="button" disabled={!canRestock} onClick={() => setDisp(it.line_no, "restock")}
-                            title={canRestock ? "" : "คืนเข้าสต๊อกไม่ได้ (ขนาดตัวอย่าง/ยังไม่ตัดสต๊อก)"}
+                            title={canRestock ? "" : "คืนเข้าสต๊อกไม่ได้ (รายการนี้ไม่ได้ตัดสต๊อก / ยังไม่ตัดสต๊อก)"}
                             className={v.disp === "restock" ? "bg-green-600 px-3 py-1.5 text-white" : `px-3 py-1.5 text-muted ${canRestock ? "hover:bg-soft" : "cursor-not-allowed opacity-40"}`}>✓ คืนสต๊อก</button>
                           <button type="button" onClick={() => setDisp(it.line_no, "damaged")}
                             className={"border-l border-line " + (v.disp === "damaged" ? "bg-red-600 px-3 py-1.5 text-white" : "px-3 py-1.5 text-muted hover:bg-soft")}>⚠ ชำรุด</button>
