@@ -37,7 +37,7 @@ export default function Sidebar({ user }: { user: { full_name: string; username:
   const materialNav = [
     ...(can.manageScents(role) ? [{ href: "/products", label: "จัดการกลิ่น", icon: FlaskConical, exact: true }] : []),
     ...(can.manageScents(role) ? [{ href: "/wholesale", label: "จัดการค้าส่ง", icon: Store, exact: true }] : []),
-    ...(can.manageScents(role) ? [{ href: "/packs", label: "จัดการแพ็ค", icon: Boxes, exact: true }] : []),
+    { href: "/packs", label: "จัดการแพ็ค", icon: Boxes, exact: true },   // เห็นได้ทุก role (ดู) · แก้ได้เฉพาะ admin/คลัง
     ...(can.viewStock(role) ? [{ href: "/stock/bulk", label: "น้ำหอม (ยังไม่บรรจุ)", icon: Droplets, exact: true }] : []),
     ...(can.viewStock(role) ? [{ href: "/stock/labels", label: "สติ๊กเกอร์ & การ์ด", icon: Sticker, exact: true }] : []),
     ...(can.viewStock(role) ? [{ href: "/stock/packaging", label: "ขวด & แพ็คเกจ", icon: Package, exact: true }] : []),

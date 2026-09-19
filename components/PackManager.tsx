@@ -10,7 +10,7 @@ type Draft = { id?: number; name: string; match: string; active: boolean; items:
 const blankItem = () => ({ product: "", size: "4 ml", is_free: false });
 const toDraft = (p: PackDef & { id: number; active: boolean }): Draft => ({ id: p.id, name: p.name, match: p.match, active: p.active, items: p.items.map((i) => ({ ...i })) });
 
-export default function PackManager({ packs, products, sizes }: { packs: (PackDef & { id: number; active: boolean })[]; products: string[]; sizes: string[] }) {
+export default function PackManager({ packs, products, sizes, canEdit = true }: { packs: (PackDef & { id: number; active: boolean })[]; products: string[]; sizes: string[]; canEdit?: boolean }) {
   const router = useRouter();
   const [drafts, setDrafts] = useState<Draft[]>(packs.map(toDraft));
   const [busy, setBusy] = useState<number | null>(null);   // index กำลังบันทึก/ลบ
@@ -48,6 +48,34 @@ export default function PackManager({ packs, products, sizes }: { packs: (PackDe
       router.refresh();
     } catch { setMsg({ i, text: "ระบบขัดข้อง", ok: false }); }
     finally { setBusy(null); }
+  }
+
+  // ดูอย่างเดียว (ไม่ใช่ admin/คลัง) — โชว์แพ็ค+กลิ่น ไม่มีปุ่มแก้
+  if (!canEdit) {
+    return (
+      <div className="space-y-4">
+        {packs.length === 0 && <p className="card p-6 text-center text-sm text-muted">ยังไม่มีแพ็ค</p>}
+        {packs.map((p) => (
+          <section key={p.id} className="card overflow-hidden">
+            <header className="flex items-center gap-2 border-b border-line bg-soft/50 px-4 py-3">
+              <PackageOpen size={16} className="text-violet-600" />
+              <span className="font-medium text-ink">{p.name}</span>
+              {!p.active && <span className="chip-muted">ปิดใช้งาน</span>}
+              <span className="ml-auto text-xs text-muted">{p.items.length} กลิ่น</span>
+            </header>
+            <ul className="divide-y divide-line/60 px-4 py-1 text-sm">
+              {p.items.map((it, j) => (
+                <li key={j} className="flex items-center gap-2 py-1.5">
+                  <span className="text-ink">{it.product}</span>
+                  <span className="text-muted">{it.size}</span>
+                  {it.is_free && <span className="chip bg-brand-50 text-brand-600">แถม</span>}
+                </li>
+              ))}
+            </ul>
+          </section>
+        ))}
+      </div>
+    );
   }
 
   return (
