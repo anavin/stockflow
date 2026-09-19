@@ -6,7 +6,7 @@ import { rowsToOrders as parseShopee, SCENT_ALIASES, suggestScents } from "@/lib
 import { rowsToOrders as parseLazada } from "@/lib/import/parse-lazada";
 import { rowsToOrders as parseTiktok } from "@/lib/import/parse-tiktok";
 import { readXlsxRaw } from "@/lib/import/read-xlsx";
-import { getProducts, getScentAliases } from "@/lib/queries";
+import { getProducts, getScentAliases, listPacks } from "@/lib/queries";
 import { canImportPlatform } from "@/lib/config";
 
 export const runtime = "nodejs";
@@ -78,10 +78,12 @@ export async function POST(req: Request) {
     }
 
     // ส่งรายชื่อกลิ่น + ชื่อพ้อง (alias จาก DB) ไปช่วยเดา "กลิ่น" จากชื่อสินค้า/SKU/ตัวเลือก/itemName
-    const [products, dbAliases] = await Promise.all([getProducts(), getScentAliases()]);
+    const [products, dbAliases, packs] = await Promise.all([getProducts(), getScentAliases(), listPacks()]);
     const aliases = { ...SCENT_ALIASES, ...dbAliases };
-    const parse = platform === "Lazada" ? parseLazada : platform === "Tiktok" ? parseTiktok : parseShopee;
-    const result = parse(rows, products, aliases);
+    // แพ็ค (แตกเป็นกลิ่นย่อย) รองรับเฉพาะ Shopee ตอนนี้ — ส่ง packs เข้า parseShopee
+    const result = platform === "Lazada" ? parseLazada(rows, products, aliases)
+      : platform === "Tiktok" ? parseTiktok(rows, products, aliases)
+      : parseShopee(rows, products, aliases, packs);
 
     // รายการที่จับกลิ่นไม่ตรง (product ไม่อยู่ใน master) → รวม + แนะนำกลิ่นใกล้เคียงให้เลือก/จำเป็น alias
     const known = new Set(products);

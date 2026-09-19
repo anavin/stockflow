@@ -2,7 +2,7 @@
 import Combobox from "./Combobox";
 import { Trash2, Plus, Gift, AlertTriangle, ShoppingBag, FlaskConical, PackageOpen } from "lucide-react";
 import { buildProductLabel } from "@/lib/types";
-import { FREE_ALLOWED_SIZES, isAllowedFreeSize, matchPack, expandPack } from "@/lib/config";
+import { FREE_ALLOWED_SIZES, isAllowedFreeSize, findPack, expandPack, type PackDef } from "@/lib/config";
 
 // ถุงกระดาษ = สินค้าแถมพิเศษ (เลือกขนาด Size S/M ตอนแพ็ก) — ไม่ติดกฎขนาดของแถม (1.2/4/10 ml)
 export const BAG_PRODUCT = "ถุงกระดาษ";
@@ -69,6 +69,7 @@ export default function ItemsEditor({
   isWholesale = false,
   platform,
   sizeAllow,
+  packs = [],
 }: {
   items: ItemDraft[];
   onChange: (items: ItemDraft[]) => void;
@@ -84,6 +85,7 @@ export default function ItemsEditor({
   isWholesale?: boolean;                                     // CTW/Eveandboy/KingPower → มีปุ่ม Try Me
   platform?: string;
   sizeAllow?: Record<string, string[]>;   // จำกัดขนาดต่อกลิ่น (key = normalize ชื่อ) — Eveandboy เลือกได้เฉพาะที่มี
+  packs?: PackDef[];                        // นิยามแพ็คจาก DB — บรรทัดที่ match ชื่อแพ็คจะมีปุ่ม "แตกแพ็ค"
 }) {
   // CTW โอนสาขา = เบิกถุงกระดาษทีละมาก → เพิ่มได้ถึง 80 ใบ (ปกติ/แพลตฟอร์มอื่น 30)
   const qtyMaxOf = (it: ItemDraft) => (isBagProduct(it.product) && platform === "CTW" ? 80 : 30);
@@ -111,7 +113,7 @@ export default function ItemsEditor({
   }
   // แตกแพ็ค: แทนบรรทัดแพ็ค (Best Seller Pack ฯลฯ) ด้วยกลิ่นย่อยตายตัว 6+1 (qty แพ็ค × ต่อขวด) → ตัดสต๊อกรายกลิ่นได้
   function expandPackAt(i: number) {
-    const def = matchPack(items[i]?.product);
+    const def = findPack(items[i]?.product, packs);
     if (!def) return;
     const parts: ItemDraft[] = expandPack(def, items[i].qty).map((c) => ({ product: c.product, size: c.size, is_free: c.is_free, qty: c.qty, unit: "ขวด", sku: "" }));
     onChange([...items.slice(0, i), ...parts, ...items.slice(i + 1)]);
@@ -203,11 +205,11 @@ export default function ItemsEditor({
                   <Combobox value={it.product} onChange={(v) => setProduct(i, v)} options={productOptionsFor(it)} allowCustom={!sizeAllow && !isTester(it)} placeholder={isTester(it) ? "เลือกกลิ่น Try Me" : "เลือกกลิ่น"} invalid={errors[i]?.product} codes={productCodes} />
                   {isTester(it) && testerProducts.length === 0 && <div className="mt-1 flex items-center gap-1 text-[11px] text-red-600"><AlertTriangle size={12} /> ยังไม่มีสต๊อก Try Me — <a href="/stock?tryme=1" target="_blank" rel="noreferrer" className="font-medium underline hover:text-red-700">รับสินค้าเข้าสต๊อก (Try Me)</a> ก่อน</div>}
                   {productTypes?.[it.product] && <div className="mt-1 text-[11px] text-muted">Grade: <span className="font-medium text-ink">{productTypes[it.product]}</span></div>}
-                  {matchPack(it.product) && (
+                  {findPack(it.product, packs) && (
                     <button type="button" onClick={() => expandPackAt(i)}
                       className="mt-1.5 inline-flex items-center gap-1 rounded-md border border-violet-300 bg-violet-50 px-2 py-1 text-[11px] font-medium text-violet-700 hover:bg-violet-100"
                       title="แตกแพ็คเป็นกลิ่นย่อย เพื่อตัดสต๊อก/ผูก SKU รายขวด">
-                      <PackageOpen size={13} /> แตกแพ็ค → {matchPack(it.product)!.items.length} กลิ่น
+                      <PackageOpen size={13} /> แตกแพ็ค → {findPack(it.product, packs)!.items.length} กลิ่น
                     </button>
                   )}
                   {errMsg(errors[i]) && (
@@ -269,10 +271,10 @@ export default function ItemsEditor({
             <Combobox value={it.product} onChange={(v) => setProduct(i, v)} options={productOptionsFor(it)} allowCustom={!sizeAllow && !isTester(it)} placeholder={isTester(it) ? "เลือกกลิ่น Try Me" : "เลือกกลิ่น"} invalid={errors[i]?.product} codes={productCodes} />
             {isTester(it) && testerProducts.length === 0 && <div className="flex items-center gap-1 text-xs text-red-600"><AlertTriangle size={12} /> ยังไม่มีสต๊อก Try Me — <a href="/stock?tryme=1" target="_blank" rel="noreferrer" className="font-medium underline hover:text-red-700">รับสินค้าเข้าสต๊อก (Try Me)</a> ก่อน</div>}
             {productTypes?.[it.product] && <div className="text-[11px] text-muted">Grade: <span className="font-medium text-ink">{productTypes[it.product]}</span></div>}
-            {matchPack(it.product) && (
+            {findPack(it.product, packs) && (
               <button type="button" onClick={() => expandPackAt(i)}
                 className="inline-flex items-center gap-1 self-start rounded-md border border-violet-300 bg-violet-50 px-2 py-1 text-xs font-medium text-violet-700 hover:bg-violet-100">
-                <PackageOpen size={13} /> แตกแพ็ค → {matchPack(it.product)!.items.length} กลิ่น
+                <PackageOpen size={13} /> แตกแพ็ค → {findPack(it.product, packs)!.items.length} กลิ่น
               </button>
             )}
             <div className="grid grid-cols-2 gap-2">

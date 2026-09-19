@@ -1,18 +1,31 @@
 import { describe, it, expect } from "vitest";
 import {
   assignsSku, needsSerialSku, requiresSku, cutsStock, isStockTracked,
-  isBagProduct, isWholesalePlatform, isAllowedFreeSize, matchPack, expandPack,
+  isBagProduct, isWholesalePlatform, isAllowedFreeSize, findPack, expandPack, type PackDef,
 } from "@/lib/config";
 
 describe("แพ็ค (Best Seller Pack) — แตกเป็นกลิ่นย่อยตายตัว", () => {
-  it("จับชื่อแพ็คจากชื่อสินค้า Shopee", () => {
-    const p = matchPack("Best Seller Pack by LAB Parfumo : น้ำหอมขนาดทดลอง (EDP) แพ็ค 6 ฟรี 1 หลอด 4ml");
+  const PACKS: PackDef[] = [{
+    name: "Best Seller Pack", match: "Best Seller Pack", active: true,
+    items: [
+      { product: "La Belle", size: "4 ml", is_free: false },
+      { product: "Senorita", size: "4 ml", is_free: false },
+      { product: "Secret of Peach", size: "4 ml", is_free: false },
+      { product: "Sicilia", size: "4 ml", is_free: false },
+      { product: "Never Blue", size: "4 ml", is_free: false },
+      { product: "Zeus", size: "4 ml", is_free: false },
+      { product: "Dream Island", size: "4 ml", is_free: true },
+    ],
+  }];
+  it("จับชื่อแพ็คจากชื่อสินค้า (substring ไม่สนตัวพิมพ์)", () => {
+    const p = findPack("Best Seller Pack by LAB Parfumo : น้ำหอมขนาดทดลอง (EDP) แพ็ค 6 ฟรี 1 หลอด 4ml", PACKS);
     expect(p?.name).toBe("Best Seller Pack");
-    expect(matchPack("La Belle")).toBe(null);        // กลิ่นเดี่ยว = ไม่ใช่แพ็ค
-    expect(matchPack("")).toBe(null);
+    expect(findPack("La Belle", PACKS)).toBe(null);   // กลิ่นเดี่ยว = ไม่ใช่แพ็ค
+    expect(findPack("", PACKS)).toBe(null);
+    expect(findPack("Best Seller Pack", [])).toBe(null);   // ไม่มีนิยามแพ็ค = null
   });
   it("แตกเป็น 6 จ่าย + 1 ฟรี · 4ml · qty คูณจำนวนแพ็ค", () => {
-    const p = matchPack("Best Seller Pack ...")!;
+    const p = findPack("Best Seller Pack ...", PACKS)!;
     const one = expandPack(p, 1);
     expect(one).toHaveLength(7);
     expect(one.filter((x) => !x.is_free)).toHaveLength(6);

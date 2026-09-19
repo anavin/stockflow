@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getProducts, getSizes, getProvinces, getPostcodes, getProductCodes, getProductTypes, getBlockedSizesForOrder, getDiscInStock, getTesterStock, getOrderFormCatalog } from "@/lib/queries";
+import { getProducts, getSizes, getProvinces, getPostcodes, getProductCodes, getProductTypes, getBlockedSizesForOrder, getDiscInStock, getTesterStock, getOrderFormCatalog, listPacks } from "@/lib/queries";
 import { resolvePlatform, platformBase, canCreatePlatform, platformColor, platformTint } from "@/lib/config";
 import OrderForm from "@/components/OrderForm";
 import { ChevronLeft } from "lucide-react";
@@ -14,8 +14,8 @@ export default async function NewOrderPage({ params }: { params: Promise<{ platf
   if (!pf) notFound();
   if (!canCreatePlatform(pf.code)) notFound();   // เฉพาะแพลตฟอร์มที่ canCreate:true (CTW = คลังกลางสร้างเอง)
   const base = platformBase(pf.code);
-  const [products, sizes, provinces, postcodes, productCodes, productTypes, discontinued, discInStock, testerStock, wsCat] = await Promise.all([
-    getProducts(), getSizes(), getProvinces(), getPostcodes(), getProductCodes(), getProductTypes(), getBlockedSizesForOrder(), getDiscInStock(), getTesterStock(), getOrderFormCatalog(pf.code),
+  const [products, sizes, provinces, postcodes, productCodes, productTypes, discontinued, discInStock, testerStock, wsCat, packs] = await Promise.all([
+    getProducts(), getSizes(), getProvinces(), getPostcodes(), getProductCodes(), getProductTypes(), getBlockedSizesForOrder(), getDiscInStock(), getTesterStock(), getOrderFormCatalog(pf.code), listPacks(),
   ]);
 
   const pfColor = platformColor(pf.code);
@@ -32,7 +32,7 @@ export default async function NewOrderPage({ params }: { params: Promise<{ platf
           <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: pfColor }} /> {pf.name}
         </span>
       </div>
-      <OrderForm platform={pf.code} products={products} sizes={sizes} provinces={provinces} postcodes={postcodes} productCodes={productCodes} productTypes={productTypes} discontinued={discontinued} discInStock={discInStock} testerStock={testerStock} branches={wsCat.branches} catalogSizes={wsCat.catalogSizes} />
+      <OrderForm platform={pf.code} products={products} sizes={sizes} provinces={provinces} postcodes={postcodes} productCodes={productCodes} productTypes={productTypes} discontinued={discontinued} discInStock={discInStock} testerStock={testerStock} branches={wsCat.branches} catalogSizes={wsCat.catalogSizes} packs={packs} />
     </div>
   );
 }

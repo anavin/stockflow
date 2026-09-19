@@ -1,5 +1,5 @@
 import { buildProductLabel, type OrderItem, type OrderWithItems } from "@/lib/types";
-import { matchPack, expandPack } from "@/lib/config";
+import { findPack, expandPack, type PackDef } from "@/lib/config";
 
 /** Canonical fields we import into. */
 type Field =
@@ -159,7 +159,7 @@ export type ParseResult = {
  * Convert flat rows (array of {header: value}) into grouped orders keyed by
  * Order No. Order-level fields come from the first row that carries them.
  */
-export function rowsToOrders(rows: Record<string, any>[], products: string[] = [], aliases: Record<string, string> = SCENT_ALIASES): ParseResult {
+export function rowsToOrders(rows: Record<string, any>[], products: string[] = [], aliases: Record<string, string> = SCENT_ALIASES, packs: PackDef[] = []): ParseResult {
   const map = new Map<string, OrderWithItems>();
   const errors: { row: number; message: string }[] = [];
   let itemCount = 0;
@@ -240,7 +240,7 @@ export function rowsToOrders(rows: Record<string, any>[], products: string[] = [
       const isFree = freeCell !== "" && !/^(0|no|n|false|ไม่ใช่|ไม่|-)$/.test(freeCell);
       const qtyRaw = r.qty != null && r.qty !== "" ? Number(r.qty) : 1;
       // แพ็ค (Best Seller Pack ฯลฯ) = 1 listing แต่หลายขวดตายตัว → แตกเป็นกลิ่นย่อยตอน import (ตัดสต๊อก/ผูก SKU รายขวด)
-      const pack = matchPack(product);
+      const pack = findPack(product, packs);
       if (pack) {
         for (const c of expandPack(pack, qtyRaw)) {
           ord.items.push({ line_no: ord.items.length + 1, product: c.product, size: c.size, is_free: c.is_free, qty: c.qty, unit: "ขวด", product_label: buildProductLabel(c.product, c.size, c.is_free), sku: null });

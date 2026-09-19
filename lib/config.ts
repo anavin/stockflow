@@ -130,30 +130,15 @@ export function isAllowedFreeSize(size?: string | null, product?: string | null)
   return FREE_ALLOWED_SIZES.includes(t);
 }
 
-// ── แพ็ค (bundle) — สินค้า Shopee 1 listing = หลายขวด "ตายตัว" → แตกเป็นบรรทัดย่อย ตัดสต๊อก/ผูก SKU รายขวด ──
-// แก้ตรงนี้ถ้ากลิ่นชุด best-seller เปลี่ยน · ชื่อกลิ่นต้องตรงกับ master/สต๊อก เป๊ะ (ใช้ตัดสต๊อก)
+// ── แพ็ค (bundle) — สินค้า 1 listing = หลายขวด "ตายตัว" → แตกเป็นบรรทัดย่อย ตัดสต๊อก/ผูก SKU รายขวด ──
+// นิยามแพ็คแก้ได้จากหน้า admin (ตาราง packs/pack_items) · listPacks() ใน queries.ts ดึงมาให้
 export type PackComponent = { product: string; size: string; is_free: boolean };
-export type PackDef = { name: string; match: RegExp; items: PackComponent[] };
-export const PACK_DEFS: PackDef[] = [
-  {
-    name: "Best Seller Pack",
-    match: /best\s*seller\s*pack/i,   // ชื่อสินค้ามีคำนี้ (แพ็ค 6 ฟรี 1 · 4ml)
-    items: [
-      { product: "La Belle", size: "4 ml", is_free: false },
-      { product: "Senorita", size: "4 ml", is_free: false },
-      { product: "Secret of Peach", size: "4 ml", is_free: false },
-      { product: "Sicilia", size: "4 ml", is_free: false },
-      { product: "Never Blue", size: "4 ml", is_free: false },
-      { product: "Zeus", size: "4 ml", is_free: false },
-      { product: "Dream Island", size: "4 ml", is_free: true },   // แถมฟรี
-    ],
-  },
-];
-/** สินค้านี้เป็น "แพ็ค" ไหม (match ชื่อ) — คืน PackDef หรือ null */
-export function matchPack(product?: string | null): PackDef | null {
-  const p = product || "";
-  if (!p.trim()) return null;
-  return PACK_DEFS.find((d) => d.match.test(p)) ?? null;
+export type PackDef = { id?: number; name: string; match: string; active?: boolean; items: PackComponent[] };
+/** สินค้านี้เป็น "แพ็ค" ไหม — จับจาก match_text (substring, ไม่สนตัวพิมพ์) · ส่ง packs จาก DB เข้ามา */
+export function findPack(product: string | null | undefined, packs: PackDef[]): PackDef | null {
+  const p = (product || "").toLowerCase();
+  if (!p.trim() || !packs?.length) return null;
+  return packs.find((d) => (d.active ?? true) && d.match && p.includes(d.match.toLowerCase()) && d.items.length > 0) ?? null;
 }
 /** แตกแพ็คเป็นบรรทัดย่อย — qty ของแพ็ค × จำนวนต่อขวด (สั่ง 2 แพ็ค = กลิ่นละ 2) */
 export function expandPack(def: PackDef, packQty = 1): { product: string; size: string; is_free: boolean; qty: number }[] {

@@ -3,7 +3,7 @@ import { unstable_cache } from "next/cache";
 import { q } from "./db";
 import type { Order, OrderItem, OrderRow, OrderWithItems } from "./types";
 import { LABEL_COMPONENTS, gradeToLabelKey, labelSpecFor, bulkRef, labelRef, mnorm } from "./materials";
-import { PERIOD_START } from "./config";
+import { PERIOD_START, type PackDef, type PackComponent } from "./config";
 
 // ── ช่วงวัน "เวลาไทย" แบบไม่ wrap คอลัมน์ timestamp → index (created_at/shipped_at/stock_issued_at) ใช้ได้ (perf)
 // BKK_TODAY = เที่ยงคืนวันนี้ (ไทย) เป็น instant (timestamptz) · พิสูจน์แล้วให้ผลเท่ากับ (col at time zone 'Asia/Bangkok')::date = …
@@ -57,6 +57,23 @@ function normOrder<T extends Partial<Order>>(o: T): T {
 export const getProducts = unstable_cache(
   async (): Promise<string[]> => (await q<{ name: string }>(`select name from products where active order by sort, name`)).map((r) => r.name),
   ["ref:products"], { tags: ["reference"], revalidate: 300 },
+);
+
+// นิยามแพ็ค (bundle) จาก DB — แก้ได้จากหน้า admin · cache + tag "reference" (bump ตอนแก้แพ็ค)
+export const listPacks = unstable_cache(
+  async (): Promise<(PackDef & { id: number; active: boolean })[]> => {
+    try {
+      const packs = await q<{ id: number; name: string; match_text: string; active: boolean; sort: number }>(
+        `select id, name, match_text, active, sort from packs order by sort, id`);
+      if (!packs.length) return [];
+      const items = await q<{ pack_id: number; product: string; size: string; is_free: boolean }>(
+        `select pack_id, product, size, is_free from pack_items order by pack_id, sort, id`);
+      const byPack = new Map<number, PackComponent[]>();
+      for (const it of items) { const a = byPack.get(it.pack_id) ?? []; a.push({ product: it.product, size: it.size, is_free: it.is_free }); byPack.set(it.pack_id, a); }
+      return packs.map((p) => ({ id: p.id, name: p.name, match: p.match_text, active: p.active, items: byPack.get(p.id) ?? [] }));
+    } catch { return []; }   // ตาราง packs ยังไม่มี (prod ยังไม่รัน 0048) = ไม่มีแพ็ค (ไม่พัง)
+  },
+  ["ref:packs"], { tags: ["reference"], revalidate: 300 },
 );
 
 /** ชื่อพ้องกลิ่น (alias) → Record<alias_key(normalize), ชื่อกลิ่นจริง> สำหรับ parser จับกลิ่น */

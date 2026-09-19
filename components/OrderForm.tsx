@@ -10,7 +10,7 @@ import type { PostcodeHit } from "@/lib/actions/orders";
 import ItemsEditor, { emptyItem, itemErrorOf, hasItemError, type ItemDraft, type ItemError } from "./ItemsEditor";
 import type { CustomerSuggestion, CustomerHistory, PastOrder } from "@/lib/actions/orders";
 import { saveOrder, orderExists, customerHistory, type OrderInput } from "@/lib/actions/orders";
-import { CUSTOMER_TYPES, platformColor, isWholesalePlatform, platformName } from "@/lib/config";
+import { CUSTOMER_TYPES, platformColor, isWholesalePlatform, platformName, type PackDef } from "@/lib/config";
 type BranchOpt = { branch: string; code: string | null; address: string | null };
 import type { OrderWithItems } from "@/lib/types";
 import type { PostcodeRow } from "@/lib/queries";
@@ -38,6 +38,7 @@ type Props = {
   testerStock?: { product: string; size: string; qty: number }[];   // สต๊อก Try Me คงเหลือ (ค้าส่ง)
   branches?: BranchOpt[];                          // สาขาค้าส่ง (Eveandboy) จาก DB
   catalogSizes?: Record<string, string[]> | null;  // ขนาดต่อกลิ่นในแคตตาล็อก (Eveandboy/King Power) จาก DB
+  packs?: PackDef[];                                // นิยามแพ็ค (bundle) จาก DB — ปุ่ม "แตกแพ็ค"
 };
 
 function todayStr() {
@@ -45,7 +46,7 @@ function todayStr() {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
-export default function OrderForm({ platform = "Shopee", products, sizes, provinces, postcodes, initial, productCodes, productTypes, discontinued, discInStock, testerStock, branches = [], catalogSizes = null }: Props) {
+export default function OrderForm({ platform = "Shopee", products, sizes, provinces, postcodes, initial, productCodes, productTypes, discontinued, discInStock, testerStock, branches = [], catalogSizes = null, packs = [] }: Props) {
   const router = useRouter();
   const base = `/${platform.toLowerCase()}`;   // path ฐานของแพลตฟอร์ม (กลับหน้ารายการ)
   const editing = !!initial;
@@ -493,7 +494,7 @@ export default function OrderForm({ platform = "Shopee", products, sizes, provin
             <ItemsEditor items={items} onChange={onItemsChange} products={catProducts} sizes={sizes} errors={itemErrors}
               productCodes={productCodes} productTypes={productTypes} discontinued={discontinued} discInStock={discInStock}
               testerProducts={testerNames} testerStock={testerMap} isWholesale={isWholesale} platform={pfCode}
-              sizeAllow={catalog} />
+              sizeAllow={catalog} packs={packs} />
           );
         })()}
       </section>
