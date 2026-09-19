@@ -1,8 +1,26 @@
 import { describe, it, expect } from "vitest";
 import {
   assignsSku, needsSerialSku, requiresSku, cutsStock, isStockTracked,
-  isBagProduct, isWholesalePlatform, isAllowedFreeSize,
+  isBagProduct, isWholesalePlatform, isAllowedFreeSize, matchPack, expandPack,
 } from "@/lib/config";
+
+describe("แพ็ค (Best Seller Pack) — แตกเป็นกลิ่นย่อยตายตัว", () => {
+  it("จับชื่อแพ็คจากชื่อสินค้า Shopee", () => {
+    const p = matchPack("Best Seller Pack by LAB Parfumo : น้ำหอมขนาดทดลอง (EDP) แพ็ค 6 ฟรี 1 หลอด 4ml");
+    expect(p?.name).toBe("Best Seller Pack");
+    expect(matchPack("La Belle")).toBe(null);        // กลิ่นเดี่ยว = ไม่ใช่แพ็ค
+    expect(matchPack("")).toBe(null);
+  });
+  it("แตกเป็น 6 จ่าย + 1 ฟรี · 4ml · qty คูณจำนวนแพ็ค", () => {
+    const p = matchPack("Best Seller Pack ...")!;
+    const one = expandPack(p, 1);
+    expect(one).toHaveLength(7);
+    expect(one.filter((x) => !x.is_free)).toHaveLength(6);
+    expect(one.filter((x) => x.is_free)).toHaveLength(1);
+    expect(one.every((x) => x.size === "4 ml")).toBe(true);
+    expect(expandPack(p, 2).every((x) => x.qty === 2)).toBe(true);   // 2 แพ็ค = กลิ่นละ 2
+  });
+});
 
 // ล็อกโมเดล 3 ระดับของ SKU (bottles / 4ml-assign / 1.2ml-qty) — จุดที่ regress ง่ายสุด
 describe("SKU tier model", () => {

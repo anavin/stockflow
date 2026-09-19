@@ -1,4 +1,5 @@
 import { buildProductLabel, type OrderItem, type OrderWithItems } from "@/lib/types";
+import { matchPack, expandPack } from "@/lib/config";
 
 /** Canonical fields we import into. */
 type Field =
@@ -237,18 +238,18 @@ export function rowsToOrders(rows: Record<string, any>[], products: string[] = [
       // ของแถมเฉพาะค่าที่เป็น truthy จริง — กัน "0"/"no"/"ไม่ใช่" ในคอลัมน์ถูกนับเป็นของแถม
       const freeCell = str(r.free).trim().toLowerCase();
       const isFree = freeCell !== "" && !/^(0|no|n|false|ไม่ใช่|ไม่|-)$/.test(freeCell);
-      const item: OrderItem = {
-        line_no: ord.items.length + 1,
-        product,
-        size,
-        is_free: isFree,
-        qty: r.qty != null && r.qty !== "" ? Number(r.qty) : 1,
-        unit: "ขวด",
-        product_label: title || buildProductLabel(product, size, isFree),
-        sku: skuRaw || null,
-      };
-      ord.items.push(item);
-      itemCount += 1;
+      const qtyRaw = r.qty != null && r.qty !== "" ? Number(r.qty) : 1;
+      // แพ็ค (Best Seller Pack ฯลฯ) = 1 listing แต่หลายขวดตายตัว → แตกเป็นกลิ่นย่อยตอน import (ตัดสต๊อก/ผูก SKU รายขวด)
+      const pack = matchPack(product);
+      if (pack) {
+        for (const c of expandPack(pack, qtyRaw)) {
+          ord.items.push({ line_no: ord.items.length + 1, product: c.product, size: c.size, is_free: c.is_free, qty: c.qty, unit: "ขวด", product_label: buildProductLabel(c.product, c.size, c.is_free), sku: null });
+          itemCount += 1;
+        }
+      } else {
+        ord.items.push({ line_no: ord.items.length + 1, product, size, is_free: isFree, qty: qtyRaw, unit: "ขวด", product_label: title || buildProductLabel(product, size, isFree), sku: skuRaw || null });
+        itemCount += 1;
+      }
     }
   });
 

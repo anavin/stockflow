@@ -1,8 +1,8 @@
 "use client";
 import Combobox from "./Combobox";
-import { Trash2, Plus, Gift, AlertTriangle, ShoppingBag, FlaskConical } from "lucide-react";
+import { Trash2, Plus, Gift, AlertTriangle, ShoppingBag, FlaskConical, PackageOpen } from "lucide-react";
 import { buildProductLabel } from "@/lib/types";
-import { FREE_ALLOWED_SIZES, isAllowedFreeSize } from "@/lib/config";
+import { FREE_ALLOWED_SIZES, isAllowedFreeSize, matchPack, expandPack } from "@/lib/config";
 
 // ถุงกระดาษ = สินค้าแถมพิเศษ (เลือกขนาด Size S/M ตอนแพ็ก) — ไม่ติดกฎขนาดของแถม (1.2/4/10 ml)
 export const BAG_PRODUCT = "ถุงกระดาษ";
@@ -109,6 +109,13 @@ export default function ItemsEditor({
   function remove(i: number) {
     onChange(items.filter((_, idx) => idx !== i));
   }
+  // แตกแพ็ค: แทนบรรทัดแพ็ค (Best Seller Pack ฯลฯ) ด้วยกลิ่นย่อยตายตัว 6+1 (qty แพ็ค × ต่อขวด) → ตัดสต๊อกรายกลิ่นได้
+  function expandPackAt(i: number) {
+    const def = matchPack(items[i]?.product);
+    if (!def) return;
+    const parts: ItemDraft[] = expandPack(def, items[i].qty).map((c) => ({ product: c.product, size: c.size, is_free: c.is_free, qty: c.qty, unit: "ขวด", sku: "" }));
+    onChange([...items.slice(0, i), ...parts, ...items.slice(i + 1)]);
+  }
   function add() {
     onChange([...items, emptyItem()]);
   }
@@ -196,6 +203,13 @@ export default function ItemsEditor({
                   <Combobox value={it.product} onChange={(v) => setProduct(i, v)} options={productOptionsFor(it)} allowCustom={!sizeAllow && !isTester(it)} placeholder={isTester(it) ? "เลือกกลิ่น Try Me" : "เลือกกลิ่น"} invalid={errors[i]?.product} codes={productCodes} />
                   {isTester(it) && testerProducts.length === 0 && <div className="mt-1 flex items-center gap-1 text-[11px] text-red-600"><AlertTriangle size={12} /> ยังไม่มีสต๊อก Try Me — <a href="/stock?tryme=1" target="_blank" rel="noreferrer" className="font-medium underline hover:text-red-700">รับสินค้าเข้าสต๊อก (Try Me)</a> ก่อน</div>}
                   {productTypes?.[it.product] && <div className="mt-1 text-[11px] text-muted">Grade: <span className="font-medium text-ink">{productTypes[it.product]}</span></div>}
+                  {matchPack(it.product) && (
+                    <button type="button" onClick={() => expandPackAt(i)}
+                      className="mt-1.5 inline-flex items-center gap-1 rounded-md border border-violet-300 bg-violet-50 px-2 py-1 text-[11px] font-medium text-violet-700 hover:bg-violet-100"
+                      title="แตกแพ็คเป็นกลิ่นย่อย เพื่อตัดสต๊อก/ผูก SKU รายขวด">
+                      <PackageOpen size={13} /> แตกแพ็ค → {matchPack(it.product)!.items.length} กลิ่น
+                    </button>
+                  )}
                   {errMsg(errors[i]) && (
                     <div className="mt-1 flex items-center gap-1 text-[11px] text-red-600"><AlertTriangle size={12} /> {errMsg(errors[i])}</div>
                   )}
@@ -255,6 +269,12 @@ export default function ItemsEditor({
             <Combobox value={it.product} onChange={(v) => setProduct(i, v)} options={productOptionsFor(it)} allowCustom={!sizeAllow && !isTester(it)} placeholder={isTester(it) ? "เลือกกลิ่น Try Me" : "เลือกกลิ่น"} invalid={errors[i]?.product} codes={productCodes} />
             {isTester(it) && testerProducts.length === 0 && <div className="flex items-center gap-1 text-xs text-red-600"><AlertTriangle size={12} /> ยังไม่มีสต๊อก Try Me — <a href="/stock?tryme=1" target="_blank" rel="noreferrer" className="font-medium underline hover:text-red-700">รับสินค้าเข้าสต๊อก (Try Me)</a> ก่อน</div>}
             {productTypes?.[it.product] && <div className="text-[11px] text-muted">Grade: <span className="font-medium text-ink">{productTypes[it.product]}</span></div>}
+            {matchPack(it.product) && (
+              <button type="button" onClick={() => expandPackAt(i)}
+                className="inline-flex items-center gap-1 self-start rounded-md border border-violet-300 bg-violet-50 px-2 py-1 text-xs font-medium text-violet-700 hover:bg-violet-100">
+                <PackageOpen size={13} /> แตกแพ็ค → {matchPack(it.product)!.items.length} กลิ่น
+              </button>
+            )}
             <div className="grid grid-cols-2 gap-2">
               <Combobox value={it.size} onChange={(v) => update(i, { size: v })}
                 options={sizeOptionsFor(it)}
