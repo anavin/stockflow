@@ -1,15 +1,14 @@
 import { requireUser } from "@/lib/auth/require-user";
-import { can } from "@/lib/auth/roles";
 import { listPacks, getProducts, getSizes } from "@/lib/queries";
 import PackManager from "@/components/PackManager";
 import { PackageOpen } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
-// นิยามแพ็ค (bundle) — เห็นได้ทุก role (ดู) · แก้ได้เฉพาะ admin/คลัง (manageScents)
+// นิยามแพ็ค (bundle) — ทุก role ที่ล็อกอิน เห็น + แก้ได้ (เจ้าของสั่ง)
 export default async function PacksPage() {
-  const me = await requireUser();
-  const canEdit = can.manageScents(me.role);
+  await requireUser();
+  const canEdit = true;
   const [packs, products, sizes] = await Promise.all([listPacks(), getProducts(), getSizes()]);
   return (
     <div className="mx-auto max-w-3xl px-4 py-6 md:px-8">

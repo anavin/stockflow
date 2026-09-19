@@ -1,17 +1,15 @@
 "use server";
 import { q, tx } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth/session";
-import { can } from "@/lib/auth/roles";
 import { revalidatePath, revalidateTag } from "next/cache";
 import { logActivity } from "@/lib/activity";
 
 // จัดการนิยาม "แพ็ค" (bundle) — สินค้า 1 listing = หลายขวดตายตัว → แตกเป็นกลิ่นย่อย
-// สิทธิ์: admin + คลัง (manageScents) เหมือนหน้า master สินค้า/ค้าส่ง
+// สิทธิ์: ทุก role ที่ล็อกอิน (เจ้าของสั่งให้ทุกคนแก้ได้)
 
 async function gate() {
   const user = await getCurrentUser();
   if (!user) return { error: "กรุณาเข้าสู่ระบบ" as const };
-  if (!can.manageScents(user.role)) return { error: "เฉพาะแอดมิน / คลัง" as const };
   return { user };
 }
 function bump() { revalidateTag("reference"); revalidatePath("/packs"); }
