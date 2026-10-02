@@ -61,10 +61,14 @@ export async function lookupOrderForReturn(orderNo: string): Promise<ReturnLooku
   type ORow = { order_no: string; doc_no: string | null; platform: string | null; receiver: string | null; username: string | null; deleted_at: string | null; shipped_at: string | null; stock_issued_at: string | null };
   let [o] = await q<ORow>(ORDER_Q, [on]);
   // ไม่เจอเป็น Order No. → ลองตีความว่าเป็น SKU/บาร์โค้ดของขวด (serial ที่ตัดออกไปกับออเดอร์) → หาออเดอร์ให้
+  // เทียบแบบตัดช่องว่าง + ไม่สนตัวพิมพ์ ("LAB 03865 A" = "lab03865a") กันสแกนไม่เจอเพราะ spacing/case
   if (!o) {
     const [u] = await q<{ order_no: string | null }>(
-      `select order_no from stock_unit where (upper(btrim(sku)) = upper($1) or upper(btrim(coalesce(barcode,''))) = upper($1)) and order_no is not null
-         order by (status = 'issued') desc, issued_at desc nulls last limit 1`, [on]).catch(() => []);
+      `select order_no from stock_unit
+        where (regexp_replace(upper(btrim(sku)),'\\s+','','g') = regexp_replace(upper($1),'\\s+','','g')
+            or regexp_replace(upper(btrim(coalesce(barcode,''))),'\\s+','','g') = regexp_replace(upper($1),'\\s+','','g'))
+          and order_no is not null
+        order by (status = 'issued') desc, issued_at desc nulls last limit 1`, [on]).catch(() => []);
     if (u?.order_no) [o] = await q<ORow>(ORDER_Q, [u.order_no]);
   }
   if (!o) return { ok: false, error: `ไม่พบออเดอร์/SKU: ${on}` };
