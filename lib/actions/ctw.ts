@@ -13,9 +13,9 @@ export type CtwPushResult = { ok: boolean; error?: string; skus?: number };
 export async function pushToCtw(orderNo: string): Promise<CtwPushResult> {
   const user = await getCurrentUser();
   if (!user) return { ok: false, error: "กรุณาเข้าสู่ระบบ" };
-  // ปุ่ม "ส่งไป CTW" อยู่บนหน้าใบเบิก CTW (หน้าเฉพาะ creator/admin) และตัว action ก็ finalize ส่งออก+รับ + POST ออกนอกระบบ
-  // → ให้สิทธิ์ตรงกับที่ใช้งานจริง: ผู้สร้างใบเบิก (createOrders) หรือฝ่ายคลัง (manageStock) เหมือนค้าส่ง Eve/KP
-  if (!(can.createOrders(user.role) || can.manageStock(user.role))) return { ok: false, error: "ไม่มีสิทธิ์" };
+  // ปุ่ม "ส่งไป CTW" อยู่บนหน้าใบเบิก CTW และ action finalize ส่งออก+รับ + POST ออกนอกระบบ
+  // สิทธิ์: ผู้สร้างใบเบิก (createOrders) หรือฝ่ายสต๊อก/จัดของ (viewStock = admin/picker/stock)
+  if (!(can.createOrders(user.role) || can.viewStock(user.role))) return { ok: false, error: "ไม่มีสิทธิ์" };
   const on = (orderNo || "").trim();
   const url = process.env.CTW_WEBHOOK_URL;
   const key = process.env.CTW_API_KEY;
