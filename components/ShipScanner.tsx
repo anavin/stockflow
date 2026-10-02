@@ -1,5 +1,6 @@
 "use client";
 import { useMemo, useRef, useState } from "react";
+import { useStickyState } from "@/lib/use-sticky-state";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import dynamic from "next/dynamic";
@@ -39,7 +40,7 @@ export default function ShipScanner({ date, isToday, rows: initialRows, pendingR
   const [banner, setBanner] = useState<Banner>(null);
   const [rows, setRows] = useState<Row[]>(initialRows);
   const [pendingList, setPendingList] = useState<PendingRow[]>(pendingRows);   // ค้างส่ง (ตัดแล้ว ยังไม่ส่ง) — เอาออกเมื่อสแกนส่งสำเร็จ
-  const [view, setView] = useState<"shipped" | "pending">("shipped");          // คลิกการ์ดสลับรายการในคอลัมน์ขวา
+  const [view, setView] = useStickyState<"shipped" | "pending">("ship:view", "shipped");   // คลิกการ์ดสลับรายการในคอลัมน์ขวา (คงเมื่อรีเฟรช)
   const inputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
   const total = rows.length;                            // = รายการของวันที่เลือก (initial + ที่เพิ่งสแกน) ไม่นับซ้ำ
@@ -47,7 +48,7 @@ export default function ShipScanner({ date, isToday, rows: initialRows, pendingR
   // คลิกการ์ด → สลับมุมมอง + เลื่อนไปรายการ (มือถือ: รายการอยู่ด้านล่าง)
   const openView = (v: "shipped" | "pending") => { setView(v); setTimeout(() => { if (window.innerWidth < 1024) listRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }); }, 30); };
   const seen = useMemo(() => new Set(rows.map((r) => r.order_no.toUpperCase())), [rows]);
-  const [pfFilter, setPfFilter] = useState<string>("");   // "" = ทุกแพลตฟอร์ม (กรองฝั่ง client จาก rows ที่โหลดมาแล้ว)
+  const [pfFilter, setPfFilter] = useStickyState<string>("ship:pfFilter", "");   // "" = ทุกแพลตฟอร์ม (กรองฝั่ง client · คงเมื่อรีเฟรช)
   // สรุปแยกแพลตฟอร์ม + รายการที่แสดงตามตัวกรอง
   const byPlatform = useMemo(() => {
     const m = new Map<string, number>();

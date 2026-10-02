@@ -33,6 +33,14 @@ export default function StockIssue({ isAdmin, initialOrder, specOptions = [], to
   const skuRef = useRef<HTMLInputElement>(null);
 
   const [reversing, setReversing] = useState<string | null>(null);   // กันกดยกเลิกซ้ำ
+  // จำ "ออเดอร์ที่กำลังตัด" ไว้ใน sessionStorage — รีเฟรชแล้วดึงรายการกลับมาให้เอง (เคลียร์เมื่อตัดเสร็จ/ยกเลิก)
+  const ACTIVE_KEY = "issue:activeOrder";
+  const saveActive = (on: string) => { try { sessionStorage.setItem(ACTIVE_KEY, on); } catch { /* ignore */ } };
+  const clearActive = () => { try { sessionStorage.removeItem(ACTIVE_KEY); } catch { /* ignore */ } };
+  useEffect(() => {
+    try { const s = sessionStorage.getItem(ACTIVE_KEY); if (s) lookup(s); } catch { /* ignore */ }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   async function onReverse(orderNo: string, idx: number) {
     if (reversing || !confirm(`ยกเลิกการตัดสต๊อกของ ${orderNo}? (คืนสต๊อกกลับ)`)) return;
     setReversing(orderNo);
@@ -68,6 +76,7 @@ export default function StockIssue({ isAdmin, initialOrder, specOptions = [], to
     setValue("");
     if (!res.ok) {
       scanBeep("error");
+      clearActive();   // ออเดอร์ที่จำไว้โหลดไม่ได้ (ตัดไปแล้ว/ไม่พบ) → เลิกจำ จะได้ไม่ดึงซ้ำ
       setLog((l) => [{ at: now(), res: res as IssueResult, input: on, platform: res.platform }, ...l].slice(0, 30));
       inputRef.current?.focus();
       return;
@@ -79,6 +88,7 @@ export default function StockIssue({ isAdmin, initialOrder, specOptions = [], to
     for (const it of res.items!) init[it.line_no] = { skus: it.sku ? it.sku.split(",").map((s) => s.trim()).filter(Boolean) : [], spec: it.spec || "" };
     setForm(init);
     setPreview(res);
+    saveActive(res.order_no || on);   // จำออเดอร์นี้ไว้ → รีเฟรชแล้วดึงกลับมา
   }
 
   // ขั้น 2: กดยืนยัน → บันทึก SKU+Spec แล้วตัดสต๊อก
@@ -112,6 +122,7 @@ export default function StockIssue({ isAdmin, initialOrder, specOptions = [], to
     finally { setBusy(false); }
     scanBeep(res.ok ? (res.negatives?.length ? "warn" : "ok") : "error");
     setLog((l) => [{ at: now(), res, input: preview.order_no!, platform: preview.platform }, ...l].slice(0, 30));
+    clearActive();
     setPreview(null); setForm({});
     inputRef.current?.focus();
   }
@@ -205,7 +216,7 @@ export default function StockIssue({ isAdmin, initialOrder, specOptions = [], to
               </h3>
               <p className="text-xs text-muted">Order No. <span className="font-mono text-ink">{preview.order_no}</span> · {preview.doc_no || "-"} · {preview.items!.length} รายการ</p>
             </div>
-            <button onClick={() => { setPreview(null); setForm({}); inputRef.current?.focus(); }} className="btn-ghost shrink-0"><X size={14} /> ยกเลิก</button>
+            <button onClick={() => { clearActive(); setPreview(null); setForm({}); inputRef.current?.focus(); }} className="btn-ghost shrink-0"><X size={14} /> ยกเลิก</button>
           </div>
 
           {preview.note && (

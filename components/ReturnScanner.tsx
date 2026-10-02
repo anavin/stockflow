@@ -28,6 +28,14 @@ export default function ReturnScanner({ todayReturns = [] }: { todayReturns?: Re
   const [note, setNote] = useState("");
   const [err, setErr] = useState<string | null>(null);
   const [log, setLog] = useState<Done[]>([]);
+  // จำ "ออเดอร์ที่กำลังรับคืน" ไว้ใน sessionStorage — รีเฟรชแล้วดึงรายการกลับมาให้เอง (เคลียร์เมื่อคืนเสร็จ/ยกเลิก)
+  const ACTIVE_KEY = "return:activeOrder";
+  const saveActive = (on: string) => { try { sessionStorage.setItem(ACTIVE_KEY, on); } catch { /* ignore */ } };
+  const clearActive = () => { try { sessionStorage.removeItem(ACTIVE_KEY); } catch { /* ignore */ } };
+  useEffect(() => {
+    try { const s = sessionStorage.getItem(ACTIVE_KEY); if (s) lookup(s); } catch { /* ignore */ }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const inputRef = useRef<HTMLInputElement>(null);
 
   // ค่าเริ่มต้นต่อรายการ: คืนเต็มจำนวนที่เหลือ · คืนเข้าสต๊อกได้→restock · ของแถม→ไม่นับ · ที่เหลือ→ชำรุด
@@ -47,9 +55,9 @@ export default function ReturnScanner({ todayReturns = [] }: { todayReturns?: Re
     let res: ReturnLookup;
     try { res = await lookupOrderForReturn(code); } catch { res = { ok: false, error: "ดึงรายการไม่สำเร็จ" }; }
     setBusy(false);
-    if (!res.ok) { scanBeep("error"); setErr(res.error || "ไม่พบ"); setPreview(null); return; }
+    if (!res.ok) { scanBeep("error"); clearActive(); setErr(res.error || "ไม่พบ"); setPreview(null); return; }
     scanBeep(res.issued ? "ok" : "warn");   // warn = ยังไม่ตัดสต๊อก คืนเข้าสต๊อกไม่ได้
-    setValue(""); setPreview(res); setForm(initForm(res.items || [], !!res.issued));
+    setValue(""); setPreview(res); setForm(initForm(res.items || [], !!res.issued)); saveActive(res.order_no || code);
   }
 
   const setQty = (line: number, qty: number, max: number) => setForm((f) => ({ ...f, [line]: { ...f[line], qty: Math.max(0, Math.min(max, qty)) } }));
@@ -82,7 +90,7 @@ export default function ReturnScanner({ todayReturns = [] }: { todayReturns?: Re
     setBusy(false);
     if (!res.ok) { setErr(res.error || "รับคืนไม่สำเร็จ"); return; }
     setLog((l) => [{ order_no: res.order_no!, platform: preview.platform, restocked: res.restocked || 0, damaged: res.damaged || 0, skipped: res.skipped || 0, at: Date.now() }, ...l]);
-    setPreview(null); setForm({}); setNote("");
+    clearActive(); setPreview(null); setForm({}); setNote("");
     setTimeout(() => inputRef.current?.focus(), 0);
   }
 
@@ -114,7 +122,7 @@ export default function ReturnScanner({ todayReturns = [] }: { todayReturns?: Re
                 <h3 className="flex items-center gap-2 text-sm font-semibold text-ink"><PackageCheck size={16} className="text-brand" /> รับคืน — ตรวจก่อนบันทึก <PlatformBadge platform={preview.platform} /></h3>
                 <p className="text-xs text-muted">Order No. <span className="font-mono text-ink">{preview.order_no}</span> · ผู้รับ {preview.receiver || "-"} · {preview.items!.length} รายการ{!preview.issued && " · ⚠️ ยังไม่ตัดสต๊อก (คืนเข้าสต๊อกไม่ได้)"}</p>
               </div>
-              <button onClick={() => { setPreview(null); setForm({}); inputRef.current?.focus(); }} className="btn-ghost shrink-0"><X size={14} /> ยกเลิก</button>
+              <button onClick={() => { clearActive(); setPreview(null); setForm({}); inputRef.current?.focus(); }} className="btn-ghost shrink-0"><X size={14} /> ยกเลิก</button>
             </div>
 
             <div className="space-y-2">
