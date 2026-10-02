@@ -1,5 +1,6 @@
 "use client";
 import { useMemo, useState } from "react";
+import { useStickyState } from "@/lib/use-sticky-state";
 import { useRouter } from "next/navigation";
 import { createUser, setUserActive, resetPassword, setUserRoles } from "@/lib/actions/users";
 import { ROLE_LABELS, ROLE_DESC, roleList } from "@/lib/auth/roles";
@@ -26,9 +27,9 @@ export default function UsersManager({ users, meId }: { users: UserRow[]; meId: 
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [msg, setMsg] = useState("");
-  const [search, setSearch] = useState("");
-  const [roleF, setRoleF] = useState("");
-  const [statusF, setStatusF] = useState<SFilter>("all");
+  const [search, setSearch] = useStickyState("users:search", "");
+  const [roleF, setRoleF] = useStickyState("users:roleF", "");
+  const [statusF, setStatusF] = useStickyState<SFilter>("users:statusF", "all");
 
   const set = (p: Partial<typeof form>) => setForm((f) => ({ ...f, ...p }));
   const countActive = (role: string) => users.filter((u) => u.is_active && roleList(u.role).includes(role)).length;

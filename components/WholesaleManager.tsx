@@ -1,5 +1,6 @@
 "use client";
 import { useMemo, useState } from "react";
+import { useStickyState } from "@/lib/use-sticky-state";
 import { useRouter } from "next/navigation";
 import { saveCatalogItem, deleteCatalogItem, saveBranch, deleteBranch, type CatalogInput, type BranchInput } from "@/lib/actions/wholesale";
 import Combobox from "@/components/Combobox";
@@ -15,7 +16,7 @@ export default function WholesaleManager({ catalog, branches, products, sizes, c
 }) {
   const router = useRouter();
   const [tab, setTab] = useState<Tab>("evb-cat");
-  const [search, setSearch] = useState("");
+  const [search, setSearch] = useStickyState("wholesale:search", "");
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState(""); const [err, setErr] = useState("");
   const [editId, setEditId] = useState<number | null>(null);

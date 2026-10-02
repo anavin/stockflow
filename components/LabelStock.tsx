@@ -1,5 +1,6 @@
 "use client";
 import { useMemo, useState } from "react";
+import { useStickyState } from "@/lib/use-sticky-state";
 import { labelRef } from "@/lib/materials";
 import type { LabelScent } from "@/lib/queries";
 import MaterialControls, { isLow } from "./MaterialControls";
@@ -12,9 +13,9 @@ const GRADE_ORDER = ["EDP", "EDP+", "PARFUM", "EDT"];
 const gradeRank = (g: string) => { const i = GRADE_ORDER.indexOf(g); return i < 0 ? GRADE_ORDER.length : i; };
 
 export default function LabelStock({ scents, canEdit }: { scents: LabelScent[]; canEdit: boolean }) {
-  const [search, setSearch] = useState("");
-  const [grade, setGrade] = useState("");
-  const [lowOnly, setLowOnly] = useState(false);
+  const [search, setSearch] = useStickyState("label:search", "");
+  const [grade, setGrade] = useStickyState("label:grade", "");
+  const [lowOnly, setLowOnly] = useStickyState("label:low", false);
   const [collapsedGrade, setCollapsedGrade] = useState<Set<string>>(new Set());   // กรุปเกรด (default กาง)
   const [collapsedScent, setCollapsedScent] = useState<Set<string>>(new Set());   // กลิ่น (default กาง)
 

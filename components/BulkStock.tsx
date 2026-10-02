@@ -1,5 +1,6 @@
 "use client";
 import { useMemo, useState } from "react";
+import { useStickyState } from "@/lib/use-sticky-state";
 import { useRouter } from "next/navigation";
 import { addBulkScent, setMaterialNote, type ItemDesc } from "@/lib/actions/supply";
 import { bulkRef } from "@/lib/materials";
@@ -20,9 +21,9 @@ export default function BulkStock({ rows, canEdit, fdaKeys = [] }: { rows: BulkR
   const hasFdaData = fdaKeys.length > 0;                              // มีข้อมูล อย. ให้เทียบไหม
   const noFda = (n: string) => hasFdaData && !fdaSet.has(normKey(n)); // กลิ่นนี้ยังไม่มีในทะเบียน อย.
   const noFdaCount = useMemo(() => rows.filter((r) => noFda(r.scent)).length, [rows, fdaSet, hasFdaData]);
-  const [search, setSearch] = useState("");
-  const [grade, setGrade] = useState("");
-  const [lowOnly, setLowOnly] = useState(false);
+  const [search, setSearch] = useStickyState("bulk:search", "");
+  const [grade, setGrade] = useStickyState("bulk:grade", "");
+  const [lowOnly, setLowOnly] = useStickyState("bulk:low", false);
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
   const [oem, setOem] = useState({ scent: "", brand: "PUNN", grade: "" });
   const [busy, setBusy] = useState(false);

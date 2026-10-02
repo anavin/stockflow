@@ -1,5 +1,6 @@
 "use client";
 import { useMemo, useRef, useState } from "react";
+import { useStickyState } from "@/lib/use-sticky-state";
 import { useRouter } from "next/navigation";
 import type { FdaRow, FdaExpirySummary } from "@/lib/queries";
 import { updateFda, addFda, deleteFda, renewFda, type FdaPatch } from "@/lib/actions/fda";
@@ -49,9 +50,9 @@ function FdaFields({ form, setF }: { form: FdaPatch; setF: (p: Partial<FdaPatch>
 
 export default function FdaManager({ rows, summary, canEdit }: { rows: FdaRow[]; summary: FdaExpirySummary; canEdit: boolean }) {
   const router = useRouter();
-  const [search, setSearch] = useState("");
+  const [search, setSearch] = useStickyState("fda:search", "");
   const [tierF, setTierF] = useState<Tier | "">("");
-  const [statusF, setStatusF] = useState("");
+  const [statusF, setStatusF] = useStickyState("fda:statusF", "");
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState("");
   const [err, setErr] = useState("");

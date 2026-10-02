@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import { useStickyState } from "@/lib/use-sticky-state";
 import { useRouter } from "next/navigation";
 import { addScentAlias, deleteScentAlias } from "@/lib/actions/products";
 import type { ScentAliasRow } from "@/lib/queries";
@@ -11,7 +12,7 @@ export default function AliasManager({ aliases, products }: { aliases: ScentAlia
   const [prod, setProd] = useState("");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
-  const [q, setQ] = useState("");
+  const [q, setQ] = useStickyState("alias:q", "");
 
   async function add(e: React.FormEvent) {
     e.preventDefault();

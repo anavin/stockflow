@@ -1,5 +1,6 @@
 "use client";
 import { useMemo, useState } from "react";
+import { useStickyState } from "@/lib/use-sticky-state";
 import { useRouter } from "next/navigation";
 import { setSkuSold } from "@/lib/actions/products";
 import { Tag, Search, X, Info } from "lucide-react";
@@ -16,7 +17,7 @@ export default function SalesManager({ rows, closed = {} }:
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [tab, setTab] = useState<Tab>("selling");
-  const [search, setSearch] = useState("");
+  const [search, setSearch] = useStickyState("sales:search", "");
   const [busy, setBusy] = useState<string | null>(null);
   const [err, setErr] = useState("");
   const [override, setOverride] = useState<Record<string, boolean>>({});   // comboKey → closed? (optimistic)

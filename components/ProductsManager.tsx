@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useMemo, useState } from "react";
+import { useStickyState } from "@/lib/use-sticky-state";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createProduct, setProductActive, setProductType, bulkSetProductTypes, addScentBarcode, deleteScentBarcode, setDiscontinued, deleteProduct } from "@/lib/actions/products";
 import type { ProductAdminRow, ScentBarcode } from "@/lib/queries";
@@ -31,8 +32,8 @@ export default function ProductsManager({
   const router = useRouter();
   const [name, setName] = useState("");
   const [ptype, setPtype] = useState("");
-  const [q, setQ] = useState("");
-  const [filter, setFilter] = useState<Filter>("all");
+  const [q, setQ] = useStickyState("products:q", "");
+  const [filter, setFilter] = useStickyState<Filter>("products:filter", "all");
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState("");
   const [error, setError] = useState("");

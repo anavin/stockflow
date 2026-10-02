@@ -1,5 +1,6 @@
 "use client";
 import { useMemo, useState } from "react";
+import { useStickyState } from "@/lib/use-sticky-state";
 import type { PackagingRow } from "@/lib/queries";
 import MaterialControls, { isLow } from "./MaterialControls";
 import { SummaryBar } from "./BulkStock";
@@ -7,9 +8,9 @@ import { downloadCsv } from "@/lib/csv";
 import { Search, ChevronDown, ChevronRight } from "lucide-react";
 
 export default function PackagingStock({ rows, canEdit }: { rows: PackagingRow[]; canEdit: boolean }) {
-  const [search, setSearch] = useState("");
-  const [cat, setCat] = useState("");
-  const [lowOnly, setLowOnly] = useState(false);
+  const [search, setSearch] = useStickyState("pkg:search", "");
+  const [cat, setCat] = useStickyState("pkg:cat", "");
+  const [lowOnly, setLowOnly] = useStickyState("pkg:low", false);
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());   // หมวด (default กาง)
 
   const cats = useMemo(() => [...new Set(rows.map((r) => r.category))], [rows]);
