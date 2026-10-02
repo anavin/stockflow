@@ -2,7 +2,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
-import { PLATFORMS, enabledPlatforms, platformBase, platformColor, platformTint } from "@/lib/config";
+import { PLATFORMS, enabledPlatforms, platformBase, platformColor, platformTint, isWholesalePlatform } from "@/lib/config";
 import { can, ROLE_LABELS, roleList, isAdmin } from "@/lib/auth/roles";
 import { Package, PlusCircle, Upload, List, LogOut, Menu, X, Trash2, Users, ScanLine, Boxes, LayoutDashboard, BarChart3, FlaskConical, ScanBarcode, ShieldCheck, Truck, Droplets, Sticker, PackageOpen, History, ScrollText, ClipboardCheck, Undo2, PackageX, Store, Wrench } from "lucide-react";
 import FontSizeToggle from "@/components/FontSizeToggle";
@@ -20,8 +20,12 @@ export default function Sidebar({ user }: { user: { full_name: string; username:
       ]
     : [];
   // 1 ลิงก์/แพลตฟอร์มที่เปิดใช้ → หน้ารายการใบเบิก (สร้าง/นำเข้า/ถังขยะ อยู่ในหน้านั้น)
+  // creator = เห็นทุกแพลตฟอร์ม · คลัง/จัดของ (viewStock) = เห็นเฉพาะค้าส่ง/โอนสาขา (CTW/Eve/KP)
+  //   เพื่อเข้าไปกดส่งออก/ยืนยันรับ/ส่ง CTW (ปุ่มในหน้า list โผล่ตามสิทธิ์)
   const orderNav = can.createOrders(role)
     ? enabledPlatforms().map((p) => ({ href: platformBase(p.code), code: p.code, label: `ใบเบิก ${p.name}`, exact: true }))
+    : can.viewStock(role)
+    ? enabledPlatforms().filter((p) => isWholesalePlatform(p.code)).map((p) => ({ href: platformBase(p.code), code: p.code, label: `ค้าส่ง ${p.name}`, exact: true }))
     : [];
   // กลุ่ม "สินค้าสำเร็จรูป" — ตัดสต๊อก/จัดส่ง/ดูสต๊อก/SKU
   const finishedNav = [

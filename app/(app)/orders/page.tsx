@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { requireDashboard } from "@/lib/auth/require-user";
+import { can } from "@/lib/auth/roles";
 import { listOrders, countOrders } from "@/lib/queries";
 import { platformColor, platformName, resolvePlatform } from "@/lib/config";
 import AllOrdersFilters from "@/components/AllOrdersFilters";
@@ -14,7 +15,8 @@ const PAGE_SIZE = 50;
 export default async function AllOrdersPage({ searchParams }: {
   searchParams: Promise<{ platform?: string; from?: string; to?: string; today?: string; unclassified?: string; issued?: string; shipped?: string; q?: string; page?: string }>;
 }) {
-  await requireDashboard();
+  const user = await requireDashboard();
+  const isCreator = can.createOrders(user.role);   // เฉพาะ creator คลิกเข้าหน้าแก้ใบเบิกได้ (หน้าแก้เป็น creator-only)
   const { platform, from, to, today, unclassified, issued, shipped, q, page } = await searchParams;
   const pf = resolvePlatform(platform)?.code;   // undefined = ทุกแพลตฟอร์ม
   const iss = issued === "yes" || issued === "no" ? issued : undefined;
@@ -74,30 +76,39 @@ export default async function AllOrdersPage({ searchParams }: {
             <span className="text-right">รายการ</span>
           </div>
           <div className="divide-y divide-line/70">
-            {orders.map((o) => (
-              <Link key={o.order_no} href={`/${(o.platform || "Shopee").toLowerCase()}/${encodeURIComponent(o.order_no)}`}
-                className="flex flex-col gap-0.5 px-4 py-2.5 hover:bg-soft sm:grid sm:grid-cols-[minmax(9rem,1.4fr)_minmax(6rem,2fr)_9rem_3.5rem] sm:items-center sm:gap-x-4">
-                {/* คอลัมน์ 1: จุดสี + เลขที่ + ใบเบิก */}
-                <div className="flex min-w-0 items-center gap-2">
-                  <span className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: platformColor(o.platform) }} title={o.platform || ""} />
-                  <span className="truncate font-mono text-xs text-ink">{o.order_no}</span>
-                  {o.doc_no && <span className="hidden shrink-0 text-[11px] text-faint lg:inline">{o.doc_no}</span>}
-                </div>
-                {/* คอลัมน์ 2: ผู้รับ · จังหวัด */}
-                <div className="truncate text-xs text-muted">{o.receiver || o.username || "—"}{o.province ? ` · ${o.province}` : ""}</div>
-                {/* คอลัมน์ 3: สถานะ (ชิดขวา) */}
-                <div className="flex items-center justify-start gap-1.5 sm:justify-end">
-                  {o.stock_issued_at
-                    ? <span className="chip inline-flex items-center gap-1 bg-green-50 text-green-700"><PackageCheck size={12} /> ตัดแล้ว</span>
-                    : <span className="chip bg-amber-50 text-amber-700">รอตัด</span>}
-                  {o.shipped_at && <span className="chip inline-flex items-center gap-1 bg-green-50 text-green-700"><Truck size={12} /> ส่งแล้ว</span>}
-                </div>
-                {/* คอลัมน์ 4: จำนวนรายการ (ชิดขวา) */}
-                <div className="flex items-center justify-start sm:justify-end">
-                  <span className="chip bg-brand-50 text-brand-600">{o.item_count}</span>
-                </div>
-              </Link>
-            ))}
+            {orders.map((o) => {
+              const rowCls = "flex flex-col gap-0.5 px-4 py-2.5 sm:grid sm:grid-cols-[minmax(9rem,1.4fr)_minmax(6rem,2fr)_9rem_3.5rem] sm:items-center sm:gap-x-4";
+              const inner = (
+                <>
+                  {/* คอลัมน์ 1: จุดสี + เลขที่ + ใบเบิก */}
+                  <div className="flex min-w-0 items-center gap-2">
+                    <span className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: platformColor(o.platform) }} title={o.platform || ""} />
+                    <span className="truncate font-mono text-xs text-ink">{o.order_no}</span>
+                    {o.doc_no && <span className="hidden shrink-0 text-[11px] text-faint lg:inline">{o.doc_no}</span>}
+                  </div>
+                  {/* คอลัมน์ 2: ผู้รับ · จังหวัด */}
+                  <div className="truncate text-xs text-muted">{o.receiver || o.username || "—"}{o.province ? ` · ${o.province}` : ""}</div>
+                  {/* คอลัมน์ 3: สถานะ (ชิดขวา) */}
+                  <div className="flex items-center justify-start gap-1.5 sm:justify-end">
+                    {o.stock_issued_at
+                      ? <span className="chip inline-flex items-center gap-1 bg-green-50 text-green-700"><PackageCheck size={12} /> ตัดแล้ว</span>
+                      : <span className="chip bg-amber-50 text-amber-700">รอตัด</span>}
+                    {o.shipped_at && <span className="chip inline-flex items-center gap-1 bg-green-50 text-green-700"><Truck size={12} /> ส่งแล้ว</span>}
+                  </div>
+                  {/* คอลัมน์ 4: จำนวนรายการ (ชิดขวา) */}
+                  <div className="flex items-center justify-start sm:justify-end">
+                    <span className="chip bg-brand-50 text-brand-600">{o.item_count}</span>
+                  </div>
+                </>
+              );
+              // creator = คลิกเข้าหน้าแก้ใบเบิก · ฝ่ายอื่น (picker/คลัง) = แถวเฉยๆ ไม่ลิงก์ (หน้าแก้เป็น creator-only จะเด้งกลับ)
+              return isCreator ? (
+                <Link key={o.order_no} href={`/${(o.platform || "Shopee").toLowerCase()}/${encodeURIComponent(o.order_no)}`}
+                  className={`${rowCls} hover:bg-soft`}>{inner}</Link>
+              ) : (
+                <div key={o.order_no} className={rowCls}>{inner}</div>
+              );
+            })}
           </div>
         </section>
       )}

@@ -5,7 +5,8 @@ import { resolvePlatform, platformBase, canImportPlatform, canCreatePlatform, pl
 import OrdersTable from "@/components/OrdersTable";
 import OrderFilters from "@/components/OrderFilters";
 import { PlusCircle, Upload, ChevronLeft, ChevronRight, FileDown, FileBarChart, Trash2, Info } from "lucide-react";
-import { requireCreator } from "@/lib/auth/require-user";
+import { requireDashboard } from "@/lib/auth/require-user";
+import { can } from "@/lib/auth/roles";
 
 export const dynamic = "force-dynamic";
 
@@ -15,7 +16,8 @@ export default async function OrdersPage({ params, searchParams }: {
   params: Promise<{ platform: string }>;
   searchParams: Promise<{ q?: string; month?: string; from?: string; to?: string; today?: string; issued?: string; shipped?: string; page?: string }>;
 }) {
-  await requireCreator();
+  const user = await requireDashboard();   // เปิดให้ทุกฝ่าย (admin/creator/picker/คลัง) เข้าหน้า list ได้ — ปุ่มซ่อนตามสิทธิ์
+  const isCreator = can.createOrders(user.role);   // สร้าง/นำเข้า/แก้/ลบ = creator เท่านั้น
   const pf = resolvePlatform((await params).platform);
   if (!pf) notFound();
   const base = platformBase(pf.code);
@@ -72,9 +74,9 @@ export default async function OrdersPage({ params, searchParams }: {
         <div className="flex gap-2">
           <a href={reportHref} target="_blank" rel="noopener" className="btn-ghost" title="สรุปกลิ่น×ขนาด ตามตัวกรอง (พิมพ์/PDF)"><FileBarChart size={16} /> สรุป</a>
           <a href={exportHref} className="btn-ghost"><FileDown size={16} /> Export</a>
-          <Link href={`${base}/trash`} className="btn-ghost" title="ถังขยะ"><Trash2 size={16} /></Link>
-          {canImportPlatform(pf.code) && <Link href={`${base}/import`} className="btn-ghost"><Upload size={16} /> นำเข้า</Link>}
-          {canCreatePlatform(pf.code) && <Link href={`${base}/new`} className="btn-primary"><PlusCircle size={16} /> สร้างใบเบิก</Link>}
+          {isCreator && <Link href={`${base}/trash`} className="btn-ghost" title="ถังขยะ"><Trash2 size={16} /></Link>}
+          {isCreator && canImportPlatform(pf.code) && <Link href={`${base}/import`} className="btn-ghost"><Upload size={16} /> นำเข้า</Link>}
+          {isCreator && canCreatePlatform(pf.code) && <Link href={`${base}/new`} className="btn-primary"><PlusCircle size={16} /> สร้างใบเบิก</Link>}
         </div>
       </div>
 
@@ -88,7 +90,7 @@ export default async function OrdersPage({ params, searchParams }: {
 
       <OrderFilters platform={pf.code} q={q} month={month} from={from} to={to} today={today} issued={iss} shipped={shp} months={months} />
 
-      <OrdersTable orders={orders} platform={pf.code} />
+      <OrdersTable orders={orders} platform={pf.code} role={user.role} />
 
       {totalPages > 1 && (
         <div className="mt-4 flex items-center justify-between text-sm">

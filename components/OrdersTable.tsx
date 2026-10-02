@@ -7,6 +7,7 @@ import { deleteOrder, bulkDeleteOrders } from "@/lib/actions/orders";
 import { pushToCtw } from "@/lib/actions/ctw";
 import { markWholesaleShipped } from "@/lib/actions/wholesale-delivery";
 import { canCreatePlatform, isWholesalePlatform } from "@/lib/config";
+import { can } from "@/lib/auth/roles";
 import type { OrderRow } from "@/lib/types";
 import WholesaleReceiptModal from "./WholesaleReceiptModal";
 import { Printer, Pencil, Trash2, PackageOpen, X, Zap, Clock, Check, Send, CheckCircle2, Truck, PackageCheck } from "lucide-react";
@@ -38,8 +39,12 @@ function StatusChip({ order }: { order: OrderRow }) {
   return <span className="inline-flex flex-wrap items-center gap-1">{base}{retChip}</span>;
 }
 
-export default function OrdersTable({ orders, platform = "Shopee" }: { orders: OrderRow[]; platform?: string }) {
+export default function OrdersTable({ orders, platform = "Shopee", role }: { orders: OrderRow[]; platform?: string; role?: string }) {
   const base = `/${platform.toLowerCase()}`;
+  // สิทธิ์ปุ่ม (ตรงกับ gate ของ server action) — หน้า list เปิดให้ทุกฝ่าย แต่ปุ่มโผล่ตามสิทธิ์
+  const canCreate = can.createOrders(role);                       // สร้าง/แก้/ลบ
+  const canWholesale = can.manageStock(role);                     // ส่งออก/ยืนยันรับ (Eve/KP)
+  const canCtw = can.createOrders(role) || can.viewStock(role);   // ส่งไป CTW
   const router = useRouter();
   const [busy, setBusy] = useState<string | null>(null);
   const [sel, setSel] = useState<Set<string>>(new Set());   // Order No. ที่ติ๊กไว้
@@ -119,12 +124,12 @@ export default function OrdersTable({ orders, platform = "Shopee" }: { orders: O
   }
 
   if (orders.length === 0) {
-    const creatable = canCreatePlatform(platform);
+    const creatable = canCreatePlatform(platform) && canCreate;
     return (
       <div className="card flex flex-col items-center gap-3 py-16 text-center">
         <PackageOpen size={40} className="text-faint" />
         <div className="text-sm text-muted">
-          {creatable ? "ยังไม่มีใบเบิก — สร้างใหม่หรือ นำเข้าจาก Excel/CSV" : "ยังไม่มีใบเบิก — รอใบเบิกจากระบบ CTW เข้ามาอัตโนมัติ"}
+          {creatable ? "ยังไม่มีใบเบิก — สร้างใหม่หรือ นำเข้าจาก Excel/CSV" : "ยังไม่มีใบเบิก"}
         </div>
         {creatable && <Link href={`${base}/new`} className="btn-primary">สร้างใบเบิกแรก</Link>}
       </div>
@@ -140,11 +145,13 @@ export default function OrdersTable({ orders, platform = "Shopee" }: { orders: O
           <div className="flex items-center gap-3 text-sm text-ink">
             <button onClick={() => setSel(new Set())} className="text-muted hover:text-ink" title="ล้างที่เลือก"><X size={16} /></button>
             <span>เลือกไว้ <b>{sel.size}</b> รายการ</span>
-            <button onClick={onBulkDelete} disabled={bulkBusy}
-              className="btn-danger px-2.5 py-1 text-xs"
-              title="ย้ายที่เลือกไปถังขยะ">
-              <Trash2 size={14} /> {bulkBusy ? "กำลังลบ…" : "ลบ"}
-            </button>
+            {canCreate && (
+              <button onClick={onBulkDelete} disabled={bulkBusy}
+                className="btn-danger px-2.5 py-1 text-xs"
+                title="ย้ายที่เลือกไปถังขยะ">
+                <Trash2 size={14} /> {bulkBusy ? "กำลังลบ…" : "ลบ"}
+              </button>
+            )}
           </div>
           {/* ขวา: ปุ่มพิมพ์เป็นปุ่มหลักเด่น */}
           <button onClick={onBulkPrint} disabled={bulkBusy} className="btn-primary">
@@ -208,44 +215,58 @@ export default function OrdersTable({ orders, platform = "Shopee" }: { orders: O
                           <span className="inline-flex items-center gap-1 rounded-md bg-red-50 px-2 py-1 text-xs font-medium text-red-700 whitespace-nowrap" title="ส่งไป CTW แล้ว">
                             <CheckCircle2 size={14} /> ส่ง CTW แล้ว
                           </span>
-                        ) : o.stock_issued_at ? (
+                        ) : !o.stock_issued_at ? (
+                          <span className="text-[11px] text-muted whitespace-nowrap" title="ต้องตัดสต๊อกก่อน">รอตัดสต๊อก</span>
+                        ) : canCtw ? (
                           <button onClick={() => onPush(o.order_no)} disabled={busy === o.order_no}
                             className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium text-white disabled:opacity-50 whitespace-nowrap"
                             style={{ backgroundColor: "#dc2626" }} title="ส่งใบเบิกนี้ไป CTW">
                             <Send size={14} /> {busy === o.order_no ? "กำลังส่ง…" : "ส่งไป CTW"}
                           </button>
                         ) : (
-                          <span className="text-[11px] text-muted whitespace-nowrap" title="ต้องตัดสต๊อกก่อน">รอตัดสต๊อก</span>
+                          <span className="text-[11px] text-muted whitespace-nowrap" title="ตัดสต๊อกแล้ว รอส่งไป CTW">พร้อมส่ง CTW</span>
                         ))}
                         {isEveKp && (!o.stock_issued_at ? (
                           <span className="text-[11px] text-muted whitespace-nowrap" title="ต้องตัดสต๊อกก่อน">รอตัดสต๊อก</span>
                         ) : !o.shipped_at ? (
-                          <button onClick={() => onShip(o.order_no)} disabled={busy === o.order_no}
-                            className="inline-flex items-center gap-1 rounded-md bg-orange-500 px-2 py-1 text-xs font-medium text-white hover:bg-orange-600 disabled:opacity-50 whitespace-nowrap" title="ยืนยันส่งออกไปปลายทาง">
-                            <Truck size={14} /> {busy === o.order_no ? "กำลังส่ง…" : "ส่งออก"}
-                          </button>
+                          canWholesale ? (
+                            <button onClick={() => onShip(o.order_no)} disabled={busy === o.order_no}
+                              className="inline-flex items-center gap-1 rounded-md bg-orange-500 px-2 py-1 text-xs font-medium text-white hover:bg-orange-600 disabled:opacity-50 whitespace-nowrap" title="ยืนยันส่งออกไปปลายทาง">
+                              <Truck size={14} /> {busy === o.order_no ? "กำลังส่ง…" : "ส่งออก"}
+                            </button>
+                          ) : (
+                            <span className="text-[11px] text-muted whitespace-nowrap" title="ตัดสต๊อกแล้ว รอคลังส่งออก">รอส่งออก</span>
+                          )
                         ) : o.received_at ? (
                           <span className="inline-flex items-center gap-1 rounded-md bg-green-50 px-2 py-1 text-xs font-medium text-green-700 whitespace-nowrap" title={`ปลายทางรับครบ${o.received_by ? " · " + o.received_by : ""}`}>
                             <PackageCheck size={14} /> รับครบ
                           </span>
-                        ) : (
+                        ) : canWholesale ? (
                           <button onClick={() => setReceiptFor({ order_no: o.order_no, doc_no: o.doc_no ?? null })}
                             className="inline-flex items-center gap-1 rounded-md bg-green-600 px-2 py-1 text-xs font-medium text-white hover:bg-green-700 whitespace-nowrap" title="ยืนยันปลายทางรับ (รับบางส่วนได้)">
                             <PackageCheck size={14} /> {(o.received_qty ?? 0) > 0 ? `รับเพิ่ม (${o.received_qty}/${o.total_qty})` : "ยืนยันรับ"}
                           </button>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 rounded-md bg-orange-50 px-2 py-1 text-xs font-medium text-orange-700 whitespace-nowrap" title="ส่งออกแล้ว รอปลายทางยืนยันรับ">
+                            <Truck size={14} /> ส่งออกแล้ว · รอรับ{(o.received_qty ?? 0) > 0 ? ` (${o.received_qty}/${o.total_qty})` : ""}
+                          </span>
                         ))}
                         <a href={`/print/pdf/${encodeURIComponent(o.order_no)}`} target="_blank" rel="noreferrer"
                           className="rounded-md p-1.5 text-muted hover:bg-brand-50 hover:text-brand-600" title="พิมพ์" aria-label="พิมพ์ใบเบิก">
                           <Printer size={16} />
                         </a>
-                        <Link href={`${base}/${encodeURIComponent(o.order_no)}`}
-                          className="rounded-md p-1.5 text-muted hover:bg-soft hover:text-ink" title="แก้ไข" aria-label="แก้ไขใบเบิก">
-                          <Pencil size={16} />
-                        </Link>
-                        <button onClick={() => onDelete(o.order_no)} disabled={busy === o.order_no}
-                          className="rounded-md p-1.5 text-muted hover:bg-red-50 hover:text-red-600" title="ลบ" aria-label="ลบใบเบิก (ไปถังขยะ)">
-                          <Trash2 size={16} />
-                        </button>
+                        {canCreate && (
+                          <Link href={`${base}/${encodeURIComponent(o.order_no)}`}
+                            className="rounded-md p-1.5 text-muted hover:bg-soft hover:text-ink" title="แก้ไข" aria-label="แก้ไขใบเบิก">
+                            <Pencil size={16} />
+                          </Link>
+                        )}
+                        {canCreate && (
+                          <button onClick={() => onDelete(o.order_no)} disabled={busy === o.order_no}
+                            className="rounded-md p-1.5 text-muted hover:bg-red-50 hover:text-red-600" title="ลบ" aria-label="ลบใบเบิก (ไปถังขยะ)">
+                            <Trash2 size={16} />
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>
