@@ -51,6 +51,15 @@ export async function resetOrderIssue(orderNo: string): Promise<{ ok: boolean; e
   const res = await reverseIssue(on);
   if (!res.ok) return { ok: false, error: `ยกเลิกการตัดสต๊อกไม่สำเร็จ: ${res.error} ${retry}` };
 
+  // 4) เคลียร์ธงค้าส่ง/CTW ที่ unshipOrder ไม่ได้แตะ (ctw_received_at / received_at / received_qty)
+  //    ไม่งั้น CTW ที่เคย push จะค้าง "ส่งแล้ว" push ซ้ำไม่ได้ · Eve/KP จะค้าง "รับครบ" ทั้งที่รีเซ็ตแล้ว
+  //    (คอลัมน์อาจยังไม่มีบน prod → ห่อ try/catch ไม่ให้รีเซ็ตล่ม)
+  try {
+    await q(`update orders set ctw_received_at = null, ctw_received_by = null,
+               received_at = null, received_by = null, updated_at = now() where order_no = $1`, [on]);
+    await q(`update order_items set received_qty = null where order_no = $1`, [on]);
+  } catch { /* คอลัมน์ค้าส่ง/CTW ยังไม่มีบน prod — ข้าม */ }
+
   await logActivity("order.reset", on);
   return { ok: true };
 }
