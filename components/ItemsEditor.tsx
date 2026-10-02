@@ -97,6 +97,13 @@ export default function ItemsEditor({
   const isTester = (it: ItemDraft) => !!it._tester || isTesterName(it.product);
   const testerLeft = (product: string, size: string): number =>
     (product && size ? testerStock?.[normKey(product)]?.[normKey(size)] : undefined) ?? 0;
+  // ป้ายขนาด+คงเหลือของ Try Me แต่ละกลิ่น (โชว์ในดรอปดาวน์ให้รู้ว่ามีขนาดไหน เหลือเท่าไหร่)
+  const TRYME_SZ = ["30 ml", "50 ml"];
+  const testerCodes: Record<string, string> = {};
+  for (const p of testerProducts) {
+    const parts = TRYME_SZ.filter((sz) => testerLeft(p, sz) > 0).map((sz) => `${sz.replace(" ", "")} เหลือ ${testerLeft(p, sz)}`);
+    if (parts.length) testerCodes[p] = parts.join(" · ");
+  }
   const errMsg = (e?: ItemError) => {
     if (!e) return "";
     const miss: string[] = [];
@@ -159,6 +166,11 @@ export default function ItemsEditor({
     const patch: Partial<ItemDraft> = { product: v, ...(isBagProduct(v) ? { is_free: true } : {}) };
     // Try Me ใช้ขนาด 30/50 เสมอ (ไม่อยู่ในแคตตาล็อก Eveandboy) → ไม่ล้างขนาดเมื่อเปลี่ยนกลิ่น
     if (sizeAllow && !isBagProduct(v) && !isTesterName(v) && !items[i]._tester && !(sizeAllow[normKey(v)] || []).includes(items[i].size)) patch.size = "";
+    // Try Me: เลือกกลิ่นแล้ว เติมขนาดที่มีสต๊อกให้อัตโนมัติ (ส่วนใหญ่มีขนาดเดียว) → ไม่ต้องเลือกขนาดเองซ้ำ
+    if (items[i]._tester || isTesterName(v)) {
+      const avail = TRYME_SIZES.filter((sz) => testerLeft(v, sz) > 0);
+      patch.size = avail.length === 1 ? avail[0] : avail.includes(items[i].size) ? items[i].size : "";
+    }
     update(i, patch);
   };
   // จำนวน > 30 = ของแถมไม่ได้ (ปิดปุ่ม Free + ยกเลิกถ้าติ๊กไว้)
@@ -202,7 +214,7 @@ export default function ItemsEditor({
               <tr key={i} className={`border-t border-line align-top ${it.is_free ? "bg-brand-50/50" : ""}`}>
                 <td className="px-3 py-2 text-muted">{i + 1}</td>
                 <td className="px-3 py-2">
-                  <Combobox value={it.product} onChange={(v) => setProduct(i, v)} options={productOptionsFor(it)} allowCustom={!sizeAllow && !isTester(it)} placeholder={isTester(it) ? "เลือกกลิ่น Try Me" : "เลือกกลิ่น"} invalid={errors[i]?.product} codes={productCodes} />
+                  <Combobox value={it.product} onChange={(v) => setProduct(i, v)} options={productOptionsFor(it)} allowCustom={!sizeAllow && !isTester(it)} placeholder={isTester(it) ? "เลือกกลิ่น Try Me" : "เลือกกลิ่น"} invalid={errors[i]?.product} codes={isTester(it) ? testerCodes : productCodes} />
                   {isTester(it) && testerProducts.length === 0 && <div className="mt-1 flex items-center gap-1 text-[11px] text-red-600"><AlertTriangle size={12} /> ยังไม่มีสต๊อก Try Me — <a href="/stock?tryme=1" target="_blank" rel="noreferrer" className="font-medium underline hover:text-red-700">รับสินค้าเข้าสต๊อก (Try Me)</a> ก่อน</div>}
                   {productTypes?.[it.product] && <div className="mt-1 text-[11px] text-muted">Grade: <span className="font-medium text-ink">{productTypes[it.product]}</span></div>}
                   {findPack(it.product, packs) && (
@@ -268,7 +280,7 @@ export default function ItemsEditor({
                 <Trash2 size={16} />
               </button>
             </div>
-            <Combobox value={it.product} onChange={(v) => setProduct(i, v)} options={productOptionsFor(it)} allowCustom={!sizeAllow && !isTester(it)} placeholder={isTester(it) ? "เลือกกลิ่น Try Me" : "เลือกกลิ่น"} invalid={errors[i]?.product} codes={productCodes} />
+            <Combobox value={it.product} onChange={(v) => setProduct(i, v)} options={productOptionsFor(it)} allowCustom={!sizeAllow && !isTester(it)} placeholder={isTester(it) ? "เลือกกลิ่น Try Me" : "เลือกกลิ่น"} invalid={errors[i]?.product} codes={isTester(it) ? testerCodes : productCodes} />
             {isTester(it) && testerProducts.length === 0 && <div className="flex items-center gap-1 text-xs text-red-600"><AlertTriangle size={12} /> ยังไม่มีสต๊อก Try Me — <a href="/stock?tryme=1" target="_blank" rel="noreferrer" className="font-medium underline hover:text-red-700">รับสินค้าเข้าสต๊อก (Try Me)</a> ก่อน</div>}
             {productTypes?.[it.product] && <div className="text-[11px] text-muted">Grade: <span className="font-medium text-ink">{productTypes[it.product]}</span></div>}
             {findPack(it.product, packs) && (
