@@ -540,7 +540,8 @@ export async function listPendingShipment(platform?: string): Promise<PendingRow
               o.stock_issued_at as issued_at
        from orders o
        left join order_items i on i.order_no = o.order_no
-       where o.deleted_at is null and o.stock_issued_at is not null and o.shipped_at is null${pc}
+       where o.deleted_at is null and o.stock_issued_at is not null and o.shipped_at is null
+             and o.platform not in (${WHOLESALE_SQL})${pc}
        group by o.order_no
        order by o.stock_issued_at asc nulls last
        limit 300`, params);
