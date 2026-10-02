@@ -240,7 +240,8 @@ export function rowsToOrders(rows: Record<string, any>[], products: string[] = [
       const isFree = freeCell !== "" && !/^(0|no|n|false|ไม่ใช่|ไม่|-)$/.test(freeCell);
       const qtyRaw = r.qty != null && r.qty !== "" ? Number(r.qty) : 1;
       // แพ็ค (Best Seller Pack ฯลฯ) = 1 listing แต่หลายขวดตายตัว → แตกเป็นกลิ่นย่อยตอน import (ตัดสต๊อก/ผูก SKU รายขวด)
-      const pack = findPack(product, packs);
+      // จับจากชื่อที่เดา (product) ก่อน · ไม่เจอค่อยลองจาก title ดิบ/SKU (ชื่อ listing จริงมักอยู่ใน title ไม่ใช่ชื่อที่เดา)
+      const pack = findPack(product, packs) ?? findPack(title, packs) ?? findPack(skuRaw, packs);
       if (pack) {
         for (const c of expandPack(pack, qtyRaw)) {
           ord.items.push({ line_no: ord.items.length + 1, product: c.product, size: c.size, is_free: c.is_free, qty: c.qty, unit: "ขวด", product_label: buildProductLabel(c.product, c.size, c.is_free), sku: null });

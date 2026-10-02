@@ -38,7 +38,11 @@ export default function StockIssue({ isAdmin, initialOrder, specOptions = [], to
   const saveActive = (on: string) => { try { sessionStorage.setItem(ACTIVE_KEY, on); } catch { /* ignore */ } };
   const clearActive = () => { try { sessionStorage.removeItem(ACTIVE_KEY); } catch { /* ignore */ } };
   useEffect(() => {
-    try { const s = sessionStorage.getItem(ACTIVE_KEY); if (s) lookup(s); } catch { /* ignore */ }
+    // ดึงออเดอร์เดียวตอน mount: ?order=XXX (ปุ่มตัดสต๊อกจากหน้าใบเบิก) มาก่อน · ไม่งั้นใช้ออเดอร์ที่จำไว้ตอนรีเฟรช
+    // (รวม 2 effect เป็นหนึ่ง — กันดึงซ้อนกัน 2 ออเดอร์ชนกันตอนโหลด)
+    let on: string | null = initialOrder || null;
+    if (!on) { try { on = sessionStorage.getItem(ACTIVE_KEY); } catch { /* ignore */ } }
+    if (on) lookup(on);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   async function onReverse(orderNo: string, idx: number) {
@@ -176,12 +180,6 @@ export default function StockIssue({ isAdmin, initialOrder, specOptions = [], to
     if ((form[it.line_no]?.skus?.length || 0) >= it.qty) { scanBeep("warn"); setScanMsg({ type: "warn", text: `${it.product} ${it.size} ครบ ${it.qty} แล้ว` }); return; }
     addSerial(it.line_no, s); scanBeep("ok"); setScanMsg({ type: "ok", text: `✓ ${it.product} ${it.size} — ${s}` });
   }
-
-  // มาจากปุ่ม "ตัดสต๊อก" ในหน้าใบเบิก (/stock/issue?order=XXX) → ดึงรายการให้อัตโนมัติ
-  useEffect(() => {
-    if (initialOrder) lookup(initialOrder);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
 
   return (
     <div className="grid items-start gap-5 lg:grid-cols-5">

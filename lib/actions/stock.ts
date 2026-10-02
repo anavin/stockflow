@@ -134,18 +134,17 @@ async function runIssue(
     }
     // จับคู่ SKU จริงในสต๊อก (normalize ชื่อ+ขนาด) → ตัดตรงแถวเดิม ไม่สร้าง SKU ซ้ำ
     const sku = await matchStockSku(run, it.product, it.size || "");
-    // assign-at-issue (4 ml + Try Me): ต้องมีสต๊อกพอก่อนตัด (รับเข้าคลังก่อน) — บล็อกไม่ให้ตัดจนติดลบ เหมือนสินค้าทั่วไป
-    if (assignsSku(it.size, it.product)) {
-      const [cur] = await run<{ qty: number }>(`select qty::float8 as qty from stock where product = $1 and size = $2`, [sku.product, sku.size]);
-      if ((cur?.qty ?? 0) < Number(it.qty))
-        throw new Error(`${it.product} ${it.size}: สต๊อกไม่พอ (คงเหลือ ${cur?.qty ?? 0} ต้องการ ${it.qty}) — รับเข้าคลังก่อนตัด`);
-    }
+    // ตัดสต๊อก (atomic: on conflict do update ล็อกแถวจน tx จบ → กดพร้อมกัน 2 คน serialize กันเอง)
     const [row] = await run<{ qty: number }>(
       `insert into stock (product, size, qty, updated_at) values ($1, $2, $3, now())
        on conflict (product, size) do update set qty = stock.qty + $3, updated_at = now()
        returning qty::float8 as qty`,
       [sku.product, sku.size, -Number(it.qty)],
     );
+    // assign-at-issue (4 ml + Try Me): ต้องมีสต๊อกพอก่อนตัด (รับเข้าคลังก่อน) — เช็ค "หลังตัด" ภายใน tx เดียวกัน
+    // ถ้ายอดกลายเป็นติดลบ = สต๊อกไม่พอจริง → throw ย้อน tx ทั้งใบ (กัน race 2 คนตัดพร้อมกันทะลุ pre-check)
+    if (assignsSku(it.size, it.product) && row.qty < 0)
+      throw new Error(`${it.product} ${it.size}: สต๊อกไม่พอ (คงเหลือ ${row.qty + Number(it.qty)} ต้องการ ${it.qty}) — รับเข้าคลังก่อนตัด`);
     await run(
       `insert into stock_moves (product, size, qty_change, balance, reason, order_no, created_by)
        values ($1,$2,$3,$4,'issue',$5,$6)`,

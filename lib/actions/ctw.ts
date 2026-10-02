@@ -13,7 +13,9 @@ export type CtwPushResult = { ok: boolean; error?: string; skus?: number };
 export async function pushToCtw(orderNo: string): Promise<CtwPushResult> {
   const user = await getCurrentUser();
   if (!user) return { ok: false, error: "กรุณาเข้าสู่ระบบ" };
-  if (!can.viewStock(user.role)) return { ok: false, error: "ไม่มีสิทธิ์" };
+  // ปุ่ม "ส่งไป CTW" อยู่บนหน้าใบเบิก CTW (หน้าเฉพาะ creator/admin) และตัว action ก็ finalize ส่งออก+รับ + POST ออกนอกระบบ
+  // → ให้สิทธิ์ตรงกับที่ใช้งานจริง: ผู้สร้างใบเบิก (createOrders) หรือฝ่ายคลัง (manageStock) เหมือนค้าส่ง Eve/KP
+  if (!(can.createOrders(user.role) || can.manageStock(user.role))) return { ok: false, error: "ไม่มีสิทธิ์" };
   const on = (orderNo || "").trim();
   const url = process.env.CTW_WEBHOOK_URL;
   const key = process.env.CTW_API_KEY;
@@ -52,10 +54,13 @@ export async function pushToCtw(orderNo: string): Promise<CtwPushResult> {
 
   // ส่งไป CTW = ส่งออก + ปลายทาง(ระบบ CTW)รับข้อมูลครบทันที → ปักทั้ง shipped + received (โมเดลค้าส่งเดียวกับ Eve/KP)
   // coalesce กันทับของเดิม — idempotent กับ markShipped / confirmWholesaleReceipt
-  await q(`update order_items set received_qty = qty where order_no = $1 and received_qty is null`, [on]);
-  await q(`update orders set shipped_at = coalesce(shipped_at, now()), shipped_by = coalesce(shipped_by, $2),
-             received_at = coalesce(received_at, now()), received_by = coalesce(received_by, 'CTW push'), updated_at = now()
-             where order_no = $1`, [on, user.id]);
+  // drift-safe: ข้อมูลส่งไป CTW สำเร็จแล้ว (ctw_received_at ปักแล้ว) — ถ้าคอลัมน์ค้าส่งยังไม่มีบน prod อย่าให้ bookkeeping ล่มแล้วย้อนผล push
+  try {
+    await q(`update order_items set received_qty = qty where order_no = $1 and received_qty is null`, [on]);
+    await q(`update orders set shipped_at = coalesce(shipped_at, now()), shipped_by = coalesce(shipped_by, $2),
+               received_at = coalesce(received_at, now()), received_by = coalesce(received_by, 'CTW push'), updated_at = now()
+               where order_no = $1`, [on, user.id]);
+  } catch { /* คอลัมน์ shipped/received ยังไม่มีบน prod (ยังไม่รัน 0047) — push สำเร็จแล้ว ข้ามการปักธงค้าส่ง */ }
 
   await logActivity("ctw.push", `${on} → CTW (${(skus as any[]).length} SKU)`);
   revalidatePath(`/ctw/${encodeURIComponent(on)}`); revalidatePath("/ctw"); revalidatePath("/ship"); revalidateTag("dashboard");

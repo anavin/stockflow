@@ -22,10 +22,16 @@ export async function savePack(inp: PackInput): Promise<{ ok: boolean; error?: s
   const g = await gate(); if ("error" in g) return { ok: false, error: g.error };
   const name = (inp.name || "").trim(), match = (inp.match || "").trim();
   if (!name || !match) return { ok: false, error: "กรอกชื่อแพ็ค + คำที่ใช้จับชื่อสินค้า" };
+  // คำจับ (match_text) สั้นเกินไป = จับออเดอร์ปกติผิด (เช่น "a"/"la") → บังคับอย่างน้อย 3 ตัวอักษร
+  if (match.length < 3) return { ok: false, error: `คำจับชื่อสินค้า "${match}" สั้นไป — ต้องยาวอย่างน้อย 3 ตัวอักษร ไม่งั้นจะไปจับออเดอร์ปกติผิด` };
   const items = (inp.items || [])
     .map((i) => ({ product: (i.product || "").trim(), size: (i.size || "").trim() || "4 ml", is_free: !!i.is_free }))
     .filter((i) => i.product);
   if (!items.length) return { ok: false, error: "ใส่กลิ่นในแพ็คอย่างน้อย 1 รายการ" };
+  // กัน match ไปตรงกับชื่อกลิ่นเดี่ยวที่อยู่ในแพ็คเอง → ขายกลิ่นนั้นเดี่ยวๆ จะถูกแตกเป็นทั้งแพ็คผิด
+  const m = match.toLowerCase();
+  const collide = items.find((i) => i.product.toLowerCase().includes(m));
+  if (collide) return { ok: false, error: `คำจับ "${match}" ไปตรงกับกลิ่นในแพ็ค (${collide.product}) — ถ้าขายกลิ่นนี้เดี่ยวๆ จะถูกแตกเป็นทั้งแพ็ค ให้ใช้ชื่อ listing ของแพ็คแทน` };
   try {
     const id = await tx<number>(async (run) => {
       let pid = inp.id;

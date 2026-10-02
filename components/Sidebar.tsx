@@ -42,7 +42,7 @@ export default function Sidebar({ user }: { user: { full_name: string; username:
     ...(can.viewStock(role) ? [{ href: "/stock/labels", label: "สติ๊กเกอร์ & การ์ด", icon: Sticker, exact: true }] : []),
     ...(can.viewStock(role) ? [{ href: "/stock/packaging", label: "ขวด & แพ็คเกจ", icon: Package, exact: true }] : []),
     ...(can.manageStock(role) ? [{ href: "/stock/materials/issue", label: "รับเข้า / เบิก (รวม)", icon: PackageOpen, exact: true }] : []),
-    ...(can.viewStock(role) ? [{ href: "/stock/materials/moves", label: "ประวัติวัตถุดิบ", icon: History }] : []),
+    ...(can.manageStock(role) ? [{ href: "/stock/materials/moves", label: "ประวัติวัตถุดิบ", icon: History }] : []),
   ];
   // กลุ่ม "ตั้งค่า & ข้อมูล" — อัปเดตยอด(ไฟล์)/อย./บันทึกการใช้งาน/ผู้ใช้
   const settingsNav = [

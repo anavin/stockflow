@@ -3,7 +3,10 @@ import { unstable_cache } from "next/cache";
 import { q } from "./db";
 import type { Order, OrderItem, OrderRow, OrderWithItems } from "./types";
 import { LABEL_COMPONENTS, gradeToLabelKey, labelSpecFor, bulkRef, labelRef, mnorm } from "./materials";
-import { PERIOD_START, type PackDef, type PackComponent } from "./config";
+import { PERIOD_START, WHOLESALE_PLATFORMS, isWholesalePlatform, type PackDef, type PackComponent } from "./config";
+
+// SQL list ของแพลตฟอร์มค้าส่ง (จาก config ชุดเดียว — กันลิสต์ 'CTW','Eveandboy','KingPower' hardcode หลายที่หลุดกัน)
+const WHOLESALE_SQL = WHOLESALE_PLATFORMS.map((p) => `'${p}'`).join(",");
 
 // ── ช่วงวัน "เวลาไทย" แบบไม่ wrap คอลัมน์ timestamp → index (created_at/shipped_at/stock_issued_at) ใช้ได้ (perf)
 // BKK_TODAY = เที่ยงคืนวันนี้ (ไทย) เป็น instant (timestamptz) · พิสูจน์แล้วให้ผลเท่ากับ (col at time zone 'Asia/Bangkok')::date = …
@@ -725,7 +728,7 @@ export async function listOrders(opts: { platform?: string; search?: string; mon
   if (opts.shipped === "yes") where.push(`o.shipped_at is not null`);
   else if (opts.shipped === "no") where.push(`o.shipped_at is null`);
   // ค้าส่ง: รอปลายทางยืนยันรับ = ส่งออกแล้วแต่ยังรับไม่ครบ (received_at ตั้งเมื่อครบ) — อ้าง received_at เฉพาะตอนเลือกฟิลเตอร์นี้
-  if (opts.awaitingReceipt) where.push(`o.shipped_at is not null and o.received_at is null and o.platform in ('CTW','Eveandboy','KingPower')`);
+  if (opts.awaitingReceipt) where.push(`o.shipped_at is not null and o.received_at is null and o.platform in (${WHOLESALE_SQL})`);
   if (opts.search) {
     params.push(`%${opts.search}%`);
     const p = `$${params.length}`;
@@ -746,8 +749,9 @@ export async function listOrders(opts: { platform?: string; search?: string; mon
   try {
     const rows = await q<OrderRow>(sql, params);
     const mapped = rows.map(normOrder);
-    // จำนวนที่ปลายทางยืนยันรับ (ค้าส่ง) — drift-safe: prod ยังไม่รัน 0047 = ข้าม (ไม่ให้ทั้งลิสต์ล่ม)
-    if (mapped.length) {
+    // จำนวนที่ปลายทางยืนยันรับ (ค้าส่ง) — ใช้เฉพาะหน้า/ลิสต์ที่เกี่ยวค้าส่งเท่านั้น (Shopee/Lazada ฯลฯ ไม่ต้องยิง query เพิ่ม)
+    // drift-safe: prod ยังไม่รัน 0047 = ข้าม (ไม่ให้ทั้งลิสต์ล่ม)
+    if (mapped.length && (!opts.platform || isWholesalePlatform(opts.platform) || opts.awaitingReceipt)) {
       try {
         const ons = mapped.map((r) => r.order_no);
         const rq = await q<{ order_no: string; rq: number }>(
@@ -776,7 +780,7 @@ export async function countOrders(opts: { platform?: string; search?: string; mo
   else if (opts.issued === "no") where.push(`stock_issued_at is null`);
   if (opts.shipped === "yes") where.push(`shipped_at is not null`);
   else if (opts.shipped === "no") where.push(`shipped_at is null`);
-  if (opts.awaitingReceipt) where.push(`shipped_at is not null and received_at is null and platform in ('CTW','Eveandboy','KingPower')`);
+  if (opts.awaitingReceipt) where.push(`shipped_at is not null and received_at is null and platform in (${WHOLESALE_SQL})`);
   if (opts.search) {
     params.push(`%${opts.search}%`);
     const p = `$${params.length}`;
