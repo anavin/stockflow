@@ -134,12 +134,11 @@ async function runIssue(
     }
     // จับคู่ SKU จริงในสต๊อก (normalize ชื่อ+ขนาด) → ตัดตรงแถวเดิม ไม่สร้าง SKU ซ้ำ
     const sku = await matchStockSku(run, it.product, it.size || "");
-    // 4 ml (assign-by-size): ต้องมีสต๊อกพอก่อนตัด (รับเข้าคลังก่อน) — บล็อกไม่ให้ตัดจนติดลบ
-    // assignsSku(size) ไม่ส่ง product → true เฉพาะ 4ml (Try Me เป็น assign ผ่านชื่อ ไม่โดน)
-    if (assignsSku(it.size)) {
+    // assign-at-issue (4 ml + Try Me): ต้องมีสต๊อกพอก่อนตัด (รับเข้าคลังก่อน) — บล็อกไม่ให้ตัดจนติดลบ เหมือนสินค้าทั่วไป
+    if (assignsSku(it.size, it.product)) {
       const [cur] = await run<{ qty: number }>(`select qty::float8 as qty from stock where product = $1 and size = $2`, [sku.product, sku.size]);
       if ((cur?.qty ?? 0) < Number(it.qty))
-        throw new Error(`${it.product} ${it.size}: สต๊อกไม่พอ (คงเหลือ ${cur?.qty ?? 0} ต้องการ ${it.qty}) — รับ 4ml เข้าคลังก่อนตัด`);
+        throw new Error(`${it.product} ${it.size}: สต๊อกไม่พอ (คงเหลือ ${cur?.qty ?? 0} ต้องการ ${it.qty}) — รับเข้าคลังก่อนตัด`);
     }
     const [row] = await run<{ qty: number }>(
       `insert into stock (product, size, qty, updated_at) values ($1, $2, $3, now())
