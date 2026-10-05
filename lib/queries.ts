@@ -444,36 +444,43 @@ export async function getScentsWithoutStock(): Promise<{ name: string; grade: st
   } catch { return []; }
 }
 
-/** กลิ่น+ขนาด ที่ปิดการขาย → Record<normScent, normSize[]> (แพทเทิร์นเดียวกับ getDiscontinued) */
-export async function getClosedSkus(): Promise<Record<string, string[]>> {
-  const norm = (s: string) => (s || "").toLowerCase().replace(/[^a-z0-9ก-๙]/g, "");
-  try {
-    const rows = await q<{ scent: string; size: string }>(`select scent, size from closed_sku`);
-    const map: Record<string, string[]> = {};
-    for (const r of rows) { (map[norm(r.scent)] ??= []).push(norm(r.size)); }
-    return map;
-  } catch { return {}; }  // ตารางยังไม่ถูกสร้าง
-}
+/** กลิ่น+ขนาด ที่ปิดการขาย → Record<normScent, normSize[]> (แพทเทิร์นเดียวกับ getDiscontinued)
+ *  cache (reference) — closed_sku เป็น master ข้อมูลอ้างอิง เปลี่ยนน้อย */
+export const getClosedSkus = unstable_cache(
+  async (): Promise<Record<string, string[]>> => {
+    const norm = (s: string) => (s || "").toLowerCase().replace(/[^a-z0-9ก-๙]/g, "");
+    try {
+      const rows = await q<{ scent: string; size: string }>(`select scent, size from closed_sku`);
+      const map: Record<string, string[]> = {};
+      for (const r of rows) { (map[norm(r.scent)] ??= []).push(norm(r.size)); }
+      return map;
+    } catch { return {}; }  // ตารางยังไม่ถูกสร้าง
+  }, ["ref:closed-skus"], { tags: ["reference"], revalidate: 300 },
+);
 
-/** เลิกผลิต + ยอดสต๊อกคงเหลือของขนาดนั้น (normalized) — ใช้ตัดสินว่าจะบล็อก/ให้เลือกได้ */
-async function _discStock(): Promise<{ sk: string; zk: string; qty: number }[]> {
-  try {
-    return await q<{ sk: string; zk: string; qty: number }>(`
-      with d as (
-        select regexp_replace(lower(btrim(scent)),'[^a-z0-9ก-๙]','','g') as sk,
-               regexp_replace(lower(btrim(size)),'[^a-z0-9ก-๙]','','g') as zk
-        from discontinued_sku
-      ),
-      st as (
-        select regexp_replace(lower(btrim(product)),'[^a-z0-9ก-๙]','','g') as sk,
-               regexp_replace(lower(btrim(size)),'[^a-z0-9ก-๙]','','g') as zk,
-               sum(qty)::float8 as qty
-        from stock group by 1, 2
-      )
-      select d.sk, d.zk, coalesce(st.qty, 0)::float8 as qty
-      from d left join st on st.sk = d.sk and st.zk = d.zk`);
-  } catch { return []; }  // ตาราง discontinued_sku ยังไม่ถูกสร้าง
-}
+/** เลิกผลิต + ยอดสต๊อกคงเหลือของขนาดนั้น (normalized) — ใช้ตัดสินว่าจะบล็อก/ให้เลือกได้
+ *  cache (reference+dashboard) — ขึ้นกับสต๊อก: mutation สต๊อกทุกตัว revalidateTag("dashboard") → สดทันทีหลังตัด/คืน/ปรับ
+ *  revalidate 60s กันค้างกรณีอัปเดตยอดด้วยไฟล์ (ไม่ bump dashboard) */
+const _discStock = unstable_cache(
+  async (): Promise<{ sk: string; zk: string; qty: number }[]> => {
+    try {
+      return await q<{ sk: string; zk: string; qty: number }>(`
+        with d as (
+          select regexp_replace(lower(btrim(scent)),'[^a-z0-9ก-๙]','','g') as sk,
+                 regexp_replace(lower(btrim(size)),'[^a-z0-9ก-๙]','','g') as zk
+          from discontinued_sku
+        ),
+        st as (
+          select regexp_replace(lower(btrim(product)),'[^a-z0-9ก-๙]','','g') as sk,
+                 regexp_replace(lower(btrim(size)),'[^a-z0-9ก-๙]','','g') as zk,
+                 sum(qty)::float8 as qty
+          from stock group by 1, 2
+        )
+        select d.sk, d.zk, coalesce(st.qty, 0)::float8 as qty
+        from d left join st on st.sk = d.sk and st.zk = d.zk`);
+    } catch { return []; }  // ตาราง discontinued_sku ยังไม่ถูกสร้าง
+  }, ["ref:disc-stock"], { tags: ["reference", "dashboard"], revalidate: 60 },
+);
 
 /** ขนาดที่เลือกในใบเบิกไม่ได้ = ปิดการขาย (ทั้งหมด) ∪ เลิกผลิตที่ "สต๊อกหมด (≤0)"
  *  เลิกผลิตที่ยังมีสต๊อก → ไม่บล็อก (เลือกใส่ออร์เดอร์ได้ ไว้แจกของแถมจนกว่าสต๊อกจะหมด) */
@@ -618,15 +625,18 @@ const TRYME_RX = "~* 'try ?me'";   // ชื่อสินค้ามี "TRY 
 
 /** สต๊อก Try Me คงเหลือ (product+size, qty>0) — ให้ฟอร์มใบเบิกเลือกเฉพาะที่มีของ + โชว์ "เหลือ N" */
 export type TesterStockRow = { product: string; size: string; qty: number };
-export async function getTesterStock(): Promise<TesterStockRow[]> {
-  try {
-    return await q<TesterStockRow>(
-      `select product, size, sum(qty)::float8 as qty from stock
-       where product ${TRYME_RX}
-       group by product, size having sum(qty) > 0
-       order by product, size`);
-  } catch { return []; }
-}
+/** cache (reference+dashboard) — ยอดเทสเตอร์เป็นแค่ hint ในฟอร์ม; mutation สต๊อก bump dashboard → สดหลังตัด/คืน */
+export const getTesterStock = unstable_cache(
+  async (): Promise<TesterStockRow[]> => {
+    try {
+      return await q<TesterStockRow>(
+        `select product, size, sum(qty)::float8 as qty from stock
+         where product ${TRYME_RX}
+         group by product, size having sum(qty) > 0
+         order by product, size`);
+    } catch { return []; }
+  }, ["ref:tester-stock"], { tags: ["reference", "dashboard"], revalidate: 60 },
+);
 
 /** สถิติ Try Me ที่ "เบิกแล้ว" — นับจากบรรทัดในใบเบิก (สินค้า TRY ME) เฉพาะค้าส่ง */
 export type TryMeStat = { platform: string; qty: number; orders: number };
@@ -1704,13 +1714,16 @@ export async function getWsData(platform: string): Promise<{ catalog: Record<str
 }
 
 // props ค้าส่งสำหรับ OrderForm — สาขา (Eveandboy) + ขนาดต่อกลิ่นในแคตตาล็อก (Eveandboy/King Power)
-export async function getOrderFormCatalog(platform: string): Promise<{ branches: WholesaleBranchRow[]; catalogSizes: Record<string, string[]> | null }> {
-  const isWs = platform === "Eveandboy" || platform === "KingPower";
-  const [branches, cat] = await Promise.all([
-    platform === "Eveandboy" ? listWholesaleBranches("Eveandboy") : Promise.resolve([] as WholesaleBranchRow[]),
-    isWs ? getWholesaleCatalog(platform) : Promise.resolve(null),
-  ]);
-  // catalog ว่าง → null (ฟอร์มไม่จำกัด = fallback สินค้าทั้งหมด) กัน catalog ยังไม่ seed แล้วเลือกสินค้าไม่ได้เลย
-  const catalogSizes = cat && Object.keys(cat.sizesByScent).length ? cat.sizesByScent : null;
-  return { branches: branches.filter((b) => b.active), catalogSizes };
-}
+/** cache (reference) — สาขา/แคตตาล็อกค้าส่งเป็นข้อมูลอ้างอิง เปลี่ยนน้อย · คีย์แยกตาม platform อัตโนมัติ */
+export const getOrderFormCatalog = unstable_cache(
+  async (platform: string): Promise<{ branches: WholesaleBranchRow[]; catalogSizes: Record<string, string[]> | null }> => {
+    const isWs = platform === "Eveandboy" || platform === "KingPower";
+    const [branches, cat] = await Promise.all([
+      platform === "Eveandboy" ? listWholesaleBranches("Eveandboy") : Promise.resolve([] as WholesaleBranchRow[]),
+      isWs ? getWholesaleCatalog(platform) : Promise.resolve(null),
+    ]);
+    // catalog ว่าง → null (ฟอร์มไม่จำกัด = fallback สินค้าทั้งหมด) กัน catalog ยังไม่ seed แล้วเลือกสินค้าไม่ได้เลย
+    const catalogSizes = cat && Object.keys(cat.sizesByScent).length ? cat.sizesByScent : null;
+    return { branches: branches.filter((b) => b.active), catalogSizes };
+  }, ["ref:order-form-catalog"], { tags: ["reference"], revalidate: 300 },
+);

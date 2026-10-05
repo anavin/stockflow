@@ -160,6 +160,7 @@ export async function setSkuSold(scent: string, size: string, sold: boolean): Pr
   } catch { return { ok: false, error: "ยังไม่มีตาราง closed_sku (รัน SQL 0026 บน prod ก่อน)" }; }
   await logActivity("scent.manage", `${sold ? "เปิดขาย" : "ปิดขาย"} ${sc} ${sz}`);
   revalidatePath("/stock");
+  revalidateTag("reference");   // getClosedSkus/getBlockedSizesForOrder แคช tag reference → bump ให้ฟอร์มสั่งซื้อเห็นผลทันที
   revalidateNewForms();
   return { ok: true };
 }
