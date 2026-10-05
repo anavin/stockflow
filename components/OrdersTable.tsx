@@ -256,7 +256,7 @@ export default function OrdersTable({ orders, platform = "Shopee", role }: { ord
                           <Printer size={16} />
                         </a>
                         {canCreate && (
-                          <Link href={`${base}/${encodeURIComponent(o.order_no)}`}
+                          <Link prefetch={false} href={`${base}/${encodeURIComponent(o.order_no)}`}
                             className="rounded-md p-1.5 text-muted hover:bg-soft hover:text-ink" title="แก้ไข" aria-label="แก้ไขใบเบิก">
                             <Pencil size={16} />
                           </Link>

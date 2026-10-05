@@ -103,7 +103,7 @@ export default async function AllOrdersPage({ searchParams }: {
               );
               // creator = คลิกเข้าหน้าแก้ใบเบิก · ฝ่ายอื่น (picker/คลัง) = แถวเฉยๆ ไม่ลิงก์ (หน้าแก้เป็น creator-only จะเด้งกลับ)
               return isCreator ? (
-                <Link key={o.order_no} href={`/${(o.platform || "Shopee").toLowerCase()}/${encodeURIComponent(o.order_no)}`}
+                <Link prefetch={false} key={o.order_no} href={`/${(o.platform || "Shopee").toLowerCase()}/${encodeURIComponent(o.order_no)}`}
                   className={`${rowCls} hover:bg-soft`}>{inner}</Link>
               ) : (
                 <div key={o.order_no} className={rowCls}>{inner}</div>

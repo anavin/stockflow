@@ -108,7 +108,7 @@ export default async function UnitsPage({ searchParams }: { searchParams: Promis
             {orderBrief.shipped_at
               ? <span className="chip bg-green-600 text-white">ส่งแล้ว {orderBrief.shipped_at}</span>
               : <span className="chip bg-slate-100 text-slate-600">ยังไม่ส่ง</span>}
-            <Link href={`/${(orderBrief.platform || "Shopee").toLowerCase()}/${encodeURIComponent(orderBrief.order_no)}`} className="ml-auto text-xs font-medium text-brand-600 hover:underline">ดูใบเบิก →</Link>
+            <Link prefetch={false} href={`/${(orderBrief.platform || "Shopee").toLowerCase()}/${encodeURIComponent(orderBrief.order_no)}`} className="ml-auto text-xs font-medium text-brand-600 hover:underline">ดูใบเบิก →</Link>
           </div>
           <p className="mt-2 text-xs text-faint">ออเดอร์นี้ไม่มี SKU รายชิ้น (ตัดสต๊อกแบบไม่สแกน SKU หรือยังไม่ตัด) — สถานะจัดส่งดูได้จากตรงนี้</p>
         </div>

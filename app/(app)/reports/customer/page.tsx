@@ -47,7 +47,7 @@ export default async function CustomerHistoryPage({ searchParams }: { searchPara
                 <tr key={o.order_no} className="border-t border-line align-top hover:bg-soft/40">
                   <td className="px-4 py-2.5 whitespace-nowrap text-xs text-muted">{o.date || "—"}</td>
                   <td className="px-3 py-2.5">
-                    <Link href={`${platformBase(o.platform || "Shopee")}/${encodeURIComponent(o.order_no)}`} className="font-mono text-xs text-brand-600 hover:underline">{o.order_no}</Link>
+                    <Link prefetch={false} href={`${platformBase(o.platform || "Shopee")}/${encodeURIComponent(o.order_no)}`} className="font-mono text-xs text-brand-600 hover:underline">{o.order_no}</Link>
                   </td>
                   <td className="px-3 py-2.5 text-xs text-muted"><span className="inline-flex items-center gap-1.5"><PlatformDot platform={o.platform} /> {o.platform || "Shopee"}</span></td>
                   <td className="px-3 py-2.5 text-xs text-ink">{o.items.map((it, k) => <span key={k} className="mr-1 inline-block">{it.product} {it.size}{it.is_free ? " (Free)" : ""} ×{it.qty}{k < o.items.length - 1 ? "," : ""}</span>)}</td>

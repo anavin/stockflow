@@ -71,7 +71,7 @@ export default async function IssuedOrdersPage({ searchParams }: { searchParams:
                   <td className="px-4 py-2.5 text-xs text-muted">{o.issued_by || "—"}</td>
                   <td className="px-4 py-2.5">
                     <div className="flex items-center justify-end gap-1">
-                      <Link href={`/${(o.platform || "Shopee").toLowerCase()}/${encodeURIComponent(o.order_no)}`} className="rounded-md p-1.5 text-muted hover:bg-soft hover:text-ink" title="ดูรายละเอียดใบเบิก"><Eye size={16} /></Link>
+                      <Link prefetch={false} href={`/${(o.platform || "Shopee").toLowerCase()}/${encodeURIComponent(o.order_no)}`} className="rounded-md p-1.5 text-muted hover:bg-soft hover:text-ink" title="ดูรายละเอียดใบเบิก"><Eye size={16} /></Link>
                       <Link href={`/stock/moves?order=${encodeURIComponent(o.order_no)}`} className="rounded-md p-1.5 text-muted hover:bg-soft hover:text-ink" title="ดูการตัดสต๊อก"><ListChecks size={16} /></Link>
                       <a href={`/print/pdf/${encodeURIComponent(o.order_no)}`} target="_blank" rel="noreferrer" className="rounded-md p-1.5 text-muted hover:bg-brand-50 hover:text-brand-600" title="พิมพ์"><Printer size={16} /></a>
                       {(isAdmin(me.role) || o.issued_by === me.username) && <ReverseIssueButton orderNo={o.order_no} platform={o.platform} />}

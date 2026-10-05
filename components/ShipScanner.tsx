@@ -226,7 +226,7 @@ export default function ShipScanner({ date, isToday, rows: initialRows, pendingR
                               <button type="button" onClick={() => manualShip(r.order_no)} disabled={busy}
                                 className="inline-flex items-center gap-1 rounded-md border border-green-200 bg-green-50 px-2 py-1 text-xs font-medium text-green-700 hover:bg-green-100 disabled:opacity-50"
                                 title="บันทึกว่าส่งแล้ว โดยไม่ต้องสแกน (กรณีลืมสแกนตอนแพ็ค แต่ของส่งออกไปแล้ว)"><PackageCheck size={13} /> บันทึกว่าส่งแล้ว</button>
-                              <Link href={`${platformBase(r.platform || "Shopee")}/${encodeURIComponent(r.order_no)}`} className="inline-flex items-center gap-0.5 rounded-md px-2 py-1 text-xs font-medium text-muted hover:bg-soft hover:text-ink">เปิด <ChevronRight size={13} /></Link>
+                              <Link prefetch={false} href={`${platformBase(r.platform || "Shopee")}/${encodeURIComponent(r.order_no)}`} className="inline-flex items-center gap-0.5 rounded-md px-2 py-1 text-xs font-medium text-muted hover:bg-soft hover:text-ink">เปิด <ChevronRight size={13} /></Link>
                             </div>
                           </td>
                         </tr>
@@ -237,7 +237,7 @@ export default function ShipScanner({ date, isToday, rows: initialRows, pendingR
                 <div className="divide-y divide-line md:hidden">
                   {pendingList.map((r) => (
                     <div key={r.order_no} className="flex items-center gap-2 px-4 py-2.5">
-                      <Link href={`${platformBase(r.platform || "Shopee")}/${encodeURIComponent(r.order_no)}`} className="min-w-0 flex-1">
+                      <Link prefetch={false} href={`${platformBase(r.platform || "Shopee")}/${encodeURIComponent(r.order_no)}`} className="min-w-0 flex-1">
                         <div className="flex items-center gap-1.5 truncate font-mono text-xs text-ink"><PlatformDot platform={r.platform} /> {r.order_no}</div>
                         <div className="truncate text-xs text-muted">{r.receiver || "-"} · {r.province || "-"} · {r.item_count} รายการ · ตัด {dayOf(r.issued_at)}</div>
                       </Link>

@@ -63,7 +63,7 @@ export default async function TryMePage() {
         {recent.length === 0 ? <p className="p-5 text-center text-xs text-muted">ยังไม่มีประวัติ</p> : (
           <div className="max-h-96 divide-y divide-line/70 overflow-y-auto">
             {recent.map((r, i) => (
-              <Link key={`${r.order_no}-${i}`} href={`/${(r.platform || "Shopee").toLowerCase()}/${encodeURIComponent(r.order_no)}`}
+              <Link prefetch={false} key={`${r.order_no}-${i}`} href={`/${(r.platform || "Shopee").toLowerCase()}/${encodeURIComponent(r.order_no)}`}
                 className="flex items-center gap-2 px-4 py-2 text-xs hover:bg-soft">
                 <span className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: platformColor(r.platform) }} title={platformName(r.platform)} />
                 <span className="min-w-0 flex-1 truncate text-ink"><b>{r.scent}</b> <span className="text-faint">{r.size}</span></span>

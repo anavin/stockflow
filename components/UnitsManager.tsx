@@ -153,7 +153,7 @@ export default function UnitsManager({ units, canEdit, reconcile }: { units: Uni
                   <td className="px-3 py-2.5"><span className={`chip whitespace-nowrap ${st.cls}`}>{st.label}</span></td>
                   <td className="px-3 py-2.5">
                     {u.order_no ? (
-                      <Link href={`/${(u.platform || "Shopee").toLowerCase()}/${encodeURIComponent(u.order_no)}`} className="inline-flex items-center gap-1.5 text-brand-600 hover:underline">
+                      <Link prefetch={false} href={`/${(u.platform || "Shopee").toLowerCase()}/${encodeURIComponent(u.order_no)}`} className="inline-flex items-center gap-1.5 text-brand-600 hover:underline">
                         <PlatformDot platform={u.platform} />
                         <span className="font-mono text-xs">{u.order_no}</span>
                         {(u.buyer || u.receiver) && <span className="text-muted"> · {u.buyer || u.receiver}</span>}

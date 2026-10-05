@@ -253,7 +253,7 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
         ) : (
           <div className="grid grid-cols-1 gap-x-6 sm:grid-cols-2 xl:grid-cols-3">
             {recent.map((o) => (
-              <Link key={o.order_no} href={`/${(o.platform || "Shopee").toLowerCase()}/${encodeURIComponent(o.order_no)}`} className="-mx-2 flex items-center justify-between gap-2 rounded-lg border-b border-line/70 px-2 py-2 hover:bg-soft">
+              <Link prefetch={false} key={o.order_no} href={`/${(o.platform || "Shopee").toLowerCase()}/${encodeURIComponent(o.order_no)}`} className="-mx-2 flex items-center justify-between gap-2 rounded-lg border-b border-line/70 px-2 py-2 hover:bg-soft">
                 <div className="min-w-0">
                   <div className="flex items-center gap-1.5">
                     <span className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: platformColor(o.platform) }} title={o.platform || ""} />
