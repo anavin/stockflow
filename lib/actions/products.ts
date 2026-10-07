@@ -4,7 +4,7 @@ import { q, tx } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth/session";
 import { can } from "@/lib/auth/roles";
 import { logActivity } from "@/lib/activity";
-import { enabledPlatforms, platformBase } from "@/lib/config";
+import { enabledPlatforms, platformBase, canonSize } from "@/lib/config";
 
 /** revalidate ฟอร์มสร้างใบเบิกทุกแพลตฟอร์ม (dropdown กลิ่นเปลี่ยน → ต้องรีเฟรชทุก /[platform]/new) */
 const revalidateNewForms = () => { for (const p of enabledPlatforms()) revalidatePath(`${platformBase(p.code)}/new`); };
@@ -55,7 +55,7 @@ export async function bulkSetProductTypes(
  *  reassign=true → ถ้าบาร์โค้ดซ้ำ ให้ "ย้าย" แถวเดิมมาที่กลิ่น/ขนาดนี้ (แทนที่จะเพิ่มซ้ำ) */
 export async function addScentBarcode(scent: string, size: string, barcode: string, sku?: string, reassign?: boolean): Promise<{ ok: boolean; error?: string; conflict?: { scent: string; size: string } }> {
   const g = await gate(); if ("error" in g) return { ok: false, error: g.error };
-  const sc = (scent || "").trim(), sz = (size || "").trim(), bc = (barcode || "").trim();
+  const sc = (scent || "").trim(), sz = canonSize(size), bc = (barcode || "").trim();
   if (!sc) return { ok: false, error: "ไม่พบชื่อกลิ่น" };
   if (!sz || !bc) return { ok: false, error: "กรอกขนาดและบาร์โค้ด" };
   const [dup] = await q<{ id: number; scent: string; size: string }>(`select id, scent, size from product_barcodes where barcode = $1`, [bc]);

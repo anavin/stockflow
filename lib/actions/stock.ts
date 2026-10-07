@@ -4,7 +4,7 @@ import { q, tx } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth/session";
 import { can, isAdmin } from "@/lib/auth/roles";
 import { logActivity } from "@/lib/activity";
-import { isStockTracked, needsSerialSku, assignsSku, requiresSku, cutsStock } from "@/lib/config";
+import { isStockTracked, needsSerialSku, assignsSku, requiresSku, cutsStock, canonSize } from "@/lib/config";
 import { getActiveSpecRules, getScentBarcodes, stockGapFor } from "@/lib/queries";
 
 // ---- auto-select spec ตามขนาด + Grade (จากตาราง spec_rules) --------------------
@@ -48,7 +48,7 @@ async function matchStockSku(
     `select product, size from stock where ${SKU_MATCH} ${SKU_TIEBREAK}`,
     [product, size || ""],
   );
-  return m ?? { product, size: size || "" };
+  return m ?? { product, size: canonSize(size) };   // ไม่เจอแถวเดิม → สร้างใหม่ด้วยขนาดมาตรฐาน (กันจุด/ช่องว่างท้าย)
 }
 
 /** ถุงกระดาษอยู่ในคลังบรรจุภัณฑ์ (material_item category='packaging') ไม่ใช่ตาราง stock
@@ -473,7 +473,7 @@ export async function receiveStock(product: string, size: string, qty: number, n
   if (!(amt > 0)) return { ok: false, error: "จำนวนต้องมากกว่า 0" };
   try {
     const balance = await tx<number>(async (run) => {
-      const m = await matchStockSku(run, product.trim(), size.trim());   // normalize ให้ตรงแถวสต๊อกเดิม
+      const m = await matchStockSku(run, product.trim(), canonSize(size));   // normalize ให้ตรงแถวสต๊อกเดิม (+ ตัดจุด/ช่องว่างท้าย)
       const [row] = await run<{ qty: number }>(
         `insert into stock (product, size, qty, updated_at) values ($1,$2,$3,now())
          on conflict (product, size) do update set qty = stock.qty + $3, updated_at = now()
@@ -495,7 +495,7 @@ export async function receiveUnits(product: string, size: string, skus: string[]
   const gate = await requireStockEdit();
   if ("error" in gate) return { ok: false, error: gate.error };
   const user = gate.user;
-  const p = (product || "").trim(), sz = (size || "").trim();
+  const p = (product || "").trim(), sz = canonSize(size);
   const list = [...new Set((skus || []).map((s) => s.trim()).filter(Boolean))];
   if (!p || !sz) return { ok: false, error: "เลือกสินค้า + ขนาด" };
   if (!list.length) return { ok: false, error: "สแกน/ใส่ SKU อย่างน้อย 1 ชิ้น" };
@@ -537,7 +537,7 @@ export async function receiveUnitsBatch(
   const user = gate.user;
   const norm = (lines || [])
     .map((l) => ({
-      product: (l.product || "").trim(), size: (l.size || "").trim(),
+      product: (l.product || "").trim(), size: canonSize(l.size),
       barcode: (l.barcode || "").trim() || null,
       skus: [...new Set((l.skus || []).map((s) => s.trim()).filter(Boolean))],
     }))
@@ -592,7 +592,7 @@ export async function assignUnitSkus(product: string, size: string, skus: string
   const gate = await requireStockEdit();
   if ("error" in gate) return { ok: false, error: gate.error };
   const user = gate.user;
-  const p = (product || "").trim(), sz = (size || "").trim();
+  const p = (product || "").trim(), sz = canonSize(size);
   const list = [...new Set((skus || []).map((s) => s.trim()).filter(Boolean))];
   if (!p || !sz) return { ok: false, error: "ไม่พบสินค้า/ขนาด" };
   if (!list.length) return { ok: false, error: "กรอก SKU อย่างน้อย 1 ชิ้น" };
@@ -707,7 +707,7 @@ export async function adjustStock(product: string, size: string, newQty: number,
   if (Number.isNaN(target)) return { ok: false, error: "จำนวนไม่ถูกต้อง" };
   try {
     await tx(async (run) => {
-      const m = await matchStockSku(run, product.trim(), size.trim());   // จับแถวจริง กันสร้างซ้ำจากชื่อ/ขนาดต่างฟอร์แมต
+      const m = await matchStockSku(run, product.trim(), canonSize(size));   // จับแถวจริง กันสร้างซ้ำจากชื่อ/ขนาดต่างฟอร์แมต (+ ตัดจุด/ช่องว่างท้าย)
       const [cur] = await run<{ qty: number }>(`select qty::float8 as qty from stock where product = $1 and size = $2 for update`, [m.product, m.size]);   // ล็อกแถว กัน read-modify แข่งกัน → diff/balance ใน ledger เพี้ยน
       const old = cur?.qty ?? 0;
       const diff = target - old;

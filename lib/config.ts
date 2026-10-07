@@ -130,6 +130,12 @@ export function isAllowedFreeSize(size?: string | null, product?: string | null)
   return FREE_ALLOWED_SIZES.includes(t);
 }
 
+/** ขนาดมาตรฐาน: ตัดช่องว่าง/จุดท้ายทิ้ง กัน "50 ml." ≠ "50 ml" (แตกเป็น 2 แถว หน้าสต๊อกไม่โชว์)
+ *  ไม่แตะจุด "ภายใน" เช่น "1.2 ml" — ตัดเฉพาะท้ายสุด · ใช้ทุกครั้งก่อนเขียน size ลง stock/stock_unit/บาร์โค้ด */
+export function canonSize(size?: string | null): string {
+  return (size || "").trim().replace(/[.\s]+$/g, "");
+}
+
 // ── แพ็ค (bundle) — สินค้า 1 listing = หลายขวด "ตายตัว" → แตกเป็นบรรทัดย่อย ตัดสต๊อก/ผูก SKU รายขวด ──
 // นิยามแพ็คแก้ได้จากหน้า admin (ตาราง packs/pack_items) · listPacks() ใน queries.ts ดึงมาให้
 export type PackComponent = { product: string; size: string; is_free: boolean };
