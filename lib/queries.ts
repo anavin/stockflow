@@ -445,18 +445,17 @@ export async function getScentsWithoutStock(): Promise<{ name: string; grade: st
 }
 
 /** กลิ่น+ขนาด ที่ปิดการขาย → Record<normScent, normSize[]> (แพทเทิร์นเดียวกับ getDiscontinued)
- *  cache (reference) — closed_sku เป็น master ข้อมูลอ้างอิง เปลี่ยนน้อย */
-export const getClosedSkus = unstable_cache(
-  async (): Promise<Record<string, string[]>> => {
-    const norm = (s: string) => (s || "").toLowerCase().replace(/[^a-z0-9ก-๙]/g, "");
-    try {
-      const rows = await q<{ scent: string; size: string }>(`select scent, size from closed_sku`);
-      const map: Record<string, string[]> = {};
-      for (const r of rows) { (map[norm(r.scent)] ??= []).push(norm(r.size)); }
-      return map;
-    } catch { return {}; }  // ตารางยังไม่ถูกสร้าง
-  }, ["ref:closed-skus"], { tags: ["reference"], revalidate: 300 },
-);
+ *  อ่านสด (ไม่แคช) — closed_sku กรองการแสดงผลหน้าสต๊อก/ฟอร์ม · ปิด/เปิดการขาย (รวมแก้มือบน DB) ต้องมีผลทันที
+ *  query เล็กมาก (ไม่กี่สิบแถว) → cost แทบ 0, คุ้มกว่า lag 5 นาที */
+export async function getClosedSkus(): Promise<Record<string, string[]>> {
+  const norm = (s: string) => (s || "").toLowerCase().replace(/[^a-z0-9ก-๙]/g, "");
+  try {
+    const rows = await q<{ scent: string; size: string }>(`select scent, size from closed_sku`);
+    const map: Record<string, string[]> = {};
+    for (const r of rows) { (map[norm(r.scent)] ??= []).push(norm(r.size)); }
+    return map;
+  } catch { return {}; }  // ตารางยังไม่ถูกสร้าง
+}
 
 /** เลิกผลิต + ยอดสต๊อกคงเหลือของขนาดนั้น (normalized) — ใช้ตัดสินว่าจะบล็อก/ให้เลือกได้
  *  cache (reference+dashboard) — ขึ้นกับสต๊อก: mutation สต๊อกทุกตัว revalidateTag("dashboard") → สดทันทีหลังตัด/คืน/ปรับ
