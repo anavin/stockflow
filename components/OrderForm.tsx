@@ -484,9 +484,9 @@ export default function OrderForm({ platform = "Shopee", products, sizes, provin
             <label className="label">รหัสไปรษณีย์ <span className="text-faint">(พิมพ์เพื่อค้นตำบล/อำเภอ)</span></label>
             <PostcodeSearch value={f.postcode} onChange={(v) => set({ postcode: v })} onPick={onPickPostcode} placeholder="พิมพ์รหัส เช่น 10110" />
           </div>
-          <div className="md:col-span-2">
+          <div className="md:col-span-3">
             <label className="label">ที่อยู่ (บ้านเลขที่ / ถนน / รายละเอียด)</label>
-            <textarea rows={1} className="input !h-10 resize-none" value={f.address} onChange={(e) => set({ address: e.target.value })} />
+            <textarea rows={3} className="input min-h-[76px] w-full resize-y leading-relaxed" value={f.address} onChange={(e) => set({ address: e.target.value })} placeholder="บ้านเลขที่ / หมู่บ้าน-อาคาร-ห้อง / ถนน / ซอย …" />
           </div>
         </div>
         </>
@@ -520,6 +520,68 @@ export default function OrderForm({ platform = "Shopee", products, sizes, provin
           );
         })()}
       </section>
+
+      {/* การขาย & จัดส่ง (Office/Website) — section แยก วางก่อน "รายละเอียดเพิ่มเติม" */}
+      {isSaleForm && (
+        <section className="card p-5">
+          <h2 className="mb-4 flex items-center gap-1.5 text-sm font-semibold text-ink"><Wallet size={16} className="text-brand" /> การขาย & จัดส่ง <span className="font-normal text-faint">({pfCode})</span></h2>
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+            <div>
+              <label className="label">ราคาสินค้า (บาท)</label>
+              <input className="input text-right tabular-nums" inputMode="decimal" value={f.price}
+                onChange={(e) => set({ price: cleanMoney(e.target.value) })} placeholder="0.00" />
+            </div>
+            <div>
+              <label className="label">ส่วนลด (บาท)</label>
+              <input className="input text-right tabular-nums" inputMode="decimal" value={f.discount}
+                onChange={(e) => set({ discount: cleanMoney(e.target.value) })} placeholder="0.00" />
+            </div>
+            <div>
+              <label className="label">ยอดสุทธิ <span className="text-faint">(auto)</span></label>
+              <div className="input flex items-center justify-end bg-soft font-semibold tabular-nums text-ink">
+                {f.price ? `${Math.max(0, (parseFloat(f.price) || 0) - (parseFloat(f.discount) || 0)).toLocaleString("th-TH")} ฿` : "—"}
+              </div>
+            </div>
+            <div>
+              <label className="label">ช่องทางชำระเงิน</label>
+              <select className="input" value={f.payment_method} onChange={(e) => set({ payment_method: e.target.value })}>
+                <option value="">— เลือก —</option>
+                {PAYMENT_METHODS.map((p) => <option key={p} value={p}>{p}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="label inline-flex items-center gap-1"><Truck size={13} className="text-muted" /> ขนส่ง</label>
+              <Combobox value={f.shipping_carrier} onChange={(v) => set({ shipping_carrier: v })} options={CARRIERS} placeholder="เลือก / พิมพ์ขนส่ง" />
+            </div>
+            <div>
+              <label className="label">เลขพัสดุ (Tracking)</label>
+              <input className="input font-mono" value={f.tracking_no}
+                onChange={(e) => set({ tracking_no: e.target.value.replace(/\s/g, "") })} placeholder="เลขพัสดุ" />
+            </div>
+          </div>
+          {/* สลิป / ไฟล์แนบ — อัปโหลดเข้า Supabase Storage (private) ดูผ่าน signed URL */}
+          <div className="mt-4">
+            <label className="label inline-flex items-center gap-1"><Paperclip size={13} className="text-muted" /> สลิป / ไฟล์แนบ <span className="text-faint">(รูป หรือ PDF · ≤6MB)</span></label>
+            {f.slip_path ? (
+              <div className="flex items-center gap-2 rounded-lg border border-green-200 bg-green-50 px-3 py-2 text-sm">
+                <FileCheck2 size={16} className="shrink-0 text-green-600" />
+                <span className="text-green-700">แนบไฟล์แล้ว</span>
+                {slipPreviewUrl && (
+                  <button type="button" onClick={() => setSlipOpen(true)} className="inline-flex items-center gap-1 font-medium text-brand-600 hover:underline"><Eye size={14} /> พรีวิว</button>
+                )}
+                <button type="button" onClick={removeSlip} className="ml-auto text-muted hover:text-red-600" title="เอาไฟล์ออก"><X size={15} /></button>
+              </div>
+            ) : (
+              <button type="button" onClick={() => slipRef.current?.click()} disabled={slipBusy}
+                className="btn-ghost w-full justify-center border border-dashed border-brand-200 disabled:opacity-50">
+                <Paperclip size={15} /> {slipBusy ? "กำลังอัปโหลด…" : "แนบสลิป / ไฟล์ (รูป หรือ PDF)"}
+              </button>
+            )}
+            <input ref={slipRef} type="file" accept="image/*,application/pdf" className="hidden"
+              onChange={(e) => { const file = e.target.files?.[0]; if (file) uploadSlip(file); e.target.value = ""; }} />
+          </div>
+        </section>
+      )}
 
       {/* extras */}
       <section className="card p-5">
@@ -563,68 +625,6 @@ export default function OrderForm({ platform = "Shopee", products, sizes, provin
             <textarea className="input min-h-[56px]" value={f.note} onChange={(e) => set({ note: e.target.value })} />
           </div>
         </div>
-
-        {/* ── การขาย & จัดส่ง — Office + Website (ร้านขาย/จัดส่งเอง) ── */}
-        {isSaleForm && (
-          <div className="mt-5 rounded-xl border border-brand-200 bg-brand-50/40 p-4">
-            <h3 className="mb-3 flex items-center gap-1.5 text-sm font-semibold text-brand-700"><Wallet size={15} /> การขาย & จัดส่ง ({pfCode})</h3>
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-              <div>
-                <label className="label">ราคาสินค้า (บาท)</label>
-                <input className="input text-right tabular-nums" inputMode="decimal" value={f.price}
-                  onChange={(e) => set({ price: cleanMoney(e.target.value) })} placeholder="0.00" />
-              </div>
-              <div>
-                <label className="label">ส่วนลด (บาท)</label>
-                <input className="input text-right tabular-nums" inputMode="decimal" value={f.discount}
-                  onChange={(e) => set({ discount: cleanMoney(e.target.value) })} placeholder="0.00" />
-              </div>
-              <div>
-                <label className="label">ยอดสุทธิ <span className="text-faint">(auto)</span></label>
-                <div className="input flex items-center justify-end bg-soft font-semibold tabular-nums text-ink">
-                  {f.price ? `${Math.max(0, (parseFloat(f.price) || 0) - (parseFloat(f.discount) || 0)).toLocaleString("th-TH")} ฿` : "—"}
-                </div>
-              </div>
-              <div>
-                <label className="label">ช่องทางชำระเงิน</label>
-                <select className="input" value={f.payment_method} onChange={(e) => set({ payment_method: e.target.value })}>
-                  <option value="">— เลือก —</option>
-                  {PAYMENT_METHODS.map((p) => <option key={p} value={p}>{p}</option>)}
-                </select>
-              </div>
-              <div>
-                <label className="label inline-flex items-center gap-1"><Truck size={13} className="text-muted" /> ขนส่ง</label>
-                <Combobox value={f.shipping_carrier} onChange={(v) => set({ shipping_carrier: v })} options={CARRIERS} placeholder="เลือก / พิมพ์ขนส่ง" />
-              </div>
-              <div>
-                <label className="label">เลขพัสดุ (Tracking)</label>
-                <input className="input font-mono" value={f.tracking_no}
-                  onChange={(e) => set({ tracking_no: e.target.value.replace(/\s/g, "") })} placeholder="เลขพัสดุ" />
-              </div>
-            </div>
-            {/* สลิป / ไฟล์แนบ — อัปโหลดเข้า Supabase Storage (private) ดูผ่าน signed URL */}
-            <div className="mt-4">
-              <label className="label inline-flex items-center gap-1"><Paperclip size={13} className="text-muted" /> สลิป / ไฟล์แนบ <span className="text-faint">(รูป หรือ PDF · ≤6MB)</span></label>
-              {f.slip_path ? (
-                <div className="flex items-center gap-2 rounded-lg border border-green-200 bg-green-50 px-3 py-2 text-sm">
-                  <FileCheck2 size={16} className="shrink-0 text-green-600" />
-                  <span className="text-green-700">แนบไฟล์แล้ว</span>
-                  {slipPreviewUrl && (
-                    <button type="button" onClick={() => setSlipOpen(true)} className="inline-flex items-center gap-1 font-medium text-brand-600 hover:underline"><Eye size={14} /> พรีวิว</button>
-                  )}
-                  <button type="button" onClick={removeSlip} className="ml-auto text-muted hover:text-red-600" title="เอาไฟล์ออก"><X size={15} /></button>
-                </div>
-              ) : (
-                <button type="button" onClick={() => slipRef.current?.click()} disabled={slipBusy}
-                  className="btn-ghost w-full justify-center border border-dashed border-brand-200 disabled:opacity-50">
-                  <Paperclip size={15} /> {slipBusy ? "กำลังอัปโหลด…" : "แนบสลิป / ไฟล์ (รูป หรือ PDF)"}
-                </button>
-              )}
-              <input ref={slipRef} type="file" accept="image/*,application/pdf" className="hidden"
-                onChange={(e) => { const file = e.target.files?.[0]; if (file) uploadSlip(file); e.target.value = ""; }} />
-            </div>
-          </div>
-        )}
       </section>
 
       <div className="sticky bottom-0 flex flex-wrap gap-3 border-t border-line bg-canvas/90 py-4 backdrop-blur">
