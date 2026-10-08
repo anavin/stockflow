@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Combobox from "./Combobox";
 import CustomerSuggest from "./CustomerSuggest";
@@ -14,7 +14,7 @@ import { CUSTOMER_TYPES, platformColor, isWholesalePlatform, platformName, type 
 type BranchOpt = { branch: string; code: string | null; address: string | null };
 import type { OrderWithItems } from "@/lib/types";
 import type { PostcodeRow } from "@/lib/queries";
-import { Save, Printer, CheckCircle2, AlertTriangle, History, Check, Wallet, Truck, MapPin } from "lucide-react";
+import { Save, Printer, CheckCircle2, AlertTriangle, History, Check, Wallet, Truck, MapPin, Paperclip, FileCheck2, X } from "lucide-react";
 
 // เบอร์โทร: เก็บเฉพาะตัวเลข + - เว้นวรรค (กันพิมพ์ตัวอักษร)
 const cleanPhone = (v: string) => v.replace(/[^0-9\-+ ]/g, "");
@@ -88,7 +88,21 @@ export default function OrderForm({ platform = "Shopee", products, sizes, provin
     payment_method: initial?.payment_method ?? "",
     shipping_carrier: initial?.shipping_carrier ?? "",
     tracking_no: initial?.tracking_no ?? "",
+    slip_path: initial?.slip_path ?? "",
   });
+  const [slipBusy, setSlipBusy] = useState(false);
+  const slipRef = useRef<HTMLInputElement>(null);
+  async function uploadSlip(file: File) {
+    setSlipBusy(true);
+    try {
+      const fd = new FormData(); fd.append("file", file);
+      const res = await fetch("/api/upload/slip", { method: "POST", body: fd });
+      const j = await res.json().catch(() => ({ ok: false, error: "อ่านผลไม่สำเร็จ" }));
+      if (!j.ok) { alert(j.error || "อัปโหลดสลิปไม่สำเร็จ"); return; }
+      set({ slip_path: j.path });   // เก็บ path → บันทึกพร้อมใบเบิก
+    } catch { alert("อัปโหลดสลิปไม่สำเร็จ (ระบบขัดข้อง ลองใหม่)"); }
+    finally { setSlipBusy(false); }
+  }
 
   const [items, setItems] = useState<ItemDraft[]>(
     initial?.items?.length
@@ -580,6 +594,27 @@ export default function OrderForm({ platform = "Shopee", products, sizes, provin
                 <input className="input font-mono" value={f.tracking_no}
                   onChange={(e) => set({ tracking_no: e.target.value.replace(/\s/g, "") })} placeholder="เลขพัสดุ" />
               </div>
+            </div>
+            {/* สลิป / ไฟล์แนบ — อัปโหลดเข้า Supabase Storage (private) ดูผ่าน signed URL */}
+            <div className="mt-4">
+              <label className="label inline-flex items-center gap-1"><Paperclip size={13} className="text-muted" /> สลิป / ไฟล์แนบ <span className="text-faint">(รูป หรือ PDF · ≤6MB)</span></label>
+              {f.slip_path ? (
+                <div className="flex items-center gap-2 rounded-lg border border-green-200 bg-green-50 px-3 py-2 text-sm">
+                  <FileCheck2 size={16} className="shrink-0 text-green-600" />
+                  <span className="text-green-700">แนบไฟล์แล้ว</span>
+                  {editing && initial?.order_no && f.slip_path === initial?.slip_path && (
+                    <a href={`/api/slip/${encodeURIComponent(initial.order_no)}`} target="_blank" rel="noreferrer" className="font-medium text-brand-600 hover:underline">ดูไฟล์</a>
+                  )}
+                  <button type="button" onClick={() => set({ slip_path: "" })} className="ml-auto text-muted hover:text-red-600" title="เอาไฟล์ออก"><X size={15} /></button>
+                </div>
+              ) : (
+                <button type="button" onClick={() => slipRef.current?.click()} disabled={slipBusy}
+                  className="btn-ghost w-full justify-center border border-dashed border-brand-200 disabled:opacity-50">
+                  <Paperclip size={15} /> {slipBusy ? "กำลังอัปโหลด…" : "แนบสลิป / ไฟล์ (รูป หรือ PDF)"}
+                </button>
+              )}
+              <input ref={slipRef} type="file" accept="image/*,application/pdf" className="hidden"
+                onChange={(e) => { const file = e.target.files?.[0]; if (file) uploadSlip(file); e.target.value = ""; }} />
             </div>
           </div>
         )}

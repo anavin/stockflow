@@ -59,6 +59,7 @@ const orderSchema = z.object({
   branch: z.string().trim().optional().nullable(),        // ใบเบิกค้าส่ง: สาขาปลายทาง
   branch_code: z.string().trim().optional().nullable(),   // รหัสสาขา
   po_version: z.string().trim().optional().nullable(),    // PO Order Version (Eveandboy — กรอกเอง)
+  slip_path: z.string().trim().optional().nullable(),     // path สลิป/ไฟล์แนบใน Supabase Storage (bucket private 'slips')
   items: z.array(itemSchema).min(1, "ต้องมีอย่างน้อย 1 รายการ"),
 });
 
@@ -70,7 +71,7 @@ const ORDER_COLS = [
   "username", "receiver", "phone", "customer_type", "purchase_count", "district",
   "subdistrict", "province", "postcode", "address", "campaign", "note", "box_scent", "order_date",
   "price", "discount", "payment_method", "shipping_carrier", "tracking_no", "branch",
-  "branch_code", "po_version",
+  "branch_code", "po_version", "slip_path",
 ];
 
 /** Allocate the next doc number for a platform/day atomically. */
@@ -185,7 +186,7 @@ export async function saveOrder(input: OrderInput, opts?: { silent?: boolean }):
         purchaseCount, o.district, o.subdistrict, o.province, o.postcode, o.address, o.campaign,
         o.note, o.box_scent, o.order_date,
         o.price ?? null, o.discount ?? null, o.payment_method || null, o.shipping_carrier || null, o.tracking_no || null,
-        o.branch || null, o.branch_code || null, o.po_version || null,
+        o.branch || null, o.branch_code || null, o.po_version || null, o.slip_path || null,
       ];
       const ph = ORDER_COLS.map((_, i) => `$${i + 1}`).join(",");
       const updates = ORDER_COLS.slice(1).map((c) => `${c} = excluded.${c}`).join(", ");

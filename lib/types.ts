@@ -48,6 +48,7 @@ export type Order = {
   branch?: string | null;
   branch_code?: string | null;
   po_version?: string | null;
+  slip_path?: string | null;   // สลิป/ไฟล์แนบ (Supabase Storage bucket private 'slips') — ดูผ่าน /api/slip/[orderNo]
   ctw_received_at?: string | null;
   ctw_received_by?: string | null;
   // ค้าส่ง 2 จังหวะ: ปลายทางยืนยันรับ (Eve/KingPower มือ · CTW auto) — undefined ถ้า prod ยังไม่รัน 0047
