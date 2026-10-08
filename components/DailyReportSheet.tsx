@@ -7,6 +7,8 @@ import type { DayOrderRow, ReportMoney } from "@/lib/queries";
 
 const nf = (n: number) => Math.round(n || 0).toLocaleString("en-US");
 const baht = (n: number) => (n || 0).toLocaleString("th-TH", { minimumFractionDigits: 0, maximumFractionDigits: 2 }) + " ฿";
+const shortDate = (s: string | null) => (s ? new Date(s + "T00:00:00").toLocaleDateString("th-TH", { day: "numeric", month: "short", year: "2-digit" }) : "—");
+const netOf = (r: { price: number | null; discount: number | null }) => (r.price != null ? r.price - (r.discount || 0) : null);
 const sizeMl = (s: string) => { const m = (s || "").match(/[\d.]+/); return m ? parseFloat(m[0]) : 9999; }; // เรียงขนาดน้อย→มาก (Size S/M ไปท้าย)
 const statusText = (r: DayOrderRow) => (r.shipped ? "ส่งแล้ว" : r.issued ? "ตัดสต๊อกแล้ว" : "รอตัดสต๊อก");
 const returnText = (s: string | null) => (s === "full" ? "คืนแล้ว" : s === "partial" ? "คืนบางส่วน" : "");
@@ -21,6 +23,7 @@ export function DailyReportSheet({ platform = "Shopee", rangeLabel, note, rows, 
   const ready = rows.length > 0;
   const orders = rows.length;
   const totalQty = rows.reduce((s, r) => s + (r.qty || 0), 0);
+  const hasMoney = !!money && money.paidOrders > 0;   // มีคอลัมน์เงินเฉพาะรายงานที่มีใบกรอกราคา
 
   // ── ตารางไขว้ กลิ่น × ขนาด (pivot) — แถว=กลิ่น คอลัมน์=ขนาด ช่อง=จำนวน ─────────
   const cell = new Map<string, Map<string, number>>();   // กลิ่น → ขนาด → จำนวน
@@ -143,9 +146,11 @@ export function DailyReportSheet({ platform = "Shopee", rangeLabel, note, rows, 
                   <tr className="text-left text-neutral-500 text-[11px] uppercase tracking-wide">
                     <th className="pb-1.5 pr-2 w-7 font-semibold">#</th>
                     <th className="pb-1.5 pr-2 w-28 font-semibold">เลขที่ใบเบิก</th>
+                    <th className="pb-1.5 pr-2 w-16 font-semibold">วันที่</th>
                     <th className="pb-1.5 pr-2 font-semibold">ผู้รับ / รายการ</th>
                     <th className="pb-1.5 pr-2 w-14 text-right font-semibold">ชิ้น</th>
-                    <th className="pb-1.5 pr-2 w-24 font-semibold">สถานะ</th>
+                    <th className="pb-1.5 pr-2 w-20 font-semibold">สถานะ</th>
+                    {hasMoney && <th className="pb-1.5 w-24 text-right font-semibold">เงินที่ชำระ</th>}
                   </tr>
                 </thead>
                 <tbody>
@@ -158,6 +163,7 @@ export function DailyReportSheet({ platform = "Shopee", rangeLabel, note, rows, 
                           <div className="font-mono text-[11px]">{r.doc_no || "-"}</div>
                           <div className="font-mono text-[10px] text-neutral-500">{r.order_no}</div>
                         </td>
+                        <td className="py-2 pr-2 whitespace-nowrap text-neutral-700">{shortDate(r.order_day)}</td>
                         <td className="py-2 pr-2">
                           <div className="font-medium">{r.receiver || "-"}{r.province ? <span className="text-neutral-500 font-normal"> · {r.province}</span> : null}</div>
                           <ul className="mt-0.5 text-[11px] text-neutral-700 space-y-0.5">
@@ -168,15 +174,17 @@ export function DailyReportSheet({ platform = "Shopee", rangeLabel, note, rows, 
                         </td>
                         <td className="py-2 pr-2 text-right font-semibold tabular-nums">{nf(r.qty)}</td>
                         <td className="py-2 pr-2">{statusText(r)}{ret ? <span className="block text-[10px] text-neutral-500">↩ {ret}</span> : null}</td>
+                        {hasMoney && <td className="py-2 text-right tabular-nums font-medium whitespace-nowrap">{netOf(r) != null ? baht(netOf(r)!) : <span className="text-neutral-300">—</span>}</td>}
                       </tr>
                     );
                   })}
                 </tbody>
                 <tfoot>
                   <tr className="border-t-2 border-black">
-                    <td colSpan={3} className="py-2 font-bold">รวม {orders} ใบเบิก</td>
+                    <td colSpan={4} className="py-2 font-bold">รวม {orders} ใบเบิก</td>
                     <td className="py-2 text-right font-bold text-[13px] tabular-nums">{nf(totalQty)}</td>
                     <td className="py-2" />
+                    {hasMoney && <td className="py-2 text-right font-bold text-[13px] tabular-nums whitespace-nowrap">{baht(money!.sumNet)}</td>}
                   </tr>
                 </tfoot>
               </table>

@@ -664,6 +664,7 @@ export type DayOrderRow = {
   province: string | null; created_by_name: string | null;
   issued: boolean; shipped: boolean; return_status: string | null;
   qty: number; items: DayOrderItem[] | null;
+  order_day: string | null; price: number | null; discount: number | null;   // วันที่ + ยอดเงินต่อใบ (Office/Website)
 };
 /** ออเดอร์ + รายการ ตามฟิลเตอร์ (เดียวกับหน้า /shopee: เดือน/ช่วงวันที่/สถานะ/ค้นหา) — สำหรับรายงานสรุป */
 export type ReportMoney = { orders: number; paidOrders: number; sumPrice: number; sumDiscount: number; sumNet: number; byMethod: { method: string; n: number; net: number }[] };
@@ -715,6 +716,8 @@ export async function reportRows(opts: { platform?: string; search?: string; mon
     return await q<DayOrderRow>(
       `select o.order_no, o.doc_no, coalesce(o.receiver, o.username) as receiver, o.username, o.province,
               coalesce(nullif(btrim(u.full_name), ''), u.username) as created_by_name,
+              to_char(coalesce(o.order_date, o.doc_date), 'YYYY-MM-DD') as order_day,
+              o.price::float8 as price, o.discount::float8 as discount,
               (o.stock_issued_at is not null) as issued, (o.shipped_at is not null) as shipped, o.return_status,
               coalesce(sum(i.qty) filter (where coalesce(i.product,'') <> ''), 0)::float8 as qty,
               coalesce(json_agg(json_build_object('product', i.product, 'size', i.size, 'qty', i.qty, 'is_free', i.is_free)
@@ -724,7 +727,7 @@ export async function reportRows(opts: { platform?: string; search?: string; mon
        left join users u on u.id = o.created_by
        where ${where.join(" and ")}
        group by o.order_no, o.doc_no, o.receiver, o.username, o.province, u.full_name, u.username,
-                o.stock_issued_at, o.shipped_at, o.return_status, o.doc_date, o.created_at
+                o.stock_issued_at, o.shipped_at, o.return_status, o.doc_date, o.order_date, o.price, o.discount, o.created_at
        order by o.doc_date desc nulls last, o.created_at desc
        limit 5000`,
       params,
