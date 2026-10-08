@@ -44,5 +44,17 @@ export async function POST(req: Request) {
     const hint = res.status === 404 ? ` — ยังไม่ได้สร้าง bucket "${BUCKET}" บน Supabase?` : "";
     return NextResponse.json({ ok: false, error: `อัปโหลดไม่สำเร็จ (${res.status})${hint} ${t.slice(0, 160)}` }, { status: 502 });
   }
-  return NextResponse.json({ ok: true, path });
+
+  // สร้าง signed URL สั้นๆ ให้พรีวิวทันทีหลังอัปโหลด (ก่อนบันทึกใบเบิก) — best-effort, ล้มก็ไม่เป็นไร
+  let previewUrl: string | null = null;
+  try {
+    const s = await fetch(`${base}/storage/v1/object/sign/${BUCKET}/${encodeURI(path)}`, {
+      method: "POST",
+      headers: { apikey: key, Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ expiresIn: 600 }),
+    });
+    if (s.ok) { const j = (await s.json()) as { signedURL?: string }; if (j.signedURL) previewUrl = `${base}/storage/v1${j.signedURL}`; }
+  } catch { /* ข้าม */ }
+
+  return NextResponse.json({ ok: true, path, previewUrl });
 }

@@ -14,7 +14,7 @@ import { CUSTOMER_TYPES, platformColor, isWholesalePlatform, platformName, type 
 type BranchOpt = { branch: string; code: string | null; address: string | null };
 import type { OrderWithItems } from "@/lib/types";
 import type { PostcodeRow } from "@/lib/queries";
-import { Save, Printer, CheckCircle2, AlertTriangle, History, Check, Wallet, Truck, MapPin, Paperclip, FileCheck2, X } from "lucide-react";
+import { Save, Printer, CheckCircle2, AlertTriangle, History, Check, Wallet, Truck, MapPin, Paperclip, FileCheck2, X, Eye } from "lucide-react";
 
 // เบอร์โทร: เก็บเฉพาะตัวเลข + - เว้นวรรค (กันพิมพ์ตัวอักษร)
 const cleanPhone = (v: string) => v.replace(/[^0-9\-+ ]/g, "");
@@ -92,6 +92,11 @@ export default function OrderForm({ platform = "Shopee", products, sizes, provin
   });
   const [slipBusy, setSlipBusy] = useState(false);
   const slipRef = useRef<HTMLInputElement>(null);
+  // URL สำหรับพรีวิว: ใบที่บันทึกแล้วใช้ /api/slip/[orderNo] (signed ภายใน) · ไฟล์ที่เพิ่งอัปใช้ previewUrl จาก response
+  const [slipPreviewUrl, setSlipPreviewUrl] = useState<string>(
+    initial?.slip_path && initial?.order_no ? `/api/slip/${encodeURIComponent(initial.order_no)}` : "");
+  const [slipOpen, setSlipOpen] = useState(false);
+  const slipIsPdf = /\.pdf$/i.test(f.slip_path || "");
   async function uploadSlip(file: File) {
     setSlipBusy(true);
     try {
@@ -100,9 +105,11 @@ export default function OrderForm({ platform = "Shopee", products, sizes, provin
       const j = await res.json().catch(() => ({ ok: false, error: "อ่านผลไม่สำเร็จ" }));
       if (!j.ok) { alert(j.error || "อัปโหลดสลิปไม่สำเร็จ"); return; }
       set({ slip_path: j.path });   // เก็บ path → บันทึกพร้อมใบเบิก
+      setSlipPreviewUrl(j.previewUrl || "");   // พรีวิวได้ทันที
     } catch { alert("อัปโหลดสลิปไม่สำเร็จ (ระบบขัดข้อง ลองใหม่)"); }
     finally { setSlipBusy(false); }
   }
+  function removeSlip() { set({ slip_path: "" }); setSlipPreviewUrl(""); setSlipOpen(false); }
 
   const [items, setItems] = useState<ItemDraft[]>(
     initial?.items?.length
@@ -602,10 +609,10 @@ export default function OrderForm({ platform = "Shopee", products, sizes, provin
                 <div className="flex items-center gap-2 rounded-lg border border-green-200 bg-green-50 px-3 py-2 text-sm">
                   <FileCheck2 size={16} className="shrink-0 text-green-600" />
                   <span className="text-green-700">แนบไฟล์แล้ว</span>
-                  {editing && initial?.order_no && f.slip_path === initial?.slip_path && (
-                    <a href={`/api/slip/${encodeURIComponent(initial.order_no)}`} target="_blank" rel="noreferrer" className="font-medium text-brand-600 hover:underline">ดูไฟล์</a>
+                  {slipPreviewUrl && (
+                    <button type="button" onClick={() => setSlipOpen(true)} className="inline-flex items-center gap-1 font-medium text-brand-600 hover:underline"><Eye size={14} /> พรีวิว</button>
                   )}
-                  <button type="button" onClick={() => set({ slip_path: "" })} className="ml-auto text-muted hover:text-red-600" title="เอาไฟล์ออก"><X size={15} /></button>
+                  <button type="button" onClick={removeSlip} className="ml-auto text-muted hover:text-red-600" title="เอาไฟล์ออก"><X size={15} /></button>
                 </div>
               ) : (
                 <button type="button" onClick={() => slipRef.current?.click()} disabled={slipBusy}
@@ -630,6 +637,26 @@ export default function OrderForm({ platform = "Shopee", products, sizes, provin
         <button className="btn-ghost ml-auto" disabled={busy}
           onClick={() => { if (!dirty || window.confirm("ยังไม่ได้บันทึก — ต้องการออกจากหน้านี้?")) router.push(base); }}>ยกเลิก</button>
       </div>
+
+      {/* พรีวิวสลิป/ไฟล์แนบ (modal) — รูปโชว์ในแอป · PDF ฝังผ่าน iframe */}
+      {slipOpen && slipPreviewUrl && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" onClick={() => setSlipOpen(false)}>
+          <div className="relative flex max-h-[90vh] w-full max-w-3xl flex-col overflow-hidden rounded-xl bg-white shadow-2xl" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between border-b border-line px-4 py-2.5">
+              <span className="flex items-center gap-1.5 text-sm font-semibold text-ink"><Paperclip size={15} /> สลิป / ไฟล์แนบ</span>
+              <div className="flex items-center gap-2">
+                <a href={slipPreviewUrl} target="_blank" rel="noreferrer" className="btn-ghost text-xs"><Eye size={14} /> เปิดเต็ม</a>
+                <button type="button" onClick={() => setSlipOpen(false)} className="rounded-md p-1 text-muted hover:bg-soft hover:text-ink" title="ปิด"><X size={18} /></button>
+              </div>
+            </div>
+            <div className="flex min-h-[50vh] items-center justify-center overflow-auto bg-soft p-2">
+              {slipIsPdf
+                ? <iframe src={slipPreviewUrl} className="h-[78vh] w-full" title="สลิป / ไฟล์แนบ" />
+                : <img src={slipPreviewUrl} alt="สลิป / ไฟล์แนบ" className="max-h-[78vh] w-auto object-contain" />}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
