@@ -54,6 +54,7 @@ const orderSchema = z.object({
   price: z.preprocess((v) => (v === "" || v == null ? null : v), z.coerce.number().nullable()).optional(),
   discount: z.preprocess((v) => (v === "" || v == null ? null : v), z.coerce.number().nullable()).optional(),
   payment_method: z.string().trim().optional().nullable(),
+  paid_date: z.string().trim().optional().nullable(),
   shipping_carrier: z.string().trim().optional().nullable(),
   tracking_no: z.string().trim().optional().nullable(),
   branch: z.string().trim().optional().nullable(),        // ใบเบิกค้าส่ง: สาขาปลายทาง
@@ -70,7 +71,7 @@ const ORDER_COLS = [
   "order_no", "platform", "doc_no", "doc_date", "month_label", "channel", "shop_name",
   "username", "receiver", "phone", "customer_type", "purchase_count", "district",
   "subdistrict", "province", "postcode", "address", "campaign", "note", "box_scent", "order_date",
-  "price", "discount", "payment_method", "shipping_carrier", "tracking_no", "branch",
+  "price", "discount", "payment_method", "paid_date", "shipping_carrier", "tracking_no", "branch",
   "branch_code", "po_version", "slip_path",
 ];
 
@@ -185,7 +186,7 @@ export async function saveOrder(input: OrderInput, opts?: { silent?: boolean }):
         o.channel ?? o.platform, o.shop_name, o.username, o.receiver, o.phone, custType || null,
         purchaseCount, o.district, o.subdistrict, o.province, o.postcode, o.address, o.campaign,
         o.note, o.box_scent, o.order_date,
-        o.price ?? null, o.discount ?? null, o.payment_method || null, o.shipping_carrier || null, o.tracking_no || null,
+        o.price ?? null, o.discount ?? null, o.payment_method || null, o.paid_date || null, o.shipping_carrier || null, o.tracking_no || null,
         o.branch || null, o.branch_code || null, o.po_version || null, o.slip_path || null,
       ];
       const ph = ORDER_COLS.map((_, i) => `$${i + 1}`).join(",");

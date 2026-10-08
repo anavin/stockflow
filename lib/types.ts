@@ -48,6 +48,7 @@ export type Order = {
   branch?: string | null;
   branch_code?: string | null;
   po_version?: string | null;
+  paid_date?: string | null;   // วันที่ชำระเงิน (Office/Website)
   slip_path?: string | null;   // สลิป/ไฟล์แนบ (Supabase Storage bucket private 'slips') — ดูผ่าน /api/slip/[orderNo]
   ctw_received_at?: string | null;
   ctw_received_by?: string | null;

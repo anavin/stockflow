@@ -86,6 +86,7 @@ export default function OrderForm({ platform = "Shopee", products, sizes, provin
     price: initial?.price?.toString() ?? "",
     discount: initial?.discount?.toString() ?? "",
     payment_method: initial?.payment_method ?? "",
+    paid_date: initial?.paid_date ?? "",
     shipping_carrier: initial?.shipping_carrier ?? "",
     tracking_no: initial?.tracking_no ?? "",
     slip_path: initial?.slip_path ?? "",
@@ -525,6 +526,7 @@ export default function OrderForm({ platform = "Shopee", products, sizes, provin
       {isSaleForm && (
         <section className="card p-5">
           <h2 className="mb-4 flex items-center gap-1.5 text-sm font-semibold text-ink"><Wallet size={16} className="text-brand" /> การขาย & จัดส่ง <span className="font-normal text-faint">({pfCode})</span></h2>
+          {/* กลุ่ม 1 · การเงิน */}
           <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
             <div>
               <label className="label">ราคาสินค้า (บาท)</label>
@@ -542,6 +544,9 @@ export default function OrderForm({ platform = "Shopee", products, sizes, provin
                 {f.price ? `${Math.max(0, (parseFloat(f.price) || 0) - (parseFloat(f.discount) || 0)).toLocaleString("th-TH")} ฿` : "—"}
               </div>
             </div>
+          </div>
+          {/* กลุ่ม 2 · การชำระเงิน (ช่องทาง · วันที่ · สลิป) */}
+          <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-3">
             <div>
               <label className="label">ช่องทางชำระเงิน</label>
               <select className="input" value={f.payment_method} onChange={(e) => set({ payment_method: e.target.value })}>
@@ -550,7 +555,34 @@ export default function OrderForm({ platform = "Shopee", products, sizes, provin
               </select>
             </div>
             <div>
-              <label className="label inline-flex items-center gap-1"><Truck size={13} className="text-muted" /> ขนส่ง</label>
+              <label className="label">วันที่ชำระเงิน</label>
+              <DatePicker value={f.paid_date} onChange={(v) => set({ paid_date: v })} quickPick />
+            </div>
+            <div>
+              <label className="label flex items-center gap-1"><Paperclip size={12} className="text-muted" /> สลิป / ไฟล์แนบ <span className="text-faint font-normal">(≤6MB)</span></label>
+              {f.slip_path ? (
+                <div className="flex h-10 items-center gap-2 rounded-lg border border-green-200 bg-green-50 px-3 text-sm">
+                  <FileCheck2 size={15} className="shrink-0 text-green-600" />
+                  <span className="text-green-700">แนบแล้ว</span>
+                  {slipPreviewUrl && (
+                    <button type="button" onClick={() => setSlipOpen(true)} className="inline-flex items-center gap-0.5 font-medium text-brand-600 hover:underline"><Eye size={13} /> ดู</button>
+                  )}
+                  <button type="button" onClick={removeSlip} className="ml-auto text-muted hover:text-red-600" title="เอาไฟล์ออก"><X size={15} /></button>
+                </div>
+              ) : (
+                <button type="button" onClick={() => slipRef.current?.click()} disabled={slipBusy}
+                  className="btn-ghost h-10 w-full justify-center border border-dashed border-brand-200 text-sm disabled:opacity-50">
+                  <Paperclip size={14} /> {slipBusy ? "กำลังอัปโหลด…" : "แนบไฟล์ (รูป/PDF)"}
+                </button>
+              )}
+              <input ref={slipRef} type="file" accept="image/*,application/pdf" className="hidden"
+                onChange={(e) => { const file = e.target.files?.[0]; if (file) uploadSlip(file); e.target.value = ""; }} />
+            </div>
+          </div>
+          {/* กลุ่ม 3 · การจัดส่ง */}
+          <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-3">
+            <div>
+              <label className="label flex items-center gap-1"><Truck size={13} className="text-muted" /> ขนส่ง</label>
               <Combobox value={f.shipping_carrier} onChange={(v) => set({ shipping_carrier: v })} options={CARRIERS} placeholder="เลือก / พิมพ์ขนส่ง" />
             </div>
             <div>
@@ -558,27 +590,6 @@ export default function OrderForm({ platform = "Shopee", products, sizes, provin
               <input className="input font-mono" value={f.tracking_no}
                 onChange={(e) => set({ tracking_no: e.target.value.replace(/\s/g, "") })} placeholder="เลขพัสดุ" />
             </div>
-          </div>
-          {/* สลิป / ไฟล์แนบ — อัปโหลดเข้า Supabase Storage (private) ดูผ่าน signed URL */}
-          <div className="mt-4">
-            <label className="label inline-flex items-center gap-1"><Paperclip size={13} className="text-muted" /> สลิป / ไฟล์แนบ <span className="text-faint">(รูป หรือ PDF · ≤6MB)</span></label>
-            {f.slip_path ? (
-              <div className="flex items-center gap-2 rounded-lg border border-green-200 bg-green-50 px-3 py-2 text-sm">
-                <FileCheck2 size={16} className="shrink-0 text-green-600" />
-                <span className="text-green-700">แนบไฟล์แล้ว</span>
-                {slipPreviewUrl && (
-                  <button type="button" onClick={() => setSlipOpen(true)} className="inline-flex items-center gap-1 font-medium text-brand-600 hover:underline"><Eye size={14} /> พรีวิว</button>
-                )}
-                <button type="button" onClick={removeSlip} className="ml-auto text-muted hover:text-red-600" title="เอาไฟล์ออก"><X size={15} /></button>
-              </div>
-            ) : (
-              <button type="button" onClick={() => slipRef.current?.click()} disabled={slipBusy}
-                className="btn-ghost w-full justify-center border border-dashed border-brand-200 disabled:opacity-50">
-                <Paperclip size={15} /> {slipBusy ? "กำลังอัปโหลด…" : "แนบสลิป / ไฟล์ (รูป หรือ PDF)"}
-              </button>
-            )}
-            <input ref={slipRef} type="file" accept="image/*,application/pdf" className="hidden"
-              onChange={(e) => { const file = e.target.files?.[0]; if (file) uploadSlip(file); e.target.value = ""; }} />
           </div>
         </section>
       )}
