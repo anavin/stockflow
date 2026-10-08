@@ -365,8 +365,8 @@ export default function OrderForm({ platform = "Shopee", products, sizes, provin
             </div>
           </div>
           <div>
-            <label className="label inline-flex items-center gap-1.5">
-              <span className="h-2 w-2 rounded-full" style={{ backgroundColor: platformColor(platform) }} /> ชื่อผู้ใช้ ({platform})
+            <label className="label flex items-center gap-1.5">
+              <span className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: platformColor(platform) }} /> ชื่อผู้ใช้ ({platform})
             </label>
             <CustomerSuggest value={f.username} onChange={(v) => { set({ username: v }); setReturnWarn(0); }} onPick={fillFromCustomer} placeholder="พิมพ์ชื่อผู้ใช้ / ชื่อ / กลิ่นที่เคยซื้อ" />
           </div>
