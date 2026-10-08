@@ -666,6 +666,36 @@ export type DayOrderRow = {
   qty: number; items: DayOrderItem[] | null;
 };
 /** ออเดอร์ + รายการ ตามฟิลเตอร์ (เดียวกับหน้า /shopee: เดือน/ช่วงวันที่/สถานะ/ค้นหา) — สำหรับรายงานสรุป */
+export type ReportMoney = { orders: number; paidOrders: number; sumPrice: number; sumDiscount: number; sumNet: number; byMethod: { method: string; n: number; net: number }[] };
+/** สรุปยอดเงินของรายงาน (ฟิลเตอร์เดียวกับ reportRows) — นับเฉพาะใบที่กรอกราคา (Office/Website) */
+export async function reportMoney(opts: { platform?: string; search?: string; month?: string; from?: string; to?: string; issued?: "yes" | "no"; shipped?: "yes" | "no" } = {}): Promise<ReportMoney> {
+  const empty: ReportMoney = { orders: 0, paidOrders: 0, sumPrice: 0, sumDiscount: 0, sumNet: 0, byMethod: [] };
+  try {
+    const where: string[] = ["deleted_at is null"];
+    const params: any[] = [];
+    params.push(opts.platform ?? "Shopee"); where.push(`platform = $${params.length}`);
+    if (opts.month) { params.push(opts.month); where.push(`month_label = $${params.length}`); }
+    if (opts.from) { params.push(opts.from); where.push(`coalesce(order_date, doc_date) >= $${params.length}`); }
+    if (opts.to) { params.push(opts.to); where.push(`coalesce(order_date, doc_date) <= $${params.length}`); }
+    if (opts.issued === "yes") where.push(`stock_issued_at is not null`); else if (opts.issued === "no") where.push(`stock_issued_at is null`);
+    if (opts.shipped === "yes") where.push(`shipped_at is not null`); else if (opts.shipped === "no") where.push(`shipped_at is null`);
+    if (opts.search) { params.push(`%${opts.search}%`); const p = `$${params.length}`; where.push(`(order_no ilike ${p} or doc_no ilike ${p} or receiver ilike ${p} or username ilike ${p} or shop_name ilike ${p} or province ilike ${p})`); }
+    const w = where.join(" and ");
+    const [tot] = await q<{ orders: number; paid: number; sp: number; sd: number; sn: number }>(
+      `select count(*)::int as orders,
+              count(*) filter (where price is not null)::int as paid,
+              coalesce(sum(price) filter (where price is not null),0)::float8 as sp,
+              coalesce(sum(discount) filter (where price is not null),0)::float8 as sd,
+              coalesce(sum(coalesce(price,0)-coalesce(discount,0)) filter (where price is not null),0)::float8 as sn
+         from orders where ${w}`, params);
+    const byMethod = await q<{ method: string; n: number; net: number }>(
+      `select coalesce(nullif(btrim(payment_method),''),'(ไม่ระบุ)') as method, count(*)::int as n,
+              coalesce(sum(coalesce(price,0)-coalesce(discount,0)),0)::float8 as net
+         from orders where ${w} and price is not null group by 1 order by net desc`, params);
+    return { orders: tot?.orders ?? 0, paidOrders: tot?.paid ?? 0, sumPrice: tot?.sp ?? 0, sumDiscount: tot?.sd ?? 0, sumNet: tot?.sn ?? 0, byMethod };
+  } catch { return empty; }
+}
+
 export async function reportRows(opts: { platform?: string; search?: string; month?: string; from?: string; to?: string; issued?: "yes" | "no"; shipped?: "yes" | "no" } = {}): Promise<DayOrderRow[]> {
   try {
     const where: string[] = ["o.deleted_at is null"];

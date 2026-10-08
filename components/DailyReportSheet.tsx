@@ -3,9 +3,10 @@
  * (lab-parfumo-central/components/DailyReportSheet) แต่ปรับเนื้อหาเป็นระบบใบเบิก:
  * ไม่มีราคา/ช่องทางจ่าย/สัญชาติ → ใช้ ออเดอร์ / ชิ้น / สถานะตัด-ส่ง / กลิ่นเบิกมากสุด แทน.
  */
-import type { DayOrderRow } from "@/lib/queries";
+import type { DayOrderRow, ReportMoney } from "@/lib/queries";
 
 const nf = (n: number) => Math.round(n || 0).toLocaleString("en-US");
+const baht = (n: number) => (n || 0).toLocaleString("th-TH", { minimumFractionDigits: 0, maximumFractionDigits: 2 }) + " ฿";
 const sizeMl = (s: string) => { const m = (s || "").match(/[\d.]+/); return m ? parseFloat(m[0]) : 9999; }; // เรียงขนาดน้อย→มาก (Size S/M ไปท้าย)
 const statusText = (r: DayOrderRow) => (r.shipped ? "ส่งแล้ว" : r.issued ? "ตัดสต๊อกแล้ว" : "รอตัดสต๊อก");
 const returnText = (s: string | null) => (s === "full" ? "คืนแล้ว" : s === "partial" ? "คืนบางส่วน" : "");
@@ -14,8 +15,8 @@ const SecTitle = ({ children }: { children: React.ReactNode }) => (
   <div className="text-[11px] font-bold uppercase tracking-wide text-neutral-500 border-b border-black pb-1 mb-2">{children}</div>
 );
 
-export function DailyReportSheet({ platform = "Shopee", rangeLabel, note, rows, showDetail = true, generatedAt }: {
-  platform?: string; rangeLabel: string; note?: string; rows: DayOrderRow[]; showDetail?: boolean; generatedAt: string;
+export function DailyReportSheet({ platform = "Shopee", rangeLabel, note, rows, money, showDetail = true, generatedAt }: {
+  platform?: string; rangeLabel: string; note?: string; rows: DayOrderRow[]; money?: ReportMoney; showDetail?: boolean; generatedAt: string;
 }) {
   const ready = rows.length > 0;
   const orders = rows.length;
@@ -52,6 +53,47 @@ export function DailyReportSheet({ platform = "Shopee", rangeLabel, note, rows, 
           <div className="text-[11px] text-neutral-500 mt-1">ออกรายงานเมื่อ {generatedAt} น.</div>
         </div>
       </div>
+
+      {/* สรุปยอดเงิน — โชว์เฉพาะรายงานที่มีใบกรอกราคา (Office/Website) · โทนอ่อน+เส้น ประหยัดหมึก */}
+      {money && money.paidOrders > 0 && (
+        <div className="mb-6">
+          <SecTitle>สรุปยอดเงิน · {nf(money.paidOrders)} ใบมียอด</SecTitle>
+          <div className="grid grid-cols-3 gap-3">
+            <div className="rounded-lg border border-neutral-300 px-3 py-2.5">
+              <div className="text-[10px] uppercase tracking-wide text-neutral-500">ยอดขายรวม</div>
+              <div className="text-[18px] font-bold tabular-nums leading-tight mt-0.5">{baht(money.sumPrice)}</div>
+            </div>
+            <div className="rounded-lg border border-neutral-300 px-3 py-2.5">
+              <div className="text-[10px] uppercase tracking-wide text-neutral-500">ส่วนลดรวม</div>
+              <div className="text-[18px] font-bold tabular-nums leading-tight mt-0.5 text-neutral-600">{money.sumDiscount ? "− " + baht(money.sumDiscount) : baht(0)}</div>
+            </div>
+            <div className="rounded-lg border-2 border-black px-3 py-2.5">
+              <div className="text-[10px] uppercase tracking-wide text-neutral-500">ยอดสุทธิ</div>
+              <div className="text-[19px] font-extrabold tabular-nums leading-tight mt-0.5">{baht(money.sumNet)}</div>
+            </div>
+          </div>
+          {money.byMethod.length > 0 && (
+            <table className="w-full text-[11px] border-collapse mt-3">
+              <thead>
+                <tr className="text-neutral-500 text-[10px] uppercase tracking-wide">
+                  <th className="border-b border-neutral-400 px-2 py-1 text-left font-semibold">ช่องทางชำระเงิน</th>
+                  <th className="w-16 border-b border-neutral-400 px-2 py-1 text-right font-semibold">ใบ</th>
+                  <th className="w-32 border-b border-neutral-400 px-2 py-1 text-right font-semibold">ยอดสุทธิ</th>
+                </tr>
+              </thead>
+              <tbody>
+                {money.byMethod.map((m) => (
+                  <tr key={m.method}>
+                    <td className="border-b border-neutral-200 px-2 py-1">{m.method}</td>
+                    <td className="border-b border-neutral-200 px-2 py-1 text-right tabular-nums">{nf(m.n)}</td>
+                    <td className="border-b border-neutral-200 px-2 py-1 text-right font-medium tabular-nums">{baht(m.net)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+      )}
 
       {!ready ? (
         <div className="py-12 text-center text-sm text-neutral-500">ไม่พบใบเบิกตามที่กรอง</div>

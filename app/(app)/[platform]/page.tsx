@@ -3,8 +3,9 @@ import { notFound } from "next/navigation";
 import { listOrders, getMonths, countOrders } from "@/lib/queries";
 import { resolvePlatform, platformBase, canImportPlatform, canCreatePlatform, platformColor, platformTint } from "@/lib/config";
 import OrdersTable from "@/components/OrdersTable";
+import ReportExportBar from "@/components/ReportExportBar";
 import OrderFilters from "@/components/OrderFilters";
-import { PlusCircle, Upload, ChevronLeft, ChevronRight, FileDown, FileBarChart, Trash2 } from "lucide-react";
+import { PlusCircle, Upload, ChevronLeft, ChevronRight, Trash2 } from "lucide-react";
 import { requireDashboard } from "@/lib/auth/require-user";
 import { can } from "@/lib/auth/roles";
 
@@ -49,8 +50,6 @@ export default async function OrdersPage({ params, searchParams }: {
     return sp.toString();
   };
   const qs = (p: number) => { const s = buildQs(p > 1 ? { page: String(p) } : {}); return `${base}${s ? "?" + s : ""}`; };
-  const exportHref = (() => { const s = buildQs({ platform: pf.code }); return `/api/export/orders?${s}`; })();
-  const reportHref = (() => { const s = buildQs({ platform: pf.code }); return `/print/daily-report?${s}`; })();
 
   const pfColor = platformColor(pf.code);
   return (
@@ -72,8 +71,7 @@ export default async function OrdersPage({ params, searchParams }: {
           </p>
         </div>
         <div className="flex gap-2">
-          <a href={reportHref} target="_blank" rel="noopener" className="btn-ghost" title="สรุปกลิ่น×ขนาด ตามตัวกรอง (พิมพ์/PDF)"><FileBarChart size={16} /> สรุป</a>
-          <a href={exportHref} className="btn-ghost"><FileDown size={16} /> Export</a>
+          <ReportExportBar platform={pf.code} q={q} issued={iss} shipped={shp} from={from} to={to} />
           {isCreator && <Link href={`${base}/trash`} className="btn-ghost" title="ถังขยะ"><Trash2 size={16} /></Link>}
           {isCreator && canImportPlatform(pf.code) && <Link href={`${base}/import`} className="btn-ghost"><Upload size={16} /> นำเข้า</Link>}
           {isCreator && canCreatePlatform(pf.code) && <Link href={`${base}/new`} className="btn-primary"><PlusCircle size={16} /> สร้างใบเบิก</Link>}
