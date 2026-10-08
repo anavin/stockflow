@@ -14,6 +14,8 @@ type Row = {
   username: string | null; receiver: string | null; phone: string | null; customer_type: string | null; purchase_count: number | null;
   district: string | null; province: string | null; postcode: string | null; address: string | null;
   campaign: string | null; note: string | null; stock_issued_at: any;
+  price: number | null; discount: number | null; payment_method: string | null; paid_date: string | null;
+  shipping_carrier: string | null; tracking_no: string | null; slip_path: string | null;
 };
 
 /** Export orders (one row per item) as xlsx — respects q / month filters. */
@@ -43,12 +45,21 @@ export async function GET(req: Request) {
   // ค้นหาให้ครบ 6 ฟิลด์เหมือน listOrders (รวม shop_name/province) ไม่งั้นผลค้นหาบนจอกับไฟล์ไม่ตรง
   if (search) { params.push(`%${search}%`); const p = `$${params.length}`; where.push(`(o.order_no ilike ${p} or o.doc_no ilike ${p} or o.receiver ilike ${p} or o.username ilike ${p} or o.shop_name ilike ${p} or o.province ilike ${p})`); }
 
+  // drift-guard: prod อาจยังไม่รัน 0049 (slip_path) / 0050 (paid_date) → เช็กก่อน กัน select คอลัมน์ที่ไม่มีแล้ว 500
+  const cols = await q<{ column_name: string }>(
+    `select column_name from information_schema.columns where table_name='orders' and column_name in ('paid_date','slip_path')`,
+  ).catch(() => [] as { column_name: string }[]);
+  const paidSel = cols.some((c) => c.column_name === "paid_date") ? "o.paid_date::text" : "null::text";
+  const slipSel = cols.some((c) => c.column_name === "slip_path") ? "o.slip_path" : "null::text";
+
   const rows = await q<Row>(
     `select o.doc_no, o.order_no, o.doc_date::text as doc_date, o.channel,
             i.product, i.size, i.is_free, i.qty::float8 as qty, i.product_label,
             o.username, o.receiver, o.phone, o.customer_type, o.purchase_count,
             o.district, o.province, o.postcode, o.address, o.campaign, o.note,
-            o.stock_issued_at::text as stock_issued_at
+            o.stock_issued_at::text as stock_issued_at,
+            o.price::float8 as price, o.discount::float8 as discount, o.payment_method,
+            ${paidSel} as paid_date, o.shipping_carrier, o.tracking_no, ${slipSel} as slip_path
      from orders o join order_items i on i.order_no = o.order_no
      where ${where.join(" and ")}
      order by o.doc_date desc nulls last, o.order_no, i.line_no
@@ -79,15 +90,36 @@ export async function GET(req: Request) {
     { header: "Campaign", key: "campaign", width: 16 },
     { header: "Note", key: "note", width: 16 },
     { header: "ตัดสต๊อกแล้ว", key: "issued", width: 14 },
+    { header: "ราคาสินค้า", key: "price", width: 12 },
+    { header: "ส่วนลด", key: "discount", width: 10 },
+    { header: "ยอดสุทธิ", key: "net", width: 12 },
+    { header: "ช่องทางชำระเงิน", key: "payment_method", width: 16 },
+    { header: "วันที่ชำระเงิน", key: "paid_date", width: 13 },
+    { header: "ขนส่ง", key: "carrier", width: 14 },
+    { header: "เลขพัสดุ", key: "tracking", width: 18 },
+    { header: "สลิป", key: "slip", width: 7 },
   ];
   ws.getRow(1).font = { bold: true };
+  // ข้อมูลระดับออเดอร์ (ราคา/ชำระเงิน/จัดส่ง) โชว์เฉพาะแถวแรกของแต่ละออเดอร์ → sum คอลัมน์ได้ถูก ไม่นับซ้ำต่อรายการ
+  let prevOrder = "";
   for (const r of rows) {
+    const firstOfOrder = r.order_no !== prevOrder;
+    prevOrder = r.order_no;
+    const hasPrice = firstOfOrder && r.price != null;
     ws.addRow({
       doc_no: r.doc_no, order_no: r.order_no, doc_date: r.doc_date, product: r.product, size: r.size,
       free: r.is_free ? "Free" : "", qty: r.qty, product_label: r.product_label, username: r.username,
       receiver: r.receiver, phone: r.phone, customer_type: r.customer_type, purchase_count: r.purchase_count,
       district: r.district, province: r.province, postcode: r.postcode, address: r.address,
       campaign: r.campaign, note: r.note, issued: r.stock_issued_at ? "✓" : "",
+      price: hasPrice ? r.price : "",
+      discount: hasPrice ? (r.discount ?? 0) : "",
+      net: hasPrice ? Math.max(0, Number(r.price) - Number(r.discount || 0)) : "",
+      payment_method: firstOfOrder ? (r.payment_method || "") : "",
+      paid_date: firstOfOrder ? (r.paid_date || "") : "",
+      carrier: firstOfOrder ? (r.shipping_carrier || "") : "",
+      tracking: firstOfOrder ? (r.tracking_no || "") : "",
+      slip: firstOfOrder && r.slip_path ? "✓" : "",
     });
   }
 
