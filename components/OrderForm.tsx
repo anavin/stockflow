@@ -54,6 +54,7 @@ export default function OrderForm({ platform = "Shopee", products, sizes, provin
   // สาขาปลายทางต่อช่องค้าส่ง — CTW คงที่, Eveandboy จาก DB, King Power พิมพ์เอง
   const BRANCHES: Record<string, string[]> = { CTW: ["01_CTW - Central World"], Eveandboy: branches.map((b) => b.branch), KingPower: [] };
   const isOffice = pfCode === "Office";   // Office = ร้านขาย/จัดส่งเอง → มีราคา/ชำระเงิน/ขนส่ง
+  const isSaleForm = isOffice || pfCode === "Website";   // Office + Website = มีบล็อกการขาย/จัดส่ง (ราคา/ชำระเงิน/ขนส่ง/สลิป)
   const isWholesale = isWholesalePlatform(pfCode);   // CTW/Eveandboy/King Power = ค้าส่ง → มีช่องสาขา ไม่ต้องมีลูกค้า/ที่อยู่
   const isCTW = pfCode === "CTW";                     // CTW = โอนสาขา (มีปุ่มส่งไป CTW)
   const isEveandboy = pfCode === "Eveandboy";         // Eveandboy = มี PO Order Version (กรอกเอง)
@@ -542,10 +543,10 @@ export default function OrderForm({ platform = "Shopee", products, sizes, provin
           </div>
         </div>
 
-        {/* ── การขาย & จัดส่ง — เฉพาะ Office (ร้านจัดส่งเอง) ── */}
-        {isOffice && (
+        {/* ── การขาย & จัดส่ง — Office + Website (ร้านขาย/จัดส่งเอง) ── */}
+        {isSaleForm && (
           <div className="mt-5 rounded-xl border border-brand-200 bg-brand-50/40 p-4">
-            <h3 className="mb-3 flex items-center gap-1.5 text-sm font-semibold text-brand-700"><Wallet size={15} /> การขาย & จัดส่ง (Office)</h3>
+            <h3 className="mb-3 flex items-center gap-1.5 text-sm font-semibold text-brand-700"><Wallet size={15} /> การขาย & จัดส่ง ({pfCode})</h3>
             <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
               <div>
                 <label className="label">ราคาสินค้า (บาท)</label>
