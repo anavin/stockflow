@@ -26,7 +26,8 @@ export async function GET(_req: Request, { params }: { params: Promise<{ orderNo
   try {
     res = await fetch(`${base}/storage/v1/object/sign/${BUCKET}/${encodeURI(o.slip_path)}`, {
       method: "POST",
-      headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
+      // apikey + Authorization → รองรับทั้ง service_role (legacy) และ secret key ใหม่ (sb_secret_...)
+      headers: { apikey: key, Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
       body: JSON.stringify({ expiresIn: 120 }),   // ลิงก์ใช้ได้ 2 นาที
     });
   } catch (e: any) { return NextResponse.json({ error: `sign failed: ${e?.message || "network"}` }, { status: 502 }); }

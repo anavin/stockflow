@@ -33,7 +33,8 @@ export async function POST(req: Request) {
   try {
     res = await fetch(`${base}/storage/v1/object/${BUCKET}/${encodeURI(path)}`, {
       method: "POST",
-      headers: { Authorization: `Bearer ${key}`, "Content-Type": file.type || "application/octet-stream", "x-upsert": "true" },
+      // ส่งทั้ง apikey + Authorization → รองรับทั้ง service_role (legacy JWT) และ secret key แบบใหม่ (sb_secret_...)
+      headers: { apikey: key, Authorization: `Bearer ${key}`, "Content-Type": file.type || "application/octet-stream", "x-upsert": "true" },
       body: Buffer.from(await file.arrayBuffer()),
     });
   } catch (e: any) { return NextResponse.json({ ok: false, error: `ต่อ Storage ไม่ได้: ${e?.message || "network"}` }, { status: 502 }); }
