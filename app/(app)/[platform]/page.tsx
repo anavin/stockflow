@@ -71,7 +71,7 @@ export default async function OrdersPage({ params, searchParams }: {
           </p>
         </div>
         <div className="flex gap-2">
-          <ReportExportBar platform={pf.code} q={q} issued={iss} shipped={shp} from={from} to={to} />
+          <ReportExportBar platform={pf.code} q={q} issued={iss} shipped={shp} from={from} to={to} month={month} />
           {isCreator && <Link href={`${base}/trash`} className="btn-ghost" title="ถังขยะ"><Trash2 size={16} /></Link>}
           {isCreator && canImportPlatform(pf.code) && <Link href={`${base}/import`} className="btn-ghost"><Upload size={16} /> นำเข้า</Link>}
           {isCreator && canCreatePlatform(pf.code) && <Link href={`${base}/new`} className="btn-primary"><PlusCircle size={16} /> สร้างใบเบิก</Link>}

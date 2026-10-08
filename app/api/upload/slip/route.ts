@@ -8,7 +8,8 @@ export const maxDuration = 30;
 
 const BUCKET = "slips";
 const MAX = 6 * 1024 * 1024;   // 6MB
-const OK = ["image/jpeg", "image/png", "image/webp", "image/heic", "image/heif", "application/pdf"];
+// นามสกุลที่รับ → content-type ปลอดภัยของเราเอง (ไม่พึ่ง file.type ที่ client ปลอม/เว้นว่างได้)
+const EXT_CT: Record<string, string> = { jpg: "image/jpeg", jpeg: "image/jpeg", png: "image/png", webp: "image/webp", heic: "image/heic", heif: "image/heif", pdf: "application/pdf" };
 
 /** อัปโหลดสลิป/ไฟล์แนบของใบเบิก → Supabase Storage (private) ผ่าน REST ฝั่ง server (service_role ไม่หลุด client)
  *  คืน path (ไม่ใช่ URL) → ฟอร์มเก็บไว้ที่ orders.slip_path · ดูไฟล์ผ่าน signed URL ที่ /api/slip/[orderNo] */
@@ -24,9 +25,10 @@ export async function POST(req: Request) {
   const file = form.get("file");
   if (!(file instanceof File)) return NextResponse.json({ ok: false, error: "ไม่พบไฟล์" }, { status: 400 });
   if (file.size > MAX) return NextResponse.json({ ok: false, error: "ไฟล์ใหญ่เกิน 6MB" }, { status: 413 });
-  if (file.type && !OK.includes(file.type)) return NextResponse.json({ ok: false, error: "รองรับเฉพาะรูป (JPG/PNG/WebP/HEIC) หรือ PDF" }, { status: 415 });
 
-  const ext = (file.name.split(".").pop() || "").toLowerCase().replace(/[^a-z0-9]/g, "").slice(0, 5) || (file.type === "application/pdf" ? "pdf" : "jpg");
+  const ext = (file.name.split(".").pop() || "").toLowerCase().replace(/[^a-z0-9]/g, "").slice(0, 5);
+  const contentType = EXT_CT[ext];   // รับเฉพาะนามสกุลใน allowlist (ไม่เช็ก/ไม่เชื่อ file.type)
+  if (!contentType) return NextResponse.json({ ok: false, error: "รองรับเฉพาะรูป (JPG/PNG/WebP/HEIC) หรือ PDF" }, { status: 415 });
   const path = `${new Date().getFullYear()}/${crypto.randomUUID()}.${ext}`;
 
   let res: Response;
@@ -34,7 +36,7 @@ export async function POST(req: Request) {
     res = await fetch(`${base}/storage/v1/object/${BUCKET}/${encodeURI(path)}`, {
       method: "POST",
       // ส่งทั้ง apikey + Authorization → รองรับทั้ง service_role (legacy JWT) และ secret key แบบใหม่ (sb_secret_...)
-      headers: { apikey: key, Authorization: `Bearer ${key}`, "Content-Type": file.type || "application/octet-stream", "x-upsert": "true" },
+      headers: { apikey: key, Authorization: `Bearer ${key}`, "Content-Type": contentType, "x-upsert": "true" },
       body: Buffer.from(await file.arrayBuffer()),
     });
   } catch (e: any) { return NextResponse.json({ ok: false, error: `ต่อ Storage ไม่ได้: ${e?.message || "network"}` }, { status: 502 }); }

@@ -60,7 +60,12 @@ const orderSchema = z.object({
   branch: z.string().trim().optional().nullable(),        // ใบเบิกค้าส่ง: สาขาปลายทาง
   branch_code: z.string().trim().optional().nullable(),   // รหัสสาขา
   po_version: z.string().trim().optional().nullable(),    // PO Order Version (Eveandboy — กรอกเอง)
-  slip_path: z.string().trim().optional().nullable(),     // path สลิป/ไฟล์แนบใน Supabase Storage (bucket private 'slips')
+  // path สลิป/ไฟล์แนบใน Supabase Storage — รับเฉพาะรูปแบบที่ upload route สร้าง (YYYY/uuid.ext)
+  // กัน client ยัด path มั่ว/traversal/อ้างไฟล์อื่น → ไม่ตรงแพทเทิร์น = ตั้ง null ทิ้ง (ไม่ error ทั้งใบ)
+  slip_path: z.preprocess(
+    (v) => { const s = typeof v === "string" ? v.trim() : ""; return /^\d{4}\/[0-9a-f-]{36}\.[a-z0-9]{1,5}$/.test(s) ? s : null; },
+    z.string().nullable(),
+  ).optional(),
   items: z.array(itemSchema).min(1, "ต้องมีอย่างน้อย 1 รายการ"),
 });
 

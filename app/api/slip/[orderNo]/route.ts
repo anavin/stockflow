@@ -18,6 +18,8 @@ export async function GET(_req: Request, { params }: { params: Promise<{ orderNo
   const on = decodeURIComponent((await params).orderNo || "").trim();
   const [o] = await q<{ slip_path: string | null }>(`select slip_path from orders where order_no = $1 limit 1`, [on]).catch(() => [] as { slip_path: string | null }[]);
   if (!o?.slip_path) return NextResponse.json({ error: "ไม่มีสลิป" }, { status: 404 });
+  // defense-in-depth: path ต้องตรงรูปแบบที่ upload สร้าง (YYYY/uuid.ext) — กัน traversal/อ้างไฟล์อื่นถ้ามีข้อมูลเก่า/ยัดมั่ว
+  if (!/^\d{4}\/[0-9a-f-]{36}\.[a-z0-9]{1,5}$/.test(o.slip_path)) return NextResponse.json({ error: "bad slip path" }, { status: 400 });
 
   const base = process.env.SUPABASE_URL, key = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!base || !key) return NextResponse.json({ error: "storage not configured" }, { status: 500 });
@@ -33,8 +35,8 @@ export async function GET(_req: Request, { params }: { params: Promise<{ orderNo
   } catch (e: any) { return NextResponse.json({ error: `sign failed: ${e?.message || "network"}` }, { status: 502 }); }
   if (!res.ok) return NextResponse.json({ error: `sign failed (${res.status})` }, { status: 502 });
 
-  const j = (await res.json()) as { signedURL?: string };
-  if (!j.signedURL) return NextResponse.json({ error: "no signed url" }, { status: 502 });
+  const j = (await res.json().catch(() => null)) as { signedURL?: string } | null;
+  if (!j?.signedURL) return NextResponse.json({ error: "no signed url" }, { status: 502 });
   // signedURL = "/object/sign/slips/....?token=..." → เติม prefix /storage/v1
   return NextResponse.redirect(`${base}/storage/v1${j.signedURL}`);
 }
